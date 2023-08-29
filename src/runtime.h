@@ -1,7 +1,7 @@
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
 
-class CRuntime: public CGameMixin
+class CRuntime : public CGameMixin
 {
 public:
     CRuntime();
@@ -15,12 +15,12 @@ public:
 protected:
     static void cleanup();
 
-    typedef struct {
+    typedef struct
+    {
         SDL_Renderer *renderer;
         SDL_Window *window;
-        SDL_Texture * texture;
+        SDL_Texture *texture;
     } App;
 
-    App m_app;    
-
+    App m_app;
 };

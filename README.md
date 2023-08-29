@@ -2,20 +2,37 @@
 
 This project aims to port to the CS3 Runtime to a wide variety of platforms. 
 
-Using the SDL libraries as base, the game can now run as a desktop app or in the browser.
+Using the SDL2 libraries as a base, the game can now run as a desktop app or in the browser.
 
 
 ![alt text](images/Screenshot_2023-08-13_00-32-18.png)
 
 
 
-## Online version
+## Building the runtime
 
-### Building the runtime
+### Online version
 
-The online version requires SDL, Zlib and Emscripten. 
 
-https://emscripten.org/index.html
+The online version requires SDL2, zlib and Emscripten.
+
+
+<b> Build cs3 runtime</b>
+
+First install emscripten : https://emscripten.org/index.html
+
+Run these commands
+```
+$ python bin/gen.py
+$ emmake make
+```
+
+<b>Launch the application</b>
+
+
+```
+$ emrun build/cs3v2.html
+```
 
 ### Map Editor
 

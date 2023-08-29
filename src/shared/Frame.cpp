@@ -163,9 +163,8 @@ void CFrame::write(IFile &file)
         int err = compressData((uint8_t *)m_rgb, 4 * m_nLen * m_nHei, &pDest, nDestLen);
         if (err != Z_OK)
         {
-            printf("CFrame::write error: %d", err);
+            printf("CFrame::write error: %d\n", err);
             return;
-            // CLuaVM::debugv("CFrame::write error: %d", err);
         }
 
         file.write(&nDestLen, 4);
@@ -349,9 +348,8 @@ void CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
     int err = compressData(data, dataSize, &cData, cDataSize);
     if (err != Z_OK)
     {
-        printf("CFrame::toPng error: %d", err);
+        printf("CFrame::toPng error: %d\n", err);
         return;
-        // CLuaVM::debugv("CFrame::toPng error: %d", err);
     }
 
     delete[] data;

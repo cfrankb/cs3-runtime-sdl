@@ -26,41 +26,44 @@
 
 #ifdef LGCK_OPENGL_DEBUG
 static void opengl_msg(unsigned int code, const char *file, int line);
-void opengl_msg(unsigned int code, const char *file, int line){
+void opengl_msg(unsigned int code, const char *file, int line)
+{
     std::string tmp;
     printf("code:%d\n", code);
-    switch(code) {
-        case GL_NO_ERROR:
-            tmp = "GL_NO_ERROR";
+    switch (code)
+    {
+    case GL_NO_ERROR:
+        tmp = "GL_NO_ERROR";
         break;
-        case GL_INVALID_ENUM:
-            tmp = "GL_INVALID_ENUM";
+    case GL_INVALID_ENUM:
+        tmp = "GL_INVALID_ENUM";
         break;
-        case GL_INVALID_VALUE:
-            tmp = "GL_INVALID_VALUE";
+    case GL_INVALID_VALUE:
+        tmp = "GL_INVALID_VALUE";
         break;
-        case GL_INVALID_OPERATION:
-            tmp = "GL_INVALID_OPERATION";
+    case GL_INVALID_OPERATION:
+        tmp = "GL_INVALID_OPERATION";
         break;
-        case GL_INVALID_FRAMEBUFFER_OPERATION:
-            tmp = "GL_INVALID_FRAMEBUFFER_OPERATION";
+    case GL_INVALID_FRAMEBUFFER_OPERATION:
+        tmp = "GL_INVALID_FRAMEBUFFER_OPERATION";
         break;
-        case GL_OUT_OF_MEMORY:
-            tmp = "GL_OUT_OF_MEMORY";
+    case GL_OUT_OF_MEMORY:
+        tmp = "GL_OUT_OF_MEMORY";
         break;
-        default:
-            char t[40];
-            sprintf(t, "GL UNKNOWN:%u", code);
-            tmp = t;
+    default:
+        char t[40];
+        sprintf(t, "GL UNKNOWN:%u", code);
+        tmp = t;
     }
-    if (code != GL_NO_ERROR) {
+    if (code != GL_NO_ERROR)
+    {
         qDebug("Opengl error: %s in %s line %d",
-            tmp.c_str(), file, line); \
+               tmp.c_str(), file, line);
     }
 }
-    #define GLDEBUG() opengl_msg(glGetError(), __FILE__, __LINE__ );
+#define GLDEBUG() opengl_msg(glGetError(), __FILE__, __LINE__);
 #else
-	#define GLDEBUG()
-#endif	
-	
+#define GLDEBUG()
+#endif
+
 #endif // GLHELPER_H

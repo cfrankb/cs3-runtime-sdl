@@ -79,9 +79,9 @@ void CGameMixin::preloadAssets()
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
-        printf("size: %d", size);
+        printf("size: %d\n", size);
     } else {
-        printf("failed to open %s", fontName);
+        printf("failed to open %s\n", fontName);
     }
 }
 

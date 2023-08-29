@@ -104,16 +104,16 @@ bool CGame::init()
 
 bool CGame::loadLevel(bool restart)
 {
-    printf("loading level: %d ...", m_level + 1);
+    printf("loading level: %d ...\n", m_level + 1);
     setMode(restart ? MODE_RESTART :MODE_INTRO);
 
     // extract level from MapArch
     map = *(m_mapArch->at(m_level));
 
-    printf("level loaded");
+    printf("level loaded\n");
 
     Pos pos = map.findFirst(TILES_ANNIE2);
-    printf("Player at: %d %d", pos.x, pos.y);
+    printf("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
     m_diamonds = map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
@@ -176,7 +176,7 @@ bool CGame::findMonsters()
             }
         }
     }
-    printf("%d monsters found.", m_monsterCount);
+    printf("%d monsters found.\n", m_monsterCount);
     return true;
 }
 

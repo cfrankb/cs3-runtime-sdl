@@ -206,8 +206,6 @@ bool CFrameSet::read0x501(IFile &file, int size)
         totalSize += 4 * len[n] * hei[n];
     }
 
-    // printf("totalSize: %d\n", totalSize);
-
     char *buffer = new char[totalSize];
     char *ptr = buffer;
 

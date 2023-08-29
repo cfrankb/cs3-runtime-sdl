@@ -1,11 +1,12 @@
 CC=emcc
 INC=-Isrc/zlib/
 LIBS=
-ARGS=-s USE_SDL=2 -s USE_ZLIB=1 -s WASM=1
+ARGS=-s USE_SDL=2 -s USE_ZLIB=1 -s WASM=1 --emrun -DWASM -O2
 PARGS=--preload-file data
 BPATH=build
 BNAME=cs3v2.html
 TARGET=$(BPATH)/$(BNAME)
+DEPS=$(BPATH)/runtime.o $(BPATH)/gamemixin.o $(BPATH)/maparch.o $(BPATH)/game.o $(BPATH)/tilesdata.o $(BPATH)/animator.o $(BPATH)/level.o $(BPATH)/actor.o $(BPATH)/map.o $(BPATH)/FrameSet.o $(BPATH)/Frame.o $(BPATH)/DotArray.o $(BPATH)/helper.o $(BPATH)/PngMagic.o $(BPATH)/FileWrap.o
 
 all: $(TARGET)
 
@@ -54,8 +55,8 @@ $(BPATH)/PngMagic.o: src/shared/PngMagic.cpp
 $(BPATH)/FileWrap.o: src/shared/FileWrap.cpp
 	$(CC) -c src/shared/FileWrap.cpp $(INC) -o $@
 
-$(TARGET): src/main.cpp $(BPATH)/runtime.o $(BPATH)/gamemixin.o $(BPATH)/maparch.o $(BPATH)/game.o $(BPATH)/tilesdata.o $(BPATH)/animator.o $(BPATH)/level.o $(BPATH)/actor.o $(BPATH)/map.o $(BPATH)/FrameSet.o $(BPATH)/Frame.o $(BPATH)/DotArray.o $(BPATH)/helper.o $(BPATH)/PngMagic.o $(BPATH)/FileWrap.o
-	$(CC) $(ARGS) src/main.cpp $(BPATH)/runtime.o $(BPATH)/gamemixin.o $(BPATH)/maparch.o $(BPATH)/game.o $(BPATH)/tilesdata.o $(BPATH)/animator.o $(BPATH)/level.o $(BPATH)/actor.o $(BPATH)/map.o $(BPATH)/FrameSet.o $(BPATH)/Frame.o $(BPATH)/DotArray.o $(BPATH)/helper.o $(BPATH)/PngMagic.o $(BPATH)/FileWrap.o $(LIBS) $(PARGS) -o $@
+$(TARGET): src/main.cpp $(DEPS)
+	$(CC) $(ARGS) src/main.cpp $(DEPS) $(LIBS) $(PARGS) -o $@
 
 clean:
 	rm -f $(BPATH)/*
