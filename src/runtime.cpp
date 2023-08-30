@@ -144,7 +144,7 @@ void CRuntime::doInput()
 
         case SDL_QUIT:
 #ifdef WASM
-            emscripten_cancel_main_loop();
+            //           emscripten_cancel_main_loop();
 #endif
             exit(0);
             break;
