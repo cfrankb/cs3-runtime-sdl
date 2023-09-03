@@ -14,6 +14,7 @@ public:
 
 protected:
     static void cleanup();
+    virtual void preloadAssets();
 
     typedef struct
     {

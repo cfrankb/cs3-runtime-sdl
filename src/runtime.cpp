@@ -1,7 +1,9 @@
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
+#include "shared/FrameSet.h"
 #include <cstring>
+#include "shared/FileWrap.h"
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -152,5 +154,52 @@ void CRuntime::doInput()
         default:
             break;
         }
+    }
+}
+
+void CRuntime::preloadAssets()
+{
+    CFileWrap file;
+
+    typedef struct
+    {
+        const char *filename;
+        CFrameSet **frameset;
+    } asset_t;
+
+    asset_t assets[] = {
+        {"data/tiles.obl", &m_tiles},
+        {"data/animz.obl", &m_animz},
+        {"data/annie.obl", &m_annie},
+    };
+
+    for (int i = 0; i < 3; ++i)
+    {
+        asset_t &asset = assets[i];
+        *(asset.frameset) = new CFrameSet();
+        if (file.open(asset.filename, "rb"))
+        {
+            printf("reading %s\n", asset.filename);
+            if ((*(asset.frameset))->extract(file))
+            {
+                printf("extracted: %d\n", (*(asset.frameset))->getSize());
+            }
+            file.close();
+        }
+    }
+
+    const char fontName[] = "data/font.bin";
+    int size = 0;
+    if (file.open(fontName, "rb"))
+    {
+        size = file.getSize();
+        m_fontData = new uint8_t[size];
+        file.read(m_fontData, size);
+        file.close();
+        printf("size: %d\n", size);
+    }
+    else
+    {
+        printf("failed to open %s\n", fontName);
     }
 }

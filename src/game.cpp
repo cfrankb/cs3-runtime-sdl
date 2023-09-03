@@ -7,6 +7,7 @@
 #include "sprtypes.h"
 #include "tilesdata.h"
 #include "maparch.h"
+#include <stdarg.h>
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[6];
@@ -59,20 +60,20 @@ void CGame::consume()
 
     if (def.type == TYPE_PICKUP)
     {
-        m_score += def.score;
+        addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         addHealth(def.health);
     }
     else if (def.type == TYPE_KEY)
     {
-        m_score += def.score;
+        addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         addKey(pu);
         addHealth(def.health);
     }
     else if (def.type == TYPE_DIAMOND)
     {
-        m_score += def.score;
+        addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         --m_diamonds;
         addHealth(def.health);
@@ -82,10 +83,20 @@ void CGame::consume()
         addHealth(def.health);
     }
 
+    // apply flags
     if (def.flags & FLAG_EXTRA_LIFE)
     {
-        m_lives++;
-        m_lives = std::min(m_lives, 99);
+        addLife();
+    }
+
+    if (def.flags & FLAG_GODMODE)
+    {
+        m_godModeTimer = GODMODE_TIMER;
+    }
+
+    if (def.flags & FLAG_EXTRA_SPEED)
+    {
+        m_extraSpeedTimer = EXTRASPEED_TIMER;
     }
 
     // trigger key
@@ -110,16 +121,16 @@ bool CGame::init()
 
 bool CGame::loadLevel(bool restart)
 {
-    printf("loading level: %d ...\n", m_level + 1);
+    vDebug("loading level: %d ...\n", m_level + 1);
     setMode(restart ? MODE_RESTART : MODE_INTRO);
 
     // extract level from MapArch
     map = *(m_mapArch->at(m_level));
 
-    printf("level loaded\n");
+    vDebug("level loaded\n");
 
     Pos pos = map.findFirst(TILES_ANNIE2);
-    printf("Player at: %d %d\n", pos.x, pos.y);
+    vDebug("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
     m_diamonds = map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
@@ -131,7 +142,7 @@ bool CGame::loadLevel(bool restart)
 
 void CGame::nextLevel()
 {
-    m_score += LEVEL_BONUS + m_health;
+    addPoints(LEVEL_BONUS + m_health);
     if (m_level != m_mapArch->size() - 1)
     {
         ++m_level;
@@ -144,6 +155,8 @@ void CGame::nextLevel()
 
 void CGame::restartLevel()
 {
+    m_godModeTimer = 0;
+    m_extraSpeedTimer = 0;
 }
 
 void CGame::restartGame()
@@ -151,6 +164,9 @@ void CGame::restartGame()
     m_score = 0;
     m_lives = DEFAULT_LIVES;
     m_level = 0;
+    m_nextLife = SCORE_LIFE;
+    m_godModeTimer = 0;
+    m_extraSpeedTimer = 0;
 }
 
 void CGame::setLevel(int levelId)
@@ -185,7 +201,7 @@ bool CGame::findMonsters()
             }
         }
     }
-    printf("%d monsters found.\n", m_monsterCount);
+    vDebug("%d monsters found.\n", m_monsterCount);
     return true;
 }
 
@@ -216,8 +232,15 @@ int CGame::findMonsterAt(int x, int y)
     return -1;
 }
 
-void CGame::manageMonsters()
+void CGame::manageMonsters(int ticks)
 {
+    const int speedCount = 9;
+    bool speeds[speedCount];
+    for (uint32_t i = 0; i < sizeof(speeds); ++i)
+    {
+        speeds[i] = i ? (ticks % i) == 0 : true;
+    }
+
     uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     std::vector<CActor> newMonsters;
 
@@ -226,6 +249,10 @@ void CGame::manageMonsters()
         CActor &actor = m_monsters[i];
         uint8_t c = map.at(actor.getX(), actor.getY());
         const TileDef &def = getTileDef(c);
+        if (!speeds[def.speed])
+        {
+            continue;
+        }
         if (def.type == TYPE_MONSTER)
         {
             if (actor.isPlayerThere(actor.getAim()))
@@ -316,6 +343,8 @@ void CGame::manageMonsters()
 
 void CGame::managePlayer(uint8_t *joystate)
 {
+    m_godModeTimer = std::max(m_godModeTimer - 1, 0);
+    m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -429,7 +458,7 @@ void CGame::addHealth(int hp)
     {
         m_health = std::min(m_health + hp, static_cast<int>(MAX_HEALTH));
     }
-    else if (hp < 0)
+    else if (hp < 0 && !m_godModeTimer)
     {
         m_health = std::max(m_health + hp, 0);
     }
@@ -483,4 +512,38 @@ int CGame::health()
 uint8_t *CGame::keys()
 {
     return m_keys;
+}
+
+void CGame::addPoints(int points)
+{
+    m_score += points;
+    if (m_score >= m_nextLife)
+    {
+        m_nextLife += SCORE_LIFE;
+        addLife();
+    }
+}
+
+void CGame::addLife()
+{
+    m_lives = std::min(m_lives + 1, static_cast<int>(MAX_LIVES));
+}
+
+int CGame::godModeTimer()
+{
+    return m_godModeTimer;
+}
+
+int CGame::playerSpeed()
+{
+    return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
+}
+
+void CGame::vDebug(const char *format, ...)
+{
+    char buffer[256];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
 }
