@@ -82,6 +82,12 @@ void CGame::consume()
         addHealth(def.health);
     }
 
+    if (def.flags & FLAG_EXTRA_LIFE)
+    {
+        m_lives++;
+        m_lives = std::min(m_lives, 99);
+    }
+
     // trigger key
     int x = m_player.getX();
     int y = m_player.getY();
@@ -95,17 +101,17 @@ void CGame::consume()
 
 bool CGame::init()
 {
-    //m_engine->init();
-    //uint8_t *ptr = &levels_mapz;
-    // load levelArch index from memory
-    //m_arch.fromMemory(ptr);
+    // m_engine->init();
+    // uint8_t *ptr = &levels_mapz;
+    //  load levelArch index from memory
+    // m_arch.fromMemory(ptr);
     return true;
 }
 
 bool CGame::loadLevel(bool restart)
 {
     printf("loading level: %d ...\n", m_level + 1);
-    setMode(restart ? MODE_RESTART :MODE_INTRO);
+    setMode(restart ? MODE_RESTART : MODE_INTRO);
 
     // extract level from MapArch
     map = *(m_mapArch->at(m_level));
@@ -126,9 +132,12 @@ bool CGame::loadLevel(bool restart)
 void CGame::nextLevel()
 {
     m_score += LEVEL_BONUS + m_health;
-    if (m_level != m_mapArch->size() -1) {
+    if (m_level != m_mapArch->size() - 1)
+    {
         ++m_level;
-    } else {
+    }
+    else
+    {
         m_level = 0;
     }
 }
@@ -230,10 +239,13 @@ void CGame::manageMonsters()
             if (aim != AIM_NONE)
             {
                 actor.move(aim);
-            } else {
+            }
+            else
+            {
                 for (uint8_t i = 0; i < sizeof(dirs); ++i)
                 {
-                    if (actor.isPlayerThere(dirs[i])) {
+                    if (actor.isPlayerThere(dirs[i]))
+                    {
                         // apply health damages
                         addHealth(def.health);
                         break;
@@ -296,7 +308,7 @@ void CGame::manageMonsters()
     }
 
     // moved here to avoid reallocation while using a reference
-    for (auto const & monster : newMonsters)
+    for (auto const &monster : newMonsters)
     {
         addMonster(monster);
     }
@@ -305,15 +317,18 @@ void CGame::manageMonsters()
 void CGame::managePlayer(uint8_t *joystate)
 {
     auto const pu = m_player.getPU();
-    if (pu == TILES_SWAMP) {
+    if (pu == TILES_SWAMP)
+    {
         // apply health damage
         const TileDef &def = getTileDef(pu);
         addHealth(def.health);
     }
     uint8_t aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
-    for (uint8_t i =0; i < 4; ++i) {
+    for (uint8_t i = 0; i < 4; ++i)
+    {
         uint8_t aim = aims[i];
-        if (joystate[aim] && move(aim)) {
+        if (joystate[aim] && move(aim))
+        {
             break;
         }
     }
@@ -437,7 +452,7 @@ bool CGame::isPlayerDead()
 
 void CGame::killPlayer()
 {
-    m_lives = m_lives ? m_lives -1 : 0;
+    m_lives = m_lives ? m_lives - 1 : 0;
 }
 
 bool CGame::isGameOver()

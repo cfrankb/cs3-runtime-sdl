@@ -66,7 +66,7 @@ void CGameMixin::preloadAssets()
         if (file.open(asset.filename, "rb")) {
             printf("reading %s\n", asset.filename);
             if ((*(asset.frameset))->extract(file)) {
-                printf("exracted: %d\n", (*(asset.frameset))->getSize());
+                printf("extracted: %d\n", (*(asset.frameset))->getSize());
             }
             file.close();
         }

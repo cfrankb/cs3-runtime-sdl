@@ -23,7 +23,7 @@ First install emscripten : https://emscripten.org/index.html
 
 Run these commands
 ```
-$ python bin/gen.py
+$ python bin/gen.py emsdl
 $ emmake make
 ```
 
