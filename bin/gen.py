@@ -16,7 +16,7 @@ def prepare_deps(deps, fname):
     if os.path.isfile(fname_h):
         ref += f' {fname_h}'
     lines.append(f'$(BPATH)/{name}$(EXT): {ref}')
-    lines.append(f'\t$(CC) $(ARGS) -c $< $(INC) -o $@')
+    lines.append(f'\t$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@')
     deps.append(f'{name}')
     return '\n'.join(lines)
 
@@ -28,13 +28,12 @@ def get_deps_blocks():
 
     for pattern in paths:
         for f in glob.glob(pattern):
-            if 'main.cpp' not in f:
-                deps_blocks.append(prepare_deps(deps, f))
+            deps_blocks.append(prepare_deps(deps, f))
 
     objs = ' '.join(f'$(BPATH)/{x}$(EXT)' for x in deps)
     lines = []
-    lines.append(f'$(TARGET): src/main.cpp $(DEPS)')
-    lines.append(f'\t$(CC) $(ARGS) src/main.cpp $(DEPS) $(LIBS) $(PARGS) -o $@')
+    lines.append(f'$(TARGET): $(DEPS)')
+    lines.append(f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@')
     deps_blocks.append('\n'.join(lines))
     lines = []
     lines.append('clean:')
@@ -62,10 +61,10 @@ def main():
         exit(EXIT_FAILURE)
     elif sys.argv[1] == 'sdl':
         vars = [
-            'CC=g++', 
+            'CXX=g++',
             'INC=', 
             'LIBS=-lSDL2 -lz',
-            'ARGS=-O3',
+            'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)'
             ]
@@ -73,11 +72,11 @@ def main():
         ext = '.o'
     elif sys.argv[1] == 'emsdl':
         vars = [
-            'CC=emcc', 
+            'CXX=emcc',
             'INC=', 
             'LIBS=',
-            'ARGS=-s USE_SDL=2 -s USE_ZLIB=1',
-            'PARGS=--preload-file data --emrun -DWASM -O2 -s WASM=1',
+            'CXXFLAGS=-sUSE_SDL=2 -sUSE_ZLIB=1 -DWASM',
+            'PARGS=--preload-file data --emrun -O2 -sWASM=1',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)'
             ]
         print("type `emmake make` to generare binary.")
