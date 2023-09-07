@@ -1,7 +1,7 @@
 CXX=emcc
 INC=
 LIBS=
-CXXFLAGS=-sUSE_SDL=2 -sUSE_ZLIB=1 -DWASM
+CXXFLAGS=-sUSE_SDL=2 -sUSE_ZLIB=1 -DWASM -O2
 PARGS=--preload-file data --emrun -O2 -sWASM=1
 BPATH=build
 BNAME=cs3v2.html

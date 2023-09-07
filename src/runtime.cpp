@@ -188,7 +188,7 @@ void CRuntime::preloadAssets()
         }
     }
 
-    const char fontName[] = "data/font.bin";
+    const char fontName[] = "data/bitfont.bin";
     int size = 0;
     if (file.open(fontName, "rb"))
     {
@@ -196,7 +196,7 @@ void CRuntime::preloadAssets()
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
-        printf("size: %d\n", size);
+        printf("loaded %s: %d bytes\n", fontName, size);
     }
     else
     {

@@ -1,7 +1,7 @@
 #ifndef CGAMEMIXIN_H
 #define CGAMEMIXIN_H
-#include <cstdint>
 
+#include <cstdint>
 class CFrameSet;
 class CGame;
 class CFrame;
