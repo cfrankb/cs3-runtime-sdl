@@ -8,6 +8,12 @@
 #include "tilesdata.h"
 #include "maparch.h"
 #include <stdarg.h>
+#include "shared/IFile.h"
+#include "sounds.h"
+#ifdef USE_SDL_MIXER
+#include "shared/interfaces/ISound.h"
+#include "shared/implementers/sn_sdl.h"
+#endif
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[6];
@@ -21,6 +27,9 @@ CGame::CGame()
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
+#ifdef USE_SDL_MIXER
+    m_sound = new CSndSDL();
+#endif
 }
 
 CGame::~CGame()
@@ -29,6 +38,13 @@ CGame::~CGame()
     {
         delete[] m_monsters;
     }
+
+#ifdef USE_SDL_MIXER
+    if (m_sound)
+    {
+        delete m_sound;
+    }
+#endif
 }
 
 CMap &CGame::getMap()
@@ -55,7 +71,7 @@ bool CGame::move(int aim)
 
 void CGame::consume()
 {
-    uint8_t pu = m_player.getPU();
+    const uint8_t pu = m_player.getPU();
     const TileDef &def = getTileDef(pu);
 
     if (def.type == TYPE_PICKUP)
@@ -63,6 +79,7 @@ void CGame::consume()
         addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         addHealth(def.health);
+        playTileSound(pu);
     }
     else if (def.type == TYPE_KEY)
     {
@@ -70,6 +87,7 @@ void CGame::consume()
         m_player.setPU(TILES_BLANK);
         addKey(pu);
         addHealth(def.health);
+        playSound(SOUND_KEY);
     }
     else if (def.type == TYPE_DIAMOND)
     {
@@ -77,6 +95,7 @@ void CGame::consume()
         m_player.setPU(TILES_BLANK);
         --m_diamonds;
         addHealth(def.health);
+        playTileSound(pu);
     }
     else if (def.type == TYPE_SWAMP)
     {
@@ -106,7 +125,10 @@ void CGame::consume()
     if (attr != 0)
     {
         map.setAttr(x, y, 0);
-        clearAttr(attr);
+        if (clearAttr(attr))
+        {
+            playSound(SOUND_0009);
+        }
     }
 }
 
@@ -247,8 +269,8 @@ void CGame::manageMonsters(int ticks)
     for (int i = 0; i < m_monsterCount; ++i)
     {
         CActor &actor = m_monsters[i];
-        uint8_t c = map.at(actor.getX(), actor.getY());
-        const TileDef &def = getTileDef(c);
+        uint8_t cs = map.at(actor.getX(), actor.getY());
+        const TileDef &def = getTileDef(cs);
         if (!speeds[def.speed])
         {
             continue;
@@ -315,8 +337,8 @@ void CGame::manageMonsters(int ticks)
             for (uint8_t i = 0; i < sizeof(dirs); ++i)
             {
                 Pos p = CGame::translate(Pos{actor.getX(), actor.getY()}, dirs[i]);
-                uint8_t c = map.at(p.x, p.y);
-                const TileDef &defT = getTileDef(c);
+                const uint8_t ct = map.at(p.x, p.y);
+                const TileDef &defT = getTileDef(ct);
                 if (defT.type == TYPE_PLAYER)
                 {
                     // apply damage from config
@@ -371,7 +393,7 @@ void CGame::managePlayer(uint8_t *joystate)
     }
 }
 
-Pos CGame::translate(const Pos p, int aim)
+Pos CGame::translate(const Pos &p, int aim)
 {
     Pos t = p;
 
@@ -438,8 +460,9 @@ bool CGame::goalCount() const
     return m_diamonds;
 }
 
-void CGame::clearAttr(uint8_t attr)
+int CGame::clearAttr(uint8_t attr)
 {
+    int count = 0;
     for (int y = 0; y < map.hei(); ++y)
     {
         for (int x = 0; x < map.len(); ++x)
@@ -447,8 +470,9 @@ void CGame::clearAttr(uint8_t attr)
             const uint8_t tileAttr = map.getAttr(x, y);
             if (tileAttr == attr)
             {
+                ++count;
                 const uint8_t tile = map.at(x, y);
-                const TileDef def = getTileDef(tile);
+                const TileDef &def = getTileDef(tile);
                 if (def.type == TYPE_DIAMOND)
                 {
                     --m_diamonds;
@@ -458,6 +482,7 @@ void CGame::clearAttr(uint8_t attr)
             }
         }
     }
+    return count;
 }
 
 void CGame::addHealth(int hp)
@@ -480,7 +505,7 @@ void CGame::setMode(int mode)
 int CGame::mode() const
 {
     return m_mode;
-};
+}
 
 bool CGame::isPlayerDead()
 {
@@ -547,6 +572,17 @@ int CGame::playerSpeed()
     return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
 }
 
+void CGame::getMonsters(CActor *&monsters, int &count)
+{
+    monsters = m_monsters;
+    count = m_monsterCount;
+}
+
+CActor &CGame::getMonster(int i)
+{
+    return m_monsters[i];
+}
+
 void CGame::vDebug(const char *format, ...)
 {
     char buffer[256];
@@ -554,4 +590,105 @@ void CGame::vDebug(const char *format, ...)
     va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
+}
+
+#ifdef USE_SDL_MIXER
+bool CGame::readSndArch(IFile &file)
+{
+    typedef struct
+    {
+        int ptr;
+        std::string name;
+        int filesize;
+    } fileinfo_t;
+
+    char name[32];
+    char tmp[5];
+    file.read(tmp, 4);
+    if (memcmp(tmp, "SNDX", 4) != 0)
+    {
+        tmp[4] = 0;
+        printf("wrong signature: %s\n", tmp);
+        return false;
+    }
+
+    int size = 0;
+    int indexPtr = 0;
+    int version = 0;
+    file.seek(4);
+    file.read(&version, 2);
+    if (version != 0)
+    {
+        printf("wrong version: %x\n", version);
+        return false;
+    }
+
+    file.seek(6);
+    file.read(&size, 2);
+    file.read(&indexPtr, 4);
+
+    // read index
+    file.seek(indexPtr);
+    for (int i = 0; i < size; ++i)
+    {
+        fileinfo_t fileInfo;
+        file.read(&fileInfo.ptr, 4);
+        int fnameSize = 0;
+        file.read(&fnameSize, 1);
+        file.read(name, fnameSize);
+        name[fnameSize] = 0;
+        fileInfo.name = name;
+        file.read(&fileInfo.filesize, 4);
+        if (fileInfo.filesize == 0)
+        {
+            continue;
+        }
+
+        /*
+        printf("\n--------------------\nindex: %d\n",i);
+        printf("name: %s\n", fileInfo.name.c_str());
+        printf("ptr: 0x%.4x\n", fileInfo.ptr);
+        printf("size: 0x%.4x\n\n", fileInfo.filesize);
+        */
+
+        uint8_t *data = new uint8_t[fileInfo.filesize];
+        long curPos = file.tell();
+        file.seek(fileInfo.ptr);
+        file.read(data, fileInfo.filesize);
+        m_sound->add(data, fileInfo.filesize, i);
+        file.seek(curPos);
+    }
+
+    return true;
+}
+#endif
+
+void CGame::playSound(int id)
+{
+#ifdef USE_SDL_MIXER
+    if (id != SOUND_NONE && m_sound)
+    {
+        m_sound->play(id);
+    }
+#endif
+}
+
+void CGame::playTileSound(int tileID)
+{
+    int snd = SOUND_NONE;
+    switch (tileID)
+    {
+    case TILES_FLOWERS_2:
+    case TILES_CHEST:
+        snd = SOUND_COIN1;
+        break;
+    case TILES_NECKLESS:
+        snd = SOUND_OKAY;
+        break;
+    case TILES_FRUIT1:
+    case TILES_APPLE:
+        snd = SOUND_GRUUP;
+        break;
+    }
+    playSound(snd);
 }

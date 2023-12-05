@@ -1,12 +1,12 @@
 #include "gamemixin.h"
 #include "tilesdata.h"
+#include "animzdata.h"
 #include "shared/FrameSet.h"
 #include "shared/Frame.h"
 #include "map.h"
 #include "game.h"
 #include "maparch.h"
 #include "animator.h"
-#include <cstring>
 
 CGameMixin::CGameMixin()
 {
@@ -198,14 +198,14 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         {
             uint8_t tileID = map->at(x + mx, y + my);
             CFrame *tile;
-            if (tileID == TILES_STOP || tileID == TILES_BLANK)
+            if (tileID == TILES_STOP || tileID == TILES_BLANK || m_animator->isSpecialCase(tileID))
             {
-                // skip blank tiles
+                // skip blank tiles and special cases
                 continue;
             }
             else if (tileID == TILES_ANNIE2)
             {
-                tile = annie[game.player().getAim() * 4 + m_playerFrameOffset];
+                tile = annie[game.player().getAim() * 8 + m_playerFrameOffset];
             }
             else
             {
@@ -223,6 +223,28 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         }
     }
 
+    const int offset = m_animator->offset() & 7;
+    CActor *monsters;
+    int count;
+    game.getMonsters(monsters, count);
+    for (int i = 0; i < count; ++i)
+    {
+        const CActor &monster = monsters[i];
+        if (monster.within(mx, my, mx + cols, my + rows))
+        {
+            const uint8_t tileID = map->at(monster.getX(), monster.getY());
+            if (!m_animator->isSpecialCase(tileID))
+            {
+                continue;
+            }
+            // special case animations
+            const int x = monster.getX() - mx;
+            const int y = monster.getY() - my;
+            CFrame *tile = animz[monster.getAim() * 8 + ANIMZ_INSECT1 + offset];
+            drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
+        }
+    }
+
     // draw game status
     char tmp[32];
     int bx = 0;
@@ -230,10 +252,10 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawFont(bitmap, 0, 2, tmp, WHITE);
     bx += strlen(tmp);
     sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
-    drawFont(bitmap, bx * 8, 2, tmp, YELLOW);
+    drawFont(bitmap, bx * FONT_SIZE, 2, tmp, YELLOW);
     bx += strlen(tmp);
     sprintf(tmp, "LIVES %.2d ", game.lives());
-    drawFont(bitmap, bx * 8, 2, tmp, PURPLE);
+    drawFont(bitmap, bx * FONT_SIZE, 2, tmp, PURPLE);
 
     // draw bottom rect
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, DARKGRAY, true);
@@ -263,8 +285,8 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         strcpy(t, "GAME OVER");
     };
 
-    int x = (WIDTH - strlen(t) * 8) / 2;
-    int y = (HEIGHT - 8) / 2;
+    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    int y = (HEIGHT - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
 }
@@ -304,13 +326,13 @@ void CGameMixin::mainLoop()
 
     if (m_ticks % 3 == 0)
     {
-        if (game.health() < m_healthRef && m_playerFrameOffset != 3)
+        if (game.health() < m_healthRef && m_playerFrameOffset != 7)
         {
-            m_playerFrameOffset = 3;
+            m_playerFrameOffset = 7;
         }
         else if (*(reinterpret_cast<uint32_t *>(m_joyState)))
         {
-            m_playerFrameOffset = (m_playerFrameOffset + 1) % 3;
+            m_playerFrameOffset = (m_playerFrameOffset + 1) % 7;
         }
         else
         {
@@ -400,6 +422,11 @@ void CGameMixin::changeZoom()
 void CGameMixin::setZoom(bool zoom)
 {
     m_zoom = zoom;
+}
+
+bool CGameMixin::within(int val, int min, int max)
+{
+    return val >= min && val <= max;
 }
 
 void CGameMixin::sanityTest()

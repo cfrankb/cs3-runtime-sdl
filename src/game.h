@@ -5,6 +5,10 @@
 #include "map.h"
 
 class CMapArch;
+class CSndArray;
+class IFile;
+class CSnd;
+class ISound;
 
 class CGame
 {
@@ -17,7 +21,7 @@ public:
     bool move(int dir);
     void manageMonsters(int ticks);
     void managePlayer(uint8_t *joystate);
-    static Pos translate(const Pos p, int aim);
+    static Pos translate(const Pos &p, int aim);
     void consume();
     static bool hasKey(uint8_t c);
     void addKey(uint8_t c);
@@ -42,13 +46,20 @@ public:
     int godModeTimer();
     int playerSpeed();
     static uint8_t *keys();
+    void getMonsters(CActor *&monsters, int &count);
+    CActor &getMonster(int i);
+    bool readSndArch(IFile &file);
+    void playSound(int id);
+    void initSoundMap();
+    void playTileSound(int tileID);
+    void attackPlayer(int hp);
 
     enum
     {
         MODE_INTRO = 0,
         MODE_LEVEL = 1,
         MODE_RESTART = 2,
-        MODE_GAMEOVER =3,
+        MODE_GAMEOVER = 3,
     };
 
 protected:
@@ -67,7 +78,9 @@ protected:
     int m_monsterCount;
     int m_monsterMax;
     CActor m_player;
-    CMapArch *m_mapArch;
+    CMapArch *m_mapArch = nullptr;
+    ISound *m_sound = nullptr;
+    uint8_t m_soundMap[256];
 
     enum
     {
@@ -85,7 +98,7 @@ protected:
         FAST_PLAYER_SPEED = 2,
     };
 
-    void clearAttr(uint8_t attr);
+    int clearAttr(uint8_t attr);
     bool findMonsters();
     int addMonster(const CActor actor);
     int findMonsterAt(int x, int y);
