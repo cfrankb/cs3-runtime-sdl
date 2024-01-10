@@ -1,5 +1,15 @@
 <script>
-    document.getElementById("Layer_1").style.display = "none";
-    document.getElementById("controls").style.display = "none";
+    let els = [
+        document.getElementById("controls"),
+        document.getElementById("Layer_1"),
+        document.getElementById("emscripten_logo"),
+    ]
+    
+    els.forEach((el) => {
+         if (el) {
+             el.style.display = "none" 
+        }
+     }
+    );
     document.getElementsByClassName("emscripten")[0].style.display = "none";
 </script>
