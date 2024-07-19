@@ -21,6 +21,7 @@
 #include "shared/FrameSet.h"
 #include <cstring>
 #include "shared/FileWrap.h"
+#include "shared/music/mu_sdl.h"
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -47,6 +48,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_LEVEL:
         drawScreen(bitmap);
+        break;
+    case CGame::MODE_CLICKSTART:
+        drawPreScreen(bitmap);
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -161,8 +165,17 @@ void CRuntime::doInput()
             }
             break;
 
+        case SDL_MOUSEBUTTONDOWN:
+            if (event.button.button != 0 &&
+                m_game->mode() == CGame::MODE_CLICKSTART)
+            {
+                m_game->setMode(CGame::MODE_INTRO);
+                initMusic();
+            }
+            break;
+
         case SDL_QUIT:
-#ifdef WASM
+#ifdef __EMSCRIPTEN__
             //           emscripten_cancel_main_loop();
 #endif
             exit(0);
@@ -218,5 +231,29 @@ void CRuntime::preloadAssets()
     else
     {
         printf("failed to open %s\n", fontName);
+    }
+}
+
+void CRuntime::preRun()
+{
+    m_game->setMode(CGame::MODE_CLICKSTART);
+}
+
+void CRuntime::drawPreScreen(CFrame &bitmap)
+{
+    const char t[] = "CLICK TO START";
+    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    int y = (HEIGHT - FONT_SIZE) / 2;
+    bitmap.fill(BLACK);
+    drawFont(bitmap, x, y, t, WHITE);
+}
+
+void CRuntime::initMusic()
+{
+    m_music = new CMusicSDL();
+    const char music[] = "data/cs3idea_64.ogg";
+    if (m_music && m_music->open(music))
+    {
+        m_music->play();
     }
 }

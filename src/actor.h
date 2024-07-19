@@ -26,6 +26,7 @@ enum JoyAim
     AIM_DOWN = 1,
     AIM_LEFT = 2,
     AIM_RIGHT = 3,
+    TOTAL_AIMS = 4,
     AIM_NONE = -1
 };
 

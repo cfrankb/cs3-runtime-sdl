@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
-#ifdef WASM
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
 
@@ -45,8 +45,9 @@ int main(int argc, char *args[])
 
     runtime.init(&maparch, 0);
     runtime.SDLInit();
+    runtime.preRun();
     runtime.paint();
-#ifdef WASM
+#ifdef __EMSCRIPTEN__
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 // emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, 1000/FPS*1000);
 #else

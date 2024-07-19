@@ -127,10 +127,10 @@ void CActor::setXY(const Pos &pos)
 
 int CActor::findNextDir()
 {
-    int i = 3;
+    int i = TOTAL_AIMS - 1;
     while (i >= 0)
     {
-        int aim = AIMS[m_aim * 4 + i];
+        int aim = AIMS[m_aim * TOTAL_AIMS + i];
         if (canMove(aim))
         {
             return aim;

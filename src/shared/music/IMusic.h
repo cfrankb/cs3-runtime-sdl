@@ -1,6 +1,6 @@
 /*
-    cs3-runtime-sdl
-    Copyright (C) 2024  Francois Blanchette
+    LGCK Builder Runtime
+    Copyright (C) 1999, 2014  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,33 +15,25 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "gamemixin.h"
-#include <SDL2/SDL.h>
 
-class CRuntime : public CGameMixin
+#ifndef IMUSIC_H
+#define IMUSIC_H
+
+class IMusic
 {
 public:
-    CRuntime();
-    virtual ~CRuntime();
-
-    void paint();
-    void run();
-    bool SDLInit();
-    void doInput();
-    void preRun();
-    void drawPreScreen(CFrame &bitmap);
-    void initMusic();
+    virtual ~IMusic()=0;
+    virtual bool open(const char *file)=0;
+    virtual bool play(int loop=-1)=0;
+    virtual void stop()=0;
+    virtual void close()=0;
+    virtual bool isValid()=0;
+    virtual const char *signature() const=0;
 
 protected:
-    static void cleanup();
-    virtual void preloadAssets();
-
-    typedef struct
-    {
-        SDL_Renderer *renderer;
-        SDL_Window *window;
-        SDL_Texture *texture;
-    } App;
-
-    App m_app;
+    bool m_valid;
 };
+
+inline IMusic::~IMusic(){}
+
+#endif // IMUSIC_H

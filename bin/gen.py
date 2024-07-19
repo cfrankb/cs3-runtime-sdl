@@ -5,13 +5,14 @@ import os
 import sys
 
 EXIT_SUCCESS = 0
-EXIT_FAILURE =1
+EXIT_FAILURE = 1
+
 
 def prepare_deps(deps, fname):
     lines = []
     basename = ntpath.basename(fname)
     name = basename.replace('.cpp', '')
-    fname_h =fname.replace('.cpp', '.h')
+    fname_h = fname.replace('.cpp', '.h')
     ref = fname
     if os.path.isfile(fname_h):
         ref += f' {fname_h}'
@@ -22,7 +23,7 @@ def prepare_deps(deps, fname):
 
 
 def get_deps_blocks():
-    paths = ['src/*.cpp', "src/**/*.cpp"]
+    paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"]
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
@@ -37,7 +38,7 @@ def get_deps_blocks():
     deps_blocks.append('\n'.join(lines))
     lines = []
     lines.append('clean:')
-    lines.append("\trm -f $(BPATH)/*")
+    lines.append("\trm -rf $(BPATH)/*")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
 
@@ -55,6 +56,7 @@ python bin/gen.py emsdl
 
 '''.strip()
 
+
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ['sdl', 'emsdl']:
         print(help_text)
@@ -62,23 +64,23 @@ def main():
     elif sys.argv[1] == 'sdl':
         vars = [
             'CXX=g++',
-            'INC=', 
-            'LIBS=-lSDL2 -lz',
+            'INC=',
+            'LIBS=-lSDL2_mixer -lSDL2 -lz',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)'
-            ]
+        ]
         print("type `make` to generare binary.")
         ext = '.o'
     elif sys.argv[1] == 'emsdl':
         vars = [
             'CXX=emcc',
-            'INC=', 
-            'LIBS=',
-            'CXXFLAGS=-sUSE_SDL=2 -sUSE_ZLIB=1 -DWASM -O2',
-            'PARGS=--preload-file data --emrun -O2 -sWASM=1',
+            'INC=',
+            'LIBS=-lopenal',
+            'CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -O2',
+            'PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)'
-            ]
+        ]
         print("type `emmake make` to generare binary.")
         ext = '.o'
 
@@ -90,5 +92,6 @@ def main():
         tfile.write('\n\n'.join(deps_blocks))
 
     return EXIT_SUCCESS
+
 
 exit(main())

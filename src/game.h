@@ -67,9 +67,7 @@ public:
     CActor &getMonster(int i);
     bool readSndArch(IFile &file);
     void playSound(int id);
-    void initSoundMap();
     void playTileSound(int tileID);
-    void attackPlayer(int hp);
 
     enum
     {
@@ -77,6 +75,7 @@ public:
         MODE_LEVEL = 1,
         MODE_RESTART = 2,
         MODE_GAMEOVER = 3,
+        MODE_CLICKSTART = 4,
     };
 
 protected:

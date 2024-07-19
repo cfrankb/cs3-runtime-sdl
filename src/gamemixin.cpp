@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <cstring>
 #include "gamemixin.h"
 #include "tilesdata.h"
 #include "animzdata.h"
@@ -24,11 +25,15 @@
 #include "game.h"
 #include "maparch.h"
 #include "animator.h"
+#include "shared/music/mu_sdl.h"
+
+int startMusic(const char *filename);
 
 CGameMixin::CGameMixin()
 {
     m_game = new CGame();
     m_animator = new CAnimator();
+    m_music = nullptr; // new CMusicSDL();
     memset(m_joyState, 0, sizeof(m_joyState));
 }
 
@@ -311,7 +316,8 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
 void CGameMixin::mainLoop()
 {
     CGame &game = *m_game;
-    if (m_countdown > 0)
+    if (game.mode() != CGame::MODE_CLICKSTART &&
+        m_countdown > 0)
     {
         --m_countdown;
     }
@@ -334,6 +340,8 @@ void CGameMixin::mainLoop()
             game.setMode(CGame::MODE_LEVEL);
         }
         break;
+    case CGame::MODE_CLICKSTART:
+        return;
     }
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())

@@ -27,6 +27,7 @@
 #include <stdarg.h>
 #include "shared/IFile.h"
 #include "sounds.h"
+
 #ifdef USE_SDL_MIXER
 #include "shared/interfaces/ISound.h"
 #include "shared/implementers/sn_sdl.h"
@@ -44,6 +45,7 @@ CGame::CGame()
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
+
 #ifdef USE_SDL_MIXER
     m_sound = new CSndSDL();
 #endif

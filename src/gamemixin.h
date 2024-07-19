@@ -28,6 +28,7 @@ class CGame;
 class CFrame;
 class CMapArch;
 class CAnimator;
+class IMusic;
 
 class CGameMixin
 {
@@ -78,6 +79,7 @@ protected:
         int height;
     } Rect;
 
+    IMusic *m_music = nullptr;
     uint8_t m_joyState[4];
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
@@ -95,7 +97,7 @@ protected:
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
     virtual void preloadAssets();
-    inline void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
+    void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
     inline void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &frame, const int x, const int y, CFrame &tile, bool alpha);
