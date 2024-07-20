@@ -17,6 +17,7 @@
 */
 #ifndef __ACTOR__H
 #define __ACTOR__H
+#include <stdio.h>
 #include <stdint.h>
 #include "map.h"
 
@@ -52,6 +53,8 @@ public:
     uint8_t tileAt(uint8_t aim);
     void setType(const uint8_t type);
     bool within(int x1, int y1, int x2, int y2) const;
+    bool read(FILE *sfile);
+    bool write(FILE *tfile);
 
 protected:
     uint8_t m_x;

@@ -173,3 +173,31 @@ bool CActor::within(int x1, int y1, int x2, int y2) const
 {
     return (m_x >= x1) && (m_x < x2) && (m_y >= y1) && (m_y < y2);
 }
+
+bool CActor::read(FILE *sfile)
+{
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
+    readfile(&m_x, sizeof(m_x));
+    readfile(&m_y, sizeof(m_y));
+    readfile(&m_type, sizeof(m_type));
+    readfile(&m_aim, sizeof(m_aim));
+    readfile(&m_pu, sizeof(m_pu));
+    return true;
+}
+
+bool CActor::write(FILE *tfile)
+{
+    auto writefile = [tfile](auto ptr, auto size)
+    {
+        return fwrite(ptr, size, 1, tfile) == 1;
+    };
+    writefile(&m_x, sizeof(m_x));
+    writefile(&m_y, sizeof(m_y));
+    writefile(&m_type, sizeof(m_type));
+    writefile(&m_aim, sizeof(m_aim));
+    writefile(&m_pu, sizeof(m_pu));
+    return true;
+}

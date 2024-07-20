@@ -29,8 +29,7 @@ public:
     bool SDLInit();
     void doInput();
     void preRun();
-    virtual bool loadScores() override;
-    virtual bool saveScores() override;
+    void enableMusic();
 
 protected:
     static void cleanup();
@@ -38,6 +37,8 @@ protected:
     void drawPreScreen(CFrame &bitmap);
     void initMusic();
     void keyReflector(SDL_Keycode key, uint8_t keyState);
+    virtual bool loadScores() override;
+    virtual bool saveScores() override;
 
     typedef struct
     {
@@ -46,5 +47,6 @@ protected:
         SDL_Texture *texture;
     } App;
 
+    bool m_musicEnabled = false;
     App m_app;
 };

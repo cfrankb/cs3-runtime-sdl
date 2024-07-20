@@ -27,17 +27,14 @@
 #include "animator.h"
 #include "shared/music/mu_sdl.h"
 
-int startMusic(const char *filename);
-
 CGameMixin::CGameMixin()
 {
     m_game = new CGame();
     m_animator = new CAnimator();
     m_music = nullptr; // new CMusicSDL();
-    memset(m_joyState, 0, sizeof(m_joyState));
-    memset(m_hiscores, 0, sizeof(m_hiscores));
-    memset(m_keyStates, 0, sizeof(m_keyStates));
-    memset(m_keyRepeters, 0, sizeof(m_keyRepeters));
+    clearJoyStates();
+    clearScores();
+    clearKeyStates();
 }
 
 CGameMixin::~CGameMixin()
@@ -322,7 +319,14 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         sprintf(t, "LEVEL %.2d", m_game->level() + 1);
         break;
     case CGame::MODE_RESTART:
-        sprintf(t, "LIVES LEFT %.2d", m_game->lives());
+        if (m_game->lives() > 1)
+        {
+            sprintf(t, "LIVES LEFT %.2d", m_game->lives());
+        }
+        else
+        {
+            strcpy(t, "LAST LIFE !");
+        }
         break;
     case CGame::MODE_GAMEOVER:
         strcpy(t, "GAME OVER");
@@ -361,13 +365,19 @@ void CGameMixin::mainLoop()
         }
         if (game.mode() == CGame::MODE_GAMEOVER)
         {
+            if (!m_hiscoreEnabled)
+            {
+                restartGame();
+                return;
+            }
+
             game.setMode(CGame::MODE_HISCORES);
             if (!m_scoresLoaded)
             {
                 m_scoresLoaded = loadScores();
             }
             m_scoreRank = rankScore();
-            m_recordScore = m_scoreRank != -1;
+            m_recordScore = m_scoreRank != INVALID;
             m_countdown = HISCORE_DELAY;
             return;
         }
@@ -476,7 +486,6 @@ void CGameMixin::init(CMapArch *maparch, int index)
     m_game->setMapArch(maparch);
     m_game->setLevel(index);
     sanityTest();
-    //  loadScores();
     m_countdown = INTRO_DELAY;
     m_game->loadLevel(false);
 }
@@ -531,13 +540,14 @@ int CGameMixin::rankScore()
 
 void CGameMixin::drawScores(CFrame &bitmap)
 {
+
     char t[50];
     int y = 1;
     strcpy(t, "HALL OF HEROES");
     int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE);
     ++y;
-    strcpy(t, "==============");
+    strcpy(t, std::string(strlen(t), '=').c_str());
     x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE);
     y += 2;
@@ -567,7 +577,8 @@ void CGameMixin::drawScores(CFrame &bitmap)
     else if (m_recordScore)
     {
         strcpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.");
-        drawFont(bitmap, 0, y++ * FONT_SIZE, t, YELLOW);
+        x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+        drawFont(bitmap, x, y++ * FONT_SIZE, t, YELLOW);
     }
 }
 
@@ -639,7 +650,78 @@ bool CGameMixin::loadScores()
 {
     return true;
 }
+
 bool CGameMixin::saveScores()
 {
+    return true;
+}
+
+void CGameMixin::enableHiScore()
+{
+    m_hiscoreEnabled = true;
+}
+
+void CGameMixin::clearScores()
+{
+    memset(m_hiscores, 0, sizeof(m_hiscores));
+}
+
+void CGameMixin::clearKeyStates()
+{
+    memset(m_keyStates, 0, sizeof(m_keyStates));
+    memset(m_keyRepeters, 0, sizeof(m_keyRepeters));
+}
+
+void CGameMixin::clearJoyStates()
+{
+    memset(m_joyState, 0, sizeof(m_joyState));
+}
+
+bool CGameMixin::read(FILE *sfile, std::string &name)
+{
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
+    m_game->read(sfile);
+    clearJoyStates();
+    clearKeyStates();
+    readfile(&m_ticks, sizeof(m_ticks));
+    readfile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
+    readfile(&m_healthRef, sizeof(m_healthRef));
+    readfile(&m_countdown, sizeof(m_countdown));
+
+    size_t ptr = 0;
+    fseek(sfile, SAVENAME_PTR_OFFSET, SEEK_SET);
+    readfile(&ptr, sizeof(uint32_t));
+    fseek(sfile, ptr, SEEK_SET);
+    size_t size = 0;
+    readfile(&size, sizeof(uint16_t));
+    char *tmp = new char[size];
+    readfile(tmp, size);
+    name = tmp;
+    delete[] tmp;
+    return true;
+}
+
+bool CGameMixin::write(FILE *tfile, std::string &name)
+{
+    auto writefile = [tfile](auto ptr, auto size)
+    {
+        return fwrite(ptr, size, 1, tfile) == 1;
+    };
+
+    m_game->write(tfile);
+    writefile(&m_ticks, sizeof(m_ticks));
+    writefile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
+    writefile(&m_healthRef, sizeof(m_healthRef));
+    writefile(&m_countdown, sizeof(m_countdown));
+
+    size_t ptr = ftell(tfile);
+    size_t size = name.size();
+    writefile(&size, sizeof(uint16_t));
+    writefile(name.c_str(), name.size());
+    fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
+    writefile(&ptr, sizeof(uint32_t));
     return true;
 }

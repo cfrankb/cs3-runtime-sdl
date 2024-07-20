@@ -22,6 +22,8 @@
 #include <QTimer>
 #endif
 #include <cstdint>
+#include <cstdio>
+#include <string>
 
 class CFrameSet;
 class CGame;
@@ -37,14 +39,13 @@ public:
     virtual ~CGameMixin();
     void init(CMapArch *maparch, int index);
     inline bool within(int val, int min, int max);
+    void enableHiScore();
 
 #ifdef USE_QFILE
 protected slots:
 #endif
     void mainLoop();
     void changeZoom();
-    virtual bool loadScores();
-    virtual bool saveScores();
 
 protected:
     enum : uint32_t
@@ -77,6 +78,7 @@ protected:
         CARET = 0xff,
         KEY_REPETE_DELAY = 5,
         MAX_NAME_LENGTH = 16,
+        SAVENAME_PTR_OFFSET = 8,
     };
 
     enum KeyCode : uint8_t
@@ -133,6 +135,7 @@ protected:
     bool m_zoom = false;
     bool m_assetPreloaded = false;
     bool m_scoresLoaded = false;
+    bool m_hiscoreEnabled = false;
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
     virtual void preloadAssets();
@@ -148,6 +151,13 @@ protected:
     int rankScore();
     void drawScores(CFrame &bitmap);
     bool inputPlayerName();
+    void clearScores();
+    void clearKeyStates();
+    void clearJoyStates();
+    virtual bool loadScores();
+    virtual bool saveScores();
+    virtual bool read(FILE *sfile, std::string &name);
+    virtual bool write(FILE *tfile, std::string &name);
     virtual void setZoom(bool zoom);
 };
 

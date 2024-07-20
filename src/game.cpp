@@ -34,11 +34,13 @@
 #endif
 
 CMap map(30, 30);
-uint8_t CGame::m_keys[6];
+uint8_t CGame::m_keys[MAX_KEYS];
+
+constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
 CGame::CGame()
 {
-    m_monsterMax = MAX_MONSTERS;
+    m_monsterMax = DEFAULT_MAX_MONSTERS;
     m_monsters = new CActor[m_monsterMax];
     m_monsterCount = 0;
     m_health = 0;
@@ -609,6 +611,98 @@ void CGame::vDebug(const char *format, ...)
     va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
+}
+
+bool CGame::read(FILE *sfile)
+{
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
+
+    // TODO: check signature/version
+    uint32_t signature = 0;
+    readfile(&signature, sizeof(signature));
+    uint32_t version = 0;
+    readfile(&version, sizeof(version));
+
+    // ptr
+    uint32_t indexPtr = 0;
+    readfile(&indexPtr, sizeof(indexPtr));
+
+    // general information
+    readfile(&m_lives, sizeof(m_lives));
+    readfile(&m_health, sizeof(m_health));
+    readfile(&m_level, sizeof(m_level));
+    readfile(&m_nextLife, sizeof(m_nextLife));
+    readfile(&m_diamonds, sizeof(m_diamonds));
+    readfile(&m_godModeTimer, sizeof(m_godModeTimer));
+    readfile(m_keys, sizeof(m_keys));
+    readfile(&m_mode, sizeof(m_mode));
+    m_player.read(sfile);
+
+    // reading map
+    CMap &map = getMap();
+    map.read(sfile);
+
+    // monsters
+    decltype(m_monsterCount) count = 0;
+    readfile(&count, sizeof(m_monsterCount));
+    m_monsterCount = count;
+    if (count > m_monsterMax)
+    {
+        if (m_monsters)
+        {
+            delete[] m_monsters;
+        }
+        m_monsterMax = m_monsterCount + GROWBY_MONSTERS;
+        m_monsters = new CActor[m_monsterMax];
+    }
+    for (int i = 0; i < m_monsterCount; ++i)
+    {
+        m_monsters[i].read(sfile);
+    }
+    return true;
+}
+
+bool CGame::write(FILE *tfile)
+{
+    auto writefile = [tfile](auto ptr, auto size)
+    {
+        return fwrite(ptr, size, 1, tfile) == 1;
+    };
+
+    // writing signature/version
+    writefile(&GAME_SIGNATURE, sizeof(GAME_SIGNATURE));
+    uint32_t version = VERSION;
+    writefile(&version, sizeof(version));
+
+    // ptr
+    uint32_t indexPtr = 0;
+    writefile(&indexPtr, sizeof(indexPtr));
+
+    // write general information
+    writefile(&m_lives, sizeof(m_lives));
+    writefile(&m_health, sizeof(m_health));
+    writefile(&m_level, sizeof(m_level));
+    writefile(&m_nextLife, sizeof(m_nextLife));
+    writefile(&m_diamonds, sizeof(m_diamonds));
+    writefile(&m_godModeTimer, sizeof(m_godModeTimer));
+    writefile(m_keys, sizeof(m_keys));
+    writefile(&m_mode, sizeof(m_mode));
+    m_player.read(tfile);
+
+    // saving map
+    CMap &map = getMap();
+    map.write(tfile);
+
+    // monsters
+    writefile(&m_monsterCount, sizeof(m_monsterCount));
+    for (int i = 0; i < m_monsterCount; ++i)
+    {
+        m_monsters[i].write(tfile);
+    }
+    return true;
 }
 
 #ifdef USE_SDL_MIXER

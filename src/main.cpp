@@ -44,6 +44,8 @@ int main(int argc, char *args[])
     }
 
     runtime.init(&maparch, 0);
+    runtime.enableHiScore();
+    runtime.enableMusic();
     runtime.SDLInit();
     runtime.preRun();
     runtime.paint();

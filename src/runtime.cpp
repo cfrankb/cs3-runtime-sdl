@@ -178,7 +178,10 @@ void CRuntime::doInput()
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
                 m_game->setMode(CGame::MODE_INTRO);
-                initMusic();
+                if (m_musicEnabled)
+                {
+                    initMusic();
+                }
             }
             break;
 
@@ -306,12 +309,20 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 
 bool CRuntime::loadScores()
 {
-    printf("read hiscores\n");
+    printf("reading %s\n", HISCORE_FILE);
     CFileWrap file;
     if (file.open(HISCORE_FILE, "rb"))
     {
-        file.read(m_hiscores, sizeof(m_hiscores));
-        file.close();
+        if (file.getSize() == sizeof(m_hiscores))
+        {
+            file.read(m_hiscores, sizeof(m_hiscores));
+            file.close();
+        }
+        else
+        {
+            printf("size mismatch. resetting to default.\n");
+            clearScores();
+        }
         return true;
     }
     printf("can't read %s\n", HISCORE_FILE);
@@ -336,4 +347,9 @@ bool CRuntime::saveScores()
     }
     printf("can't write %s\n", HISCORE_FILE);
     return false;
+}
+
+void CRuntime::enableMusic()
+{
+    m_musicEnabled = true;
 }

@@ -18,6 +18,7 @@
 #ifndef __GAME_H
 #define __GAME_H
 #include <stdint.h>
+#include <cstdio>
 #include "actor.h"
 #include "map.h"
 
@@ -101,7 +102,7 @@ protected:
 
     enum
     {
-        MAX_MONSTERS = 128,
+        DEFAULT_MAX_MONSTERS = 128,
         GROWBY_MONSTERS = 64,
         MAX_HEALTH = 255,
         DEFAULT_HEALTH = 64,
@@ -114,6 +115,8 @@ protected:
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
+        VERSION = (0x0200 << 16) + 0x0000,
+        MAX_KEYS = 6,
     };
 
     int clearAttr(uint8_t attr);
@@ -124,5 +127,9 @@ protected:
     void addPoints(int points);
     void addLife();
     void vDebug(const char *format, ...);
+    bool read(FILE *sfile);
+    bool write(FILE *tfile);
+
+    friend class CGameMixin;
 };
 #endif

@@ -6,6 +6,7 @@ PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH -sEXPORTED_
 BPATH=build
 BNAME=cs3v2.html
 TARGET=$(BPATH)/$(BNAME)
+TEMPLATE=--shell-file src/template/body.html
 DEPS=$(BPATH)/runtime$(EXT) $(BPATH)/gamemixin$(EXT) $(BPATH)/main$(EXT) $(BPATH)/maparch$(EXT) $(BPATH)/game$(EXT) $(BPATH)/tilesdata$(EXT) $(BPATH)/animator$(EXT) $(BPATH)/level$(EXT) $(BPATH)/actor$(EXT) $(BPATH)/map$(EXT) $(BPATH)/FrameSet$(EXT) $(BPATH)/Frame$(EXT) $(BPATH)/DotArray$(EXT) $(BPATH)/helper$(EXT) $(BPATH)/PngMagic$(EXT) $(BPATH)/FileWrap$(EXT) $(BPATH)/mu_sdl$(EXT)
 EXT=.o
 
@@ -63,7 +64,7 @@ $(BPATH)/mu_sdl$(EXT): src/shared/music/mu_sdl.cpp src/shared/music/mu_sdl.h
 	$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@
 
 $(TARGET): $(DEPS)
-	$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@ --shell-file src/template/shell_minimal.html
+	$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)
 
 clean:
 	rm -rf $(BPATH)/*
