@@ -29,12 +29,15 @@ public:
     bool SDLInit();
     void doInput();
     void preRun();
-    void drawPreScreen(CFrame &bitmap);
-    void initMusic();
+    virtual bool loadScores() override;
+    virtual bool saveScores() override;
 
 protected:
     static void cleanup();
-    virtual void preloadAssets();
+    virtual void preloadAssets() override;
+    void drawPreScreen(CFrame &bitmap);
+    void initMusic();
+    void keyReflector(SDL_Keycode key, uint8_t keyState);
 
     typedef struct
     {

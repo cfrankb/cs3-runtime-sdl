@@ -270,7 +270,7 @@ int CGame::findMonsterAt(int x, int y)
             return i;
         }
     }
-    return -1;
+    return INVALID;
 }
 
 void CGame::manageMonsters(int ticks)
@@ -372,7 +372,7 @@ void CGame::manageMonsters(int ticks)
                 else if (defT.type == TYPE_MONSTER)
                 {
                     int j = findMonsterAt(p.x, p.y);
-                    if (j == -1)
+                    if (j == INVALID)
                         continue;
                     CActor &m = m_monsters[j];
                     m.setType(TYPE_VAMPLANT);

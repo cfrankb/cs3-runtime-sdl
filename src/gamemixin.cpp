@@ -35,6 +35,9 @@ CGameMixin::CGameMixin()
     m_animator = new CAnimator();
     m_music = nullptr; // new CMusicSDL();
     memset(m_joyState, 0, sizeof(m_joyState));
+    memset(m_hiscores, 0, sizeof(m_hiscores));
+    memset(m_keyStates, 0, sizeof(m_keyStates));
+    memset(m_keyRepeters, 0, sizeof(m_keyRepeters));
 }
 
 CGameMixin::~CGameMixin()
@@ -77,6 +80,16 @@ void CGameMixin::preloadAssets()
 
 void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color)
 {
+    static uint8_t caret[8]{
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+        0xff,
+    };
     uint32_t *rgba = frame.getRGB();
     const int rowPixels = frame.len();
     const int fontSize = 8;
@@ -84,8 +97,16 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
     const int textSize = strlen(text);
     for (int i = 0; i < textSize; ++i)
     {
-        const uint8_t c = static_cast<uint8_t>(text[i]) - ' ';
-        uint8_t *font = m_fontData + c * fontOffset;
+        uint8_t *font = nullptr;
+        if (static_cast<uint8_t>(text[i]) == CARET)
+        {
+            font = caret;
+        }
+        else
+        {
+            const uint8_t c = static_cast<uint8_t>(text[i]) - ' ';
+            font = m_fontData + c * fontOffset;
+        }
         for (int yy = 0; yy < fontSize; ++yy)
         {
             uint8_t bitFilter = 1;
@@ -315,6 +336,7 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
 
 void CGameMixin::mainLoop()
 {
+    ++m_ticks;
     CGame &game = *m_game;
     if (game.mode() != CGame::MODE_CLICKSTART &&
         m_countdown > 0)
@@ -324,6 +346,12 @@ void CGameMixin::mainLoop()
 
     switch (game.mode())
     {
+    case CGame::MODE_HISCORES:
+        if (m_recordScore && inputPlayerName())
+        {
+            m_recordScore = false;
+            saveScores();
+        }
     case CGame::MODE_INTRO:
     case CGame::MODE_RESTART:
     case CGame::MODE_GAMEOVER:
@@ -333,7 +361,23 @@ void CGameMixin::mainLoop()
         }
         if (game.mode() == CGame::MODE_GAMEOVER)
         {
-            restartGame();
+            game.setMode(CGame::MODE_HISCORES);
+            if (!m_scoresLoaded)
+            {
+                m_scoresLoaded = loadScores();
+            }
+            m_scoreRank = rankScore();
+            m_recordScore = m_scoreRank != -1;
+            m_countdown = HISCORE_DELAY;
+            return;
+        }
+        else if (game.mode() == CGame::MODE_HISCORES)
+        {
+            if (!m_recordScore)
+            {
+                restartGame();
+            }
+            return;
         }
         else
         {
@@ -384,8 +428,6 @@ void CGameMixin::mainLoop()
         }
     }
 
-    ++m_ticks;
-
     if (!game.isGameOver())
     {
         if (game.goalCount() == 0)
@@ -434,7 +476,7 @@ void CGameMixin::init(CMapArch *maparch, int index)
     m_game->setMapArch(maparch);
     m_game->setLevel(index);
     sanityTest();
-
+    //  loadScores();
     m_countdown = INTRO_DELAY;
     m_game->loadLevel(false);
 }
@@ -457,4 +499,147 @@ bool CGameMixin::within(int val, int min, int max)
 void CGameMixin::sanityTest()
 {
     // TODO: sanityTest() to be implemented in child class
+}
+
+int CGameMixin::rankScore()
+{
+    int score = m_game->score();
+    if (score <= m_hiscores[MAX_SCORES - 1].score)
+    {
+        return INVALID;
+    }
+
+    int i;
+    for (i = 0; i < MAX_SCORES; ++i)
+    {
+        if (score > m_hiscores[i].score)
+        {
+            break;
+        }
+    }
+
+    for (int j = MAX_SCORES - 2; j >= i; --j)
+    {
+        m_hiscores[j + 1] = m_hiscores[j];
+    }
+
+    m_hiscores[i].score = m_game->score();
+    m_hiscores[i].level = m_game->level() + 1;
+    memset(m_hiscores[i].name, 0, sizeof(m_hiscores[i].name));
+    return i;
+}
+
+void CGameMixin::drawScores(CFrame &bitmap)
+{
+    char t[50];
+    int y = 1;
+    strcpy(t, "HALL OF HEROES");
+    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE);
+    ++y;
+    strcpy(t, "==============");
+    x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE);
+    y += 2;
+
+    for (int i = 0; i < MAX_SCORES; ++i)
+    {
+        uint32_t color = i & 2 ? CYAN : BLUE;
+        if (m_recordScore && m_scoreRank == i)
+        {
+            color = YELLOW;
+        }
+        sprintf(t, "%.8d %.2d %s%c",
+                m_hiscores[i].score,
+                m_hiscores[i].level,
+                m_hiscores[i].name,
+                color == YELLOW ? CARET : '\0');
+        drawFont(bitmap, 1, y * FONT_SIZE, t, color);
+        ++y;
+    }
+
+    ++y;
+    if (m_scoreRank == INVALID)
+    {
+        strcpy(t, "SORRY, YOU DIDN'T QUALIFY.");
+        drawFont(bitmap, 0, y * FONT_SIZE, t, YELLOW);
+    }
+    else if (m_recordScore)
+    {
+        strcpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.");
+        drawFont(bitmap, 0, y++ * FONT_SIZE, t, YELLOW);
+    }
+}
+
+bool CGameMixin::inputPlayerName()
+{
+    auto between = [](uint16_t keyCode, uint16_t start, uint16_t end)
+    {
+        return keyCode >= start && keyCode <= end;
+    };
+
+    int j = m_scoreRank;
+    for (int k = 0; k < Key_Count; ++k)
+    {
+        m_keyRepeters[k] ? --m_keyRepeters[k] : 0;
+    }
+
+    for (int k = 0; k < Key_Count; ++k)
+    {
+        if (!m_keyStates[k])
+        {
+            m_keyRepeters[k] = 0;
+            continue;
+        }
+        else if (m_keyRepeters[k])
+        {
+            continue;
+        }
+
+        char c = 0;
+        if (between(k, Key_0, Key_9))
+        {
+            c = k + '0' - Key_0;
+        }
+        else if (between(k, Key_A, Key_Z))
+        {
+            c = k + 'A' - Key_A;
+        }
+        else if (k == Key_Space)
+        {
+            c = k + ' ' - Key_Space;
+        }
+        else if (k == Key_BackSpace)
+        {
+            m_keyRepeters[k] = KEY_REPETE_DELAY;
+            int i = strlen(m_hiscores[j].name);
+            if (i > 0)
+            {
+                m_hiscores[j].name[i - 1] = '\0';
+            }
+            continue;
+        }
+        else if (k == Key_Enter)
+        {
+            return true;
+        }
+        if (strlen(m_hiscores[j].name) == sizeof(m_hiscores[j].name) - 1)
+        {
+            // already at maxlenght
+            continue;
+        }
+        m_keyRepeters[k] = KEY_REPETE_DELAY;
+        char s[2] = {c, 0};
+        strcat(m_hiscores[j].name, s);
+    }
+    return false;
+}
+
+bool CGameMixin::loadScores()
+{
+    return true;
+}
+bool CGameMixin::saveScores()
+{
+    return true;
 }

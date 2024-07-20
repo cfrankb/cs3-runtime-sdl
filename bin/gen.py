@@ -34,7 +34,8 @@ def get_deps_blocks():
     objs = ' '.join(f'$(BPATH)/{x}$(EXT)' for x in deps)
     lines = []
     lines.append(f'$(TARGET): $(DEPS)')
-    lines.append(f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@')
+    lines.append(
+        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@ $(SHELL)')
     deps_blocks.append('\n'.join(lines))
     lines = []
     lines.append('clean:')
@@ -68,18 +69,18 @@ def main():
             'LIBS=-lSDL2_mixer -lSDL2 -lz',
             'CXXFLAGS=-O3',
             'PARGS=',
-            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)'
+            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'SHELL='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
     elif sys.argv[1] == 'emsdl':
         vars = [
-            'CXX=emcc',
+            'CXX=em++',
             'INC=',
-            'LIBS=-lopenal',
+            'LIBS=-lopenal -lidbfs.js',
             'CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -O2',
-            'PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH',
-            'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)'
+            'PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH -sEXPORTED_RUNTIME_METHODS=ccall,cwrap',
+            'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'SHELL=--shell-file src/template/shell_minimal.html'
         ]
         print("type `emmake make` to generare binary.")
         ext = '.o'

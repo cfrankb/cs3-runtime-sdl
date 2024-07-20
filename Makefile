@@ -1,8 +1,8 @@
-CXX=emcc
+CXX=em++
 INC=
-LIBS=-lopenal
+LIBS=-lopenal -lidbfs.js
 CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -O2
-PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH
+PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
 BPATH=build
 BNAME=cs3v2.html
 TARGET=$(BPATH)/$(BNAME)
@@ -63,7 +63,7 @@ $(BPATH)/mu_sdl$(EXT): src/shared/music/mu_sdl.cpp src/shared/music/mu_sdl.h
 	$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@
 
 $(TARGET): $(DEPS)
-	$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@
+	$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@ --shell-file src/template/shell_minimal.html
 
 clean:
 	rm -rf $(BPATH)/*

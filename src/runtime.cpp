@@ -23,8 +23,27 @@
 #include "shared/FileWrap.h"
 #include "shared/music/mu_sdl.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+const char HISCORE_FILE[] = "/offline/hiscores.dat";
+#else
+const char HISCORE_FILE[] = "hiscores.dat";
+#endif
+
 CRuntime::CRuntime() : CGameMixin()
 {
+#ifdef __EMSCRIPTEN__
+    EM_ASM(
+        // Make a directory other than '/'
+        FS.mkdir('/offline');
+        // Then mount with IDBFS type
+        FS.mount(IDBFS, {autoPersist : true}, '/offline');
+
+        // Then sync
+        FS.syncfs(true, function(err) {
+        console.log(FS.readdir('/offline'));
+        console.log(err); }));
+#endif
     memset(&m_app, 0, sizeof(App));
 }
 
@@ -48,6 +67,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_LEVEL:
         drawScreen(bitmap);
+        break;
+    case CGame::MODE_HISCORES:
+        drawScores(bitmap);
         break;
     case CGame::MODE_CLICKSTART:
         drawPreScreen(bitmap);
@@ -116,45 +138,31 @@ void CRuntime::doInput()
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
+        uint8_t keyState = KEY_RELEASED;
         switch (event.type)
         {
-        case SDL_KEYUP:
-            switch (event.key.keysym.sym)
-            {
-            case SDLK_UP:
-                m_joyState[AIM_UP] = KEY_RELEASED;
-                break;
-            case SDLK_DOWN:
-                m_joyState[AIM_DOWN] = KEY_RELEASED;
-                break;
-            case SDLK_LEFT:
-                m_joyState[AIM_LEFT] = KEY_RELEASED;
-                break;
-            case SDLK_RIGHT:
-                m_joyState[AIM_RIGHT] = KEY_RELEASED;
-                break;
-            default:
-                break;
-            }
-            break;
-
         case SDL_KEYDOWN:
+            keyState = KEY_PRESSED;
+        case SDL_KEYUP:
+            keyReflector(event.key.keysym.sym, keyState);
+
             switch (event.key.keysym.sym)
             {
             case SDLK_UP:
-                m_joyState[AIM_UP] = KEY_PRESSED;
-                break;
+                m_joyState[AIM_UP] = keyState;
+                continue;
             case SDLK_DOWN:
-                m_joyState[AIM_DOWN] = KEY_PRESSED;
-                break;
+                m_joyState[AIM_DOWN] = keyState;
+                continue;
             case SDLK_LEFT:
-                m_joyState[AIM_LEFT] = KEY_PRESSED;
-                break;
+                m_joyState[AIM_LEFT] = keyState;
+                continue;
             case SDLK_RIGHT:
-                m_joyState[AIM_RIGHT] = KEY_PRESSED;
-                break;
-            default:
-                break;
+                m_joyState[AIM_RIGHT] = keyState;
+                continue;
+            case SDLK_SPACE:
+            case SDLK_LSHIFT:
+                continue;
             }
             break;
 
@@ -236,7 +244,9 @@ void CRuntime::preloadAssets()
 
 void CRuntime::preRun()
 {
+#ifdef __EMSCRIPTEN__
     m_game->setMode(CGame::MODE_CLICKSTART);
+#endif
 }
 
 void CRuntime::drawPreScreen(CFrame &bitmap)
@@ -256,4 +266,74 @@ void CRuntime::initMusic()
     {
         m_music->play();
     }
+}
+
+void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
+{
+    auto between = [](uint16_t keyCode, uint16_t start, uint16_t end)
+    {
+        return keyCode >= start && keyCode <= end;
+    };
+
+    uint16_t result;
+    if (between(key, SDLK_0, SDLK_9))
+    {
+        result = key - SDLK_0 + Key_0;
+    }
+    else if (between(key, SDLK_a, SDLK_z))
+    {
+        result = key - SDLK_a + Key_A;
+    }
+    else
+    {
+        switch (key)
+        {
+        case SDLK_SPACE:
+            result = Key_Space;
+            break;
+        case SDLK_BACKSPACE:
+            result = Key_BackSpace;
+            break;
+        case SDLK_RETURN:
+            result = Key_Enter;
+            break;
+        default:
+            return;
+        }
+    }
+    m_keyStates[result] = keyState;
+}
+
+bool CRuntime::loadScores()
+{
+    printf("read hiscores\n");
+    CFileWrap file;
+    if (file.open(HISCORE_FILE, "rb"))
+    {
+        file.read(m_hiscores, sizeof(m_hiscores));
+        file.close();
+        return true;
+    }
+    printf("can't read %s\n", HISCORE_FILE);
+    return false;
+}
+
+bool CRuntime::saveScores()
+{
+    CFileWrap file;
+    if (file.open(HISCORE_FILE, "wb"))
+    {
+        file.write(m_hiscores, sizeof(m_hiscores));
+        file.close();
+#ifdef __EMSCRIPTEN__
+        EM_ASM(
+            FS.syncfs(function(err) {
+                // Error
+                console.log(err);
+            }));
+#endif
+        return true;
+    }
+    printf("can't write %s\n", HISCORE_FILE);
+    return false;
 }

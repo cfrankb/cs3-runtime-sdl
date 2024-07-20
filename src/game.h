@@ -71,11 +71,12 @@ public:
 
     enum
     {
-        MODE_INTRO = 0,
-        MODE_LEVEL = 1,
-        MODE_RESTART = 2,
-        MODE_GAMEOVER = 3,
-        MODE_CLICKSTART = 4,
+        MODE_INTRO,
+        MODE_LEVEL,
+        MODE_RESTART,
+        MODE_GAMEOVER,
+        MODE_CLICKSTART,
+        MODE_HISCORES,
     };
 
 protected:
@@ -112,6 +113,7 @@ protected:
         EXTRASPEED_TIMER = 200,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
+        INVALID = -1,
     };
 
     int clearAttr(uint8_t attr);
