@@ -225,20 +225,19 @@
   </body>
 </html>
 <script>
-  function byID1(id) {
+  function byID(id) {
     return document.getElementById(id);
   }
 
   function toggle(id) {
-    let el = byID1(id);
+    let el = byID(id);
     if (el) {
       el.style.display = el.style.display == "block" ? "none" : "block";
     }
   }
 
   function show(id, b) {
-    let el = byID1(id);
-    console.log(id, el);
+    let el = byID(id);
     if (el) {
       el.style.display = b ? "block" : "none";
     }

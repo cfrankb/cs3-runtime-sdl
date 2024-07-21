@@ -97,7 +97,7 @@ protected:
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0000,
+        VERSION = (0x0200 << 16) + 0x0001,
         MAX_KEYS = 6,
     };
 

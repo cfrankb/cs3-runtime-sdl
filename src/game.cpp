@@ -40,6 +40,8 @@ constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
 CGame::CGame()
 {
+    printf("staring up version: 0x%.8x\n", VERSION);
+
     m_monsterMax = DEFAULT_MAX_MONSTERS;
     m_monsters = new CActor[m_monsterMax];
     m_monsterCount = 0;
@@ -650,7 +652,7 @@ bool CGame::read(FILE *sfile)
     readfile(&m_diamonds, sizeof(m_diamonds));
     readfile(&m_godModeTimer, sizeof(m_godModeTimer));
     readfile(m_keys, sizeof(m_keys));
-    //    readfile(&m_mode, sizeof(m_mode));
+    readfile(&m_score, sizeof(m_score));
     m_player.read(sfile);
 
     // reading map
@@ -701,6 +703,7 @@ bool CGame::write(FILE *tfile)
     writefile(&m_diamonds, sizeof(m_diamonds));
     writefile(&m_godModeTimer, sizeof(m_godModeTimer));
     writefile(m_keys, sizeof(m_keys));
+    writefile(&m_score, sizeof(m_score));
     m_player.write(tfile);
 
     // saving map
