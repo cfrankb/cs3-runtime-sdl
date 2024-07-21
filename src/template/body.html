@@ -112,10 +112,20 @@
       />
     </div>
     <div id="buttonbox">
-      <button title="" onclick="toggle('output');">Console</button> &nbsp;
-      <button title="">Mute</button> &nbsp;
-      <button title="">Load</button> &nbsp;
-      <button title="">Save</button>
+      <button onclick="toggle('output');">Console</button> &nbsp;
+      <button
+        onclick="Module.ccall('mute',  'number',  ['number'], [this.innerHTML=='Mute'?0:1]); this.innerHTML = (this.innerHTML =='Mute'? 'Play':'Mute'); "
+      >
+        Mute
+      </button>
+      &nbsp;
+      <button onclick="Module.ccall('savegame',  'number',  ['number'], [0]);">
+        Load
+      </button>
+      &nbsp;
+      <button onclick="Module.ccall('savegame',  'number',  ['number'], [1]);">
+        Save
+      </button>
     </div>
     <hr />
     <textarea class="emscripten" id="output" rows="8"></textarea>
@@ -215,19 +225,19 @@
   </body>
 </html>
 <script>
-  function byID(id) {
+  function byID1(id) {
     return document.getElementById(id);
   }
 
   function toggle(id) {
-    let el = byID(id); // document.getElementById(id);
+    let el = byID1(id);
     if (el) {
       el.style.display = el.style.display == "block" ? "none" : "block";
     }
   }
 
   function show(id, b) {
-    let el = byID(id); //document.getElementById(id);
+    let el = byID1(id);
     console.log(id, el);
     if (el) {
       el.style.display = b ? "block" : "none";

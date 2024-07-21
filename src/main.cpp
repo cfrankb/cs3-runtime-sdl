@@ -19,11 +19,41 @@
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
 
 #define FPS 24
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+CRuntime *g_runtime = nullptr;
+extern "C"
+{
+    int savegame(int x)
+    {
+        if (x == 0)
+        {
+            g_runtime->load();
+        }
+        else
+        {
+            g_runtime->save();
+        }
+        return 0;
+    }
+
+    int mute(int x)
+    {
+        if (x == 0)
+        {
+            g_runtime->stopMusic();
+        }
+        else
+        {
+            g_runtime->startMusic();
+        }
+        return 0;
+    }
+}
+#endif
 
 void loop_handler(void *arg)
 {
@@ -50,6 +80,7 @@ int main(int argc, char *args[])
     runtime.preRun();
     runtime.paint();
 #ifdef __EMSCRIPTEN__
+    g_runtime = &runtime;
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 // emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, 1000/FPS*1000);
 #else

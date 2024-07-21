@@ -26,8 +26,10 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 const char HISCORE_FILE[] = "/offline/hiscores.dat";
+const char SAVEGAME_FILE[] = "/offline/savegame.dat";
 #else
 const char HISCORE_FILE[] = "hiscores.dat";
+const char SAVEGAME_FILE[] = "savegame.dat";
 #endif
 
 CRuntime::CRuntime() : CGameMixin()
@@ -41,8 +43,11 @@ CRuntime::CRuntime() : CGameMixin()
 
         // Then sync
         FS.syncfs(true, function(err) {
-        console.log(FS.readdir('/offline'));
-        console.log(err); }));
+            console.log(FS.readdir('/offline'));
+            if (err)
+            {
+                console.log(err);
+            } }));
 #endif
     memset(&m_app, 0, sizeof(App));
 }
@@ -163,6 +168,12 @@ void CRuntime::doInput()
             case SDLK_SPACE:
             case SDLK_LSHIFT:
                 continue;
+            case SDLK_HOME:
+                save();
+                break;
+            case SDLK_END:
+                load();
+                break;
             }
             break;
 
@@ -340,7 +351,10 @@ bool CRuntime::saveScores()
         EM_ASM(
             FS.syncfs(function(err) {
                 // Error
-                console.log(err);
+                if (err)
+                {
+                    console.log(err);
+                }
             }));
 #endif
         return true;
@@ -352,4 +366,72 @@ bool CRuntime::saveScores()
 void CRuntime::enableMusic()
 {
     m_musicEnabled = true;
+}
+
+void CRuntime::stopMusic()
+{
+    if (m_music)
+    {
+        m_music->stop();
+    }
+}
+
+void CRuntime::startMusic()
+{
+    if (m_music)
+    {
+        m_music->play();
+    }
+}
+
+void CRuntime::save()
+{
+    if (m_game->mode() != CGame::MODE_LEVEL)
+    {
+        printf("cannot save while not playing\n");
+        return;
+    }
+
+    printf("writing: %s\n", SAVEGAME_FILE);
+    std::string name{"Testing123"};
+    FILE *tfile = fopen(SAVEGAME_FILE, "wb");
+    if (tfile)
+    {
+        write(tfile, name);
+        fclose(tfile);
+#ifdef __EMSCRIPTEN__
+        EM_ASM(
+            FS.syncfs(function(err) {
+                // Error
+                if (err)
+                {
+                    console.log(err);
+                }
+            }));
+#endif
+    }
+    else
+    {
+        printf("can't write:%s\n", SAVEGAME_FILE);
+    }
+}
+
+void CRuntime::load()
+{
+    m_game->setMode(CGame::MODE_IDLE);
+
+    std::string name;
+    printf("reading: %s\n", SAVEGAME_FILE);
+    FILE *sfile = fopen(SAVEGAME_FILE, "rb");
+    if (sfile)
+    {
+        read(sfile, name);
+        fclose(sfile);
+    }
+    else
+    {
+        printf("can't read:%s\n", SAVEGAME_FILE);
+    }
+
+    m_game->setMode(CGame::MODE_LEVEL);
 }

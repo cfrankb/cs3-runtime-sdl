@@ -620,11 +620,23 @@ bool CGame::read(FILE *sfile)
         return fread(ptr, size, 1, sfile) == 1;
     };
 
-    // TODO: check signature/version
+    // check signature/version
     uint32_t signature = 0;
     readfile(&signature, sizeof(signature));
     uint32_t version = 0;
     readfile(&version, sizeof(version));
+    if (memcmp(GAME_SIGNATURE, &signature, sizeof(GAME_SIGNATURE)) != 0)
+    {
+        char sig[5] = {0, 0, 0, 0, 0};
+        memcpy(sig, &signature, sizeof(signature));
+        printf("savegame signature mismatched: %s\n", sig);
+        return false;
+    }
+    if (version != VERSION)
+    {
+        printf("savegame version mismatched: 0x%.8x\n", version);
+        return false;
+    }
 
     // ptr
     uint32_t indexPtr = 0;
@@ -638,7 +650,7 @@ bool CGame::read(FILE *sfile)
     readfile(&m_diamonds, sizeof(m_diamonds));
     readfile(&m_godModeTimer, sizeof(m_godModeTimer));
     readfile(m_keys, sizeof(m_keys));
-    readfile(&m_mode, sizeof(m_mode));
+    //    readfile(&m_mode, sizeof(m_mode));
     m_player.read(sfile);
 
     // reading map
@@ -689,8 +701,7 @@ bool CGame::write(FILE *tfile)
     writefile(&m_diamonds, sizeof(m_diamonds));
     writefile(&m_godModeTimer, sizeof(m_godModeTimer));
     writefile(m_keys, sizeof(m_keys));
-    writefile(&m_mode, sizeof(m_mode));
-    m_player.read(tfile);
+    m_player.write(tfile);
 
     // saving map
     CMap &map = getMap();

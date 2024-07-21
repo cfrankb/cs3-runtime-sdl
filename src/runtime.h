@@ -30,6 +30,10 @@ public:
     void doInput();
     void preRun();
     void enableMusic();
+    void stopMusic();
+    void startMusic();
+    void save();
+    void load();
 
 protected:
     static void cleanup();

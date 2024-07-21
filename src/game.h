@@ -70,7 +70,7 @@ public:
     void playSound(int id);
     void playTileSound(int tileID);
 
-    enum
+    enum GameMode
     {
         MODE_INTRO,
         MODE_LEVEL,
@@ -78,28 +78,10 @@ public:
         MODE_GAMEOVER,
         MODE_CLICKSTART,
         MODE_HISCORES,
+        MODE_IDLE,
     };
 
 protected:
-    int m_lives = 0;
-    int m_health = 0;
-    int m_level = 0;
-    int m_score = 0;
-    int m_nextLife = SCORE_LIFE;
-    int m_diamonds = 0;
-    int32_t m_godModeTimer = 0;
-    int32_t m_extraSpeedTimer = 0;
-    static uint8_t m_keys[6];
-    int m_mode;
-    // monsters
-    CActor *m_monsters;
-    int m_monsterCount;
-    int m_monsterMax;
-    CActor m_player;
-    CMapArch *m_mapArch = nullptr;
-    ISound *m_sound = nullptr;
-    uint8_t m_soundMap[256];
-
     enum
     {
         DEFAULT_MAX_MONSTERS = 128,
@@ -118,6 +100,25 @@ protected:
         VERSION = (0x0200 << 16) + 0x0000,
         MAX_KEYS = 6,
     };
+
+    int m_lives = 0;
+    int m_health = 0;
+    int m_level = 0;
+    int m_score = 0;
+    int m_nextLife = SCORE_LIFE;
+    int m_diamonds = 0;
+    int32_t m_godModeTimer = 0;
+    int32_t m_extraSpeedTimer = 0;
+    static uint8_t m_keys[MAX_KEYS];
+    int m_mode;
+    // monsters
+    CActor *m_monsters;
+    int m_monsterCount;
+    int m_monsterMax;
+    CActor m_player;
+    CMapArch *m_mapArch = nullptr;
+    ISound *m_sound = nullptr;
+    uint8_t m_soundMap[256];
 
     int clearAttr(uint8_t attr);
     bool findMonsters();

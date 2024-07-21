@@ -394,6 +394,7 @@ void CGameMixin::mainLoop()
             game.setMode(CGame::MODE_LEVEL);
         }
         break;
+    case CGame::MODE_IDLE:
     case CGame::MODE_CLICKSTART:
         return;
     }
