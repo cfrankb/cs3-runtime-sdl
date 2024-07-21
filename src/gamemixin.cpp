@@ -31,7 +31,7 @@ CGameMixin::CGameMixin()
 {
     m_game = new CGame();
     m_animator = new CAnimator();
-    m_music = nullptr; // new CMusicSDL();
+    m_prompt = PROMPT_NONE;
     clearJoyStates();
     clearScores();
     clearKeyStates();
@@ -287,15 +287,42 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // draw game status
     char tmp[32];
-    int bx = 0;
-    sprintf(tmp, "%.8d ", game.score());
-    drawFont(bitmap, 0, 2, tmp, WHITE);
-    bx += strlen(tmp);
-    sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
-    drawFont(bitmap, bx * FONT_SIZE, 2, tmp, YELLOW);
-    bx += strlen(tmp);
-    sprintf(tmp, "LIVES %.2d ", game.lives());
-    drawFont(bitmap, bx * FONT_SIZE, 2, tmp, PURPLE);
+    if (m_pause)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "PRESS [F4] TO RESUME PLAYING...", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_ERASE_SCORES)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "ERASE HIGH SCORES, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_RESTART_GAME)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "RESTART GAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_LOAD)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "LOAD PREVIOUS SAVEGAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_SAVE)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "SAVE GAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_HARDCORE)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "HARDCORE MODE, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else
+    {
+        int bx = 0;
+        sprintf(tmp, "%.8d ", game.score());
+        drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
+        bx += strlen(tmp);
+        sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, YELLOW);
+        bx += strlen(tmp);
+        sprintf(tmp, "LIVES %.2d ", game.lives());
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
+    }
 
     // draw bottom rect
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, DARKGRAY, true);
@@ -399,6 +426,23 @@ void CGameMixin::mainLoop()
         return;
     }
 
+    manageGamePlay();
+}
+
+void CGameMixin::manageGamePlay()
+{
+    CGame &game = *m_game;
+    if (handlePrompts())
+    {
+        return;
+    }
+
+    handleFunctionKeys();
+    if (m_pause)
+    {
+        return;
+    }
+
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
         game.managePlayer(m_joyState);
@@ -465,6 +509,7 @@ void CGameMixin::restartLevel()
 
 void CGameMixin::restartGame()
 {
+    m_pause = false;
     startCountdown(COUNTDOWN_RESTART);
     m_game->restartGame();
     sanityTest();
@@ -541,7 +586,6 @@ int CGameMixin::rankScore()
 
 void CGameMixin::drawScores(CFrame &bitmap)
 {
-
     char t[50];
     int y = 1;
     strcpy(t, "HALL OF HEROES");
@@ -583,9 +627,83 @@ void CGameMixin::drawScores(CFrame &bitmap)
     }
 }
 
+bool CGameMixin::handlePrompts()
+{
+    auto result = m_prompt != PROMPT_NONE;
+    if (m_prompt != PROMPT_NONE && m_keyStates[Key_N])
+    {
+        m_prompt = PROMPT_NONE;
+    }
+    else if (m_keyStates[Key_Y])
+    {
+        if (m_prompt == PROMPT_ERASE_SCORES)
+        {
+            clearScores();
+            saveScores();
+        }
+        else if (m_prompt == PROMPT_RESTART_GAME)
+        {
+            restartGame();
+        }
+        else if (m_prompt == PROMPT_LOAD)
+        {
+            load();
+        }
+        else if (m_prompt == PROMPT_SAVE)
+        {
+            save();
+        }
+        else if (m_prompt == PROMPT_HARDCORE)
+        {
+            m_game->setLives(1);
+        }
+        m_prompt = PROMPT_NONE;
+    }
+    return result;
+}
+
+void CGameMixin::handleFunctionKeys()
+{
+    for (int k = Key_F1; k <= Key_F12; ++k)
+    {
+        if (!m_keyStates[k])
+        {
+            // keyup
+            m_keyRepeters[k] = 0;
+            continue;
+        }
+        else if (m_keyRepeters[k])
+        {
+            // avoid keys repeating
+            continue;
+        }
+        switch (k)
+        {
+        case Key_F2: // restart game
+            m_prompt = PROMPT_RESTART_GAME;
+            break;
+        case Key_F3: // erase score
+            m_prompt = PROMPT_ERASE_SCORES;
+            break;
+        case Key_F4:
+            m_pause = !m_pause;
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+        case Key_F9:
+            m_prompt = PROMPT_LOAD;
+            break;
+        case Key_F10:
+            m_prompt = PROMPT_SAVE;
+            break;
+        case Key_F12:
+            m_prompt = PROMPT_HARDCORE;
+        }
+    }
+}
+
 bool CGameMixin::inputPlayerName()
 {
-    auto between = [](uint16_t keyCode, uint16_t start, uint16_t end)
+    auto range = [](uint16_t keyCode, uint16_t start, uint16_t end)
     {
         return keyCode >= start && keyCode <= end;
     };
@@ -607,13 +725,12 @@ bool CGameMixin::inputPlayerName()
         {
             continue;
         }
-
         char c = 0;
-        if (between(k, Key_0, Key_9))
+        if (range(k, Key_0, Key_9))
         {
             c = k + '0' - Key_0;
         }
-        else if (between(k, Key_A, Key_Z))
+        else if (range(k, Key_A, Key_Z))
         {
             c = k + 'A' - Key_A;
         }
@@ -634,6 +751,12 @@ bool CGameMixin::inputPlayerName()
         else if (k == Key_Enter)
         {
             return true;
+        }
+        else
+        {
+            // don't handle any other keys
+            m_keyRepeters[k] = 0;
+            continue;
         }
         if (strlen(m_hiscores[j].name) == sizeof(m_hiscores[j].name) - 1)
         {
@@ -687,6 +810,7 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     m_game->read(sfile);
     clearJoyStates();
     clearKeyStates();
+    m_pause = false;
     readfile(&m_ticks, sizeof(m_ticks));
     readfile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
     readfile(&m_healthRef, sizeof(m_healthRef));
@@ -711,7 +835,6 @@ bool CGameMixin::write(FILE *tfile, std::string &name)
     {
         return fwrite(ptr, size, 1, tfile) == 1;
     };
-
     m_game->write(tfile);
     writefile(&m_ticks, sizeof(m_ticks));
     writefile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
@@ -725,4 +848,13 @@ bool CGameMixin::write(FILE *tfile, std::string &name)
     fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
     writefile(&ptr, sizeof(uint32_t));
     return true;
+}
+
+void CGameMixin::drawPreScreen(CFrame &bitmap)
+{
+    const char t[] = "CLICK TO START";
+    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    int y = (HEIGHT - FONT_SIZE) / 2;
+    bitmap.fill(BLACK);
+    drawFont(bitmap, x, y, t, WHITE);
 }

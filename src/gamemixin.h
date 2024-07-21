@@ -46,6 +46,8 @@ protected slots:
 #endif
     void mainLoop();
     void changeZoom();
+    virtual void save() {};
+    virtual void load() {};
 
 protected:
     enum : uint32_t
@@ -77,20 +79,47 @@ protected:
         MAX_SCORES = 18,
         CARET = 0xff,
         KEY_REPETE_DELAY = 5,
+        KEY_NO_REPETE = 1,
         MAX_NAME_LENGTH = 16,
         SAVENAME_PTR_OFFSET = 8,
+        Y_STATUS = 2,
     };
 
     enum KeyCode : uint8_t
     {
         Key_A,
+        Key_N = Key_A + 13,
+        Key_Y = Key_A + 24,
         Key_Z = Key_A + 25,
         Key_Space,
         Key_0,
         Key_9 = Key_0 + 9,
         Key_BackSpace,
         Key_Enter,
+        Key_F1,
+        Key_F2,
+        Key_F3,
+        Key_F4,
+        Key_F5,
+        Key_F6,
+        Key_F7,
+        Key_F8,
+        Key_F9,
+        Key_F10,
+        Key_F11,
+        Key_F12,
         Key_Count
+    };
+
+    enum
+    {
+        PROMPT_NONE,
+        PROMPT_ERASE_SCORES,
+        PROMPT_RESTART_GAME,
+        PROMPT_LOAD,
+        PROMPT_SAVE,
+        PROMPT_RESTART_LEVEL,
+        PROMPT_HARDCORE,
     };
 
     enum
@@ -117,7 +146,6 @@ protected:
     };
 
     hiscore_t m_hiscores[MAX_SCORES];
-    IMusic *m_music = nullptr;
     uint8_t m_joyState[4];
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
@@ -136,6 +164,9 @@ protected:
     bool m_assetPreloaded = false;
     bool m_scoresLoaded = false;
     bool m_hiscoreEnabled = false;
+    bool m_pause = false;
+    int m_prompt = PROMPT_NONE;
+    void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
     virtual void preloadAssets();
@@ -154,6 +185,9 @@ protected:
     void clearScores();
     void clearKeyStates();
     void clearJoyStates();
+    void manageGamePlay();
+    void handleFunctionKeys();
+    bool handlePrompts();
     virtual bool loadScores();
     virtual bool saveScores();
     virtual bool read(FILE *sfile, std::string &name);

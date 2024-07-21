@@ -44,11 +44,9 @@ CRuntime::CRuntime() : CGameMixin()
         // Then sync
         FS.syncfs(true, function(err) {
             console.log(FS.readdir('/offline'));
-            if (err)
-            {
-                console.log(err);
-            } }));
+            err ? console.log(err) : null; }));
 #endif
+    m_music = nullptr; // new CMusicSDL();
     memset(&m_app, 0, sizeof(App));
 }
 
@@ -165,15 +163,6 @@ void CRuntime::doInput()
             case SDLK_RIGHT:
                 m_joyState[AIM_RIGHT] = keyState;
                 continue;
-            case SDLK_SPACE:
-            case SDLK_LSHIFT:
-                continue;
-            case SDLK_HOME:
-                save();
-                break;
-            case SDLK_END:
-                load();
-                break;
             }
             break;
 
@@ -189,6 +178,10 @@ void CRuntime::doInput()
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
                 m_game->setMode(CGame::MODE_INTRO);
+#ifdef __EMSCRIPTEN__
+                EM_ASM(
+                    enableButtons(););
+#endif
                 if (m_musicEnabled)
                 {
                     initMusic();
@@ -263,15 +256,6 @@ void CRuntime::preRun()
 #endif
 }
 
-void CRuntime::drawPreScreen(CFrame &bitmap)
-{
-    const char t[] = "CLICK TO START";
-    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
-    int y = (HEIGHT - FONT_SIZE) / 2;
-    bitmap.fill(BLACK);
-    drawFont(bitmap, x, y, t, WHITE);
-}
-
 void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
@@ -284,19 +268,23 @@ void CRuntime::initMusic()
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 {
-    auto between = [](uint16_t keyCode, uint16_t start, uint16_t end)
+    auto range = [](auto keyCode, auto start, auto end)
     {
         return keyCode >= start && keyCode <= end;
     };
 
     uint16_t result;
-    if (between(key, SDLK_0, SDLK_9))
+    if (range(key, SDLK_0, SDLK_9))
     {
         result = key - SDLK_0 + Key_0;
     }
-    else if (between(key, SDLK_a, SDLK_z))
+    else if (range(key, SDLK_a, SDLK_z))
     {
         result = key - SDLK_a + Key_A;
+    }
+    else if (range(key, SDLK_F1, SDLK_F12))
+    {
+        result = key - SDLK_F1 + Key_F1;
     }
     else
     {
@@ -351,10 +339,7 @@ bool CRuntime::saveScores()
         EM_ASM(
             FS.syncfs(function(err) {
                 // Error
-                if (err)
-                {
-                    console.log(err);
-                }
+                err ? console.log(err) : null;
             }));
 #endif
         return true;
@@ -382,6 +367,10 @@ void CRuntime::startMusic()
     {
         m_music->play();
     }
+    else
+    {
+        initMusic();
+    }
 }
 
 void CRuntime::save()
@@ -403,10 +392,7 @@ void CRuntime::save()
         EM_ASM(
             FS.syncfs(function(err) {
                 // Error
-                if (err)
-                {
-                    console.log(err);
-                }
+                err ? console.log(err) : null;
             }));
 #endif
     }
@@ -419,7 +405,6 @@ void CRuntime::save()
 void CRuntime::load()
 {
     m_game->setMode(CGame::MODE_IDLE);
-
     std::string name;
     printf("reading: %s\n", SAVEGAME_FILE);
     FILE *sfile = fopen(SAVEGAME_FILE, "rb");
@@ -432,6 +417,5 @@ void CRuntime::load()
     {
         printf("can't read:%s\n", SAVEGAME_FILE);
     }
-
     m_game->setMode(CGame::MODE_LEVEL);
 }

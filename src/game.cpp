@@ -36,11 +36,11 @@
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 
-constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
 CGame::CGame()
 {
-    printf("staring up version: 0x%.8x\n", VERSION);
+    vDebug("staring up version: 0x%.8x\n", VERSION);
 
     m_monsterMax = DEFAULT_MAX_MONSTERS;
     m_monsters = new CActor[m_monsterMax];
@@ -717,6 +717,11 @@ bool CGame::write(FILE *tfile)
         m_monsters[i].write(tfile);
     }
     return true;
+}
+
+void CGame::setLives(int lives)
+{
+    m_lives = lives;
 }
 
 #ifdef USE_SDL_MIXER

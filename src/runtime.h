@@ -32,13 +32,12 @@ public:
     void enableMusic();
     void stopMusic();
     void startMusic();
-    void save();
-    void load();
+    virtual void save() override;
+    virtual void load() override;
 
 protected:
     static void cleanup();
     virtual void preloadAssets() override;
-    void drawPreScreen(CFrame &bitmap);
     void initMusic();
     void keyReflector(SDL_Keycode key, uint8_t keyState);
     virtual bool loadScores() override;
@@ -51,6 +50,7 @@ protected:
         SDL_Texture *texture;
     } App;
 
+    IMusic *m_music = nullptr;
     bool m_musicEnabled = false;
     App m_app;
 };

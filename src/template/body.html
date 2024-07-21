@@ -112,18 +112,29 @@
       />
     </div>
     <div id="buttonbox">
-      <button onclick="toggle('output');">Console</button> &nbsp;
+      <button id="btnOutput" onclick="toggle('output');">Console</button>
+      &nbsp;
       <button
+        id="btnMute"
+        disabled
         onclick="Module.ccall('mute',  'number',  ['number'], [this.innerHTML=='Mute'?0:1]); this.innerHTML = (this.innerHTML =='Mute'? 'Play':'Mute'); "
       >
         Mute
       </button>
       &nbsp;
-      <button onclick="Module.ccall('savegame',  'number',  ['number'], [0]);">
+      <button
+        disabled
+        id="btnLoad"
+        onclick="Module.ccall('savegame',  'number',  ['number'], [0]);"
+      >
         Load
       </button>
       &nbsp;
-      <button onclick="Module.ccall('savegame',  'number',  ['number'], [1]);">
+      <button
+        disabled
+        id="btnSave"
+        onclick="Module.ccall('savegame',  'number',  ['number'], [1]);"
+      >
         Save
       </button>
     </div>
@@ -225,6 +236,16 @@
   </body>
 </html>
 <script>
+  function setStatus(s) {
+    Module.setStatus(s);
+  }
+
+  function enableButtons() {
+    byID("btnSave").disabled = false;
+    byID("btnLoad").disabled = false;
+    byID("btnMute").disabled = false;
+  }
+
   function byID(id) {
     return document.getElementById(id);
   }

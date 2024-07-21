@@ -69,6 +69,7 @@ public:
     bool readSndArch(IFile &file);
     void playSound(int id);
     void playTileSound(int tileID);
+    void setLives(int lives);
 
     enum GameMode
     {
@@ -97,7 +98,7 @@ protected:
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0001,
+        VERSION = (0x0200 << 16) + 0x0002,
         MAX_KEYS = 6,
     };
 

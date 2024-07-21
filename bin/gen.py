@@ -84,6 +84,7 @@ def main():
         ]
         print("type `emmake make` to generare binary.")
         ext = '.o'
+    print("type `make clean` to delete the content of the build folder.")
 
     deps_blocks, objs = get_deps_blocks()
     vars.append(f'DEPS={objs}')

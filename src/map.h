@@ -56,6 +56,8 @@ public:
     const char *lastError();
     CMap &operator=(const CMap &map);
     bool fromMemory(uint8_t *mem);
+    const char *title();
+    void setTitle(const char *title);
 
     enum : uint16_t
     {
@@ -76,6 +78,7 @@ protected:
     int m_size;
     AttrMap m_attrs;
     std::string m_lastError;
+    std::string m_title;
     static uint16_t toKey(const uint8_t x, const uint8_t y);
 };
 
