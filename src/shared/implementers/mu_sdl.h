@@ -18,7 +18,7 @@
 #ifndef MU_SDL_H
 #define MU_SDL_H
 
-#include "IMusic.h"
+#include "../interfaces/IMusic.h"
 #include "SDL2/SDL_mixer.h"
 
 class CMusicSDL : public IMusic

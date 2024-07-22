@@ -1,6 +1,6 @@
 /*
-    cs3-runtime-sdl
-    Copyright (C) 2024  Francois Blanchette
+    LGCK Builder Runtime
+    Copyright (C) 1999, 2013  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -15,39 +15,26 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CANIMATOR_H
-#define CANIMATOR_H
 
-#include <inttypes.h>
+#ifndef ISOUND_H
+#define ISOUND_H
 
-class CAnimator
+class ISound
 {
 public:
-    CAnimator();
-    ~CAnimator();
-    void animate();
-    uint8_t at(uint8_t tileID);
-    int offset();
-    bool isSpecialCase(uint8_t tileID);
-
-protected:
-    using animzSeq_t = struct
-    {
-        uint8_t srcTile;
-        uint8_t startSeq;
-        uint8_t count;
-    };
-
-    enum : uint32_t
-    {
-        NO_ANIMZ = 255,
-        MAX_TILES = 256
-    };
-
-    static animzSeq_t m_animzSeq[];
-    uint8_t m_tileReplacement[MAX_TILES];
-    int32_t *m_seqIndex = nullptr;
-    int m_offset = 0;
+	virtual ~ISound()=0;
+    virtual void forget()=0;
+    virtual void add(unsigned char *data, unsigned int size, unsigned int uid)=0;
+    virtual void remove(unsigned int uid)=0;
+    virtual void replace(unsigned char *data, unsigned int size, unsigned int uid)=0;
+    virtual void play(unsigned int uid)=0;
+    virtual void stop(unsigned int uid)=0;
+    virtual void stopAll()=0;
+    virtual bool isValid()=0;
+    virtual bool has_sound(unsigned int uid)=0;
+    virtual const char *signature() const=0;
 };
 
-#endif // CANIMATOR_H
+inline ISound::~ISound(){}
+
+#endif

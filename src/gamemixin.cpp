@@ -25,7 +25,6 @@
 #include "game.h"
 #include "maparch.h"
 #include "animator.h"
-#include "shared/music/mu_sdl.h"
 
 CGameMixin::CGameMixin()
 {
@@ -287,7 +286,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // draw game status
     char tmp[32];
-    if (m_pause)
+    if (m_paused)
     {
         drawFont(bitmap, 0, Y_STATUS, "PRESS [F4] TO RESUME PLAYING...", LIGHTGRAY);
     }
@@ -310,6 +309,13 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     else if (m_prompt == PROMPT_HARDCORE)
     {
         drawFont(bitmap, 0, Y_STATUS, "HARDCORE MODE, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_TOGGLE_MUSIC)
+    {
+        drawFont(bitmap, 0, Y_STATUS,
+                 m_musicMuted ? "PLAY MUSIC, CONFIRM (Y/N)?"
+                              : "MUTE MUSIC, CONFIRM (Y/N)?",
+                 LIGHTGRAY);
     }
     else
     {
@@ -432,13 +438,13 @@ void CGameMixin::mainLoop()
 void CGameMixin::manageGamePlay()
 {
     CGame &game = *m_game;
-    if (handlePrompts())
+    if (!m_paused && handlePrompts())
     {
         return;
     }
 
     handleFunctionKeys();
-    if (m_pause)
+    if (m_paused)
     {
         return;
     }
@@ -509,7 +515,7 @@ void CGameMixin::restartLevel()
 
 void CGameMixin::restartGame()
 {
-    m_pause = false;
+    m_paused = false;
     startCountdown(COUNTDOWN_RESTART);
     m_game->restartGame();
     sanityTest();
@@ -599,16 +605,17 @@ void CGameMixin::drawScores(CFrame &bitmap)
 
     for (int i = 0; i < MAX_SCORES; ++i)
     {
-        uint32_t color = i & 2 ? CYAN : BLUE;
+        uint32_t color = i & INTERLINES ? CYAN : BLUE;
         if (m_recordScore && m_scoreRank == i)
         {
             color = YELLOW;
         }
-        sprintf(t, "%.8d %.2d %s%c",
+        bool showCaret = (color == YELLOW) && (m_ticks & CARET_SPEED);
+        sprintf(t, " %.8d %.2d %s%c",
                 m_hiscores[i].score,
                 m_hiscores[i].level,
                 m_hiscores[i].name,
-                color == YELLOW ? CARET : '\0');
+                showCaret ? CARET : '\0');
         drawFont(bitmap, 1, y * FONT_SIZE, t, color);
         ++y;
     }
@@ -616,7 +623,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     ++y;
     if (m_scoreRank == INVALID)
     {
-        strcpy(t, "SORRY, YOU DIDN'T QUALIFY.");
+        strcpy(t, " SORRY, YOU DIDN'T QUALIFY.");
         drawFont(bitmap, 0, y * FONT_SIZE, t, YELLOW);
     }
     else if (m_recordScore)
@@ -657,6 +664,11 @@ bool CGameMixin::handlePrompts()
         {
             m_game->setLives(1);
         }
+        else if (m_prompt == PROMPT_TOGGLE_MUSIC)
+        {
+            m_musicMuted ? startMusic() : stopMusic();
+            m_musicMuted = !m_musicMuted;
+        }
         m_prompt = PROMPT_NONE;
     }
     return result;
@@ -677,16 +689,23 @@ void CGameMixin::handleFunctionKeys()
             // avoid keys repeating
             continue;
         }
+        if (m_paused && k != Key_F4)
+        {
+            // don't handle any other
+            // hotkeys while paused
+            continue;
+        }
+
         switch (k)
         {
         case Key_F2: // restart game
             m_prompt = PROMPT_RESTART_GAME;
             break;
-        case Key_F3: // erase score
+        case Key_F3: // erase scores
             m_prompt = PROMPT_ERASE_SCORES;
             break;
         case Key_F4:
-            m_pause = !m_pause;
+            m_paused = !m_paused;
             m_keyRepeters[k] = KEY_NO_REPETE;
             break;
         case Key_F9:
@@ -694,6 +713,9 @@ void CGameMixin::handleFunctionKeys()
             break;
         case Key_F10:
             m_prompt = PROMPT_SAVE;
+            break;
+        case Key_F11:
+            m_prompt = PROMPT_TOGGLE_MUSIC;
             break;
         case Key_F12:
             m_prompt = PROMPT_HARDCORE;
@@ -810,7 +832,8 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     m_game->read(sfile);
     clearJoyStates();
     clearKeyStates();
-    m_pause = false;
+    m_paused = false;
+    m_prompt = PROMPT_NONE;
     readfile(&m_ticks, sizeof(m_ticks));
     readfile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
     readfile(&m_healthRef, sizeof(m_healthRef));
@@ -857,4 +880,14 @@ void CGameMixin::drawPreScreen(CFrame &bitmap)
     int y = (HEIGHT - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
+}
+
+void CGameMixin::stopMusic()
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::startMusic()
+{
+    // TODO: implement in child class
 }

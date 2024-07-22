@@ -21,7 +21,7 @@
 #include "shared/FrameSet.h"
 #include <cstring>
 #include "shared/FileWrap.h"
-#include "shared/music/mu_sdl.h"
+#include "shared/implementers/mu_sdl.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -251,9 +251,7 @@ void CRuntime::preloadAssets()
 
 void CRuntime::preRun()
 {
-#ifdef __EMSCRIPTEN__
     m_game->setMode(CGame::MODE_CLICKSTART);
-#endif
 }
 
 void CRuntime::initMusic()

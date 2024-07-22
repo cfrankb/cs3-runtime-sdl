@@ -30,8 +30,8 @@ public:
     void doInput();
     void preRun();
     void enableMusic();
-    void stopMusic();
-    void startMusic();
+    virtual void stopMusic() override;
+    virtual void startMusic() override;
     virtual void save() override;
     virtual void load() override;
 

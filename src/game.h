@@ -66,7 +66,6 @@ public:
     static uint8_t *keys();
     void getMonsters(CActor *&monsters, int &count);
     CActor &getMonster(int i);
-    bool readSndArch(IFile &file);
     void playSound(int id);
     void playTileSound(int tileID);
     void setLives(int lives);
@@ -119,7 +118,6 @@ protected:
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
-    uint8_t m_soundMap[256];
 
     int clearAttr(uint8_t attr);
     bool findMonsters();
@@ -131,6 +129,7 @@ protected:
     void vDebug(const char *format, ...);
     bool read(FILE *sfile);
     bool write(FILE *tfile);
+    void attach(ISound *s);
 
     friend class CGameMixin;
 };

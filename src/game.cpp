@@ -27,11 +27,7 @@
 #include <stdarg.h>
 #include "shared/IFile.h"
 #include "sounds.h"
-
-#ifdef USE_SDL_MIXER
 #include "shared/interfaces/ISound.h"
-#include "shared/implementers/sn_sdl.h"
-#endif
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -49,10 +45,6 @@ CGame::CGame()
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
-
-#ifdef USE_SDL_MIXER
-    m_sound = new CSndSDL();
-#endif
 }
 
 CGame::~CGame()
@@ -62,12 +54,10 @@ CGame::~CGame()
         delete[] m_monsters;
     }
 
-#ifdef USE_SDL_MIXER
     if (m_sound)
     {
         delete m_sound;
     }
-#endif
 }
 
 CMap &CGame::getMap()
@@ -724,85 +714,12 @@ void CGame::setLives(int lives)
     m_lives = lives;
 }
 
-#ifdef USE_SDL_MIXER
-bool CGame::readSndArch(IFile &file)
-{
-    typedef struct
-    {
-        int ptr;
-        std::string name;
-        int filesize;
-    } fileinfo_t;
-
-    char name[32];
-    char tmp[5];
-    file.read(tmp, 4);
-    if (memcmp(tmp, "SNDX", 4) != 0)
-    {
-        tmp[4] = 0;
-        printf("wrong signature: %s\n", tmp);
-        return false;
-    }
-
-    int size = 0;
-    int indexPtr = 0;
-    int version = 0;
-    file.seek(4);
-    file.read(&version, 2);
-    if (version != 0)
-    {
-        printf("wrong version: %x\n", version);
-        return false;
-    }
-
-    file.seek(6);
-    file.read(&size, 2);
-    file.read(&indexPtr, 4);
-
-    // read index
-    file.seek(indexPtr);
-    for (int i = 0; i < size; ++i)
-    {
-        fileinfo_t fileInfo;
-        file.read(&fileInfo.ptr, 4);
-        int fnameSize = 0;
-        file.read(&fnameSize, 1);
-        file.read(name, fnameSize);
-        name[fnameSize] = 0;
-        fileInfo.name = name;
-        file.read(&fileInfo.filesize, 4);
-        if (fileInfo.filesize == 0)
-        {
-            continue;
-        }
-
-        /*
-        printf("\n--------------------\nindex: %d\n",i);
-        printf("name: %s\n", fileInfo.name.c_str());
-        printf("ptr: 0x%.4x\n", fileInfo.ptr);
-        printf("size: 0x%.4x\n\n", fileInfo.filesize);
-        */
-
-        uint8_t *data = new uint8_t[fileInfo.filesize];
-        long curPos = file.tell();
-        file.seek(fileInfo.ptr);
-        file.read(data, fileInfo.filesize);
-        m_sound->add(data, fileInfo.filesize, i);
-        file.seek(curPos);
-    }
-
-    return true;
-}
-#endif
-
 void CGame::playSound(int id)
 {
-#ifdef USE_SDL_MIXER
-    if (id != SOUND_NONE && m_sound)
+    if (id != SOUND_NONE && m_sound != nullptr)
     {
         m_sound->play(id);
     }
-#endif
 }
 
 void CGame::playTileSound(int tileID)
@@ -823,4 +740,9 @@ void CGame::playTileSound(int tileID)
         break;
     }
     playSound(snd);
+}
+
+void CGame::attach(ISound *s)
+{
+    m_sound = s;
 }

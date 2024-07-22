@@ -82,6 +82,8 @@ protected:
         KEY_NO_REPETE = 1,
         MAX_NAME_LENGTH = 16,
         SAVENAME_PTR_OFFSET = 8,
+        CARET_SPEED = 8,
+        INTERLINES = 2,
         Y_STATUS = 2,
     };
 
@@ -120,6 +122,7 @@ protected:
         PROMPT_SAVE,
         PROMPT_RESTART_LEVEL,
         PROMPT_HARDCORE,
+        PROMPT_TOGGLE_MUSIC
     };
 
     enum
@@ -164,7 +167,8 @@ protected:
     bool m_assetPreloaded = false;
     bool m_scoresLoaded = false;
     bool m_hiscoreEnabled = false;
-    bool m_pause = false;
+    bool m_paused = false;
+    bool m_musicMuted = false;
     int m_prompt = PROMPT_NONE;
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -192,6 +196,8 @@ protected:
     virtual bool saveScores();
     virtual bool read(FILE *sfile, std::string &name);
     virtual bool write(FILE *tfile, std::string &name);
+    virtual void stopMusic();
+    virtual void startMusic();
     virtual void setZoom(bool zoom);
 };
 
