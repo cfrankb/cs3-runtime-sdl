@@ -21,7 +21,9 @@
 #include "shared/FrameSet.h"
 #include <cstring>
 #include "shared/FileWrap.h"
+#include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
+#include "shared/implementers/sn_sdl.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -185,6 +187,7 @@ void CRuntime::doInput()
                 if (m_musicEnabled)
                 {
                     initMusic();
+                    initSounds();
                 }
             }
             break;
@@ -205,14 +208,13 @@ void CRuntime::doInput()
 void CRuntime::preloadAssets()
 {
     CFileWrap file;
-
-    typedef struct
+    using asset_t = struct
     {
         const char *filename;
         CFrameSet **frameset;
-    } asset_t;
+    };
 
-    asset_t assets[] = {
+    asset_t assets[]{
         {"data/tiles.obl", &m_tiles},
         {"data/animz.obl", &m_animz},
         {"data/annie.obl", &m_annie},
@@ -234,10 +236,9 @@ void CRuntime::preloadAssets()
     }
 
     const char fontName[] = "data/bitfont.bin";
-    int size = 0;
     if (file.open(fontName, "rb"))
     {
-        size = file.getSize();
+        int size = file.getSize();
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
@@ -416,4 +417,34 @@ void CRuntime::load()
         printf("can't read:%s\n", SAVEGAME_FILE);
     }
     m_game->setMode(CGame::MODE_LEVEL);
+}
+
+void CRuntime::initSounds()
+{
+    constexpr const char *filelist[]{
+        "data/sounds/gruup.wav",
+        "data/sounds/key.ogg",
+        "data/sounds/0009.ogg",
+        "data/sounds/coin1.oga",
+    };
+    auto m_sound = new CSndSDL();
+    CFileWrap file;
+    for (int i = 0; i < sizeof(filelist) / sizeof(filelist[0]); ++i)
+    {
+        auto soundName = filelist[i];
+        if (file.open(soundName, "rb"))
+        {
+            int size = file.getSize();
+            auto sound = new uint8_t[size];
+            file.read(sound, size);
+            file.close();
+            printf("loaded %s: %d bytes\n", soundName, size);
+            m_sound->add(sound, size, i + 1);
+        }
+        else
+        {
+            printf("failed to open %s\n", soundName);
+        }
+    }
+    m_game->attach(m_sound);
 }

@@ -18,6 +18,8 @@
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
 
+class CSndSDL;
+
 class CRuntime : public CGameMixin
 {
 public:
@@ -39,6 +41,7 @@ protected:
     static void cleanup();
     virtual void preloadAssets() override;
     void initMusic();
+    void initSounds();
     void keyReflector(SDL_Keycode key, uint8_t keyState);
     virtual bool loadScores() override;
     virtual bool saveScores() override;
@@ -51,6 +54,7 @@ protected:
     } App;
 
     IMusic *m_music = nullptr;
+    CSndSDL *m_sound = nullptr;
     bool m_musicEnabled = false;
     App m_app;
 };

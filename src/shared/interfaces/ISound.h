@@ -22,19 +22,19 @@
 class ISound
 {
 public:
-	virtual ~ISound()=0;
-    virtual void forget()=0;
-    virtual void add(unsigned char *data, unsigned int size, unsigned int uid)=0;
-    virtual void remove(unsigned int uid)=0;
-    virtual void replace(unsigned char *data, unsigned int size, unsigned int uid)=0;
-    virtual void play(unsigned int uid)=0;
-    virtual void stop(unsigned int uid)=0;
-    virtual void stopAll()=0;
-    virtual bool isValid()=0;
-    virtual bool has_sound(unsigned int uid)=0;
-    virtual const char *signature() const=0;
+    virtual ~ISound() = 0;
+    virtual void forget() = 0;
+    virtual bool add(unsigned char *data, unsigned int size, unsigned int uid) = 0;
+    virtual void remove(unsigned int uid) = 0;
+    virtual void replace(unsigned char *data, unsigned int size, unsigned int uid) = 0;
+    virtual void play(unsigned int uid) = 0;
+    virtual void stop(unsigned int uid) = 0;
+    virtual void stopAll() = 0;
+    virtual bool isValid() = 0;
+    virtual bool has_sound(unsigned int uid) = 0;
+    virtual const char *signature() const = 0;
 };
 
-inline ISound::~ISound(){}
+inline ISound::~ISound() {}
 
 #endif

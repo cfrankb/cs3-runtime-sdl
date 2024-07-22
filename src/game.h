@@ -23,9 +23,7 @@
 #include "map.h"
 
 class CMapArch;
-class CSndArray;
 class IFile;
-class CSnd;
 class ISound;
 
 class CGame
@@ -69,6 +67,7 @@ public:
     void playSound(int id);
     void playTileSound(int tileID);
     void setLives(int lives);
+    void attach(ISound *s);
 
     enum GameMode
     {
@@ -129,7 +128,6 @@ protected:
     void vDebug(const char *format, ...);
     bool read(FILE *sfile);
     bool write(FILE *tfile);
-    void attach(ISound *s);
 
     friend class CGameMixin;
 };

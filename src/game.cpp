@@ -171,7 +171,6 @@ bool CGame::loadLevel(bool restart)
     memset(m_keys, 0, sizeof(m_keys));
     m_health = DEFAULT_HEALTH;
     findMonsters();
-
     return true;
 }
 
@@ -729,10 +728,8 @@ void CGame::playTileSound(int tileID)
     {
     case TILES_FLOWERS_2:
     case TILES_CHEST:
-        snd = SOUND_COIN1;
-        break;
     case TILES_NECKLESS:
-        snd = SOUND_OKAY;
+        snd = SOUND_COIN1;
         break;
     case TILES_FRUIT1:
     case TILES_APPLE:

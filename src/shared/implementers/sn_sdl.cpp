@@ -22,6 +22,8 @@
 #include <SDL2/SDL_mixer.h>
 #include "sn_sdl.h"
 
+std::unordered_map<unsigned int, SND *> m_sounds;
+
 CSndSDL::CSndSDL()
 {
     m_valid = false;
@@ -55,12 +57,12 @@ void CSndSDL::forget()
     m_sounds.clear();
 }
 
-void CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
+bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
 {
-    if (m_sounds.find(uid) != m_sounds.end())
+    if (m_sounds.count(uid) != 0)
     {
         printf("ADD: sound already added: %u\n", uid);
-        return;
+        return false;
     }
     SND *snd = new SND;
     snd->channel = -1;
@@ -72,7 +74,7 @@ void CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
         fail = true;
         printf("SDL_RWFromConstMem Failed: %s\n", SDL_GetError());
     }
-    if (!fail)
+    else
     {
         snd->chunk = Mix_LoadWAV_RW(rw, 1);
         if (!snd->chunk)
@@ -81,11 +83,8 @@ void CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
             printf("Mix_LoadWAV_RW Failed: %s\n", Mix_GetError());
         }
     }
-    if (fail)
-    {
-        snd->chunk = nullptr;
-    }
     m_sounds[uid] = snd;
+    return !fail;
 }
 
 void CSndSDL::replace(unsigned char *data, unsigned int size, unsigned int uid)

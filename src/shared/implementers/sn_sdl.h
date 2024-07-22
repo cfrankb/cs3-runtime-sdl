@@ -26,11 +26,11 @@ class ISound;
 struct Mix_Chunk;
 struct SDL_RWops;
 
-typedef struct
+using SND = struct
 {
     Mix_Chunk *chunk;
     int channel;
-} SND;
+};
 
 class CSndSDL : public ISound
 {
@@ -38,19 +38,18 @@ public:
     CSndSDL();
     virtual ~CSndSDL();
     virtual void forget();
-    virtual void add(unsigned char *data, unsigned int size, unsigned int uid);
-    virtual void replace(unsigned char *data, unsigned int size, unsigned int uid);
-    virtual void remove(unsigned int uid);
-    virtual void play(unsigned int uid);
-    virtual void stop(unsigned int uid);
+    virtual bool add(unsigned char *data, unsigned int size, unsigned int uid) override;
+    virtual void replace(unsigned char *data, unsigned int size, unsigned int uid) override;
+    virtual void remove(unsigned int uid) override;
+    virtual void play(unsigned int uid) override;
+    virtual void stop(unsigned int uid) override;
     virtual void stopAll();
     virtual bool isValid();
     virtual bool has_sound(unsigned int uid);
-    virtual const char *signature() const;
+    virtual const char *signature() const override;
 
 protected:
     bool m_valid;
-    std::unordered_map<unsigned int, SND *> m_sounds;
 };
 
 #endif // SN_SDL_H
