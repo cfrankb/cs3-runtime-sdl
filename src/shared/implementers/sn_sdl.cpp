@@ -22,7 +22,7 @@
 #include <SDL2/SDL_mixer.h>
 #include "sn_sdl.h"
 
-std::unordered_map<unsigned int, SND *> m_sounds;
+std::unordered_map<unsigned int, CSndSDL::SND *> m_sounds;
 
 CSndSDL::CSndSDL()
 {
@@ -65,7 +65,10 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
         return false;
     }
     SND *snd = new SND;
-    snd->channel = -1;
+    for (int i = 0; i < MAX_INSTANCES; ++i)
+    {
+        snd->channels[i] = -1;
+    }
     snd->chunk = nullptr;
     bool fail = false;
     SDL_RWops *rw = SDL_RWFromConstMem(static_cast<void *>(data), size);
@@ -102,9 +105,12 @@ void CSndSDL::remove(unsigned int uid)
         return;
     }
     SND *snd = m_sounds[uid];
-    if (snd->channel != -1)
+    for (int i = 0; i < MAX_INSTANCES; ++i)
     {
-        Mix_HaltChannel(snd->channel);
+        if (snd->channels[i] != -1)
+        {
+            Mix_HaltChannel(snd->channels[i]);
+        }
     }
     Mix_FreeChunk(snd->chunk);
     delete snd;
@@ -114,26 +120,36 @@ void CSndSDL::remove(unsigned int uid)
 void CSndSDL::play(unsigned int uid)
 {
     SND *snd = m_sounds[uid];
-    if (snd->channel != -1 && Mix_Playing(snd->channel))
+    for (int i = 0; i < MAX_INSTANCES; ++i)
     {
-        // already playing
-        return;
-    }
-    snd->channel = Mix_PlayChannel(
-        snd->channel, snd->chunk, 0);
-    if (snd->channel == -1)
-    {
-        printf("Mix_PlayChannel: %s\n", Mix_GetError());
+        if (snd->channels[i] != -1 && Mix_Playing(snd->channels[i]))
+        {
+            // already playing
+            continue;
+        }
+        else
+        {
+            snd->channels[i] = Mix_PlayChannel(
+                snd->channels[i], snd->chunk, 0);
+            if (snd->channels[i] == -1)
+            {
+                printf("Mix_PlayChannel: %s\n", Mix_GetError());
+            }
+            break;
+        }
     }
 }
 
 void CSndSDL::stop(unsigned int uid)
 {
     SND *snd = m_sounds[uid];
-    if (snd->channel != -1)
+    for (int i = 0; i < MAX_INSTANCES; ++i)
     {
-        Mix_HaltChannel(snd->channel);
-        snd->channel = -1;
+        if (snd->channels[i] != -1)
+        {
+            Mix_HaltChannel(snd->channels[i]);
+            snd->channels[i] = -1;
+        }
     }
 }
 

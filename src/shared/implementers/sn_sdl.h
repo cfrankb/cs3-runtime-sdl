@@ -26,12 +26,6 @@ class ISound;
 struct Mix_Chunk;
 struct SDL_RWops;
 
-using SND = struct
-{
-    Mix_Chunk *chunk;
-    int channel;
-};
-
 class CSndSDL : public ISound
 {
 public:
@@ -47,6 +41,16 @@ public:
     virtual bool isValid();
     virtual bool has_sound(unsigned int uid);
     virtual const char *signature() const override;
+
+    enum
+    {
+        MAX_INSTANCES = 3
+    };
+    using SND = struct
+    {
+        Mix_Chunk *chunk;
+        int channels[MAX_INSTANCES];
+    };
 
 protected:
     bool m_valid;

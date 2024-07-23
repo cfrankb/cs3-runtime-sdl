@@ -18,7 +18,7 @@
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
 
-class CSndSDL;
+class ISound;
 
 class CRuntime : public CGameMixin
 {
@@ -54,7 +54,7 @@ protected:
     } App;
 
     IMusic *m_music = nullptr;
-    CSndSDL *m_sound = nullptr;
+    ISound *m_sound = nullptr;
     bool m_musicEnabled = false;
     App m_app;
 };
