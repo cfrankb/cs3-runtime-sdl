@@ -26,6 +26,24 @@
 #include "maparch.h"
 #include "animator.h"
 
+// Check windows
+#ifdef _WIN64
+#define ENVIRONMENT64
+#else
+#ifdef _WIN32
+#define ENVIRONMENT32
+#endif
+#endif
+
+// Check GCC
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENVIRONMENT64
+#else
+#define ENVIRONMENT32
+#endif
+#endif
+
 CGameMixin::CGameMixin()
 {
     m_game = new CGame();
@@ -167,9 +185,29 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
     }
     else
     {
+
+#ifdef ENVIRONMENT64
+        uint64_t *d64 = reinterpret_cast<uint64_t *>(dest);
+        const uint64_t *s64 = reinterpret_cast<const uint64_t *>(tileData);
         for (uint32_t row = 0; row < TILE_SIZE; ++row)
         {
             int i = 0;
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+            d64[i++] = *(s64++);
+            d64 += WIDTH / 2;
+        }
+#else
+        for (uint32_t row = 0; row < TILE_SIZE; ++row)
+        {
+            int i = 0;
+
             dest[i++] = *(tileData++);
             dest[i++] = *(tileData++);
             dest[i++] = *(tileData++);
@@ -191,6 +229,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
             dest[i++] = *(tileData++);
             dest += WIDTH;
         }
+#endif
     }
 }
 

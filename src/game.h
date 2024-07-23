@@ -23,7 +23,6 @@
 #include "map.h"
 
 class CMapArch;
-class IFile;
 class ISound;
 
 class CGame

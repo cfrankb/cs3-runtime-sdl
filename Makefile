@@ -7,7 +7,7 @@ BPATH=build
 BNAME=cs3v2.html
 TARGET=$(BPATH)/$(BNAME)
 TEMPLATE=--shell-file src/template/body.html
-DEPS=$(BPATH)/runtime$(EXT) $(BPATH)/gamemixin$(EXT) $(BPATH)/main$(EXT) $(BPATH)/maparch$(EXT) $(BPATH)/game$(EXT) $(BPATH)/tilesdata$(EXT) $(BPATH)/animator$(EXT) $(BPATH)/level$(EXT) $(BPATH)/actor$(EXT) $(BPATH)/map$(EXT) $(BPATH)/FrameSet$(EXT) $(BPATH)/Frame$(EXT) $(BPATH)/DotArray$(EXT) $(BPATH)/helper$(EXT) $(BPATH)/PngMagic$(EXT) $(BPATH)/FileWrap$(EXT) $(BPATH)/mu_sdl$(EXT)
+DEPS=$(BPATH)/runtime$(EXT) $(BPATH)/gamemixin$(EXT) $(BPATH)/main$(EXT) $(BPATH)/maparch$(EXT) $(BPATH)/game$(EXT) $(BPATH)/tilesdata$(EXT) $(BPATH)/animator$(EXT) $(BPATH)/level$(EXT) $(BPATH)/actor$(EXT) $(BPATH)/map$(EXT) $(BPATH)/FrameSet$(EXT) $(BPATH)/Frame$(EXT) $(BPATH)/DotArray$(EXT) $(BPATH)/helper$(EXT) $(BPATH)/PngMagic$(EXT) $(BPATH)/FileWrap$(EXT) $(BPATH)/sn_sdl$(EXT) $(BPATH)/mu_sdl$(EXT)
 EXT=.o
 
 all: $(TARGET)
@@ -60,7 +60,10 @@ $(BPATH)/PngMagic$(EXT): src/shared/PngMagic.cpp src/shared/PngMagic.h
 $(BPATH)/FileWrap$(EXT): src/shared/FileWrap.cpp src/shared/FileWrap.h
 	$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@
 
-$(BPATH)/mu_sdl$(EXT): src/shared/music/mu_sdl.cpp src/shared/music/mu_sdl.h
+$(BPATH)/sn_sdl$(EXT): src/shared/implementers/sn_sdl.cpp src/shared/implementers/sn_sdl.h
+	$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@
+
+$(BPATH)/mu_sdl$(EXT): src/shared/implementers/mu_sdl.cpp src/shared/implementers/mu_sdl.h
 	$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@
 
 $(TARGET): $(DEPS)

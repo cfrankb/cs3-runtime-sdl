@@ -31,15 +31,15 @@ class CSndSDL : public ISound
 public:
     CSndSDL();
     virtual ~CSndSDL();
-    virtual void forget();
+    virtual void forget() override;
     virtual bool add(unsigned char *data, unsigned int size, unsigned int uid) override;
     virtual void replace(unsigned char *data, unsigned int size, unsigned int uid) override;
     virtual void remove(unsigned int uid) override;
     virtual void play(unsigned int uid) override;
     virtual void stop(unsigned int uid) override;
-    virtual void stopAll();
-    virtual bool isValid();
-    virtual bool has_sound(unsigned int uid);
+    virtual void stopAll() override;
+    virtual bool isValid() override;
+    virtual bool has_sound(unsigned int uid) override;
     virtual const char *signature() const override;
 
     enum
