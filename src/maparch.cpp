@@ -18,10 +18,8 @@
 #include "maparch.h"
 #include "map.h"
 #include "level.h"
-#include <cstdio>
-#include <cstring>
 
-const char MAAZ_SIG[] = "MAAZ";
+constexpr const char MAAZ_SIG[]{'M', 'A', 'A', 'Z'};
 const uint16_t MAAZ_VERSION = 0;
 
 CMapArch::CMapArch()
@@ -128,7 +126,7 @@ bool CMapArch::read(const char *filename)
         // read header
         fread(&hdr, 12, 1, sfile);
         // check signature
-        if (memcmp(hdr.sig, MAAZ_SIG, 4) != 0)
+        if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
         {
             m_lastError = "MAAZ signature is incorrect";
             return false;
@@ -173,7 +171,7 @@ bool CMapArch::write(const char *filename)
     {
         std::vector<long> index;
         // write temp header
-        fwrite(MAAZ_SIG, 4, 1, tfile);
+        fwrite(MAAZ_SIG, sizeof(MAAZ_SIG), 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
         for (int i = 0; i < m_size; ++i)
@@ -225,7 +223,7 @@ bool CMapArch::extract(const char *filename)
     fread(sig, 4, 1, sfile);
     fclose(sfile);
 
-    if (memcmp(sig, MAAZ_SIG, 4) == 0)
+    if (memcmp(sig, MAAZ_SIG, sizeof(MAAZ_SIG)) == 0)
     {
         return read(filename);
     }
@@ -252,7 +250,7 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
         Header hdr;
         fread(&hdr, 12, 1, sfile);
         // check signature
-        if (memcmp(hdr.sig, MAAZ_SIG, 4) != 0)
+        if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
         {
             return false;
         }

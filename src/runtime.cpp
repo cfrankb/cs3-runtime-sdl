@@ -48,7 +48,7 @@ CRuntime::CRuntime() : CGameMixin()
             console.log(FS.readdir('/offline'));
             err ? console.log(err) : null; }));
 #endif
-    m_music = nullptr; // new CMusicSDL();
+    m_music = nullptr;
     memset(&m_app, 0, sizeof(App));
 }
 
@@ -58,6 +58,11 @@ CRuntime::~CRuntime()
     SDL_DestroyRenderer(m_app.renderer);
     SDL_DestroyWindow(m_app.window);
     SDL_Quit();
+
+    if (m_music)
+    {
+        delete m_music;
+    }
 }
 
 void CRuntime::paint()
@@ -409,7 +414,10 @@ void CRuntime::load()
     FILE *sfile = fopen(SAVEGAME_FILE, "rb");
     if (sfile)
     {
-        read(sfile, name);
+        if (!read(sfile, name))
+        {
+            printf("incompatible file\n");
+        }
         fclose(sfile);
     }
     else

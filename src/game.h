@@ -124,7 +124,6 @@ protected:
     void addHealth(int hp);
     void addPoints(int points);
     void addLife();
-    void vDebug(const char *format, ...);
     bool read(FILE *sfile);
     bool write(FILE *tfile);
 

@@ -208,10 +208,10 @@ const uint16_t convTable[] = {
     TILES_BLANK + 0x500,
     TILES_DIAMOND + 0x600,
     TILES_BLANK + 0x600, // 0x31
-    TILES_BLANK, //0x32
-    TILES_BLANK, //0x33
-    TILES_BLANK, //0x34
-    TILES_YAHOO, //0x35
+    TILES_BLANK,         // 0x32
+    TILES_BLANK,         // 0x33
+    TILES_BLANK,         // 0x34
+    TILES_YAHOO,         // 0x35
 };
 
 bool convertCs3Level(CMap &map, const char *fname)
@@ -231,7 +231,8 @@ bool convertCs3Level(CMap &map, const char *fname)
         for (int x = 0; x < 64; ++x)
         {
             uint8_t oldTile = *p;
-            if (oldTile >= sizeof(convTable) / 2) {
+            if (oldTile >= sizeof(convTable) / 2)
+            {
                 printf("oldTile: %d", oldTile);
                 oldTile = 0;
             }
@@ -248,24 +249,26 @@ bool convertCs3Level(CMap &map, const char *fname)
     return true;
 }
 
-bool fetchLevel(CMap &map, const char *fname, std::string & error)
+bool fetchLevel(CMap &map, const char *fname, std::string &error)
 {
     char *tmp = new char[strlen(fname) + 128];
     printf("fetching: %s\n", fname);
 
-    FILE * sfile = fopen(fname,"rb");
-    if (!sfile) {
+    FILE *sfile = fopen(fname, "rb");
+    if (!sfile)
+    {
         sprintf(tmp, "can't open file: %s", fname);
         error = tmp;
-        delete []tmp;
+        delete[] tmp;
         return false;
     }
 
-    delete []tmp;
+    delete[] tmp;
 
     char sig[4];
     fread(sig, sizeof(sig), 1, sfile);
-    if (memcmp(sig, "MAPZ", 4) == 0) {
+    if (memcmp(sig, "MAPZ", 4) == 0)
+    {
         fclose(sfile);
         printf("level is MAPZ\n");
         return map.read(fname);
@@ -274,7 +277,8 @@ bool fetchLevel(CMap &map, const char *fname, std::string & error)
     fseek(sfile, 0, SEEK_END);
     int size = ftell(sfile);
     const int cs3LevelSize = 64 * 64 + 7;
-    if (size == cs3LevelSize) {
+    if (size == cs3LevelSize)
+    {
         fclose(sfile);
         printf("level is cs3\n");
         return convertCs3Level(map, fname);

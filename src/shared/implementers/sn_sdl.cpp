@@ -28,6 +28,11 @@ CSndSDL::CSndSDL()
 {
     m_valid = false;
     // Initialize all SDL subsystems
+    if (SDL_Init(SDL_INIT_AUDIO) < 0)
+    {
+        printf("SDL_init failed: %s\n", SDL_GetError());
+        m_valid = false;
+    }
     if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
     {
         printf("SDL_init failed: %s\n", SDL_GetError());

@@ -15,7 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cstring>
+#include <stdarg.h>
 #include <string>
 #include <vector>
 #include "game.h"
@@ -24,19 +24,17 @@
 #include "sprtypes.h"
 #include "tilesdata.h"
 #include "maparch.h"
-#include <stdarg.h>
 #include "shared/IFile.h"
 #include "sounds.h"
 #include "shared/interfaces/ISound.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
-
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
 CGame::CGame()
 {
-    vDebug("staring up version: 0x%.8x\n", VERSION);
+    printf("staring up version: 0x%.8x\n", VERSION);
 
     m_monsterMax = DEFAULT_MAX_MONSTERS;
     m_monsters = new CActor[m_monsterMax];
@@ -156,16 +154,16 @@ bool CGame::init()
 
 bool CGame::loadLevel(bool restart)
 {
-    vDebug("loading level: %d ...\n", m_level + 1);
+    printf("loading level: %d ...\n", m_level + 1);
     setMode(restart ? MODE_RESTART : MODE_INTRO);
 
     // extract level from MapArch
     map = *(m_mapArch->at(m_level));
 
-    vDebug("level loaded\n");
+    printf("level loaded\n");
 
     Pos pos = map.findFirst(TILES_ANNIE2);
-    vDebug("Player at: %d %d\n", pos.x, pos.y);
+    printf("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
     m_diamonds = map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
@@ -235,7 +233,7 @@ bool CGame::findMonsters()
             }
         }
     }
-    vDebug("%d monsters found.\n", m_monsterCount);
+    printf("%d monsters found.\n", m_monsterCount);
     return true;
 }
 
@@ -595,15 +593,6 @@ CActor &CGame::getMonster(int i)
     return m_monsters[i];
 }
 
-void CGame::vDebug(const char *format, ...)
-{
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-    vsprintf(buffer, format, args);
-    va_end(args);
-}
-
 bool CGame::read(FILE *sfile)
 {
     auto readfile = [sfile](auto ptr, auto size)
@@ -646,7 +635,10 @@ bool CGame::read(FILE *sfile)
 
     // reading map
     CMap &map = getMap();
-    map.read(sfile);
+    if (!map.read(sfile))
+    {
+        return false;
+    }
 
     // monsters
     decltype(m_monsterCount) count = 0;

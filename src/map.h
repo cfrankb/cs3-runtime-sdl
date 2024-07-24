@@ -24,7 +24,6 @@
 #include <string>
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
-
 typedef struct
 {
     uint16_t x;

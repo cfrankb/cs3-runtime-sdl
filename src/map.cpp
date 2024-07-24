@@ -16,12 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "map.h"
-#include <cstring>
 #include <cstdio>
 #include <algorithm>
 
-static const char SIG[] = "MAPZ";
-static const char XTR_SIG[] = "XTR";
+static const char SIG[]{'M', 'A', 'P', 'Z'};
+static const char XTR_SIG[]{"XTR"};
 static const char XTR_VER = 0;
 static const uint16_t VERSION = 0;
 static const uint16_t MAX_SIZE = 256;
@@ -119,8 +118,8 @@ bool CMap::read(FILE *sfile)
     if (sfile)
     {
         char sig[4];
-        fread(sig, strlen(SIG), 1, sfile);
-        if (memcmp(sig, SIG, strlen(SIG)) != 0)
+        fread(sig, sizeof(SIG), 1, sfile);
+        if (memcmp(sig, SIG, sizeof(SIG)) != 0)
         {
             m_lastError = "signature mismatch";
             printf("%s\n", m_lastError.c_str());
@@ -188,7 +187,7 @@ bool CMap::read(FILE *sfile)
 
 bool CMap::fromMemory(uint8_t *mem)
 {
-    if (memcmp(mem, SIG, strlen(SIG)) != 0)
+    if (memcmp(mem, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
         printf("%s\n", m_lastError.c_str());
@@ -244,7 +243,7 @@ bool CMap::write(FILE *tfile)
 {
     if (tfile)
     {
-        fwrite(SIG, strlen(SIG), 1, tfile);
+        fwrite(SIG, sizeof(SIG), 1, tfile);
         fwrite(&VERSION, sizeof(VERSION), 1, tfile);
         fwrite(&m_len, sizeof(uint8_t), 1, tfile);
         fwrite(&m_hei, sizeof(uint8_t), 1, tfile);

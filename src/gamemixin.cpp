@@ -358,13 +358,14 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     }
     else
     {
+        int tx;
         int bx = 0;
-        sprintf(tmp, "%.8d ", game.score());
+        tx = sprintf(tmp, "%.8d ", game.score());
         drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
-        bx += strlen(tmp);
-        sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
+        bx += tx;
+        tx = sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, YELLOW);
-        bx += strlen(tmp);
+        bx += tx;
         sprintf(tmp, "LIVES %.2d ", game.lives());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
     }
@@ -379,6 +380,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawRect(bitmap, Rect{4, bitmap.hei() - 12, std::min(game.health() / 2, bitmap.len() - 4), 8},
              WHITE, false);
 
+    // draw keys
     drawKeys(bitmap);
 }
 
@@ -868,7 +870,10 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     {
         return fread(ptr, size, 1, sfile) == 1;
     };
-    m_game->read(sfile);
+    if (!m_game->read(sfile))
+    {
+        return false;
+    }
     clearJoyStates();
     clearKeyStates();
     m_paused = false;
