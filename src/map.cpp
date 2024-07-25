@@ -15,9 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "map.h"
+#include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include "map.h"
+#include "shared/IFile.h"
 
 static const char SIG[]{'M', 'A', 'P', 'Z'};
 static const char XTR_SIG[]{"XTR"};
@@ -113,76 +115,125 @@ bool CMap::write(const char *fname)
     return tfile != nullptr && result;
 }
 
+bool CMap::read(IFile &file)
+{
+    auto readfile = [&file](auto ptr, auto size)
+    {
+        return file.read(ptr, size);
+    };
+
+    char sig[4];
+
+    readfile(sig, sizeof(SIG));
+    if (memcmp(sig, SIG, sizeof(SIG)) != 0)
+    {
+        m_lastError = "signature mismatch";
+        printf("%s\n", m_lastError.c_str());
+        return false;
+    }
+    uint16_t ver = 0;
+    readfile(&ver, sizeof(VERSION));
+    if (ver > VERSION)
+    {
+        m_lastError = "bad version";
+        printf("%s\n", m_lastError.c_str());
+        return false;
+    }
+    uint16_t len = 0;
+    uint16_t hei = 0;
+    readfile(&len, sizeof(uint8_t));
+    readfile(&hei, sizeof(uint8_t));
+    len = len ? len : MAX_SIZE;
+    hei = hei ? hei : MAX_SIZE;
+    resize(len, hei, true);
+    readfile(m_map, len * hei);
+    m_attrs.clear();
+    uint16_t attrCount = 0;
+    readfile(&attrCount, sizeof(attrCount));
+    for (int i = 0; i < attrCount; ++i)
+    {
+        uint8_t x;
+        uint8_t y;
+        uint8_t a;
+        readfile(&x, sizeof(x));
+        readfile(&y, sizeof(y));
+        readfile(&a, sizeof(a));
+        setAttr(x, y, a);
+    }
+    extrahdr_t hdr;
+    memset(&hdr, 0, sizeof(hdr));
+    m_title = "";
+    // TODO: Read title
+    return true;
+}
+
 bool CMap::read(FILE *sfile)
 {
-    if (sfile)
+    char sig[4];
+    fread(sig, sizeof(SIG), 1, sfile);
+    if (memcmp(sig, SIG, sizeof(SIG)) != 0)
     {
-        char sig[4];
-        fread(sig, sizeof(SIG), 1, sfile);
-        if (memcmp(sig, SIG, sizeof(SIG)) != 0)
+        m_lastError = "signature mismatch";
+        printf("%s\n", m_lastError.c_str());
+        return false;
+    }
+    uint16_t ver = 0;
+    fread(&ver, sizeof(VERSION), 1, sfile);
+    if (ver > VERSION)
+    {
+        m_lastError = "bad version";
+        printf("%s\n", m_lastError.c_str());
+        return false;
+    }
+    uint16_t len = 0;
+    uint16_t hei = 0;
+    fread(&len, sizeof(uint8_t), 1, sfile);
+    fread(&hei, sizeof(uint8_t), 1, sfile);
+    len = len ? len : MAX_SIZE;
+    hei = hei ? hei : MAX_SIZE;
+    resize(len, hei, true);
+    fread(m_map, len * hei, 1, sfile);
+    m_attrs.clear();
+    uint16_t attrCount = 0;
+    fread(&attrCount, sizeof(attrCount), 1, sfile);
+    for (int i = 0; i < attrCount; ++i)
+    {
+        uint8_t x;
+        uint8_t y;
+        uint8_t a;
+        fread(&x, sizeof(x), 1, sfile);
+        fread(&y, sizeof(y), 1, sfile);
+        fread(&a, sizeof(a), 1, sfile);
+        setAttr(x, y, a);
+    }
+    extrahdr_t hdr;
+    memset(&hdr, 0, sizeof(hdr));
+    m_title = "";
+    // read title
+    size_t ptr = ftell(sfile);
+    if (fread(&hdr, sizeof(hdr), 1, sfile) != 0)
+    {
+        if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0) && (hdr.ver == XTR_VER))
         {
-            m_lastError = "signature mismatch";
-            printf("%s\n", m_lastError.c_str());
-            return false;
-        }
-        uint16_t ver = 0;
-        fread(&ver, sizeof(VERSION), 1, sfile);
-        if (ver > VERSION)
-        {
-            m_lastError = "bad version";
-            printf("%s\n", m_lastError.c_str());
-            return false;
-        }
-        uint16_t len = 0;
-        uint16_t hei = 0;
-        fread(&len, sizeof(uint8_t), 1, sfile);
-        fread(&hei, sizeof(uint8_t), 1, sfile);
-        len = len ? len : MAX_SIZE;
-        hei = hei ? hei : MAX_SIZE;
-        resize(len, hei, true);
-        fread(m_map, len * hei, 1, sfile);
-        m_attrs.clear();
-        uint16_t attrCount = 0;
-        fread(&attrCount, sizeof(attrCount), 1, sfile);
-        for (int i = 0; i < attrCount; ++i)
-        {
-            uint8_t x;
-            uint8_t y;
-            uint8_t a;
-            fread(&x, sizeof(x), 1, sfile);
-            fread(&y, sizeof(y), 1, sfile);
-            fread(&a, sizeof(a), 1, sfile);
-            setAttr(x, y, a);
-        }
-        extrahdr_t hdr;
-        memset(&hdr, 0, sizeof(hdr));
-        m_title = "";
-        // read title
-        size_t ptr = ftell(sfile);
-        if (fread(&hdr, sizeof(hdr), 1, sfile) != 0)
-        {
-            if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0) && (hdr.ver == XTR_VER))
+            // printf("reading4: %s %d\n", hdr.sig, hdr.ver);
+            uint16_t size = 0;
+            if (fread(&size, 1, 1, sfile) != 0)
             {
-                // printf("reading4: %s %d\n", hdr.sig, hdr.ver);
-                uint16_t size = 0;
-                if (fread(&size, 1, 1, sfile) != 0)
+                char tmp[MAX_TITLE + 1];
+                tmp[size] = 0;
+                if (fread(tmp, size, 1, sfile) != 0)
                 {
-                    char tmp[MAX_TITLE + 1];
-                    tmp[size] = 0;
-                    if (fread(tmp, size, 1, sfile) != 0)
-                    {
-                        m_title = tmp;
-                    }
+                    m_title = tmp;
                 }
             }
-            else
-            {
-                // revert back to previous position
-                fseek(sfile, ptr, SEEK_SET);
-            }
+        }
+        else
+        {
+            // revert back to previous position
+            fseek(sfile, ptr, SEEK_SET);
         }
     }
-    return sfile != nullptr;
+    return true;
 }
 
 bool CMap::fromMemory(uint8_t *mem)

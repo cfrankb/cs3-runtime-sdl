@@ -30,6 +30,8 @@ typedef struct
     uint16_t y;
 } Pos;
 
+class IFile;
+
 class CMap
 {
 public:
@@ -41,6 +43,7 @@ public:
     bool read(const char *fname);
     bool write(const char *fname);
     bool read(FILE *sfile);
+    bool read(IFile &file);
     bool write(FILE *tfile);
     void forget();
     int len() const;

@@ -22,6 +22,7 @@
 #include <string>
 #include <stdint.h>
 
+class IFile;
 class CMap;
 
 typedef std::vector<long> IndexVector;
@@ -39,6 +40,7 @@ public:
     CMap *removeAt(int i);
     void insertAt(int i, CMap *map);
     CMap *at(int i);
+    bool read(IFile &file);
     bool read(const char *filename);
     bool extract(const char *filename);
     bool write(const char *filename);

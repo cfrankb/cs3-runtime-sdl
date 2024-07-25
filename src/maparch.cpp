@@ -15,9 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <cstring>
 #include "maparch.h"
 #include "map.h"
 #include "level.h"
+#include "shared/IFile.h"
 
 constexpr const char MAAZ_SIG[]{'M', 'A', 'A', 'Z'};
 const uint16_t MAAZ_VERSION = 0;
@@ -106,6 +108,58 @@ void CMapArch::allocSpace()
 CMap *CMapArch::at(int i)
 {
     return m_maps[i];
+}
+
+bool CMapArch::read(IFile &file)
+{
+    auto readfile = [&file](auto ptr, auto size)
+    {
+        return file.read(ptr, size);
+    };
+
+    typedef struct
+    {
+        uint8_t sig[4];
+        uint16_t version;
+        uint16_t count;
+        uint32_t offset;
+    } Header;
+
+    Header hdr;
+    // read header
+    readfile(&hdr, 12);
+    // check signature
+    if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
+    {
+        m_lastError = "MAAZ signature is incorrect";
+        return false;
+    }
+    // check version
+    if (hdr.version != MAAZ_VERSION)
+    {
+        m_lastError = "MAAZ Version is incorrect";
+        return false;
+    }
+    // read index
+    file.seek(hdr.offset);
+    uint32_t *indexPtr = new uint32_t[hdr.count];
+    readfile(indexPtr, 4 * hdr.count);
+    forget();
+    m_maps = new CMap *[hdr.count];
+    m_size = hdr.count;
+    m_max = m_size;
+    // read levels
+    for (int i = 0; i < hdr.count; ++i)
+    {
+        file.seek(indexPtr[i]);
+        m_maps[i] = new CMap();
+        if (!m_maps[i]->read(file))
+        {
+            return false;
+        }
+    }
+    delete[] indexPtr;
+    return true;
 }
 
 bool CMapArch::read(const char *filename)

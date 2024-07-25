@@ -83,6 +83,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_CLICKSTART:
         drawPreScreen(bitmap);
+        break;
+    case CGame::MODE_HELP:
+        drawHelpScreen(bitmap);
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));

@@ -44,7 +44,7 @@ public:
 #ifdef USE_QFILE
 protected slots:
 #endif
-    void mainLoop();
+    virtual void mainLoop();
     void changeZoom();
     virtual void save() {};
     virtual void load() {};
@@ -192,6 +192,7 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
+    virtual void drawHelpScreen(CFrame &bitmap);
     virtual bool loadScores();
     virtual bool saveScores();
     virtual bool read(FILE *sfile, std::string &name);
