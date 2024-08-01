@@ -67,7 +67,7 @@ CRuntime::~CRuntime()
 
 void CRuntime::paint()
 {
-    CFrame bitmap(WIDTH, HEIGHT);
+    static CFrame bitmap(WIDTH, HEIGHT);
     switch (m_game->mode())
     {
     case CGame::MODE_INTRO:

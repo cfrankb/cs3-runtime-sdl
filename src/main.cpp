@@ -15,12 +15,15 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <algorithm>
 #include <unistd.h>
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
 
 #define FPS 24
+#define SLEEP 1000 / FPS
+// #define TEST_SPEED
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -29,6 +32,7 @@ extern "C"
 {
     int savegame(int x)
     {
+        /// printf("savegame: %d\n", x);
         if (x == 0)
         {
             g_runtime->load();
@@ -57,11 +61,35 @@ extern "C"
 
 void loop_handler(void *arg)
 {
+    static int cycle = 0;
     CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
-    usleep(1000 / FPS * 1000);
+    uint32_t bticks = SDL_GetTicks();
+    if (cycle == 0)
+    {
+        runtime->paint();
+    }
     runtime->doInput();
-    runtime->paint();
     runtime->run();
+    uint32_t aticks = SDL_GetTicks();
+    int64_t diff = aticks - bticks;
+    if (diff > SLEEP && cycle == 0)
+    {
+        ++cycle;
+    }
+    else if (diff <= SLEEP)
+    {
+        if (cycle)
+            --cycle;
+        usleep((SLEEP - diff) * 1000);
+    }
+    else
+    {
+        usleep(SLEEP * 1000);
+    }
+
+#ifdef TEST_SPEED
+    printf("time %d %d %d\n", aticks - bticks, bticks, aticks);
+#endif
 }
 
 int main(int argc, char *args[])

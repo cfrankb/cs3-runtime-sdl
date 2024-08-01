@@ -481,7 +481,9 @@ void CGameMixin::mainLoop()
         {
             // avoid keys repeating
             return;
-        } else {
+        }
+        else
+        {
             m_game->setMode(CGame::MODE_LEVEL);
             m_keyRepeters[Key_F1] = 1;
         }
@@ -648,6 +650,7 @@ int CGameMixin::rankScore()
 
 void CGameMixin::drawScores(CFrame &bitmap)
 {
+    bitmap.fill(BLACK);
     char t[50];
     int y = 1;
     strcpy(t, "HALL OF HEROES");
@@ -692,6 +695,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
 
 void CGameMixin::drawHelpScreen(CFrame &bitmap)
 {
+    bitmap.fill(BLACK);
     const char *helptext[]{
         "",
         "!HELP",
@@ -719,18 +723,21 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
     };
 
     char t[50];
-    int y =0;
+    int y = 0;
 
-    for (size_t i=0; i < sizeof(helptext)/sizeof(helptext[0]);++i) {
+    for (size_t i = 0; i < sizeof(helptext) / sizeof(helptext[0]); ++i)
+    {
         strcpy(t, helptext[i]);
         char *p = t;
         int x = 0;
         auto color = WHITE;
-        if (p[0] =='~') {
+        if (p[0] == '~')
+        {
             ++p;
             color = YELLOW;
         }
-        else if (p[0] =='!') {
+        else if (p[0] == '!')
+        {
             ++p;
             x = (WIDTH - strlen(p) * FONT_SIZE) / 2;
         }
