@@ -40,5 +40,5 @@ https://github.com/cfrankb/cs3-map-edit
 
 ### Play online
 
-https://cfrankb.com/games/ems/cs3v2.html
+https://cfrankb.itch.io/creepspread-iii
 
