@@ -1,4 +1,4 @@
-# CS3 Runtime SDL
+# CS3 Runtime SDL2
 
 This project aims to port to the CS3 Runtime to a wide variety of platforms. 
 
