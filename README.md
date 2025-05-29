@@ -34,6 +34,34 @@ $ emmake make
 $ emrun build/cs3v2.html
 ```
 
+
+## Mingw32 on Linux
+
+<b>Building the docker image</b>
+
+```
+$ sudo docker build -t sdl2-static-xmp-zlib .
+```
+
+<b>Deleting an existing image</b>
+
+```
+$ sudo docker rmi sdl2-static-xmp-zlib
+```
+
+<b>Building cs3 runtime</b>
+
+```
+$ sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-static-xmp-zlib
+$ cd workspace
+$ python3 bin/gen.py mingw-sdl
+$ make
+```
+
+
+
+## Other resources
+
 ### Map Editor
 
 https://github.com/cfrankb/cs3-map-edit

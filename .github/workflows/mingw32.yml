@@ -1,0 +1,65 @@
+name: Build Windows App
+
+
+on:
+  push:
+    branches:
+      - 'master'
+      - "github-ci"
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ github-ci ]
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            mingw-w64 \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            wget \
+            unzip \
+            python3 \
+            git
+
+      - name: Download SDL2 mingw
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/deps
+          cd $GITHUB_WORKSPACE/deps
+          wget https://cfrankb.com/files/libs/sdl2-mingw.zip
+          unzip sdl2-mingw.zip
+          rm sdl2-mingw.zip
+
+
+      - name: Build your app
+        run: |
+          python3 bin/gen.py mingw-sdl $GITHUB_WORKSPACE/deps
+          mkdir -p build
+          make
+          mkdir -p setup/data
+          cp -R data/* setup/data
+          cp build/*.exe setup
+          cp LICENSE setup
+          ls -l setup
+
+      - name: Upload Windows executable
+        uses: actions/upload-artifact@master
+        with:
+          name: cs3v2-mingw-win32
+          path: setup

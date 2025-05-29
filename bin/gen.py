@@ -44,29 +44,47 @@ def get_deps_blocks():
     return deps_blocks, objs
 
 
-help_text = '''
+options = ['sdl', 'emsdl', 'mingw-sdl']
+
+help_text = f'''
 makefile generator
 
 must have only one arg.
-possible values are sdl and emsdl
+possible values are: {', '.join(options)}
 
-example:
+examples:
 
 python bin/gen.py sdl
 python bin/gen.py emsdl
+python bin/gen.py mingw-sdl
 
 '''.strip()
 
-
+# https://www.reddit.com/r/C_Programming/comments/18xgs92/fixing_a_github_action_to_build_my_c_project_for/
 def main():
-    if len(sys.argv) != 2 or sys.argv[1] not in ['sdl', 'emsdl']:
+
+    if (len(sys.argv) == 2 and sys.argv[1] not in options) or \
+        (len(sys.argv) == 3 and sys.argv[1] not in ['mingw-sdl']) or \
+        (len(sys.argv) != 2 and len(sys.argv) != 3):
         print(help_text)
         exit(EXIT_FAILURE)
     elif sys.argv[1] == 'sdl':
         vars = [
             'CXX=g++',
             'INC=',
-            'LIBS=-lSDL2_mixer -lSDL2 -lz',
+            'LIBS= -lSDL2_mixer -lSDL2 -lSDL2main -lz',
+            'CXXFLAGS=-O3',
+            'PARGS=',
+            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+        ]
+        print("type `make` to generare binary.")
+        ext = '.o'
+    elif sys.argv[1] == 'mingw-sdl':
+        prefix = sys.argv[2] if len(sys.argv) ==3 else '/sdl2-windows'
+        vars = [
+            'CXX=x86_64-w64-mingw32-g++',
+            f'INC=-I{prefix}/include',
+            f'LIBS=-L{prefix}/lib -static-libgcc -static-libstdc++ -static -lmingw32  -lSDL2main -lSDL2 -lSDL2_mixer  -lxmp  -lvorbisfile -lvorbis -logg  -lopengl32 -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lgdi32 -lwinmm -lws2_32  -lSDL2_mixer -lSDL2 -lSDL2main -lz -lsetupapi -lhid',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='

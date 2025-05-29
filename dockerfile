@@ -1,0 +1,81 @@
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install toolchain and required build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    mingw-w64 \
+    autoconf \
+    automake \
+    libtool \
+    pkg-config \
+    wget \
+    git \
+    python3 \
+    ca-certificates && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# --- Build libogg ---
+WORKDIR /build
+RUN wget https://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz && \
+    tar -xf libogg-1.3.5.tar.gz && rm libogg-1.3.5.tar.gz
+WORKDIR /build/libogg-1.3.5
+RUN ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-shared --enable-static && \
+    make -j$(nproc) && make install
+
+# --- Build libvorbis ---
+WORKDIR /build
+RUN wget https://downloads.xiph.org/releases/vorbis/libvorbis-1.3.7.tar.gz && \
+    tar -xf libvorbis-1.3.7.tar.gz && rm libvorbis-1.3.7.tar.gz
+WORKDIR /build/libvorbis-1.3.7
+RUN ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --with-ogg=/sdl2-windows --disable-shared --enable-static && \
+    make -j$(nproc) && make install
+
+# --- Build SDL2 ---
+WORKDIR /build
+RUN wget https://github.com/libsdl-org/SDL/releases/download/release-2.30.3/SDL2-2.30.3.tar.gz && \
+    tar -xf SDL2-2.30.3.tar.gz && rm SDL2-2.30.3.tar.gz
+WORKDIR /build/SDL2-2.30.3
+RUN ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-shared --enable-static && \
+    make -j$(nproc) && make install
+
+# --- Build full libxmp from GitHub (static) ---
+WORKDIR /build
+RUN git clone https://github.com/libxmp/libxmp.git
+WORKDIR /build/libxmp
+RUN ./autogen.sh && \
+    ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-shared --enable-static && \
+    make -j$(nproc) && make install
+
+# --- Build SDL2_mixer with static linking and minimal formats ---
+WORKDIR /build
+RUN wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz && \
+    tar -xf SDL2_mixer-2.8.0.tar.gz && rm SDL2_mixer-2.8.0.tar.gz
+WORKDIR /build/SDL2_mixer-2.8.0
+RUN ./configure \
+    --host=x86_64-w64-mingw32 \
+    --prefix=/sdl2-windows \
+    --with-sdl-prefix=/sdl2-windows \
+    --disable-shared --enable-static \
+    --disable-music-mp3 \
+    --disable-music-mp3-mpg123 \
+    --disable-music-flac \
+    --disable-music-opus \
+    --disable-music-wavpack \
+    --enable-music-ogg \
+    --enable-music-mod-xmp \
+    LIBS="-L/sdl2-windows/lib -lxmp -logg -lvorbis -lvorbisfile" && \
+    make -j$(nproc) && make install
+
+# --- Build zlib (static) ---
+WORKDIR /build
+RUN wget https://cfrankb.com/files/libs/zlib-1.3.1.tar.gz && \
+    tar -xf zlib-1.3.1.tar.gz && rm zlib-1.3.1.tar.gz
+WORKDIR /build/zlib-1.3.1
+RUN CROSS_PREFIX=x86_64-w64-mingw32- ./configure --static --prefix=/sdl2-windows && \
+    make -j$(nproc) && make install
+
+# --- Final container setup ---
+WORKDIR /workspace
+CMD ["/bin/bash"]
