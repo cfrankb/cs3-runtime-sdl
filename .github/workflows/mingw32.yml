@@ -5,11 +5,11 @@ on:
   push:
     branches:
       - 'master'
-      - "gitlab-ci"
+      - "github-ci"
     tags:
       - 'v*'
   pull_request:
-    branches: [ gitlab-ci ]
+    branches: [ github-ci ]
 
 jobs:
   build-windows:

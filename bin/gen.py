@@ -68,9 +68,6 @@ def main():
         (len(sys.argv) != 2 and len(sys.argv) != 3):
         print(help_text)
         exit(EXIT_FAILURE)
-
-
-
     elif sys.argv[1] == 'sdl':
         vars = [
             'CXX=g++',

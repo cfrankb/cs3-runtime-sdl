@@ -49,13 +49,13 @@ $ sudo docker build -t sdl2-static-xmp-zlib .
 $ sudo docker rmi sdl2-static-xmp-zlib
 ```
 
-<b>Building the runtime
+<b>Building cs3 runtime</b>
 
 ```
-sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-static-xmp-zlib
-cd workspace
-python3 bin/gen.py mingw-sdl
-make
+$ sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-static-xmp-zlib
+$ cd workspace
+$ python3 bin/gen.py mingw-sdl
+$ make
 ```
 
 

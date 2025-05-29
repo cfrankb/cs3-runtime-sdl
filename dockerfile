@@ -16,9 +16,8 @@ RUN apt-get update && apt-get install -y \
     ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /build
-
 # --- Build libogg ---
+WORKDIR /build
 RUN wget https://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.gz && \
     tar -xf libogg-1.3.5.tar.gz && rm libogg-1.3.5.tar.gz
 WORKDIR /build/libogg-1.3.5
