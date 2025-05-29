@@ -1,68 +1,5 @@
 name: Build Windows App
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build-windows:
-    runs-on: ubuntu-22.04
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Install build dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y \
-          mingw-w64 \
-          build-essential \
-          autoconf \
-          automake \
-          libtool \
-          pkg-config \
-          wget \
-          unzip \
-          python3 \
-          git
-
-    - name: Download SDL2 mingw
-      run: |
-        mkdir -p $GITHUB_WORKSPACE/deps
-        cd $GITHUB_WORKSPACE/deps
-        wget https://cfrankb.com/files/libs/sdl2-mingw.zip
-        unzip sdl2-mingw.zip
-        rm sdl2-mingw.zip
-        ls -l
-
-
-    - name: Build your app
-      run: |
-        python3 build/gen.py mingw-sdl
-        ln -s $GITHUB_WORKSPACE/deps /sdl2-windows
-        ls -l /sdl2-windows
-        ls -l
-        make
-        ls -l
-
-
-    - name: Upload Windows executable
-      uses: actions/upload-artifact@v3
-      with:
-        name: myapp-windows
-        path: myapp.exe
-
-
-
-
-
-
-
-
-name: Windows Release
 
 on:
   push:
@@ -73,164 +10,59 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - 'master'
-      - 'continuous-integration'
-
-defaults:
-  run:
-    shell: cmd
-
-env:
-  VERSION: 0.6.9
-  BUILD_TYPE: Release
-  SOURCE_DIR: ${{ github.workspace }}
-  ARTIFACT: cs3v2_Win64
-  HOST: windows
-
+    branches: [ gitlab-ci ]
 
 jobs:
-  build:
-    runs-on: windows-2019
-
-    strategy:
-      matrix:
-        os: [windows-latest]
-        python-version: [3.12]
-      fail-fast: false
+  build-windows:
+    runs-on: ubuntu-22.04
 
     steps:
-      - name: checkout repo
+
+      - name: Checkout repo
         uses: actions/checkout@v3
-
-      - name: Get all tags for correct version determination
-        working-directory: ${{ github.workspace }}
-        run: |
-          git fetch --all --tags -f
-
-      - name: Download SDL2
-        uses: suisei-cn/actions-download-file@v1.4.0
         with:
-          url: https://cfrankb.com/files/libs/sdl2-mingw.zip
-          target: ${{ runner.temp }}\
+          submodules: recursive
 
-      - name: Unzip SDL2 / copy files
-        working-directory: ${{ runner.temp }}
+
+      - name: Install build dependencies
         run: |
-          7z x sdl2-mingw.zip -osdl2-mingw
-          dir /s sdl2-mingw
+          sudo apt update
+          sudo apt install -y \
+            mingw-w64 \
+            build-essential \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            wget \
+            unzip \
+            python3 \
+            git
 
-      - name: Set up MinGW
-        uses: egor-tensin/setup-mingw@v2
-        with:
-          platform: x64
-
-      - name: Setup C/C++ Compiler
-        id: setup-compiler
-        uses: rlalik/setup-cpp-compiler@master
-        with:
-          compiler: gcc-latest
-
-      - name: Verify GCC Installation
+      - name: Download SDL2 mingw
         run: |
-          gcc --version
-          g++ --version
+          mkdir -p $GITHUB_WORKSPACE/deps
+          cd $GITHUB_WORKSPACE/deps
+          wget https://cfrankb.com/files/libs/sdl2-mingw.zip
+          unzip sdl2-mingw.zip
+          rm sdl2-mingw.zip
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
 
-      - name: Create build directory
+      - name: Build your app
         run: |
-          mkdir ${{ runner.temp }}\build\cs3v2
-          mkdir ${{ runner.temp }}\build\cs3v2\build
-          mkdir ${{ runner.temp }}\setup
+          python3 bin/gen.py mingw-sdl $GITHUB_WORKSPACE/deps
+          mkdir -p build
+          ls -l
+          make
+          ls -l
+          mkdir -p setup/data
+          cp -R data/* setup/data
+          cp build/*.exe setup
+          cp LICENSE setup
+          ls -l setup
 
-      - name: Download JOM
-        uses: suisei-cn/actions-download-file@v1.4.0
-        with:
-          url: http://download.qt.io/official_releases/jom/jom.zip
-          target: ${{ runner.temp }}\
-
-      - name: Unzip JOM
-        working-directory: ${{ runner.temp }}
-        run: |
-          7z x jom.zip -ojom
-
-      - name: Download zlib
-        uses: suisei-cn/actions-download-file@v1.4.0
-        with:
-          url: https://cfrankb.com/files/libs/zlib13.zip
-          target: ${{ runner.temp }}\
-
-      - name: Unzip and compile zlib
-        working-directory: ${{ runner.temp }}
-        run: |
-          7z x zlib13.zip -ozlib
-          dir /w zlib
-          cd zlib\\zlib-1.3
-          dir /w
-          ${{ runner.temp }}\jom\jom -j2 -f win32/Makefile.gcc
-          dir /w
-
-          copy zlib.a ${{ runner.temp }}\build\libs
-          copy zlib.h ${{ runner.temp }}\build\headers
-          copy zconf.h ${{ runner.temp }}\build\headers
-
-
-      - name: Build cs3v2
-        working-directory: ${{ runner.temp }}\build\cs3v2
-        run: |
-          xcopy ${{ env.SOURCE_DIR }} ${{ runner.temp }}\build\cs3v2 /C /I /E
-          xcopy ${{ env.SOURCE_DIR }}/data ${{ runner.temp }}/setup/data /E
-          xcopy ../setup ../../setup /E
-          python bin\\gen.py sdl
-          ${{ runner.temp }}\jom\jom -j2 -f Makefile
-          dir /s
-          dir .. /s
-
-
-
-      - name: Save build artifact
+      - name: Upload Windows executable
         uses: actions/upload-artifact@master
         with:
-          name: ${{ env.ARTIFACT }}_${{ env.VERSION }}
-          path: ${{ runner.temp }}\setup
-
-
-
-jobs:
-  msys2-ucrt64:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
-    steps:
-      - uses: actions/checkout@v3
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          #install: git mingw-w64-ucrt-x86_64-libgcrypt mingw-w64-ucrt-x86_64-gcc make
-          install: |
-            git make
-            mingw-w64-ucrt-x86_64-SDL2
-            mingw-w64-ucrt-x86_64-SDL2_mixer
-            mingw-w64-ucrt-x86_64-SDL2_sound
-            mingw-w64-ucrt-x86_64-mpg123
-            mingw-w64-ucrt-x86_64-opus
-            mingw-w64-ucrt-x86_64-opusfile
-            mingw-w64-ucrt-x86_64-libogg
-            mingw-w64-ucrt-x86_64-libvorbis
-            mingw-w64-ucrt-x86_64-flac
-            mingw-w64-ucrt-x86_64-zlib
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-libxmp
-          # mingw-w64-ucrt-x86_64-python
-      - name: CI-Build
-        run: |
-          echo 'Running in MSYS2!'
-          mkdir -p build
-          make
-
+          name: cs3v2-mingw-win32
+          path: setup
