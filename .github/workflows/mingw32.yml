@@ -6,7 +6,6 @@ on:
     branches:
       - 'master'
       - "gitlab-ci"
-      - 'continuous-integration'
     tags:
       - 'v*'
   pull_request:
@@ -52,9 +51,7 @@ jobs:
         run: |
           python3 bin/gen.py mingw-sdl $GITHUB_WORKSPACE/deps
           mkdir -p build
-          ls -l
           make
-          ls -l
           mkdir -p setup/data
           cp -R data/* setup/data
           cp build/*.exe setup
