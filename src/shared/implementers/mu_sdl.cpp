@@ -27,11 +27,28 @@ CMusicSDL::CMusicSDL()
         printf("SDL_init failed: %s\n", SDL_GetError());
         m_valid = false;
     }
-    if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 8192) < 0)
+
+    /*
+if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 8192) < 0)
+{
+    printf("Mix_OpenAudio failed: %s\n", SDL_GetError());
+    m_valid = false;
+}
+    */
+
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) == -1)
     {
-        printf("Mix_OpenAudio failed: %s\n", SDL_GetError());
+        printf("Mix_OpenAudio Error: %s\n", Mix_GetError());
         m_valid = false;
     }
+
+    // Make sure XMP is enabled
+    if (!(Mix_Init(MIX_INIT_MOD) & MIX_INIT_MOD))
+    {
+        printf("Mix_Init MOD error: %s\n", Mix_GetError());
+        m_valid = false;
+    }
+
     m_music = nullptr;
 }
 
@@ -48,6 +65,10 @@ bool CMusicSDL::open(const char *file)
     if (m_valid)
     {
         m_music = Mix_LoadMUS(file);
+        if (!m_music)
+        {
+            printf("Failed to load music: %s\n", Mix_GetError());
+        }
     }
     else
     {

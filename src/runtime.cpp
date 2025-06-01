@@ -265,8 +265,10 @@ void CRuntime::preRun()
 
 void CRuntime::initMusic()
 {
+
     m_music = new CMusicSDL();
-    const char music[] = "data/music/cs3idea_64.ogg";
+    //    const char music[] = "data/music/cs3idea_64.ogg";
+    const char music[] = "data/music/Ievan_Banjo3.xm";
     if (m_music && m_music->open(music))
     {
         m_music->play();

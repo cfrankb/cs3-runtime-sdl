@@ -65,6 +65,8 @@ RUN ./configure \
     --disable-music-wavpack \
     --enable-music-ogg \
     --enable-music-mod-xmp \
+    --enable-music-mod \
+    --enable-music-mod-modplug \
     LIBS="-L/sdl2-windows/lib -lxmp -logg -lvorbis -lvorbisfile" && \
     make -j$(nproc) && make install
 
