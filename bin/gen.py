@@ -35,7 +35,7 @@ def get_deps_blocks(extra_path):
     lines = []
     lines.append(f'$(TARGET): $(DEPS)')
     lines.append(
-        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)')
+        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)')
     deps_blocks.append('\n'.join(lines))
     lines = []
     lines.append('clean:')
@@ -72,6 +72,7 @@ def main():
         vars = [
             'CXX=g++',
             'INC=',
+            'LDFLAGS=',
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
             'PARGS=',
@@ -84,7 +85,8 @@ def main():
         vars = [
             'CXX=g++',
             f'INC=-I{prefix}/include',
-            f'LIBS=-L{prefix}/lib -static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
+            f'LDFLAGS=-L{prefix}/lib',
+            'LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
@@ -96,7 +98,9 @@ def main():
         vars = [
             'CXX=x86_64-w64-mingw32-g++',
             f'INC=-I{prefix}/include',
-            f'LIBS=-L{prefix}/lib -static-libgcc -static-libstdc++ -static -lmingw32  -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug  -lxmp -lvorbisfile -lvorbis -logg  -lopengl32 -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lgdi32 -lwinmm -lws2_32  -lSDL2_mixer -lSDL2 -lSDL2main -lz -lsetupapi -lhid -lxmp',
+            f'LDFLAGS=-L{prefix}/lib -Wl,-t',
+            'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
+            #'LIBS=-static-libgcc -static-libstdc++ -static -Wl,-Bstatic -lmingw32  -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug -lvorbisfile -lvorbis -logg  -lopengl32  -lxmp -lz -lm -Wl,-Bdynamic -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
@@ -108,6 +112,7 @@ def main():
             'CXX=em++',
             'INC=',
             'LIBS=-lopenal -lidbfs.js',
+            'LDFLAGS=',
             'CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -O2',
             'PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE=--shell-file src/template/body.html'

@@ -47,9 +47,12 @@ RUN ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-share
 
 # --- Build full libxmp from GitHub (static) ---
 WORKDIR /build
-RUN git clone https://github.com/libxmp/libxmp.git
-WORKDIR /build/libxmp
-RUN ./autogen.sh && \
+RUN rm -rf libxmp &&  \
+    git clone https://github.com/libxmp/libxmp.git && \
+    rm -f /sdl2-windows/libxmp.* && \
+    cd libxmp && \
+    make distclean || true && \
+    ./autogen.sh && \
     ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-shared --enable-static && \
     make -j$(nproc) && make install
 
@@ -99,6 +102,10 @@ RUN wget https://cfrankb.com/files/libs/zlib-1.3.1.tar.gz && \
 WORKDIR /build/zlib-1.3.1
 RUN CROSS_PREFIX=x86_64-w64-mingw32- ./configure --static --prefix=/sdl2-windows && \
     make -j$(nproc) && make install
+
+
+# clean up
+RUN rm -rf /build
 
 # --- Final container setup ---
 WORKDIR /workspace

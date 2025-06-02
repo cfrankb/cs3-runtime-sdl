@@ -16,8 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cstdio>
+extern "C"
+{
 #include <SDL2/SDL.h>
 #include <xmp.h>
+}
 #include "mu_sdl.h"
 
 #define AUDIO_RATE 48000
@@ -26,34 +29,37 @@
 #define AUDIO_SAMPLES 1024
 
 xmp_context ctx;
-
-void audio_callback(void *userdata, Uint8 *stream, int len)
-{
-    xmp_play_buffer(ctx, stream, len, 0); // 0 = don't loop
-}
+SDL_AudioDeviceID dev;
+struct xmp_frame_info info;
 
 CMusicSDL::CMusicSDL()
 {
     m_valid = true;
-    if (SDL_Init(SDL_INIT_AUDIO) < 0)
+    if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_TIMER) < 0)
     {
-        printf("SDL_init failed: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL_Init error: %s\n", SDL_GetError());
         m_valid = false;
     }
 
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024) == -1)
     {
-        printf("Mix_OpenAudio Error: %s\n", Mix_GetError());
+        fprintf(stderr, "Mix_OpenAudio Error: %s\n", Mix_GetError());
         m_valid = false;
     }
 
     SDL_AudioSpec spec;
+    SDL_zero(spec);
     spec.freq = AUDIO_RATE;
     spec.format = AUDIO_FORMAT;
     spec.channels = AUDIO_CHANNELS;
     spec.samples = AUDIO_SAMPLES;
-    spec.callback = audio_callback;
-    spec.userdata = NULL;
+    spec.callback = NULL;
+    SDL_AudioSpec obtained;
+    dev = SDL_OpenAudioDevice(NULL, 0, &spec, &obtained, 0);
+    if (dev == 0)
+    {
+        fprintf(stderr, "SDL_OpenAudioDevice error: %s\n", SDL_GetError());
+    }
 
     if (SDL_OpenAudio(&spec, NULL) < 0)
     {
@@ -94,7 +100,7 @@ bool CMusicSDL::open(const char *file)
         //    printf("Failed to load music: %s\n", Mix_GetError());
         //}
 
-        if (xmp_load_module(ctx, file) < 0)
+        if (xmp_load_module(ctx, file) != 0)
         {
             fprintf(stderr, "Error: could not load module %s\n", file);
             // xmp_free_context(ctx);
@@ -106,6 +112,21 @@ bool CMusicSDL::open(const char *file)
             fprintf(stderr, "Error: could not start player\n");
             //   xmp_free_context(ctx);
             return false;
+        }
+
+        while (1)
+        {
+            if (xmp_play_frame(ctx) != 0)
+                break;
+            xmp_get_frame_info(ctx, &info);
+
+            if (info.loop_count > 0)
+                break;
+
+            // Queue audio to SDL2
+            SDL_QueueAudio(dev, info.buffer, info.buffer_size);
+
+            SDL_Delay(info.total_time / info.num_rows / 2); // avoid CPU spin
         }
     }
     else
