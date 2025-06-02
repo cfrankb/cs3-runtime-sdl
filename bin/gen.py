@@ -22,8 +22,8 @@ def prepare_deps(deps, fname):
     return '\n'.join(lines)
 
 
-def get_deps_blocks():
-    paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"]
+def get_deps_blocks(extra_path):
+    paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"] + extra_path
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
@@ -62,7 +62,7 @@ python bin/gen.py mingw32-sdl2
 
 # https://www.reddit.com/r/C_Programming/comments/18xgs92/fixing_a_github_action_to_build_my_c_project_for/
 def main():
-
+    extra_paths = []
     if (len(sys.argv) == 2 and sys.argv[1] not in options) or \
         (len(sys.argv) == 3 and sys.argv[1] not in ['sdl2-static', 'mingw32-sdl2']) or \
         (len(sys.argv) != 2 and len(sys.argv) != 3):
@@ -72,7 +72,7 @@ def main():
         vars = [
             'CXX=g++',
             'INC=',
-            'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz',
+            'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
@@ -96,7 +96,7 @@ def main():
         vars = [
             'CXX=x86_64-w64-mingw32-g++',
             f'INC=-I{prefix}/include',
-            f'LIBS=-L{prefix}/lib -static-libgcc -static-libstdc++ -static -lmingw32  -lSDL2main -lSDL2 -lSDL2_mixer -lxmp -lvorbisfile -lvorbis -logg  -lopengl32 -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lgdi32 -lwinmm -lws2_32  -lSDL2_mixer -lSDL2 -lSDL2main -lz -lsetupapi -lhid -lxmp',
+            f'LIBS=-L{prefix}/lib -static-libgcc -static-libstdc++ -static -lmingw32  -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug  -lxmp -lvorbisfile -lvorbis -logg  -lopengl32 -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lgdi32 -lwinmm -lws2_32  -lSDL2_mixer -lSDL2 -lSDL2main -lz -lsetupapi -lhid -lxmp',
             'CXXFLAGS=-O3',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
@@ -116,7 +116,7 @@ def main():
         ext = '.o'
     print("type `make clean` to delete the content of the build folder.")
 
-    deps_blocks, objs = get_deps_blocks()
+    deps_blocks, objs = get_deps_blocks(extra_paths)
     vars.append(f'DEPS={objs}')
     vars.append(f'EXT={ext}')
     with open('Makefile', 'w') as tfile:

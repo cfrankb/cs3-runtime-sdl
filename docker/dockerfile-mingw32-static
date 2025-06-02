@@ -13,8 +13,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     git \
     python3 \
+    cmake \
     ca-certificates && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV CC=x86_64-w64-mingw32-gcc
+ENV CXX=x86_64-w64-mingw32-g++
+ENV PREFIX=/sdl2-windows
 
 # --- Build libogg ---
 WORKDIR /build
@@ -48,12 +53,25 @@ RUN ./autogen.sh && \
     ./configure --host=x86_64-w64-mingw32 --prefix=/sdl2-windows --disable-shared --enable-static && \
     make -j$(nproc) && make install
 
+# --- libmodplug (CMake build) ---
+RUN git clone https://github.com/Konstanty/libmodplug.git && \
+    cd libmodplug && mkdir build && cd build && \
+    cmake .. -G "Unix Makefiles" \
+      -DCMAKE_SYSTEM_NAME=Windows \
+      -DCMAKE_C_COMPILER=${CC} \
+      -DCMAKE_CXX_COMPILER=${CXX} \
+      -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+      -DBUILD_SHARED_LIBS=OFF && \
+    make -j$(nproc) && make install
+
 # --- Build SDL2_mixer with static linking and minimal formats ---
 WORKDIR /build
-RUN wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz && \
-    tar -xf SDL2_mixer-2.8.0.tar.gz && rm SDL2_mixer-2.8.0.tar.gz
-WORKDIR /build/SDL2_mixer-2.8.0
-RUN ./configure \
+RUN rm -rf SDL2_mixer-2.8.0 && \
+    rm -rf /sdl2-windows/lib/libSDL2_mixer.* && \
+    wget https://github.com/libsdl-org/SDL_mixer/releases/download/release-2.8.0/SDL2_mixer-2.8.0.tar.gz && \
+    tar -xf SDL2_mixer-2.8.0.tar.gz && rm SDL2_mixer-2.8.0.tar.gz && \
+    cd SDL2_mixer-2.8.0 && \
+  ./configure \
     --host=x86_64-w64-mingw32 \
     --prefix=/sdl2-windows \
     --with-sdl-prefix=/sdl2-windows \
@@ -67,8 +85,12 @@ RUN ./configure \
     --enable-music-mod-xmp \
     --enable-music-mod \
     --enable-music-mod-modplug \
-    LIBS="-L/sdl2-windows/lib -lxmp -logg -lvorbis -lvorbisfile" && \
+    --enable-music-midi \
+    LIBS="-L/sdl2-windows/lib -lxmp -lmodplug -logg -lvorbis -lvorbisfile" && \
+    make clean && \
     make -j$(nproc) && make install
+
+    # https://github.com/libsdl-org/SDL_mixer/blob/release-2.8.x/configure
 
 # --- Build zlib (static) ---
 WORKDIR /build

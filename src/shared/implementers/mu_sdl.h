@@ -36,6 +36,13 @@ public:
 protected:
     Mix_Music *m_music; // Background Music
     char *m_name;
+    enum
+    {
+        TYPE_NONE,
+        TYPE_MOD,
+        TYPE_OGG
+    };
+    uint8_t m_type = TYPE_NONE;
 };
 
 #endif // MU_SDL_H
