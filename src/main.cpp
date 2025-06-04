@@ -20,14 +20,16 @@
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
+#include "shared/implementers/mu_sdl.h"
 
 #define FPS 24
 #define SLEEP 1000 / FPS
-// #define TEST_SPEED
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 CRuntime *g_runtime = nullptr;
+extern void playXM(void *userData);
 extern "C"
 {
     int savegame(int x)
@@ -59,37 +61,20 @@ extern "C"
 }
 #endif
 
+uint32_t lastTick = 0;
+
 void loop_handler(void *arg)
 {
-    static int cycle = 0;
-    CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
-    uint32_t bticks = SDL_GetTicks();
-    if (cycle == 0)
+    uint32_t currTick = SDL_GetTicks();
+    if (currTick - lastTick > SLEEP)
     {
+        CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
+        uint32_t bticks = SDL_GetTicks();
+        runtime->doInput();
+        runtime->run();
         runtime->paint();
+        lastTick = currTick;
     }
-    runtime->doInput();
-    runtime->run();
-    uint32_t aticks = SDL_GetTicks();
-    int64_t diff = aticks - bticks;
-    if (diff > SLEEP && cycle == 0)
-    {
-        ++cycle;
-    }
-    else if (diff <= SLEEP)
-    {
-        if (cycle)
-            --cycle;
-        usleep((SLEEP - diff) * 1000);
-    }
-    else
-    {
-        usleep(SLEEP * 1000);
-    }
-
-#ifdef TEST_SPEED
-    printf("time %d %d %d\n", aticks - bticks, bticks, aticks);
-#endif
 }
 
 int main(int argc, char *args[])
@@ -109,8 +94,8 @@ int main(int argc, char *args[])
     runtime.paint();
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
+    emscripten_set_interval(playXM, 30, nullptr);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
-// emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, 1000/FPS*1000);
 #else
     while (true)
     {
