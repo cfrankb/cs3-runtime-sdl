@@ -40,6 +40,9 @@ def get_deps_blocks(extra_path):
     lines = []
     lines.append('clean:')
     lines.append("\trm -rf $(BPATH)/*")
+    lines.append("")
+    lines.append('retry:')
+    lines.append("\trm -rf $(TARGET)")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
 
@@ -99,7 +102,7 @@ def main():
             'CXX=x86_64-w64-mingw32-g++',
             f'INC=-I{prefix}/include',
             f'LDFLAGS=-L{prefix}/lib -Wl,-t',
-            'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
+            'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             #'LIBS=-static-libgcc -static-libstdc++ -static -Wl,-Bstatic -lmingw32  -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug -lvorbisfile -lvorbis -logg  -lopengl32  -lxmp -lz -lm -Wl,-Bdynamic -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3',
             'PARGS=',
