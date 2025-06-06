@@ -45,6 +45,7 @@ protected:
     void keyReflector(SDL_Keycode key, uint8_t keyState);
     virtual bool loadScores() override;
     virtual bool saveScores() override;
+    virtual void openMusicForLevel(int i) override;
 
     typedef struct
     {

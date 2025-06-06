@@ -43,6 +43,7 @@ def get_deps_blocks(extra_path):
     lines.append("")
     lines.append('retry:')
     lines.append("\trm -rf $(TARGET)")
+    lines.append("")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
 
@@ -103,7 +104,6 @@ def main():
             f'INC=-I{prefix}/include',
             f'LDFLAGS=-L{prefix}/lib -Wl,-t',
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
-            #'LIBS=-static-libgcc -static-libstdc++ -static -Wl,-Bstatic -lmingw32  -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lmodplug -lvorbisfile -lvorbis -logg  -lopengl32  -lxmp -lz -lm -Wl,-Bdynamic -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='

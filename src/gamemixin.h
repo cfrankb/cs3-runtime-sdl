@@ -200,6 +200,7 @@ protected:
     virtual void stopMusic();
     virtual void startMusic();
     virtual void setZoom(bool zoom);
+    virtual void openMusicForLevel(int i);
 };
 
 #endif // CGAMEMIXIN_H

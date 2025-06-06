@@ -25,6 +25,9 @@
 #define FPS 24
 #define SLEEP 1000 / FPS
 
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -62,17 +65,22 @@ extern "C"
 #endif
 
 uint32_t lastTick = 0;
+bool skip = false;
 
 void loop_handler(void *arg)
 {
     uint32_t currTick = SDL_GetTicks();
-    if (currTick - lastTick > SLEEP)
+    uint32_t meantime = currTick - lastTick;
+    if (meantime >= SLEEP)
     {
         CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
         uint32_t bticks = SDL_GetTicks();
         runtime->doInput();
         runtime->run();
-        runtime->paint();
+        if (meantime < (SLEEP + SLEEP / 2))
+        {
+            runtime->paint();
+        }
         lastTick = currTick;
     }
 }
@@ -83,13 +91,17 @@ int main(int argc, char *args[])
     CMapArch maparch;
     if (!maparch.read("data/levels.mapz"))
     {
-        printf("failed to read maparch: %s\n", maparch.lastError());
+        fprintf(stderr, "failed to read maparch: %s\n", maparch.lastError());
+        return EXIT_FAILURE;
     }
-
-    runtime.init(&maparch, 0);
+    int level = argc > 1 ? atoi(args[1]) % maparch.size() : 0;
+    runtime.init(&maparch, level);
     runtime.enableHiScore();
     runtime.enableMusic();
-    runtime.SDLInit();
+    if (!runtime.SDLInit())
+    {
+        return EXIT_FAILURE;
+    }
     runtime.preRun();
     runtime.paint();
 #ifdef __EMSCRIPTEN__
@@ -102,5 +114,5 @@ int main(int argc, char *args[])
         loop_handler(&runtime);
     }
 #endif
-    return 0;
+    return EXIT_SUCCESS;
 }

@@ -563,6 +563,7 @@ void CGameMixin::nextLevel()
     sanityTest();
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(false);
+    openMusicForLevel(m_game->level());
 }
 
 void CGameMixin::restartLevel()
@@ -1007,6 +1008,11 @@ void CGameMixin::stopMusic()
 }
 
 void CGameMixin::startMusic()
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::openMusicForLevel(int)
 {
     // TODO: implement in child class
 }

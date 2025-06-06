@@ -100,7 +100,7 @@ bool CRuntime::SDLInit()
     int windowFlags = SDL_WINDOW_SHOWN;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     else
@@ -110,7 +110,7 @@ bool CRuntime::SDLInit()
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 2 * WIDTH, 2 * HEIGHT, windowFlags);
         if (m_app.window == NULL)
         {
-            printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+            fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
             return false;
         }
         else
@@ -120,7 +120,7 @@ bool CRuntime::SDLInit()
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
-                printf("Failed to create renderer: %s\n", SDL_GetError());
+                fprintf(stderr, "Failed to create renderer: %s\n", SDL_GetError());
                 return false;
             }
 
@@ -129,7 +129,7 @@ bool CRuntime::SDLInit()
                 SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
             if (m_app.texture == nullptr)
             {
-                printf("Failed to create texture: %s\n", SDL_GetError());
+                fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
                 return false;
             }
         }
@@ -254,7 +254,7 @@ void CRuntime::preloadAssets()
     }
     else
     {
-        printf("failed to open %s\n", fontName);
+        fprintf(stderr, "failed to open %s\n", fontName);
     }
 }
 
@@ -266,12 +266,7 @@ void CRuntime::preRun()
 void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
-    // const char music[] = "data/music/cs3idea_64.ogg";
-    const char music[] = "data/music/Ievan_Banjo3.xm";
-    if (m_music && m_music->open(music))
-    {
-        m_music->play();
-    }
+    openMusicForLevel(m_game->level());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -327,12 +322,12 @@ bool CRuntime::loadScores()
         }
         else
         {
-            printf("size mismatch. resetting to default.\n");
+            fprintf(stderr, "size mismatch. resetting to default.\n");
             clearScores();
         }
         return true;
     }
-    printf("can't read %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't read %s\n", HISCORE_FILE);
     return false;
 }
 
@@ -352,7 +347,7 @@ bool CRuntime::saveScores()
 #endif
         return true;
     }
-    printf("can't write %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't write %s\n", HISCORE_FILE);
     return false;
 }
 
@@ -385,7 +380,7 @@ void CRuntime::save()
 {
     if (m_game->mode() != CGame::MODE_LEVEL)
     {
-        printf("cannot save while not playing\n");
+        fprintf(stderr, "cannot save while not playing\n");
         return;
     }
 
@@ -406,7 +401,7 @@ void CRuntime::save()
     }
     else
     {
-        printf("can't write:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't write:%s\n", SAVEGAME_FILE);
     }
 }
 
@@ -420,15 +415,16 @@ void CRuntime::load()
     {
         if (!read(sfile, name))
         {
-            printf("incompatible file\n");
+            fprintf(stderr, "incompatible file\n");
         }
         fclose(sfile);
     }
     else
     {
-        printf("can't read:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't read:%s\n", SAVEGAME_FILE);
     }
     m_game->setMode(CGame::MODE_LEVEL);
+    openMusicForLevel(m_game->level());
 }
 
 void CRuntime::initSounds()
@@ -455,8 +451,34 @@ void CRuntime::initSounds()
         }
         else
         {
-            printf("failed to open %s\n", soundName);
+            fprintf(stderr, "failed to open %s\n", soundName);
         }
     }
     m_game->attach(m_sound);
+}
+
+void CRuntime::openMusicForLevel(int i)
+{
+    const char *musics[] = {
+        "dissorint.xm",
+        "wrath_of_the_djinn.xm",
+        "viral_legacy.xm",
+        "musix-cute-october.mod.xm",
+        "knuckles_sucks!.xm",
+        "Ievan_Banjo3.xm",
+        "bitshift.xm",
+        "4_rndd!.xm",
+        "stranger_-_run.mod.xm",
+        "the_radix_point.xm",
+        "cabin_fever.xm",
+        "october_chip.xm",
+        "super_chicken.xm",
+        "kc-basslinetech.xm",
+    };
+    const size_t count = sizeof(musics) / sizeof(decltype(musics[0]));
+    const std::string music = std::string("data/music/") + musics[i % count];
+    if (m_music && m_music->open(music.c_str()))
+    {
+        m_music->play();
+    }
 }
