@@ -22,8 +22,8 @@
 #include "maparch.h"
 #include "shared/implementers/mu_sdl.h"
 
-#define FPS 24
-#define SLEEP 1000 / FPS
+const uint32_t FPS = 24;
+const uint32_t SLEEP = 1000 / FPS;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -66,20 +66,36 @@ extern "C"
 
 uint32_t lastTick = 0;
 bool skip = false;
+uint32_t sleepDelay = SLEEP;
 
 void loop_handler(void *arg)
 {
     uint32_t currTick = SDL_GetTicks();
     uint32_t meantime = currTick - lastTick;
-    if (meantime >= SLEEP)
+    if (meantime >= sleepDelay)
     {
         CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
         uint32_t bticks = SDL_GetTicks();
         runtime->doInput();
         runtime->run();
-        if (meantime < (SLEEP + SLEEP / 2))
+
+        uint32_t btime = SDL_GetTicks();
+        if (!skip)
         {
             runtime->paint();
+        }
+        uint32_t atime = SDL_GetTicks();
+
+        uint32_t ptime = atime - btime;
+        if (ptime < SLEEP)
+        {
+            sleepDelay = SLEEP - ptime;
+            skip = false;
+        }
+        else
+        {
+            sleepDelay = SLEEP;
+            skip = true;
         }
         lastTick = currTick;
     }
