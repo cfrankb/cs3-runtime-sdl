@@ -192,11 +192,8 @@ void CRuntime::doInput()
                 EM_ASM(
                     enableButtons(););
 #endif
-                if (m_musicEnabled)
-                {
-                    initMusic();
-                    initSounds();
-                }
+                initMusic();
+                initSounds();
             }
             break;
 
@@ -222,39 +219,43 @@ void CRuntime::preloadAssets()
         CFrameSet **frameset;
     };
 
-    asset_t assets[]{
-        {"data/tiles.obl", &m_tiles},
-        {"data/animz.obl", &m_animz},
-        {"data/annie.obl", &m_annie},
+    CFrameSet **frameSets[] = {
+        &m_tiles,
+        &m_animz,
+        &m_annie,
     };
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < m_assetFiles.size(); ++i)
     {
-        asset_t &asset = assets[i];
-        *(asset.frameset) = new CFrameSet();
-        if (file.open(asset.filename, "rb"))
+        std::string filename = m_prefix + m_assetFiles[i];
+        *frameSets[i] = new CFrameSet();
+        if (file.open(filename.c_str(), "rb"))
         {
-            printf("reading %s\n", asset.filename);
-            if ((*(asset.frameset))->extract(file))
+            printf("reading %s\n", filename.c_str());
+            if ((*frameSets[i])->extract(file))
             {
-                printf("extracted: %d\n", (*(asset.frameset))->getSize());
+                printf("extracted: %d\n", ((*frameSets[i])->getSize()));
             }
             file.close();
         }
+        else
+        {
+            fprintf(stderr, "can't read: %s\n", filename.c_str());
+        }
     }
 
-    const char fontName[] = "data/bitfont.bin";
-    if (file.open(fontName, "rb"))
+    std::string fontName = m_prefix + "bitfont.bin";
+    if (file.open(fontName.c_str(), "rb"))
     {
         int size = file.getSize();
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
-        printf("loaded %s: %d bytes\n", fontName, size);
+        printf("loaded %s: %d bytes\n", fontName.c_str(), size);
     }
     else
     {
-        fprintf(stderr, "failed to open %s\n", fontName);
+        fprintf(stderr, "failed to open %s\n", fontName.c_str());
     }
 }
 
@@ -358,6 +359,7 @@ void CRuntime::enableMusic()
 
 void CRuntime::stopMusic()
 {
+    m_musicEnabled = false;
     if (m_music)
     {
         m_music->stop();
@@ -366,6 +368,7 @@ void CRuntime::stopMusic()
 
 void CRuntime::startMusic()
 {
+    m_musicEnabled = true;
     if (m_music)
     {
         m_music->play();
@@ -429,29 +432,23 @@ void CRuntime::load()
 
 void CRuntime::initSounds()
 {
-    constexpr const char *filelist[]{
-        "data/sounds/gruup.wav",
-        "data/sounds/key.ogg",
-        "data/sounds/0009.ogg",
-        "data/sounds/coin1.oga",
-    };
     auto m_sound = new CSndSDL();
     CFileWrap file;
-    for (int i = 0; i < sizeof(filelist) / sizeof(filelist[0]); ++i)
+    for (int i = 0; i < m_soundFiles.size(); ++i)
     {
-        auto soundName = filelist[i];
-        if (file.open(soundName, "rb"))
+        const auto soundName = m_prefix + std::string("sounds/") + m_soundFiles[i];
+        if (file.open(soundName.c_str(), "rb"))
         {
-            int size = file.getSize();
+            const int size = file.getSize();
             auto sound = new uint8_t[size];
             file.read(sound, size);
             file.close();
-            printf("loaded %s: %d bytes\n", soundName, size);
+            printf("loaded %s: %d bytes\n", soundName.c_str(), size);
             m_sound->add(sound, size, i + 1);
         }
         else
         {
-            fprintf(stderr, "failed to open %s\n", soundName);
+            fprintf(stderr, "failed to open %s\n", soundName.c_str());
         }
     }
     m_game->attach(m_sound);
@@ -459,26 +456,92 @@ void CRuntime::initSounds()
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const char *musics[] = {
-        "dissorint.xm",
-        "wrath_of_the_djinn.xm",
-        "viral_legacy.xm",
-        "musix-cute-october.mod.xm",
-        "knuckles_sucks!.xm",
-        "Ievan_Banjo3.xm",
-        "bitshift.xm",
-        "4_rndd!.xm",
-        "stranger_-_run.mod.xm",
-        "the_radix_point.xm",
-        "cabin_fever.xm",
-        "october_chip.xm",
-        "super_chicken.xm",
-        "kc-basslinetech.xm",
-    };
-    const size_t count = sizeof(musics) / sizeof(decltype(musics[0]));
-    const std::string music = std::string("data/music/") + musics[i % count];
-    if (m_music && m_music->open(music.c_str()))
+    const std::string music = m_prefix + std::string("music/") + m_musicFiles[i % m_musicFiles.size()];
+    if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
     }
+}
+
+bool CRuntime::parseConfig(const char *filename)
+{
+    CFileWrap file;
+    if (!file.open(filename))
+    {
+        return false;
+    }
+    const int size = file.getSize();
+    char *tmp = new char[size + 1];
+    tmp[size] = '\0';
+    file.read(tmp, size);
+    file.close();
+
+    std::string section;
+    char *p = tmp;
+    int line = 1;
+    while (p && *p)
+    {
+        char *en = strstr(p, "\n");
+        if (en)
+        {
+            *en = 0;
+        }
+        char *er = strstr(p, "\r");
+        if (er)
+        {
+            *er = 0;
+        }
+        char *e = er > en ? er : en;
+        char *c = strstr(p, "#");
+        if (c)
+        {
+            *c = 0;
+        }
+        while (*p == ' ' || *p == '\t')
+        {
+            ++p;
+        }
+        int i = strlen(p) - 1;
+        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
+        {
+            p[i] = '\0';
+            --i;
+        }
+        if (p[0] == '[')
+        {
+            ++p;
+            char *pe = strstr(p, "]");
+            if (pe)
+                *pe = 0;
+            if (!pe)
+            {
+                fprintf(stderr, "missing section terminator on line %d\n", line);
+            }
+            section = p;
+        }
+        else if (p[0])
+        {
+            if (section == "musics")
+            {
+                m_musicFiles.push_back(p);
+            }
+            else if (section == "sounds")
+            {
+                m_soundFiles.push_back(p);
+            }
+            else if (section == "assets")
+            {
+                m_assetFiles.push_back(p);
+            }
+        }
+        p = e ? e + 1 : nullptr;
+        ++line;
+    }
+    delete[] tmp;
+    return true;
+}
+
+void CRuntime::setPrefix(const char *prefix)
+{
+    m_prefix = prefix;
 }

@@ -24,7 +24,6 @@
 #include "../FileWrap.h"
 
 extern AUDIOPLAYER Audioplayer;
-pthread_t thread1;
 
 #ifdef __EMSCRIPTEN__
 void playXM(void *userData)
@@ -36,6 +35,7 @@ void playXM(void *userData)
     }
 }
 #else
+pthread_t thread1;
 void *playXMThread(void *)
 {
     while (1)

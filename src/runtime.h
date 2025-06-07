@@ -17,6 +17,7 @@
 */
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
+#include <vector>
 
 class ISound;
 
@@ -24,7 +25,7 @@ class CRuntime : public CGameMixin
 {
 public:
     CRuntime();
-    virtual ~CRuntime();
+    ~CRuntime() override;
 
     void paint();
     void run();
@@ -36,6 +37,8 @@ public:
     virtual void startMusic() override;
     virtual void save() override;
     virtual void load() override;
+    bool parseConfig(const char *filename);
+    void setPrefix(const char *prefix);
 
 protected:
     static void cleanup();
@@ -58,4 +61,8 @@ protected:
     ISound *m_sound = nullptr;
     bool m_musicEnabled = false;
     App m_app;
+    std::vector<std::string> m_musicFiles;
+    std::vector<std::string> m_soundFiles;
+    std::vector<std::string> m_assetFiles;
+    std::string m_prefix = "data/";
 };
