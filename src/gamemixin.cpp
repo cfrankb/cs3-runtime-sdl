@@ -417,6 +417,7 @@ void CGameMixin::mainLoop()
     ++m_ticks;
     CGame &game = *m_game;
     if (game.mode() != CGame::MODE_CLICKSTART &&
+        game.mode() != CGame::MODE_TITLE &&
         m_countdown > 0)
     {
         --m_countdown;
@@ -486,6 +487,13 @@ void CGameMixin::mainLoop()
         {
             m_game->setMode(CGame::MODE_LEVEL);
             m_keyRepeters[Key_F1] = 1;
+        }
+        return;
+    case CGame::MODE_TITLE:
+        if (m_keyStates[Key_Space])
+        {
+            game.setMode(CGame::MODE_INTRO);
+            startCountdown(COUNTDOWN_INTRO);
         }
         return;
     }
@@ -579,6 +587,7 @@ void CGameMixin::restartGame()
     m_game->restartGame();
     sanityTest();
     m_game->loadLevel(false);
+    m_game->setMode(CGame::MODE_TITLE);
 }
 
 void CGameMixin::startCountdown(int f)

@@ -20,6 +20,7 @@
 #include <vector>
 
 class ISound;
+class CFrameSet;
 
 class CRuntime : public CGameMixin
 {
@@ -49,6 +50,7 @@ protected:
     virtual bool loadScores() override;
     virtual bool saveScores() override;
     virtual void openMusicForLevel(int i) override;
+    void drawTitleScreen(CFrame &bitmap);
 
     typedef struct
     {
@@ -65,4 +67,5 @@ protected:
     std::vector<std::string> m_soundFiles;
     std::vector<std::string> m_assetFiles;
     std::string m_prefix = "data/";
+    CFrameSet *m_title;
 };

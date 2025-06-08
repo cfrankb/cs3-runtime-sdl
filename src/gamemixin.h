@@ -175,7 +175,7 @@ protected:
     void drawLevelIntro(CFrame &bitmap);
     virtual void preloadAssets();
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
-    inline void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
+    void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &frame, const int x, const int y, CFrame &tile, bool alpha);
     void nextLevel();

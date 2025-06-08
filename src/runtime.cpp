@@ -86,6 +86,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_HELP:
         drawHelpScreen(bitmap);
+        break;
+    case CGame::MODE_TITLE:
+        drawTitleScreen(bitmap);
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -187,7 +190,7 @@ void CRuntime::doInput()
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                m_game->setMode(CGame::MODE_INTRO);
+                m_game->setMode(CGame::MODE_TITLE);
 #ifdef __EMSCRIPTEN__
                 EM_ASM(
                     enableButtons(););
@@ -213,18 +216,11 @@ void CRuntime::doInput()
 void CRuntime::preloadAssets()
 {
     CFileWrap file;
-    using asset_t = struct
-    {
-        const char *filename;
-        CFrameSet **frameset;
-    };
-
     CFrameSet **frameSets[] = {
         &m_tiles,
         &m_animz,
         &m_annie,
     };
-
     for (int i = 0; i < m_assetFiles.size(); ++i)
     {
         std::string filename = m_prefix + m_assetFiles[i];
@@ -256,6 +252,14 @@ void CRuntime::preloadAssets()
     else
     {
         fprintf(stderr, "failed to open %s\n", fontName.c_str());
+    }
+
+    // extracting title
+    m_title = new CFrameSet();
+    if (file.open("data/cs3title.png", "rb"))
+    {
+        m_title->extract(file);
+        file.close();
     }
 }
 
@@ -544,4 +548,29 @@ bool CRuntime::parseConfig(const char *filename)
 void CRuntime::setPrefix(const char *prefix)
 {
     m_prefix = prefix;
+}
+
+void CRuntime::drawTitleScreen(CFrame &bitmap)
+{
+    bitmap.clear();
+    auto &title = *(*m_title)[0];
+    const auto offsetY = (HEIGHT - title.hei()) / 2;
+    for (int y = 0; y < title.hei(); ++y)
+    {
+        for (int x = 0; x < title.len(); ++x)
+        {
+            bitmap.at(x, y + offsetY) = title.at(x, y);
+        }
+    }
+
+    if ((m_ticks / 20) & 1)
+    {
+        const Rect rect = {
+            .x = 0,
+            .y = 180 - 38,
+            .width = 320,
+            .height = 16 + 5,
+        };
+        drawRect(bitmap, rect, BLACK, true);
+    }
 }
