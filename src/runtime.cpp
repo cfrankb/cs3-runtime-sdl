@@ -24,6 +24,7 @@
 #include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
 #include "shared/implementers/sn_sdl.h"
+#include "level.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -86,6 +87,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_HELP:
         drawHelpScreen(bitmap);
+        break;
+    case CGame::MODE_TITLE:
+        drawTitleScreen(bitmap);
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -100,7 +104,7 @@ bool CRuntime::SDLInit()
     int windowFlags = SDL_WINDOW_SHOWN;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     else
@@ -110,17 +114,17 @@ bool CRuntime::SDLInit()
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 2 * WIDTH, 2 * HEIGHT, windowFlags);
         if (m_app.window == NULL)
         {
-            printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+            fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
             return false;
         }
         else
         {
             atexit(cleanup);
-            //            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
-                printf("Failed to create renderer: %s\n", SDL_GetError());
+                fprintf(stderr, "Failed to create renderer: %s\n", SDL_GetError());
                 return false;
             }
 
@@ -129,7 +133,13 @@ bool CRuntime::SDLInit()
                 SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
             if (m_app.texture == nullptr)
             {
-                printf("Failed to create texture: %s\n", SDL_GetError());
+                fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
+                return false;
+            }
+
+            if (SDL_RenderSetVSync(m_app.renderer, 1) != 0)
+            {
+                fprintf(stderr, "SDL_RenderSetVSync Failed: %s\n", SDL_GetError());
                 return false;
             }
         }
@@ -187,16 +197,13 @@ void CRuntime::doInput()
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                m_game->setMode(CGame::MODE_INTRO);
+                setupTitleScreen();
 #ifdef __EMSCRIPTEN__
                 EM_ASM(
                     enableButtons(););
 #endif
-                if (m_musicEnabled)
-                {
-                    initMusic();
-                    initSounds();
-                }
+                initMusic();
+                initSounds();
             }
             break;
 
@@ -216,45 +223,55 @@ void CRuntime::doInput()
 void CRuntime::preloadAssets()
 {
     CFileWrap file;
-    using asset_t = struct
-    {
-        const char *filename;
-        CFrameSet **frameset;
+    CFrameSet **frameSets[] = {
+        &m_tiles,
+        &m_animz,
+        &m_annie,
     };
-
-    asset_t assets[]{
-        {"data/tiles.obl", &m_tiles},
-        {"data/animz.obl", &m_animz},
-        {"data/annie.obl", &m_annie},
-    };
-
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < m_assetFiles.size(); ++i)
     {
-        asset_t &asset = assets[i];
-        *(asset.frameset) = new CFrameSet();
-        if (file.open(asset.filename, "rb"))
+        std::string filename = m_prefix + m_assetFiles[i];
+        *frameSets[i] = new CFrameSet();
+        if (file.open(filename.c_str(), "rb"))
         {
-            printf("reading %s\n", asset.filename);
-            if ((*(asset.frameset))->extract(file))
+            printf("reading %s\n", filename.c_str());
+            if ((*frameSets[i])->extract(file))
             {
-                printf("extracted: %d\n", (*(asset.frameset))->getSize());
+                printf("extracted: %d\n", ((*frameSets[i])->getSize()));
             }
             file.close();
         }
+        else
+        {
+            fprintf(stderr, "can't read: %s\n", filename.c_str());
+        }
     }
 
-    const char fontName[] = "data/bitfont.bin";
-    if (file.open(fontName, "rb"))
+    std::string fontName = m_prefix + m_config["font"];
+    if (file.open(fontName.c_str(), "rb"))
     {
         int size = file.getSize();
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
-        printf("loaded %s: %d bytes\n", fontName, size);
+        printf("loaded %s: %d bytes\n", fontName.c_str(), size);
     }
     else
     {
-        printf("failed to open %s\n", fontName);
+        fprintf(stderr, "failed to open %s\n", fontName.c_str());
+    }
+
+    // extracting title
+    m_title = new CFrameSet();
+    std::string titlePix = m_prefix + m_config["titlepix"];
+    if (file.open(titlePix.c_str(), "rb"))
+    {
+        m_title->extract(file);
+        file.close();
+    }
+    else
+    {
+        fprintf(stderr, "failed to open %s\n", titlePix.c_str());
     }
 }
 
@@ -266,11 +283,7 @@ void CRuntime::preRun()
 void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
-    const char music[] = "data/music/cs3idea_64.ogg";
-    if (m_music && m_music->open(music))
-    {
-        m_music->play();
-    }
+    openMusicForLevel(m_game->level());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -326,12 +339,12 @@ bool CRuntime::loadScores()
         }
         else
         {
-            printf("size mismatch. resetting to default.\n");
+            fprintf(stderr, "size mismatch. resetting to default.\n");
             clearScores();
         }
         return true;
     }
-    printf("can't read %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't read %s\n", HISCORE_FILE);
     return false;
 }
 
@@ -351,7 +364,7 @@ bool CRuntime::saveScores()
 #endif
         return true;
     }
-    printf("can't write %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't write %s\n", HISCORE_FILE);
     return false;
 }
 
@@ -362,6 +375,7 @@ void CRuntime::enableMusic()
 
 void CRuntime::stopMusic()
 {
+    m_musicEnabled = false;
     if (m_music)
     {
         m_music->stop();
@@ -370,6 +384,7 @@ void CRuntime::stopMusic()
 
 void CRuntime::startMusic()
 {
+    m_musicEnabled = true;
     if (m_music)
     {
         m_music->play();
@@ -384,7 +399,7 @@ void CRuntime::save()
 {
     if (m_game->mode() != CGame::MODE_LEVEL)
     {
-        printf("cannot save while not playing\n");
+        fprintf(stderr, "cannot save while not playing\n");
         return;
     }
 
@@ -405,7 +420,7 @@ void CRuntime::save()
     }
     else
     {
-        printf("can't write:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't write:%s\n", SAVEGAME_FILE);
     }
 }
 
@@ -419,43 +434,199 @@ void CRuntime::load()
     {
         if (!read(sfile, name))
         {
-            printf("incompatible file\n");
+            fprintf(stderr, "incompatible file\n");
         }
         fclose(sfile);
     }
     else
     {
-        printf("can't read:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't read:%s\n", SAVEGAME_FILE);
     }
     m_game->setMode(CGame::MODE_LEVEL);
+    openMusicForLevel(m_game->level());
 }
 
 void CRuntime::initSounds()
 {
-    constexpr const char *filelist[]{
-        "data/sounds/gruup.wav",
-        "data/sounds/key.ogg",
-        "data/sounds/0009.ogg",
-        "data/sounds/coin1.oga",
-    };
     auto m_sound = new CSndSDL();
     CFileWrap file;
-    for (int i = 0; i < sizeof(filelist) / sizeof(filelist[0]); ++i)
+    for (int i = 0; i < m_soundFiles.size(); ++i)
     {
-        auto soundName = filelist[i];
-        if (file.open(soundName, "rb"))
+        const auto soundName = m_prefix + std::string("sounds/") + m_soundFiles[i];
+        if (file.open(soundName.c_str(), "rb"))
         {
-            int size = file.getSize();
+            const int size = file.getSize();
             auto sound = new uint8_t[size];
             file.read(sound, size);
             file.close();
-            printf("loaded %s: %d bytes\n", soundName, size);
+            printf("loaded %s: %d bytes\n", soundName.c_str(), size);
             m_sound->add(sound, size, i + 1);
         }
         else
         {
-            printf("failed to open %s\n", soundName);
+            fprintf(stderr, "failed to open %s\n", soundName.c_str());
         }
     }
     m_game->attach(m_sound);
+}
+
+void CRuntime::openMusicForLevel(int i)
+{
+    const std::string music = m_prefix + std::string("music/") + m_musicFiles[i % m_musicFiles.size()];
+    if (m_music && m_musicEnabled && m_music->open(music.c_str()))
+    {
+        m_music->play();
+    }
+}
+
+bool CRuntime::parseConfig(const char *filename)
+{
+    CFileWrap file;
+    if (!file.open(filename))
+    {
+        return false;
+    }
+    const int size = file.getSize();
+    char *tmp = new char[size + 1];
+    tmp[size] = '\0';
+    file.read(tmp, size);
+    file.close();
+
+    std::string section;
+    char *p = tmp;
+    int line = 1;
+    while (p && *p)
+    {
+        char *en = strstr(p, "\n");
+        if (en)
+        {
+            *en = 0;
+        }
+        char *er = strstr(p, "\r");
+        if (er)
+        {
+            *er = 0;
+        }
+        char *e = er > en ? er : en;
+        char *c = strstr(p, "#");
+        if (c)
+        {
+            *c = 0;
+        }
+        while (*p == ' ' || *p == '\t')
+        {
+            ++p;
+        }
+        int i = strlen(p) - 1;
+        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
+        {
+            p[i] = '\0';
+            --i;
+        }
+        if (p[0] == '[')
+        {
+            ++p;
+            char *pe = strstr(p, "]");
+            if (pe)
+                *pe = 0;
+            if (!pe)
+            {
+                fprintf(stderr, "missing section terminator on line %d\n", line);
+            }
+            section = p;
+        }
+        else if (p[0])
+        {
+            if (section == "musics")
+            {
+                m_musicFiles.push_back(p);
+            }
+            else if (section == "sounds")
+            {
+                m_soundFiles.push_back(p);
+            }
+            else if (section == "assets")
+            {
+                m_assetFiles.push_back(p);
+            }
+            else if (section == "config")
+            {
+                StringVector list;
+                splitString(p, list);
+                if (list.size() == 2)
+                {
+                    m_config[list[0]] = list[1];
+                }
+                else
+                {
+                    fprintf(stderr, "string %s on line %d split into %d parts\n", p, line, list.size());
+                }
+            }
+        }
+        p = e ? e + 1 : nullptr;
+        ++line;
+    }
+    delete[] tmp;
+    return true;
+}
+
+void CRuntime::setPrefix(const char *prefix)
+{
+    m_prefix = prefix;
+}
+
+void CRuntime::drawTitleScreen(CFrame &bitmap)
+{
+    bitmap.clear();
+    if (m_title->getSize() == 0)
+        return;
+
+    auto &title = *(*m_title)[0];
+    const auto offsetY = (HEIGHT - title.hei()) / 2;
+    for (int y = 0; y < title.hei(); ++y)
+    {
+        for (int x = 0; x < title.len(); ++x)
+        {
+            bitmap.at(x, y + offsetY) = title.at(x, y);
+        }
+    }
+    if ((m_ticks / 20) & 1)
+    {
+        const Rect rect = {
+            .x = 0,
+            .y = 142,
+            .width = WIDTH,
+            .height = 21,
+        };
+        drawRect(bitmap, rect, BLACK, true);
+    }
+
+    const char msg[] = "CREEPSPREAD III: NAN'O LOST        "
+                       "COPYRIGHT 1993, 2024 FRANCOIS BLANCHETTE    "
+                       "PROGRAMMING BY FRANCOIS BLANCHETTE      "
+                       "ORIGINAL PIXEL ART BY FRANCOIS BLANCHETTE    "
+                       "PRESS SPACE TO START A NEW GAME       "
+                       "USE ARROW KEYS TO MOVE     "
+                       "COLLECT DIAMONDS, AVOID MONSTERS AND OTHER HAZARDS...      "
+                       "AND TRIGGERS SWITCHES TO REVEAL SECRET PASSAGES.     "
+                       "                             ";
+    drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
+    if (m_ticks & 1)
+    {
+        memcpy(m_scroll, m_scroll + 1, SCROLLER_BUF_SIZE);
+        m_scroll[SCROLLER_BUF_SIZE - 1] = msg[m_scrollPtr];
+        ++m_scrollPtr;
+        if (m_scrollPtr >= strlen(msg))
+        {
+            m_scrollPtr = 0;
+        }
+    }
+}
+
+void CRuntime::setupTitleScreen()
+{
+    m_game->setMode(CGame::MODE_TITLE);
+    memset(m_scroll, ' ', sizeof(m_scroll));
+    m_scroll[SCROLLER_BUF_SIZE] = '\0';
+    m_scrollPtr = 0;
 }

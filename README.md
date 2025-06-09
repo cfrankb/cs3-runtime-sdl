@@ -23,7 +23,7 @@ First install emscripten : https://emscripten.org/index.html
 
 Run these commands
 ```
-$ python bin/gen.py emsdl
+$ python bin/gen.py emsdl2
 $ emmake make
 ```
 
@@ -40,21 +40,23 @@ $ emrun build/cs3v2.html
 <b>Building the docker image</b>
 
 ```
-$ sudo docker build -t sdl2-static-xmp-zlib .
+$ sudo docker build -t sdl2-mingw32-static . -f docker/dockerfile-mingw32-static
 ```
 
 <b>Deleting an existing image</b>
 
 ```
-$ sudo docker rmi sdl2-static-xmp-zlib
+$ sudo docker rmi sdl2-mingw32-static
+
+# also delete all caches
+$ docker system prune -a
 ```
 
 <b>Building cs3 runtime</b>
 
 ```
-$ sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-static-xmp-zlib
-$ cd workspace
-$ python3 bin/gen.py mingw-sdl
+$ sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-mingw32-static
+$ python3 bin/gen.py mingw32-sdl2
 $ make
 ```
 

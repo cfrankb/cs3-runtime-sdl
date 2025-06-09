@@ -417,6 +417,7 @@ void CGameMixin::mainLoop()
     ++m_ticks;
     CGame &game = *m_game;
     if (game.mode() != CGame::MODE_CLICKSTART &&
+        game.mode() != CGame::MODE_TITLE &&
         m_countdown > 0)
     {
         --m_countdown;
@@ -486,6 +487,13 @@ void CGameMixin::mainLoop()
         {
             m_game->setMode(CGame::MODE_LEVEL);
             m_keyRepeters[Key_F1] = 1;
+        }
+        return;
+    case CGame::MODE_TITLE:
+        if (m_keyStates[Key_Space])
+        {
+            game.setMode(CGame::MODE_INTRO);
+            startCountdown(COUNTDOWN_INTRO);
         }
         return;
     }
@@ -563,6 +571,7 @@ void CGameMixin::nextLevel()
     sanityTest();
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(false);
+    openMusicForLevel(m_game->level());
 }
 
 void CGameMixin::restartLevel()
@@ -578,6 +587,7 @@ void CGameMixin::restartGame()
     m_game->restartGame();
     sanityTest();
     m_game->loadLevel(false);
+    setupTitleScreen();
 }
 
 void CGameMixin::startCountdown(int f)
@@ -1007,6 +1017,16 @@ void CGameMixin::stopMusic()
 }
 
 void CGameMixin::startMusic()
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::openMusicForLevel(int)
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::setupTitleScreen()
 {
     // TODO: implement in child class
 }

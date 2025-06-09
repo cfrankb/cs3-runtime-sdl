@@ -77,7 +77,8 @@ public:
         MODE_CLICKSTART,
         MODE_HISCORES,
         MODE_IDLE,
-        MODE_HELP
+        MODE_HELP,
+        MODE_TITLE
     };
 
 protected:

@@ -17,14 +17,17 @@
 */
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
+#include <vector>
+#include <unordered_map>
 
 class ISound;
+class CFrameSet;
 
 class CRuntime : public CGameMixin
 {
 public:
     CRuntime();
-    virtual ~CRuntime();
+    ~CRuntime() override;
 
     void paint();
     void run();
@@ -36,6 +39,8 @@ public:
     virtual void startMusic() override;
     virtual void save() override;
     virtual void load() override;
+    bool parseConfig(const char *filename);
+    void setPrefix(const char *prefix);
 
 protected:
     static void cleanup();
@@ -45,6 +50,9 @@ protected:
     void keyReflector(SDL_Keycode key, uint8_t keyState);
     virtual bool loadScores() override;
     virtual bool saveScores() override;
+    virtual void openMusicForLevel(int i) override;
+    void drawTitleScreen(CFrame &bitmap);
+    virtual void setupTitleScreen() override;
 
     typedef struct
     {
@@ -53,8 +61,22 @@ protected:
         SDL_Texture *texture;
     } App;
 
+    enum
+    {
+        FONT_SIZE = 8,
+        SCROLLER_BUF_SIZE = WIDTH / FONT_SIZE,
+    };
+
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
     bool m_musicEnabled = false;
     App m_app;
+    std::unordered_map<std::string, std::string> m_config;
+    std::vector<std::string> m_musicFiles;
+    std::vector<std::string> m_soundFiles;
+    std::vector<std::string> m_assetFiles;
+    std::string m_prefix = "data/";
+    CFrameSet *m_title;
+    char m_scroll[SCROLLER_BUF_SIZE + 1];
+    int m_scrollPtr;
 };

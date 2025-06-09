@@ -15,11 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef MU_SDL_H
-#define MU_SDL_H
+#pragma once
 
 #include "../interfaces/IMusic.h"
 #include "SDL2/SDL_mixer.h"
+#include <pthread.h>
 
 class CMusicSDL : public IMusic
 {
@@ -32,10 +32,24 @@ public:
     virtual void close();
     virtual bool isValid();
     virtual const char *signature() const;
+    static int type() { return m_type; }
+    static int isPlaying() { return m_playing; }
+    enum
+    {
+        TYPE_NONE,
+        TYPE_XM,
+        TYPE_OGG
+    };
 
 protected:
-    Mix_Music *m_music; // Background Music
-    char *m_name;
-};
+    typedef struct
+    {
+        Mix_Music *mixData;
+        uint8_t *xmData;
+    } MusicData;
 
-#endif // MU_SDL_H
+    MusicData m_data; // Background Music
+    char *m_name;
+    static uint8_t m_type;
+    static bool m_playing;
+};

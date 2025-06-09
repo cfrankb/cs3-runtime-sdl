@@ -20,14 +20,26 @@
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
+#include "shared/implementers/mu_sdl.h"
 
-#define FPS 24
-#define SLEEP 1000 / FPS
-// #define TEST_SPEED
+const uint32_t FPS = 24;
+const uint32_t SLEEP = 1000 / FPS;
+
+#define EXIT_SUCCESS 0
+#define EXIT_FAILURE 1
+
+typedef struct
+{
+    int level;
+    bool musicEnabled;
+    std::string prefix;
+} config_t;
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 CRuntime *g_runtime = nullptr;
+extern void playXM(void *userData);
 extern "C"
 {
     int savegame(int x)
@@ -59,63 +71,125 @@ extern "C"
 }
 #endif
 
+uint32_t lastTick = 0;
+bool skip = false;
+uint32_t sleepDelay = SLEEP;
+
 void loop_handler(void *arg)
 {
-    static int cycle = 0;
-    CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
-    uint32_t bticks = SDL_GetTicks();
-    if (cycle == 0)
+    uint32_t currTick = SDL_GetTicks();
+    uint32_t meantime = currTick - lastTick;
+    if (meantime >= sleepDelay)
     {
-        runtime->paint();
-    }
-    runtime->doInput();
-    runtime->run();
-    uint32_t aticks = SDL_GetTicks();
-    int64_t diff = aticks - bticks;
-    if (diff > SLEEP && cycle == 0)
-    {
-        ++cycle;
-    }
-    else if (diff <= SLEEP)
-    {
-        if (cycle)
-            --cycle;
-        usleep((SLEEP - diff) * 1000);
-    }
-    else
-    {
-        usleep(SLEEP * 1000);
-    }
+        CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
+        uint32_t bticks = SDL_GetTicks();
+        runtime->doInput();
+        runtime->run();
 
-#ifdef TEST_SPEED
-    printf("time %d %d %d\n", aticks - bticks, bticks, aticks);
-#endif
+        uint32_t btime = SDL_GetTicks();
+        if (!skip)
+        {
+            runtime->paint();
+        }
+        uint32_t atime = SDL_GetTicks();
+
+        uint32_t ptime = atime - btime;
+        if (ptime < SLEEP)
+        {
+            sleepDelay = SLEEP - ptime;
+            skip = false;
+        }
+        else
+        {
+            sleepDelay = SLEEP;
+            skip = true;
+        }
+        lastTick = currTick;
+    }
+}
+
+void parseArgs(int argc, char *args[], config_t &config)
+{
+    config.level = 0;
+    config.musicEnabled = true;
+    config.prefix = "data/";
+    for (int i = 1; i < argc; ++i)
+    {
+        // set prefix
+        if (strcmp(args[i], "-p") == 0)
+        {
+            if (i + 1 < argc && args[i + 1][0] != '-')
+            {
+                config.prefix = args[i + 1];
+                if (config.prefix.back() != '/')
+                {
+                    config.prefix += "/";
+                }
+                ++i;
+            }
+            else
+            {
+                printf("missing prefix on cmdline\n");
+            }
+        }
+        // handle flags
+        else if (args[i][0] == '-')
+        {
+            for (int j = 1; j < strlen(args[i]); ++j)
+            {
+                switch (args[i][j])
+                {
+                case 'm':
+                    config.musicEnabled = false;
+                    break;
+                default:
+                    printf("invalid switch: %c\n", args[i][j]);
+                }
+            }
+        }
+        else
+        {
+            config.level = atoi(args[i]);
+        }
+    }
 }
 
 int main(int argc, char *args[])
 {
     CRuntime runtime;
     CMapArch maparch;
-    if (!maparch.read("data/levels.mapz"))
+    config_t config;
+    parseArgs(argc, args, config);
+    std::string archFile = config.prefix + "levels.mapz";
+    if (!maparch.read(archFile.c_str()))
     {
-        printf("failed to read maparch: %s\n", maparch.lastError());
+        fprintf(stderr, "failed to read maparch: %s %s\n", archFile.c_str(), maparch.lastError());
+        return EXIT_FAILURE;
     }
-
-    runtime.init(&maparch, 0);
+    std::string configFile = config.prefix + "game.cfg";
+    runtime.setPrefix(config.prefix.c_str());
+    runtime.parseConfig(configFile.c_str());
+    runtime.init(&maparch, config.level % maparch.size());
     runtime.enableHiScore();
-    runtime.enableMusic();
-    runtime.SDLInit();
+    if (config.musicEnabled)
+    {
+        runtime.enableMusic();
+    }
+    if (!runtime.SDLInit())
+    {
+        return EXIT_FAILURE;
+    }
     runtime.preRun();
     runtime.paint();
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
+    emscripten_set_interval(playXM, 30, nullptr);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
-// emscripten_set_main_loop_timing(EM_TIMING_SETTIMEOUT, 1000/FPS*1000);
 #else
     while (true)
     {
         loop_handler(&runtime);
     }
 #endif
-    return 0;
+    return EXIT_SUCCESS;
 }
