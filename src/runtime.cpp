@@ -24,6 +24,7 @@
 #include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
 #include "shared/implementers/sn_sdl.h"
+#include "level.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -119,7 +120,7 @@ bool CRuntime::SDLInit()
         else
         {
             atexit(cleanup);
-            //            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
@@ -133,6 +134,12 @@ bool CRuntime::SDLInit()
             if (m_app.texture == nullptr)
             {
                 fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
+                return false;
+            }
+
+            if (SDL_RenderSetVSync(m_app.renderer, 1) != 0)
+            {
+                fprintf(stderr, "SDL_RenderSetVSync Failed: %s\n", SDL_GetError());
                 return false;
             }
         }
@@ -190,7 +197,7 @@ void CRuntime::doInput()
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                m_game->setMode(CGame::MODE_TITLE);
+                setupTitleScreen();
 #ifdef __EMSCRIPTEN__
                 EM_ASM(
                     enableButtons(););
@@ -240,7 +247,7 @@ void CRuntime::preloadAssets()
         }
     }
 
-    std::string fontName = m_prefix + "bitfont.bin";
+    std::string fontName = m_prefix + m_config["font"];
     if (file.open(fontName.c_str(), "rb"))
     {
         int size = file.getSize();
@@ -256,10 +263,15 @@ void CRuntime::preloadAssets()
 
     // extracting title
     m_title = new CFrameSet();
-    if (file.open("data/cs3title.png", "rb"))
+    std::string titlePix = m_prefix + m_config["titlepix"];
+    if (file.open(titlePix.c_str(), "rb"))
     {
         m_title->extract(file);
         file.close();
+    }
+    else
+    {
+        fprintf(stderr, "failed to open %s\n", titlePix.c_str());
     }
 }
 
@@ -537,6 +549,19 @@ bool CRuntime::parseConfig(const char *filename)
             {
                 m_assetFiles.push_back(p);
             }
+            else if (section == "config")
+            {
+                StringVector list;
+                splitString(p, list);
+                if (list.size() == 2)
+                {
+                    m_config[list[0]] = list[1];
+                }
+                else
+                {
+                    fprintf(stderr, "string %s on line %d split into %d parts\n", p, line, list.size());
+                }
+            }
         }
         p = e ? e + 1 : nullptr;
         ++line;
@@ -553,6 +578,9 @@ void CRuntime::setPrefix(const char *prefix)
 void CRuntime::drawTitleScreen(CFrame &bitmap)
 {
     bitmap.clear();
+    if (m_title->getSize() == 0)
+        return;
+
     auto &title = *(*m_title)[0];
     const auto offsetY = (HEIGHT - title.hei()) / 2;
     for (int y = 0; y < title.hei(); ++y)
@@ -562,15 +590,43 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
             bitmap.at(x, y + offsetY) = title.at(x, y);
         }
     }
-
     if ((m_ticks / 20) & 1)
     {
         const Rect rect = {
             .x = 0,
-            .y = 180 - 38,
-            .width = 320,
-            .height = 16 + 5,
+            .y = 142,
+            .width = WIDTH,
+            .height = 21,
         };
         drawRect(bitmap, rect, BLACK, true);
     }
+
+    const char msg[] = "CREEPSPREAD III: NAN'O LOST        "
+                       "COPYRIGHT 1993, 2024 FRANCOIS BLANCHETTE    "
+                       "PROGRAMMING BY FRANCOIS BLANCHETTE      "
+                       "ORIGINAL PIXEL ART BY FRANCOIS BLANCHETTE    "
+                       "PRESS SPACE TO START A NEW GAME       "
+                       "USE ARROW KEYS TO MOVE     "
+                       "COLLECT DIAMONDS, AVOID MONSTERS AND OTHER HAZARDS...      "
+                       "AND TRIGGERS SWITCHES TO REVEAL SECRET PASSAGES.     "
+                       "                             ";
+    drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
+    if (m_ticks & 1)
+    {
+        memcpy(m_scroll, m_scroll + 1, SCROLLER_BUF_SIZE);
+        m_scroll[SCROLLER_BUF_SIZE - 1] = msg[m_scrollPtr];
+        ++m_scrollPtr;
+        if (m_scrollPtr >= strlen(msg))
+        {
+            m_scrollPtr = 0;
+        }
+    }
+}
+
+void CRuntime::setupTitleScreen()
+{
+    m_game->setMode(CGame::MODE_TITLE);
+    memset(m_scroll, ' ', sizeof(m_scroll));
+    m_scroll[SCROLLER_BUF_SIZE] = '\0';
+    m_scrollPtr = 0;
 }

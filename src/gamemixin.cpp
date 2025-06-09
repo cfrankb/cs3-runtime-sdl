@@ -587,7 +587,7 @@ void CGameMixin::restartGame()
     m_game->restartGame();
     sanityTest();
     m_game->loadLevel(false);
-    m_game->setMode(CGame::MODE_TITLE);
+    setupTitleScreen();
 }
 
 void CGameMixin::startCountdown(int f)
@@ -1022,6 +1022,11 @@ void CGameMixin::startMusic()
 }
 
 void CGameMixin::openMusicForLevel(int)
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::setupTitleScreen()
 {
     // TODO: implement in child class
 }
