@@ -15,6 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <ctime>
+#include <chrono>
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
@@ -64,11 +66,17 @@ CRuntime::~CRuntime()
     {
         delete m_music;
     }
+
+    if (m_title)
+    {
+        delete m_title;
+    }
 }
 
 void CRuntime::paint()
 {
-    static CFrame bitmap(WIDTH, HEIGHT);
+    CFrame bitmap(WIDTH, HEIGHT);
+    bitmap.fill(BLACK);
     switch (m_game->mode())
     {
     case CGame::MODE_INTRO:
@@ -100,7 +108,7 @@ void CRuntime::paint()
 
 bool CRuntime::SDLInit()
 {
-    int rendererFlags = SDL_RENDERER_ACCELERATED;
+    int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
@@ -608,7 +616,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
                        "PRESS SPACE TO START A NEW GAME       "
                        "USE ARROW KEYS TO MOVE     "
                        "COLLECT DIAMONDS, AVOID MONSTERS AND OTHER HAZARDS...      "
-                       "AND TRIGGERS SWITCHES TO REVEAL SECRET PASSAGES.     "
+                       "AND TRIGGER SWITCHES TO REVEAL SECRET PASSAGES AND MORE COLLECTABLES.     "
                        "                             ";
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1)
@@ -629,4 +637,43 @@ void CRuntime::setupTitleScreen()
     memset(m_scroll, ' ', sizeof(m_scroll));
     m_scroll[SCROLLER_BUF_SIZE] = '\0';
     m_scrollPtr = 0;
+}
+
+void CRuntime::takeScreenshot()
+{
+    CFrame bitmap(WIDTH, HEIGHT);
+    bitmap.fill(BLACK);
+    drawScreen(bitmap);
+    auto rgba = bitmap.getRGB();
+    for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
+    {
+        if (rgba[i] == 0)
+            rgba[i] = BLACK;
+    }
+    bitmap.enlarge();
+    uint8_t *png;
+    int size;
+    bitmap.toPng(png, size);
+    CFileWrap file;
+    char filename[64];
+    auto now = std::chrono::system_clock::now();
+    std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+    std::tm *localTime = std::localtime(&currentTime);
+    sprintf(filename, "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
+            1900 + localTime->tm_year,
+            localTime->tm_mon,
+            localTime->tm_mday,
+            localTime->tm_hour,
+            localTime->tm_min,
+            localTime->tm_sec);
+    if (file.open(filename, "wb"))
+    {
+        file.write(png, size);
+        file.close();
+    }
+    else
+    {
+        fprintf(stderr, "can't write %s\n", filename);
+    }
+    delete[] png;
 }

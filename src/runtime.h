@@ -53,6 +53,7 @@ protected:
     virtual void openMusicForLevel(int i) override;
     void drawTitleScreen(CFrame &bitmap);
     virtual void setupTitleScreen() override;
+    virtual void takeScreenshot() override;
 
     typedef struct
     {

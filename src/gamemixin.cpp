@@ -724,6 +724,9 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
         "F2 Restart Game",
         "F3 Erase Scores",
         "F4 Pause Game",
+#ifndef __EMSCRIPTEN__
+        "F8 Take Screenshot (in-game only)",
+#endif
         "F9 Load savegame",
         "F10 Save savegame ",
         "F11 Toggle Music",
@@ -834,6 +837,12 @@ void CGameMixin::handleFunctionKeys()
             m_paused = !m_paused;
             m_keyRepeters[k] = KEY_NO_REPETE;
             break;
+#ifndef __EMSCRIPTEN__
+        case Key_F8:
+            takeScreenshot();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+#endif
         case Key_F9:
             m_prompt = PROMPT_LOAD;
             break;
@@ -1027,6 +1036,11 @@ void CGameMixin::openMusicForLevel(int)
 }
 
 void CGameMixin::setupTitleScreen()
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::takeScreenshot()
 {
     // TODO: implement in child class
 }
