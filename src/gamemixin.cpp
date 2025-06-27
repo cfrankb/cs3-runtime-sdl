@@ -725,6 +725,7 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
         "F3 Erase Scores",
         "F4 Pause Game",
 #ifndef __EMSCRIPTEN__
+        "F5 Toggle Full Screen",
         "F8 Take Screenshot (in-game only)",
 #endif
         "F9 Load savegame",
@@ -837,7 +838,12 @@ void CGameMixin::handleFunctionKeys()
             m_paused = !m_paused;
             m_keyRepeters[k] = KEY_NO_REPETE;
             break;
+
 #ifndef __EMSCRIPTEN__
+        case Key_F5:
+            toggleFullscreen();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
         case Key_F8:
             takeScreenshot();
             m_keyRepeters[k] = KEY_NO_REPETE;
@@ -1041,6 +1047,11 @@ void CGameMixin::setupTitleScreen()
 }
 
 void CGameMixin::takeScreenshot()
+{
+    // TODO: implement in child class
+}
+
+void CGameMixin::toggleFullscreen()
 {
     // TODO: implement in child class
 }

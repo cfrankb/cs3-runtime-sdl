@@ -203,6 +203,7 @@ protected:
     virtual void openMusicForLevel(int i);
     virtual void setupTitleScreen();
     virtual void takeScreenshot();
+    virtual void toggleFullscreen();
 };
 
 #endif // CGAMEMIXIN_H
