@@ -104,15 +104,19 @@ void CRuntime::paint()
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
-    // SDL_RenderClear(m_app.renderer);
-    SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, NULL);
+    SDL_RenderClear(m_app.renderer);
+    int width;
+    int height;
+    SDL_GetWindowSize(m_app.window, &width, &height);
+    SDL_Rect rectDest{0, 0, width, height};
+    SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }
 
 bool CRuntime::SDLInit()
 {
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    int windowFlags = SDL_WINDOW_SHOWN;
+    int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -132,7 +136,7 @@ bool CRuntime::SDLInit()
         else
         {
             atexit(cleanup);
-            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
@@ -142,7 +146,7 @@ bool CRuntime::SDLInit()
 
             m_app.texture = SDL_CreateTexture(
                 m_app.renderer,
-                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
             if (m_app.texture == nullptr)
             {
                 fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
@@ -201,6 +205,7 @@ void CRuntime::doInput()
         case SDL_WINDOWEVENT:
             if (event.window.event == SDL_WINDOWEVENT_RESIZED)
             {
+                printf("resuzed\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
@@ -290,7 +295,16 @@ void CRuntime::preloadAssets()
 
 void CRuntime::preRun()
 {
-    m_game->setMode(CGame::MODE_CLICKSTART);
+    if (isTrue(m_config["clickstart"]))
+    {
+        m_game->setMode(CGame::MODE_CLICKSTART);
+    }
+    else
+    {
+        setupTitleScreen();
+        initMusic();
+        initSounds();
+    }
 }
 
 void CRuntime::initMusic()
@@ -506,7 +520,7 @@ void CRuntime::initSounds()
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const std::string music = m_prefix + std::string("music/") + m_musicFiles[i % m_musicFiles.size()];
+    const std::string music = m_prefix + std::string("musics/") + m_musicFiles[i % m_musicFiles.size()];
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
@@ -765,13 +779,18 @@ void CRuntime::takeScreenshot()
     delete[] png;
 }
 
+bool CRuntime::isTrue(std::string value)
+{
+    return value == "true" || value == "1";
+}
+
 void CRuntime::initOptions()
 {
-    if (m_config["hiscore_enabled"] == "true")
+    if (isTrue(m_config["hiscore_enabled"]))
     {
         enableHiScore();
     }
-    if (m_config["music_enabled"] == "true")
+    if (isTrue(m_config["music_enabled"]))
     {
         enableMusic(true);
     }
@@ -783,6 +802,7 @@ void CRuntime::toggleFullscreen()
     Uint32 flags = SDL_GetWindowFlags(m_app.window);
     if (m_isFullscreen)
     {
+        m_isFullscreen = false;
         // Currently in fullscreen, switch to windowed
         printf("Switching to windowed mode.\n");
         SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
@@ -790,10 +810,10 @@ void CRuntime::toggleFullscreen()
         // Restore original window size and position
         SDL_SetWindowSize(m_app.window, m_windowedWidth, m_windowedHeigth);
         SDL_SetWindowPosition(m_app.window, m_windowedX, m_windowedX);
-        m_isFullscreen = false;
     }
     else
     {
+        m_isFullscreen = true;
         // Currently in windowed, switch to fullscreen
         printf("Switching to fullscreen desktop mode.\n");
 
@@ -801,9 +821,16 @@ void CRuntime::toggleFullscreen()
         SDL_GetWindowPosition(m_app.window, &m_windowedX, &m_windowedX);
         SDL_GetWindowSize(m_app.window, &m_windowedWidth, &m_windowedHeigth);
 
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+
         // Use SDL_WINDOW_FULLSCREEN_DESKTOP for borderless fullscreen
         // or SDL_WINDOW_FULLSCREEN for exclusive fullscreen
-        SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP); // SDL_WINDOW_FULLSCREEN_DESKTOP);
-        m_isFullscreen = true;
+        SDL_SetWindowSize(m_app.window, dm.w, dm.h);
+        SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
+    int x, y, w, h;
+    SDL_GetWindowPosition(m_app.window, &x, &y);
+    SDL_GetWindowSize(m_app.window, &w, &h);
+    printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
 }

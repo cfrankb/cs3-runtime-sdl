@@ -173,7 +173,6 @@ protected:
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
-    virtual void preloadAssets();
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);
@@ -181,7 +180,6 @@ protected:
     void nextLevel();
     void restartLevel();
     void restartGame();
-    virtual void sanityTest();
     void startCountdown(int f = 1);
     int rankScore();
     void drawScores(CFrame &bitmap);
@@ -192,6 +190,8 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
+    virtual void preloadAssets();
+    virtual void sanityTest();
     virtual void drawHelpScreen(CFrame &bitmap);
     virtual bool loadScores();
     virtual bool saveScores();

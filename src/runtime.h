@@ -89,9 +89,10 @@ protected:
     bool m_isFullscreen = false;
     int m_windowedX;
     int m_windowedY;
-    int m_windowedWidth;
-    int m_windowedHeigth;
+    int m_windowedWidth = WIDTH * 2;
+    int m_windowedHeigth = HEIGHT * 2;
 
 private:
     void addTrailSlash(std::string &path);
+    bool isTrue(std::string value);
 };
