@@ -15,9 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CMAPARCH_H
-#define CMAPARCH_H
-
+#pragma once
 #include <vector>
 #include <string>
 #include <stdint.h>
@@ -60,5 +58,3 @@ protected:
     CMap **m_maps;
     std::string m_lastError;
 };
-
-#endif // CMAPARCH_H

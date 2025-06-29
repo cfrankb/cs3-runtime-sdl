@@ -56,7 +56,7 @@ CRuntime::CRuntime() : CGameMixin()
 
 CRuntime::~CRuntime()
 {
-    if (m_isFullscreen)
+    if (m_app.isFullscreen)
     {
         toggleFullscreen();
     }
@@ -136,7 +136,7 @@ bool CRuntime::SDLInit()
         else
         {
             atexit(cleanup);
-            SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+            //     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
@@ -165,6 +165,7 @@ bool CRuntime::SDLInit()
 
 void CRuntime::cleanup()
 {
+    printf("cleanup()\n");
 }
 
 void CRuntime::run()
@@ -203,7 +204,7 @@ void CRuntime::doInput()
             break;
 
         case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED && !m_app.isFullscreen)
             {
                 printf("resuzed\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
@@ -228,6 +229,7 @@ void CRuntime::doInput()
 #ifdef __EMSCRIPTEN__
             //           emscripten_cancel_main_loop();
 #endif
+            printf("SQL_QUIT\n");
             exit(0);
             break;
 
@@ -800,26 +802,26 @@ void CRuntime::initOptions()
 void CRuntime::toggleFullscreen()
 {
     Uint32 flags = SDL_GetWindowFlags(m_app.window);
-    if (m_isFullscreen)
+    if (m_app.isFullscreen)
     {
-        m_isFullscreen = false;
+        m_app.isFullscreen = false;
         // Currently in fullscreen, switch to windowed
         printf("Switching to windowed mode.\n");
         SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
 
         // Restore original window size and position
-        SDL_SetWindowSize(m_app.window, m_windowedWidth, m_windowedHeigth);
-        SDL_SetWindowPosition(m_app.window, m_windowedX, m_windowedX);
+        SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth);
+        SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX);
     }
     else
     {
-        m_isFullscreen = true;
+        m_app.isFullscreen = true;
         // Currently in windowed, switch to fullscreen
         printf("Switching to fullscreen desktop mode.\n");
 
         // Save current windowed position and size before going fullscreen
-        SDL_GetWindowPosition(m_app.window, &m_windowedX, &m_windowedX);
-        SDL_GetWindowSize(m_app.window, &m_windowedWidth, &m_windowedHeigth);
+        SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
+        SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
 
         SDL_DisplayMode dm;
         SDL_GetCurrentDisplayMode(0, &dm);
@@ -833,4 +835,8 @@ void CRuntime::toggleFullscreen()
     SDL_GetWindowPosition(m_app.window, &x, &y);
     SDL_GetWindowSize(m_app.window, &w, &h);
     printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+}
+
+void CRuntime::sanityTest()
+{
 }

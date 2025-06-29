@@ -16,8 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef _FrameSet_H
-#define _FrameSet_H
+#pragma once
 
 #include <string>
 #include <unordered_map>
@@ -33,7 +32,7 @@ class IFile;
 /////////////////////////////////////////////////////////////////////////////
 // CFrameSet
 
-class CFrameSet: public ISerial
+class CFrameSet : public ISerial
 {
     // Construction
 public:
@@ -42,26 +41,26 @@ public:
 
     // Attributes
 public:
-    CFrame * current();
+    CFrame *current();
     int getSize();
 
     // Operations
 public:
-    int operator ++();
-    int operator --();
+    int operator++();
+    int operator--();
 
-    CFrame * operator[](int) const;
-    CFrameSet & operator = (CFrameSet & s);
-    int add (CFrame *pFrame);
+    CFrame *operator[](int) const;
+    CFrameSet &operator=(CFrameSet &s);
+    int add(CFrame *pFrame);
     void setName(const char *s);
-    const char * getName() const;
+    const char *getName() const;
 
-    CFrame * removeAt(int n);
+    CFrame *removeAt(int n);
     void insertAt(int n, CFrame *pFrame);
     void forget();
-    void removeAll ();
-    bool extract (IFile & file, char *format=nullptr);
-    bool extractPNG(IFile & file);
+    void removeAll();
+    bool extract(IFile &file, char *format = nullptr);
+    bool extractPNG(IFile &file);
 
     static char *ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
@@ -70,12 +69,12 @@ public:
 
     const char *getLastError() const;
     void setLastError(const char *error);
-    void toPng(unsigned char * &data, int &size);
-    std::string & tag(const char *tag);
+    void toPng(unsigned char *&data, int &size);
+    std::string &tag(const char *tag);
     void setTag(const char *tag, const char *v);
-    void copyTags(CFrameSet & src);
+    void copyTags(CFrameSet &src);
     void assignNewUUID();
-    void toSubset(CFrameSet & dest, int start, int end=-1);
+    void toSubset(CFrameSet &dest, int start, int end = -1);
 
     // Implementation
 public:
@@ -84,22 +83,21 @@ public:
     virtual bool read(IFile &file);
     int m_nCurrFrame;
 
-    enum {
+    enum
+    {
         OBL_VERSION = 0x501,
-        GROWBY      = 16
+        GROWBY = 16
     };
 
 protected:
-
     void write0x501(IFile &file);
-    bool read0x501(IFile & file, int size);
+    bool read0x501(IFile &file, int size);
 
     std::string m_lastError;
     CFrame **m_arrFrames;
     int m_max;
     int m_size;
     std::string m_name;
-    std::unordered_map <std::string, std::string>m_tags;
+    std::unordered_map<std::string, std::string> m_tags;
     friend class CFrameArray;
 };
-#endif

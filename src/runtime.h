@@ -54,17 +54,21 @@ protected:
     bool loadScores() override;
     bool saveScores() override;
     void openMusicForLevel(int i) override;
-    void drawTitleScreen(CFrame &bitmap);
     void setupTitleScreen() override;
     void takeScreenshot() override;
     void toggleFullscreen() override;
-    void splitString2(const std::string &str, StringVector &list);
+    void sanityTest() override;
 
     typedef struct
     {
         SDL_Renderer *renderer;
         SDL_Window *window;
         SDL_Texture *texture;
+        bool isFullscreen = false;
+        int windowedX;
+        int windowedY;
+        int windowedWidth = WIDTH * 2;
+        int windowedHeigth = HEIGHT * 2;
     } App;
 
     enum
@@ -86,13 +90,10 @@ protected:
     CFrameSet *m_title;
     char m_scroll[SCROLLER_BUF_SIZE + 1];
     int m_scrollPtr;
-    bool m_isFullscreen = false;
-    int m_windowedX;
-    int m_windowedY;
-    int m_windowedWidth = WIDTH * 2;
-    int m_windowedHeigth = HEIGHT * 2;
 
 private:
+    void drawTitleScreen(CFrame &bitmap);
+    void splitString2(const std::string &str, StringVector &list);
     void addTrailSlash(std::string &path);
     bool isTrue(std::string value);
 };

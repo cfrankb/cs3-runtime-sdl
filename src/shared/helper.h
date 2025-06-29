@@ -15,19 +15,17 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __HELPER_H__LGCK
-#define __HELPER_H__LGCK
+#pragma once
 #include <string>
 #include <list>
-const char *toUpper(char *s); 
+const char *toUpper(char *s);
 char *getUUID();
-bool copyFile(const std::string in, const std::string out, std::string & errMsg);
-bool concat(const std::list<std::string> files, std::string out, std::string & msg);
+bool copyFile(const std::string in, const std::string out, std::string &errMsg);
+bool concat(const std::list<std::string> files, std::string out, std::string &msg);
 int upperClean(int c);
 #ifdef _WIN32
 #else
-    #include <stdlib.h>
-    //#include <linux/limits.h>
+#include <stdlib.h>
+// #include <linux/limits.h>
 #endif
-int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long & out_size);
-#endif
+int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long &out_size);
