@@ -16,9 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ISOUND_H
-#define ISOUND_H
-
+#pragma once
 class ISound
 {
 public:
@@ -36,5 +34,3 @@ public:
 };
 
 inline ISound::~ISound() {}
-
-#endif

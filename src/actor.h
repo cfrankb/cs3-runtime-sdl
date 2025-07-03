@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __ACTOR__H
-#define __ACTOR__H
+#pragma once
 #include <stdio.h>
 #include <stdint.h>
 #include "map.h"
@@ -65,5 +64,3 @@ protected:
 
     friend class CGame;
 };
-
-#endif

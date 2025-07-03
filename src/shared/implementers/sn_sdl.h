@@ -16,8 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef SN_SDL_H
-#define SN_SDL_H
+#pragma once
 
 #include "../interfaces/ISound.h"
 #include <unordered_map>
@@ -55,5 +54,3 @@ public:
 protected:
     bool m_valid;
 };
-
-#endif // SN_SDL_H

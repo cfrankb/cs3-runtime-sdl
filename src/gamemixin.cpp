@@ -87,14 +87,9 @@ CGameMixin::~CGameMixin()
     }
 }
 
-void CGameMixin::preloadAssets()
-{
-    // TODO: implement in child class
-}
-
 void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color)
 {
-    static uint8_t caret[8]{
+    uint8_t caret[FONT_SIZE]{
         0xff,
         0xff,
         0xff,
@@ -106,12 +101,12 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
     };
     uint32_t *rgba = frame.getRGB();
     const int rowPixels = frame.len();
-    const int fontSize = 8;
+    const int fontSize = FONT_SIZE;
     const int fontOffset = fontSize;
     const int textSize = strlen(text);
+    uint8_t *font = nullptr;
     for (int i = 0; i < textSize; ++i)
     {
-        uint8_t *font = nullptr;
         if (static_cast<uint8_t>(text[i]) == CARET)
         {
             font = caret;
@@ -127,7 +122,7 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
             for (int xx = 0; xx < fontSize; ++xx)
             {
                 rgba[(yy + y) * rowPixels + xx + x] = font[yy] & bitFilter ? color : BLACK;
-                bitFilter = bitFilter << 1;
+                bitFilter <<= 1;
             }
         }
         x += fontSize;
@@ -625,11 +620,6 @@ bool CGameMixin::within(int val, int min, int max)
     return val >= min && val <= max;
 }
 
-void CGameMixin::sanityTest()
-{
-    // TODO: sanityTest() to be implemented in child class
-}
-
 int CGameMixin::rankScore()
 {
     int score = m_game->score();
@@ -724,6 +714,10 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
         "F2 Restart Game",
         "F3 Erase Scores",
         "F4 Pause Game",
+#ifndef __EMSCRIPTEN__
+        "F5 Toggle Full Screen",
+        "F8 Take Screenshot (in-game only)",
+#endif
         "F9 Load savegame",
         "F10 Save savegame ",
         "F11 Toggle Music",
@@ -834,6 +828,17 @@ void CGameMixin::handleFunctionKeys()
             m_paused = !m_paused;
             m_keyRepeters[k] = KEY_NO_REPETE;
             break;
+
+#ifndef __EMSCRIPTEN__
+        case Key_F5:
+            toggleFullscreen();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+        case Key_F8:
+            takeScreenshot();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+#endif
         case Key_F9:
             m_prompt = PROMPT_LOAD;
             break;
@@ -918,16 +923,6 @@ bool CGameMixin::inputPlayerName()
     return false;
 }
 
-bool CGameMixin::loadScores()
-{
-    return true;
-}
-
-bool CGameMixin::saveScores()
-{
-    return true;
-}
-
 void CGameMixin::enableHiScore()
 {
     m_hiscoreEnabled = true;
@@ -1009,24 +1004,4 @@ void CGameMixin::drawPreScreen(CFrame &bitmap)
     int y = (HEIGHT - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
-}
-
-void CGameMixin::stopMusic()
-{
-    // TODO: implement in child class
-}
-
-void CGameMixin::startMusic()
-{
-    // TODO: implement in child class
-}
-
-void CGameMixin::openMusicForLevel(int)
-{
-    // TODO: implement in child class
-}
-
-void CGameMixin::setupTitleScreen()
-{
-    // TODO: implement in child class
 }

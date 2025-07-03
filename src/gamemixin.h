@@ -46,8 +46,8 @@ protected slots:
 #endif
     virtual void mainLoop();
     void changeZoom();
-    virtual void save() {};
-    virtual void load() {};
+    virtual void save() = 0;
+    virtual void load() = 0;
 
 protected:
     enum : uint32_t
@@ -173,7 +173,6 @@ protected:
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
-    virtual void preloadAssets();
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);
@@ -181,7 +180,6 @@ protected:
     void nextLevel();
     void restartLevel();
     void restartGame();
-    virtual void sanityTest();
     void startCountdown(int f = 1);
     int rankScore();
     void drawScores(CFrame &bitmap);
@@ -192,16 +190,20 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
+    virtual void preloadAssets() = 0;
+    virtual void sanityTest() = 0;
     virtual void drawHelpScreen(CFrame &bitmap);
-    virtual bool loadScores();
-    virtual bool saveScores();
+    virtual bool loadScores() = 0;
+    virtual bool saveScores() = 0;
     virtual bool read(FILE *sfile, std::string &name);
     virtual bool write(FILE *tfile, std::string &name);
-    virtual void stopMusic();
-    virtual void startMusic();
+    virtual void stopMusic() = 0;
+    virtual void startMusic() = 0;
     virtual void setZoom(bool zoom);
-    virtual void openMusicForLevel(int i);
-    virtual void setupTitleScreen();
+    virtual void openMusicForLevel(int i) = 0;
+    virtual void setupTitleScreen() = 0;
+    virtual void takeScreenshot() = 0;
+    virtual void toggleFullscreen() = 0;
 };
 
 #endif // CGAMEMIXIN_H

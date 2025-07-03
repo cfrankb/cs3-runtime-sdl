@@ -22,6 +22,7 @@
 
 class ISound;
 class CFrameSet;
+typedef std::vector<std::string> StringVector;
 
 class CRuntime : public CGameMixin
 {
@@ -34,31 +35,40 @@ public:
     bool SDLInit();
     void doInput();
     void preRun();
-    void enableMusic();
-    virtual void stopMusic() override;
-    virtual void startMusic() override;
-    virtual void save() override;
-    virtual void load() override;
+    void enableMusic(bool state);
+    void stopMusic() override;
+    void startMusic() override;
+    void save() override;
+    void load() override;
     bool parseConfig(const char *filename);
     void setPrefix(const char *prefix);
+    void setWorkspace(const char *workspace);
+    void initOptions();
 
 protected:
     static void cleanup();
-    virtual void preloadAssets() override;
+    void preloadAssets() override;
     void initMusic();
     void initSounds();
     void keyReflector(SDL_Keycode key, uint8_t keyState);
-    virtual bool loadScores() override;
-    virtual bool saveScores() override;
-    virtual void openMusicForLevel(int i) override;
-    void drawTitleScreen(CFrame &bitmap);
-    virtual void setupTitleScreen() override;
+    bool loadScores() override;
+    bool saveScores() override;
+    void openMusicForLevel(int i) override;
+    void setupTitleScreen() override;
+    void takeScreenshot() override;
+    void toggleFullscreen() override;
+    void sanityTest() override;
 
     typedef struct
     {
         SDL_Renderer *renderer;
         SDL_Window *window;
         SDL_Texture *texture;
+        bool isFullscreen = false;
+        int windowedX;
+        int windowedY;
+        int windowedWidth = WIDTH * 2;
+        int windowedHeigth = HEIGHT * 2;
     } App;
 
     enum
@@ -76,7 +86,14 @@ protected:
     std::vector<std::string> m_soundFiles;
     std::vector<std::string> m_assetFiles;
     std::string m_prefix = "data/";
+    std::string m_workspace = "";
     CFrameSet *m_title;
     char m_scroll[SCROLLER_BUF_SIZE + 1];
     int m_scrollPtr;
+
+private:
+    void drawTitleScreen(CFrame &bitmap);
+    void splitString2(const std::string &str, StringVector &list);
+    void addTrailSlash(std::string &path);
+    bool isTrue(std::string value);
 };

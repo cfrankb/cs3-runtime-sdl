@@ -16,24 +16,20 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef IMUSIC_H
-#define IMUSIC_H
-
+#pragma once
 class IMusic
 {
 public:
-    virtual ~IMusic()=0;
-    virtual bool open(const char *file)=0;
-    virtual bool play(int loop=-1)=0;
-    virtual void stop()=0;
-    virtual void close()=0;
-    virtual bool isValid()=0;
-    virtual const char *signature() const=0;
+    virtual ~IMusic() = 0;
+    virtual bool open(const char *file) = 0;
+    virtual bool play(int loop = -1) = 0;
+    virtual void stop() = 0;
+    virtual void close() = 0;
+    virtual bool isValid() = 0;
+    virtual const char *signature() const = 0;
 
 protected:
     bool m_valid;
 };
 
-inline IMusic::~IMusic(){}
-
-#endif // IMUSIC_H
+inline IMusic::~IMusic() {}

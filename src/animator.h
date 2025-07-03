@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CANIMATOR_H
-#define CANIMATOR_H
+#pragma once
 
 #include <inttypes.h>
 
@@ -49,5 +48,3 @@ protected:
     int32_t *m_seqIndex = nullptr;
     int m_offset = 0;
 };
-
-#endif // CANIMATOR_H

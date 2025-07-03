@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __LEVEL_H__
-#define __LEVEL_H__
+#pragma once
 #include <stdint.h>
 #include <vector>
 #include <string>
@@ -30,4 +29,3 @@ void splitString(const std::string str, StringVector &list);
 bool getChMap(const char *mapFile, char *chMap);
 bool fetchLevel(CMap &map, const char *fname, std::string &error);
 std::string findLevel(const char *target);
-#endif

@@ -16,31 +16,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FILEWRAP_H
-#define FILEWRAP_H
+#pragma once
 
 #include <string>
 #include "IFile.h"
 
-class CFileWrap: public IFile
+class CFileWrap : public IFile
 {
 public:
-
     CFileWrap();
     virtual ~CFileWrap();
 
-    virtual CFileWrap & operator >> (std::string & str);
-    virtual CFileWrap & operator << (const std::string & str);
-    virtual CFileWrap & operator += (const std::string & str);
+    virtual CFileWrap &operator>>(std::string &str);
+    virtual CFileWrap &operator<<(const std::string &str);
+    virtual CFileWrap &operator+=(const std::string &str);
 
-    virtual CFileWrap & operator >> (int & n);
-    virtual CFileWrap & operator << (int n);
+    virtual CFileWrap &operator>>(int &n);
+    virtual CFileWrap &operator<<(int n);
 
-    virtual CFileWrap & operator >> (bool & b);
-    virtual CFileWrap & operator << (bool b);
-    virtual CFileWrap & operator += (const char *);
+    virtual CFileWrap &operator>>(bool &b);
+    virtual CFileWrap &operator<<(bool b);
+    virtual CFileWrap &operator+=(const char *);
 
-    virtual bool open(const char *filename, const char *mode= "rb");
+    virtual bool open(const char *filename, const char *mode = "rb");
     virtual int read(void *buf, int size);
     virtual int write(const void *buf, int size);
     static void addFile(const char *fileName, const char *data, const int size);
@@ -52,10 +50,10 @@ public:
     virtual long tell();
 
 protected:
+    FILE *m_file;
 
-    FILE * m_file;
-
-    typedef struct {
+    typedef struct
+    {
         char *fileName;
         unsigned char *data;
         int size;
@@ -68,7 +66,5 @@ protected:
     static MEMFILE *m_head;
     static MEMFILE *m_tail;
 
-    MEMFILE * findFile(const char *fileName);
+    MEMFILE *findFile(const char *fileName);
 };
-
-#endif // FILEWRAP_H

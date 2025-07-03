@@ -15,6 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <ctime>
+#include <chrono>
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
@@ -24,7 +26,6 @@
 #include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
 #include "shared/implementers/sn_sdl.h"
-#include "level.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -55,6 +56,10 @@ CRuntime::CRuntime() : CGameMixin()
 
 CRuntime::~CRuntime()
 {
+    if (m_app.isFullscreen)
+    {
+        toggleFullscreen();
+    }
     SDL_DestroyTexture(m_app.texture);
     SDL_DestroyRenderer(m_app.renderer);
     SDL_DestroyWindow(m_app.window);
@@ -64,11 +69,17 @@ CRuntime::~CRuntime()
     {
         delete m_music;
     }
+
+    if (m_title)
+    {
+        delete m_title;
+    }
 }
 
 void CRuntime::paint()
 {
-    static CFrame bitmap(WIDTH, HEIGHT);
+    CFrame bitmap(WIDTH, HEIGHT);
+    bitmap.fill(BLACK);
     switch (m_game->mode())
     {
     case CGame::MODE_INTRO:
@@ -93,15 +104,19 @@ void CRuntime::paint()
     }
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
-    // SDL_RenderClear(m_app.renderer);
-    SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, NULL);
+    SDL_RenderClear(m_app.renderer);
+    int width;
+    int height;
+    SDL_GetWindowSize(m_app.window, &width, &height);
+    SDL_Rect rectDest{0, 0, width, height};
+    SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }
 
 bool CRuntime::SDLInit()
 {
-    int rendererFlags = SDL_RENDERER_ACCELERATED;
-    int windowFlags = SDL_WINDOW_SHOWN;
+    int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
     {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -109,8 +124,9 @@ bool CRuntime::SDLInit()
     }
     else
     {
+        const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
         m_app.window = SDL_CreateWindow(
-            "CS3v2 Runtime",
+            title.c_str(),
             SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 2 * WIDTH, 2 * HEIGHT, windowFlags);
         if (m_app.window == NULL)
         {
@@ -120,7 +136,7 @@ bool CRuntime::SDLInit()
         else
         {
             atexit(cleanup);
-            // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+            //     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
             m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
             if (m_app.renderer == nullptr)
             {
@@ -130,7 +146,7 @@ bool CRuntime::SDLInit()
 
             m_app.texture = SDL_CreateTexture(
                 m_app.renderer,
-                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, WIDTH, HEIGHT);
+                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
             if (m_app.texture == nullptr)
             {
                 fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
@@ -149,6 +165,7 @@ bool CRuntime::SDLInit()
 
 void CRuntime::cleanup()
 {
+    printf("cleanup()\n");
 }
 
 void CRuntime::run()
@@ -187,8 +204,9 @@ void CRuntime::doInput()
             break;
 
         case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED && !m_app.isFullscreen)
             {
+                printf("resuzed\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
@@ -211,6 +229,7 @@ void CRuntime::doInput()
 #ifdef __EMSCRIPTEN__
             //           emscripten_cancel_main_loop();
 #endif
+            printf("SQL_QUIT\n");
             exit(0);
             break;
 
@@ -248,13 +267,14 @@ void CRuntime::preloadAssets()
     }
 
     std::string fontName = m_prefix + m_config["font"];
+    printf("loading: %s\n", fontName.c_str());
     if (file.open(fontName.c_str(), "rb"))
     {
         int size = file.getSize();
         m_fontData = new uint8_t[size];
         file.read(m_fontData, size);
         file.close();
-        printf("loaded %s: %d bytes\n", fontName.c_str(), size);
+        printf("-> loaded %s: %d bytes\n", fontName.c_str(), size);
     }
     else
     {
@@ -277,7 +297,16 @@ void CRuntime::preloadAssets()
 
 void CRuntime::preRun()
 {
-    m_game->setMode(CGame::MODE_CLICKSTART);
+    if (isTrue(m_config["clickstart"]))
+    {
+        m_game->setMode(CGame::MODE_CLICKSTART);
+    }
+    else
+    {
+        setupTitleScreen();
+        initMusic();
+        initSounds();
+    }
 }
 
 void CRuntime::initMusic()
@@ -328,9 +357,14 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 
 bool CRuntime::loadScores()
 {
-    printf("reading %s\n", HISCORE_FILE);
+#ifdef __EMSCRIPTEN__
+    std::string path = HISCORE_FILE;
+#else
+    std::string path = m_workspace + HISCORE_FILE;
+#endif
+    printf("reading %s\n", path.c_str());
     CFileWrap file;
-    if (file.open(HISCORE_FILE, "rb"))
+    if (file.open(path.c_str(), "rb"))
     {
         if (file.getSize() == sizeof(m_hiscores))
         {
@@ -339,19 +373,25 @@ bool CRuntime::loadScores()
         }
         else
         {
-            fprintf(stderr, "size mismatch. resetting to default.\n");
+            fprintf(stderr, "hiscore size mismatch. resetting to default.\n");
             clearScores();
         }
         return true;
     }
-    fprintf(stderr, "can't read %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't read %s\n", path.c_str());
     return false;
 }
 
 bool CRuntime::saveScores()
 {
+#ifdef __EMSCRIPTEN__
+    std::string path = HISCORE_FILE;
+#else
+    std::string path = m_workspace + HISCORE_FILE;
+#endif
+
     CFileWrap file;
-    if (file.open(HISCORE_FILE, "wb"))
+    if (file.open(path.c_str(), "wb"))
     {
         file.write(m_hiscores, sizeof(m_hiscores));
         file.close();
@@ -364,13 +404,13 @@ bool CRuntime::saveScores()
 #endif
         return true;
     }
-    fprintf(stderr, "can't write %s\n", HISCORE_FILE);
+    fprintf(stderr, "can't write %s\n", path.c_str());
     return false;
 }
 
-void CRuntime::enableMusic()
+void CRuntime::enableMusic(bool state)
 {
-    m_musicEnabled = true;
+    m_musicEnabled = state;
 }
 
 void CRuntime::stopMusic()
@@ -397,15 +437,20 @@ void CRuntime::startMusic()
 
 void CRuntime::save()
 {
+#ifdef __EMSCRIPTEN__
+    std::string path = SAVEGAME_FILE;
+#else
+    std::string path = m_workspace + SAVEGAME_FILE;
+#endif
+
     if (m_game->mode() != CGame::MODE_LEVEL)
     {
         fprintf(stderr, "cannot save while not playing\n");
         return;
     }
-
-    printf("writing: %s\n", SAVEGAME_FILE);
+    printf("writing: %s\n", path.c_str());
     std::string name{"Testing123"};
-    FILE *tfile = fopen(SAVEGAME_FILE, "wb");
+    FILE *tfile = fopen(path.c_str(), "wb");
     if (tfile)
     {
         write(tfile, name);
@@ -420,16 +465,21 @@ void CRuntime::save()
     }
     else
     {
-        fprintf(stderr, "can't write:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't write:%s\n", path.c_str());
     }
 }
 
 void CRuntime::load()
 {
+#ifdef __EMSCRIPTEN__
+    std::string path = SAVEGAME_FILE;
+#else
+    std::string path = m_workspace + SAVEGAME_FILE;
+#endif
     m_game->setMode(CGame::MODE_IDLE);
     std::string name;
-    printf("reading: %s\n", SAVEGAME_FILE);
-    FILE *sfile = fopen(SAVEGAME_FILE, "rb");
+    printf("reading: %s\n", path.c_str());
+    FILE *sfile = fopen(path.c_str(), "rb");
     if (sfile)
     {
         if (!read(sfile, name))
@@ -440,7 +490,7 @@ void CRuntime::load()
     }
     else
     {
-        fprintf(stderr, "can't read:%s\n", SAVEGAME_FILE);
+        fprintf(stderr, "can't read:%s\n", path.c_str());
     }
     m_game->setMode(CGame::MODE_LEVEL);
     openMusicForLevel(m_game->level());
@@ -472,10 +522,45 @@ void CRuntime::initSounds()
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const std::string music = m_prefix + std::string("music/") + m_musicFiles[i % m_musicFiles.size()];
+    const std::string music = m_prefix + std::string("musics/") + m_musicFiles[i % m_musicFiles.size()];
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
+    }
+}
+
+void CRuntime::splitString2(const std::string &str, StringVector &list)
+{
+    int i = 0;
+    unsigned int j = 0;
+    bool inQuote = false;
+    std::string item;
+    while (j < str.length())
+    {
+        if (str[j] == '"')
+        {
+            inQuote = !inQuote;
+        }
+        else if (!isspace(str[j]) || inQuote)
+        {
+            item += str[j];
+        }
+        if (!inQuote && isspace(str[j]))
+        {
+            list.emplace_back(item);
+            while (isspace(str[j]) && j < str.length())
+            {
+                ++j;
+            }
+            i = j;
+            item.clear();
+            continue;
+        }
+        ++j;
+    }
+    if (item.size())
+    {
+        list.emplace_back(item);
     }
 }
 
@@ -552,7 +637,7 @@ bool CRuntime::parseConfig(const char *filename)
             else if (section == "config")
             {
                 StringVector list;
-                splitString(p, list);
+                splitString2(std::string(p), list);
                 if (list.size() == 2)
                 {
                     m_config[list[0]] = list[1];
@@ -561,6 +646,10 @@ bool CRuntime::parseConfig(const char *filename)
                 {
                     fprintf(stderr, "string %s on line %d split into %d parts\n", p, line, list.size());
                 }
+            }
+            else
+            {
+                fprintf(stderr, "item for unknown section %s on line %d\n", section.c_str(), line);
             }
         }
         p = e ? e + 1 : nullptr;
@@ -573,6 +662,26 @@ bool CRuntime::parseConfig(const char *filename)
 void CRuntime::setPrefix(const char *prefix)
 {
     m_prefix = prefix;
+    addTrailSlash(m_prefix);
+}
+
+void CRuntime::setWorkspace(const char *workspace)
+{
+    m_workspace = workspace;
+    addTrailSlash(m_workspace);
+}
+
+void CRuntime::addTrailSlash(std::string &path)
+{
+    if (path.size() == 0)
+    {
+        path = "./";
+    }
+    else if (path.back() != '/' &&
+             path.back() != '\\')
+    {
+        path += "/";
+    }
 }
 
 void CRuntime::drawTitleScreen(CFrame &bitmap)
@@ -607,8 +716,9 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
                        "ORIGINAL PIXEL ART BY FRANCOIS BLANCHETTE    "
                        "PRESS SPACE TO START A NEW GAME       "
                        "USE ARROW KEYS TO MOVE     "
+                       "PRESS F1 FOR MORE HELP AND OPTIONS     "
                        "COLLECT DIAMONDS, AVOID MONSTERS AND OTHER HAZARDS...      "
-                       "AND TRIGGERS SWITCHES TO REVEAL SECRET PASSAGES.     "
+                       "AND TRIGGER SWITCHES TO REVEAL SECRET PASSAGES AND MORE COLLECTABLES.     "
                        "                             ";
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1)
@@ -629,4 +739,104 @@ void CRuntime::setupTitleScreen()
     memset(m_scroll, ' ', sizeof(m_scroll));
     m_scroll[SCROLLER_BUF_SIZE] = '\0';
     m_scrollPtr = 0;
+}
+
+void CRuntime::takeScreenshot()
+{
+    CFrame bitmap(WIDTH, HEIGHT);
+    bitmap.fill(BLACK);
+    drawScreen(bitmap);
+    auto rgba = bitmap.getRGB();
+    for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
+    {
+        if (rgba[i] == 0)
+            rgba[i] = BLACK;
+    }
+    bitmap.enlarge();
+    uint8_t *png;
+    int size;
+    bitmap.toPng(png, size);
+    CFileWrap file;
+    char filename[64];
+    auto now = std::chrono::system_clock::now();
+    std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+    std::tm *localTime = std::localtime(&currentTime);
+    sprintf(filename, "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
+            1900 + localTime->tm_year,
+            localTime->tm_mon,
+            localTime->tm_mday,
+            localTime->tm_hour,
+            localTime->tm_min,
+            localTime->tm_sec);
+    std::string path = m_workspace + filename;
+    if (file.open(path.c_str(), "wb"))
+    {
+        file.write(png, size);
+        file.close();
+    }
+    else
+    {
+        fprintf(stderr, "can't write %s\n", path.c_str());
+    }
+    delete[] png;
+}
+
+bool CRuntime::isTrue(std::string value)
+{
+    return value == "true" || value == "1";
+}
+
+void CRuntime::initOptions()
+{
+    if (isTrue(m_config["hiscore_enabled"]))
+    {
+        enableHiScore();
+    }
+    if (isTrue(m_config["music_enabled"]))
+    {
+        enableMusic(true);
+    }
+}
+
+// Function to toggle fullscreen mode
+void CRuntime::toggleFullscreen()
+{
+    Uint32 flags = SDL_GetWindowFlags(m_app.window);
+    if (m_app.isFullscreen)
+    {
+        m_app.isFullscreen = false;
+        // Currently in fullscreen, switch to windowed
+        printf("Switching to windowed mode.\n");
+        SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
+
+        // Restore original window size and position
+        SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth);
+        SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX);
+    }
+    else
+    {
+        m_app.isFullscreen = true;
+        // Currently in windowed, switch to fullscreen
+        printf("Switching to fullscreen desktop mode.\n");
+
+        // Save current windowed position and size before going fullscreen
+        SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
+        SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
+
+        SDL_DisplayMode dm;
+        SDL_GetCurrentDisplayMode(0, &dm);
+
+        // Use SDL_WINDOW_FULLSCREEN_DESKTOP for borderless fullscreen
+        // or SDL_WINDOW_FULLSCREEN for exclusive fullscreen
+        SDL_SetWindowSize(m_app.window, dm.w, dm.h);
+        SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+    }
+    int x, y, w, h;
+    SDL_GetWindowPosition(m_app.window, &x, &y);
+    SDL_GetWindowSize(m_app.window, &w, &h);
+    printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+}
+
+void CRuntime::sanityTest()
+{
 }

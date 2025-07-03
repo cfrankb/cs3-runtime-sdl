@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __MAP_H
-#define __MAP_H
+#pragma once
 
 #include <stdint.h>
 #include <cstdio>
@@ -83,5 +82,3 @@ protected:
     std::string m_title;
     static uint16_t toKey(const uint8_t x, const uint8_t y);
 };
-
-#endif

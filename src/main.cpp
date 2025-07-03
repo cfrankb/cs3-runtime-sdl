@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include "runtime.h"
 #include "maparch.h"
+#include "parseargs.h"
 #include "shared/implementers/mu_sdl.h"
 
 const uint32_t FPS = 24;
@@ -27,13 +28,9 @@ const uint32_t SLEEP = 1000 / FPS;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-
-typedef struct
-{
-    int level;
-    bool musicEnabled;
-    std::string prefix;
-} config_t;
+#define PREFIX "data/"
+#define DEFAULT_MAPARCH "levels.mapz"
+#define CONF_FILE "game.cfg"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -108,72 +105,32 @@ void loop_handler(void *arg)
     }
 }
 
-void parseArgs(int argc, char *args[], config_t &config)
-{
-    config.level = 0;
-    config.musicEnabled = true;
-    config.prefix = "data/";
-    for (int i = 1; i < argc; ++i)
-    {
-        // set prefix
-        if (strcmp(args[i], "-p") == 0)
-        {
-            if (i + 1 < argc && args[i + 1][0] != '-')
-            {
-                config.prefix = args[i + 1];
-                if (config.prefix.back() != '/')
-                {
-                    config.prefix += "/";
-                }
-                ++i;
-            }
-            else
-            {
-                printf("missing prefix on cmdline\n");
-            }
-        }
-        // handle flags
-        else if (args[i][0] == '-')
-        {
-            for (int j = 1; j < strlen(args[i]); ++j)
-            {
-                switch (args[i][j])
-                {
-                case 'm':
-                    config.musicEnabled = false;
-                    break;
-                default:
-                    printf("invalid switch: %c\n", args[i][j]);
-                }
-            }
-        }
-        else
-        {
-            config.level = atoi(args[i]);
-        }
-    }
-}
-
 int main(int argc, char *args[])
 {
     CRuntime runtime;
     CMapArch maparch;
-    config_t config;
-    parseArgs(argc, args, config);
-    std::string archFile = config.prefix + "levels.mapz";
-    if (!maparch.read(archFile.c_str()))
+    params_t params;
+    params.muteMusic = false;
+    params.level = 0;
+    params.prefix = PREFIX;
+    params.mapArch = params.prefix + DEFAULT_MAPARCH;
+    if (!parseArgs(argc, args, params))
+        return EXIT_FAILURE;
+    if (!maparch.read(params.mapArch.c_str()))
     {
-        fprintf(stderr, "failed to read maparch: %s %s\n", archFile.c_str(), maparch.lastError());
+        fprintf(stderr, "failed to read maparch: %s %s\n", params.mapArch.c_str(), maparch.lastError());
         return EXIT_FAILURE;
     }
-    std::string configFile = config.prefix + "game.cfg";
-    runtime.setPrefix(config.prefix.c_str());
+    std::string configFile = params.prefix + CONF_FILE;
+    runtime.setPrefix(params.prefix.c_str());
+    runtime.setWorkspace(params.workspace.c_str());
     runtime.parseConfig(configFile.c_str());
-    runtime.init(&maparch, config.level % maparch.size());
-    runtime.enableHiScore();
-    if (config.musicEnabled)
+    runtime.init(&maparch, params.level % maparch.size());
+    runtime.initOptions();
+    if (params.muteMusic)
     {
-        runtime.enableMusic();
+        // override options
+        runtime.enableMusic(false);
     }
     if (!runtime.SDLInit())
     {

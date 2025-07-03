@@ -15,8 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef __GAME_H
-#define __GAME_H
+#pragma once
 #include <stdint.h>
 #include <cstdio>
 #include "actor.h"
@@ -131,4 +130,3 @@ protected:
 
     friend class CGameMixin;
 };
-#endif
