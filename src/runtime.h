@@ -41,23 +41,10 @@ public:
     void save() override;
     void load() override;
     bool parseConfig(const char *filename);
+    void setConfig(const char *key, const char *val);
     void setPrefix(const char *prefix);
     void setWorkspace(const char *workspace);
     void initOptions();
-
-protected:
-    static void cleanup();
-    void preloadAssets() override;
-    void initMusic();
-    void initSounds();
-    void keyReflector(SDL_Keycode key, uint8_t keyState);
-    bool loadScores() override;
-    bool saveScores() override;
-    void openMusicForLevel(int i) override;
-    void setupTitleScreen() override;
-    void takeScreenshot() override;
-    void toggleFullscreen() override;
-    void sanityTest() override;
 
     typedef struct
     {
@@ -70,6 +57,21 @@ protected:
         int windowedWidth = WIDTH * 2;
         int windowedHeigth = HEIGHT * 2;
     } App;
+
+protected:
+    static void cleanup();
+    void preloadAssets() override;
+    void initMusic();
+    void initSounds();
+    void keyReflector(SDL_Keycode key, uint8_t keyState);
+    bool loadScores() override;
+    bool saveScores() override;
+    void openMusicForLevel(int i) override;
+    void setupTitleScreen() override;
+    void takeScreenshot() override;
+    void sanityTest() override;
+    void toggleFullscreen() override;
+    static void toggleFullscreenHelper();
 
     enum
     {

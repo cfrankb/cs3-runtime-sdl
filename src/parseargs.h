@@ -23,6 +23,7 @@ typedef struct
     int level;
     std::string prefix;
     bool muteMusic;
+    bool fullscreen;
     std::string mapArch;
     std::string workspace;
 } params_t;

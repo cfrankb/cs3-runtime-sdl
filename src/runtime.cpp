@@ -36,6 +36,8 @@ const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
 
+CRuntime::App *g_app = nullptr;
+
 CRuntime::CRuntime() : CGameMixin()
 {
 #ifdef __EMSCRIPTEN__
@@ -52,6 +54,7 @@ CRuntime::CRuntime() : CGameMixin()
 #endif
     m_music = nullptr;
     memset(&m_app, 0, sizeof(App));
+    g_app = &m_app;
 }
 
 CRuntime::~CRuntime()
@@ -166,6 +169,10 @@ bool CRuntime::SDLInit()
 void CRuntime::cleanup()
 {
     printf("cleanup()\n");
+    if (g_app->isFullscreen)
+    {
+        toggleFullscreenHelper();
+    }
 }
 
 void CRuntime::run()
@@ -227,7 +234,7 @@ void CRuntime::doInput()
 
         case SDL_QUIT:
 #ifdef __EMSCRIPTEN__
-            //           emscripten_cancel_main_loop();
+//           emscripten_cancel_main_loop();
 #endif
             printf("SQL_QUIT\n");
             exit(0);
@@ -659,6 +666,11 @@ bool CRuntime::parseConfig(const char *filename)
     return true;
 }
 
+void CRuntime::setConfig(const char *key, const char *val)
+{
+    m_config[key] = val;
+}
+
 void CRuntime::setPrefix(const char *prefix)
 {
     m_prefix = prefix;
@@ -714,6 +726,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
                        "COPYRIGHT 1993, 2024 FRANCOIS BLANCHETTE    "
                        "PROGRAMMING BY FRANCOIS BLANCHETTE      "
                        "ORIGINAL PIXEL ART BY FRANCOIS BLANCHETTE    "
+                       "UPDATED SPRITES: MR. JC @ https://mr-jc.itch.io/     "
                        "PRESS SPACE TO START A NEW GAME       "
                        "USE ARROW KEYS TO MOVE     "
                        "PRESS F1 FOR MORE HELP AND OPTIONS     "
@@ -783,7 +796,7 @@ void CRuntime::takeScreenshot()
 
 bool CRuntime::isTrue(std::string value)
 {
-    return value == "true" || value == "1";
+    return (value == "true") || (value == "1");
 }
 
 void CRuntime::initOptions()
@@ -796,44 +809,54 @@ void CRuntime::initOptions()
     {
         enableMusic(true);
     }
+    if (isTrue(m_config["fullscreen"]))
+    {
+        printf("is full screen?\n");
+        toggleFullscreen();
+    }
+}
+
+void CRuntime::toggleFullscreen()
+{
+    toggleFullscreenHelper();
 }
 
 // Function to toggle fullscreen mode
-void CRuntime::toggleFullscreen()
+void CRuntime::toggleFullscreenHelper()
 {
-    Uint32 flags = SDL_GetWindowFlags(m_app.window);
-    if (m_app.isFullscreen)
+    Uint32 flags = SDL_GetWindowFlags(g_app->window);
+    if (g_app->isFullscreen)
     {
-        m_app.isFullscreen = false;
+        g_app->isFullscreen = false;
         // Currently in fullscreen, switch to windowed
         printf("Switching to windowed mode.\n");
-        SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
+        SDL_SetWindowFullscreen(g_app->window, 0); // 0 means windowed mode
 
         // Restore original window size and position
-        SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth);
-        SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX);
+        SDL_SetWindowSize(g_app->window, g_app->windowedWidth, g_app->windowedHeigth);
+        SDL_SetWindowPosition(g_app->window, g_app->windowedX, g_app->windowedX);
     }
     else
     {
-        m_app.isFullscreen = true;
+        g_app->isFullscreen = true;
         // Currently in windowed, switch to fullscreen
         printf("Switching to fullscreen desktop mode.\n");
 
         // Save current windowed position and size before going fullscreen
-        SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
-        SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
+        SDL_GetWindowPosition(g_app->window, &g_app->windowedX, &g_app->windowedX);
+        SDL_GetWindowSize(g_app->window, &g_app->windowedWidth, &g_app->windowedHeigth);
 
         SDL_DisplayMode dm;
         SDL_GetCurrentDisplayMode(0, &dm);
 
         // Use SDL_WINDOW_FULLSCREEN_DESKTOP for borderless fullscreen
         // or SDL_WINDOW_FULLSCREEN for exclusive fullscreen
-        SDL_SetWindowSize(m_app.window, dm.w, dm.h);
-        SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_SetWindowSize(g_app->window, dm.w, dm.h);
+        SDL_SetWindowFullscreen(g_app->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
     int x, y, w, h;
-    SDL_GetWindowPosition(m_app.window, &x, &y);
-    SDL_GetWindowSize(m_app.window, &w, &h);
+    SDL_GetWindowPosition(g_app->window, &x, &y);
+    SDL_GetWindowSize(g_app->window, &w, &h);
     printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
 }
 

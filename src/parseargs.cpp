@@ -30,8 +30,16 @@ void showHelp()
          //"-s 999x999                set window size\n"
          "\n"
          "flags:\n"
+         "-f                        start in fullscreen\n"
          "-h                        show this screen\n"
          "-q                        mute music by default\n");
+}
+
+void initArgs(params_t &params)
+{
+    params.fullscreen = false;
+    params.level = 0;
+    params.muteMusic = false;
 }
 
 bool parseArgs(const int argc, char *args[], params_t &params)
@@ -42,6 +50,7 @@ bool parseArgs(const int argc, char *args[], params_t &params)
         const char *name;
         std::string *dest;
     } paramdef_t;
+    initArgs(params);
 
     const paramdef_t paramdefs[] = {
         {"-p", "prefix", &params.prefix},
@@ -75,13 +84,17 @@ bool parseArgs(const int argc, char *args[], params_t &params)
                 result = false;
             }
         }
-        // handle flags
+        // handle switch
         else if (args[i][0] == '-')
         {
             for (int j = 1; j < strlen(args[i]); ++j)
             {
                 switch (args[i][j])
                 {
+                case 'f':
+                    printf("fullscreen\n");
+                    params.fullscreen = true;
+                    break;
                 case 'q':
                     printf("muted music\n");
                     params.muteMusic = true;

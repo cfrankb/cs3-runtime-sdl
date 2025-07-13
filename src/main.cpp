@@ -126,7 +126,10 @@ int main(int argc, char *args[])
     runtime.setWorkspace(params.workspace.c_str());
     runtime.parseConfig(configFile.c_str());
     runtime.init(&maparch, params.level % maparch.size());
-    runtime.initOptions();
+    if (params.fullscreen == true)
+    {
+        runtime.setConfig("fullscreen", "true");
+    }
     if (params.muteMusic)
     {
         // override options
@@ -136,6 +139,7 @@ int main(int argc, char *args[])
     {
         return EXIT_FAILURE;
     }
+    runtime.initOptions();
     runtime.preRun();
     runtime.paint();
 #ifdef __EMSCRIPTEN__
