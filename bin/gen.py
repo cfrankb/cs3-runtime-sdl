@@ -44,6 +44,9 @@ def get_deps_blocks(extra_path):
     lines.append('retry:')
     lines.append("\trm -rf $(TARGET)")
     lines.append("")
+    lines.append('run:')
+    lines.append("\t$(TARGET)")
+    lines.append("")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
 

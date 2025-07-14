@@ -54,8 +54,8 @@ public:
         bool isFullscreen = false;
         int windowedX;
         int windowedY;
-        int windowedWidth = WIDTH * 2;
-        int windowedHeigth = HEIGHT * 2;
+        int windowedWidth;
+        int windowedHeigth;
     } App;
 
 protected:
@@ -71,12 +71,10 @@ protected:
     void takeScreenshot() override;
     void sanityTest() override;
     void toggleFullscreen() override;
-    static void toggleFullscreenHelper();
 
     enum
     {
         FONT_SIZE = 8,
-        SCROLLER_BUF_SIZE = WIDTH / FONT_SIZE,
     };
 
     IMusic *m_music = nullptr;
@@ -90,12 +88,16 @@ protected:
     std::string m_prefix = "data/";
     std::string m_workspace = "";
     CFrameSet *m_title;
-    char m_scroll[SCROLLER_BUF_SIZE + 1];
+    char *m_credits = nullptr;
+    char *m_scroll = nullptr;
     int m_scrollPtr;
 
 private:
     void drawTitleScreen(CFrame &bitmap);
     void splitString2(const std::string &str, StringVector &list);
     void addTrailSlash(std::string &path);
-    bool isTrue(std::string value);
+    bool isTrue(const std::string &value) const;
+    void resizeScroller();
+    void cleanUpCredits();
+    size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
 };

@@ -25,6 +25,9 @@
 #include <cstdio>
 #include <string>
 
+#define WIDTH getWidth()
+#define HEIGHT getHeight()
+
 class CFrameSet;
 class CGame;
 class CFrame;
@@ -70,8 +73,8 @@ protected:
         DARKBLUE = 0x00440000 | ALPHA,
         DARKGRAY = 0x00444444 | ALPHA,
         LIGHTGRAY = 0x00A9A9A9 | ALPHA,
-        WIDTH = 320,
-        HEIGHT = 240,
+        _WIDTH = 320,
+        _HEIGHT = 240,
         TILE_SIZE = 16,
         COUNTDOWN_INTRO = 1,
         COUNTDOWN_RESTART = 2,
@@ -190,6 +193,14 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
+    inline int getWidth()
+    {
+        return _WIDTH;
+    }
+    inline int getHeight()
+    {
+        return _HEIGHT;
+    }
     virtual void preloadAssets() = 0;
     virtual void sanityTest() = 0;
     virtual void drawHelpScreen(CFrame &bitmap);
