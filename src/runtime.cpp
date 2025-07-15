@@ -327,7 +327,6 @@ void CRuntime::preloadAssets()
 void CRuntime::cleanUpCredits()
 {
     const size_t len = strlen(m_credits);
-    printf("len:%d\n", strlen(m_credits));
     size_t j = 0;
     for (size_t i = 0; i < len; ++i)
     {
@@ -346,7 +345,6 @@ void CRuntime::cleanUpCredits()
         ++j;
     }
     m_credits[j] = '\0';
-    printf("len:%d   %d \n", strlen(m_credits), j);
 }
 
 void CRuntime::preRun()
@@ -698,7 +696,7 @@ bool CRuntime::parseConfig(const char *filename)
                 }
                 else
                 {
-                    fprintf(stderr, "string %s on line %d split into %d parts\n", p, line, list.size());
+                    fprintf(stderr, "string %s on line %d split into %zu parts\n", p, line, list.size());
                 }
             }
             else
@@ -785,9 +783,8 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 void CRuntime::setupTitleScreen()
 {
     m_game->setMode(CGame::MODE_TITLE);
-    memset(m_scroll, ' ', sizeof(m_scroll));
     size_t len = scrollerBufSize();
-    memset(m_scroll, 32, len);
+    memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
     m_scrollPtr = 0;
 }

@@ -51,7 +51,7 @@ public:
         SDL_Renderer *renderer;
         SDL_Window *window;
         SDL_Texture *texture;
-        bool isFullscreen = false;
+        bool isFullscreen;
         int windowedX;
         int windowedY;
         int windowedWidth;

@@ -35,7 +35,7 @@ $ emrun build/cs3v2.html
 ```
 
 
-## Mingw32 on Linux
+### Mingw32 on Linux (manual)
 
 <b>Building the docker image</b>
 
