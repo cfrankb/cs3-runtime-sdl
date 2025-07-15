@@ -47,13 +47,14 @@ public:
     void setXY(const Pos &pos);
     uint8_t getAim() const;
     void setAim(const uint8_t aim);
-    int findNextDir();
-    bool isPlayerThere(uint8_t aim);
-    uint8_t tileAt(uint8_t aim);
+    int findNextDir(const bool reverse = false);
+    bool isPlayerThere(uint8_t aim) const;
+    uint8_t tileAt(uint8_t aim) const;
     void setType(const uint8_t type);
-    bool within(int x1, int y1, int x2, int y2) const;
+    bool within(const int x1, const int y1, const int x2, const int y2) const;
     bool read(FILE *sfile);
     bool write(FILE *tfile);
+    void reverveDir();
 
 protected:
     uint8_t m_x;

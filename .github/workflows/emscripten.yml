@@ -43,14 +43,14 @@ jobs:
         mv build/cs3/cs3v2.html build/cs3/index.html
         bin/prepare.sh
 
-    - name: Upload WebAssembly Build Artifacts
+    - name: Upload WebAssembly Build Artifacts (itchio)
       uses: actions/upload-artifact@v4
       with:
         name: cs3-itchio
         path: |
           build/cs3/*
 
-    - name: Upload WebAssembly Build Artifacts
+    - name: Upload WebAssembly Build Artifacts (local)
       uses: actions/upload-artifact@v4
       with:
         name: cs3-local

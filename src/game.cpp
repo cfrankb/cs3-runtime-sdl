@@ -274,13 +274,13 @@ void CGame::manageMonsters(int ticks)
         speeds[i] = i ? (ticks % i) == 0 : true;
     }
 
-    uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    const uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     std::vector<CActor> newMonsters;
 
     for (int i = 0; i < m_monsterCount; ++i)
     {
         CActor &actor = m_monsters[i];
-        uint8_t cs = map.at(actor.getX(), actor.getY());
+        const uint8_t cs = map.at(actor.getX(), actor.getY());
         const TileDef &def = getTileDef(cs);
         if (!speeds[def.speed])
         {

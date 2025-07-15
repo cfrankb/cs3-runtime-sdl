@@ -59,7 +59,7 @@ bool CActor::canMove(int aim)
         return false;
     }
 
-    uint8_t c = map.at(newPos.x, newPos.y);
+    const uint8_t c = map.at(newPos.x, newPos.y);
     const TileDef &def = getTileDef(c);
     if (def.type == TYPE_BACKGROUND)
     {
@@ -125,15 +125,16 @@ void CActor::setXY(const Pos &pos)
     m_y = pos.y;
 }
 
-int CActor::findNextDir()
+int CActor::findNextDir(const bool reverse)
 {
+    const int aim = m_aim ^ (1 & reverse);
     int i = TOTAL_AIMS - 1;
     while (i >= 0)
     {
-        int aim = AIMS[m_aim * TOTAL_AIMS + i];
-        if (canMove(aim))
+        int newAim = AIMS[aim * TOTAL_AIMS + i];
+        if (canMove(newAim))
         {
-            return aim;
+            return newAim;
         }
         --i;
     }
@@ -150,14 +151,14 @@ void CActor::setAim(const uint8_t aim)
     m_aim = aim;
 }
 
-bool CActor::isPlayerThere(uint8_t aim)
+bool CActor::isPlayerThere(uint8_t aim) const
 {
     const uint8_t c = tileAt(aim);
     const TileDef &def = getTileDef(c);
     return def.type == TYPE_PLAYER;
 }
 
-uint8_t CActor::tileAt(uint8_t aim)
+uint8_t CActor::tileAt(uint8_t aim) const
 {
     CMap &map = CGame::getMap();
     const Pos &p = CGame::translate(Pos{m_x, m_y}, aim);
@@ -169,9 +170,14 @@ void CActor::setType(const uint8_t type)
     m_type = type;
 }
 
-bool CActor::within(int x1, int y1, int x2, int y2) const
+bool CActor::within(const int x1, const int y1, const int x2, const int y2) const
 {
     return (m_x >= x1) && (m_x < x2) && (m_y >= y1) && (m_y < y2);
+}
+
+void CActor::reverveDir()
+{
+    m_aim ^= 1;
 }
 
 bool CActor::read(FILE *sfile)
