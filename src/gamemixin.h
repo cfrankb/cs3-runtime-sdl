@@ -43,6 +43,7 @@ public:
     void init(CMapArch *maparch, int index);
     inline bool within(int val, int min, int max);
     void enableHiScore();
+    void setSkill(uint8_t skill);
 
 #ifdef USE_QFILE
 protected slots:
@@ -173,6 +174,7 @@ protected:
     bool m_paused = false;
     bool m_musicMuted = false;
     int m_prompt = PROMPT_NONE;
+
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);

@@ -1005,3 +1005,8 @@ void CGameMixin::drawPreScreen(CFrame &bitmap)
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
 }
+
+void CGameMixin::setSkill(uint8_t skill)
+{
+    m_game->setSkill(skill);
+}
