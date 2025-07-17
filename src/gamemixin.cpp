@@ -25,7 +25,8 @@
 #include "game.h"
 #include "maparch.h"
 #include "animator.h"
-#include "skill.h"
+#include "skills.h"
+#include "chars.h"
 
 // Check windows
 #ifdef _WIN64
@@ -90,33 +91,17 @@ CGameMixin::~CGameMixin()
 
 void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color, const uint32_t bgcolor, const int scaleX, const int scaleY)
 {
-    uint8_t caret[FONT_SIZE]{
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-        0xff,
-    };
     uint32_t *rgba = frame.getRGB();
     const int rowPixels = frame.len();
     const int fontSize = FONT_SIZE;
     const int fontOffset = fontSize;
     const int textSize = strlen(text);
-    uint8_t *font = nullptr;
     for (int i = 0; i < textSize; ++i)
     {
-        if (static_cast<uint8_t>(text[i]) == CARET)
-        {
-            font = caret;
-        }
-        else
-        {
-            const uint8_t c = static_cast<uint8_t>(text[i]) - ' ';
-            font = m_fontData + c * fontOffset;
-        }
+        uint8_t c = static_cast<uint8_t>(text[i]);
+        const uint8_t *font = nullptr;
+        font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+                                 : m_fontData + (c - ' ') * fontOffset;
         for (int yy = 0; yy < fontSize; ++yy)
         {
             uint8_t bitFilter = 1;
@@ -494,31 +479,7 @@ void CGameMixin::mainLoop()
         }
         return;
     case CGame::MODE_TITLE:
-
-        int skill = m_game->skill();
-        if (m_optionCooldown)
-        {
-            --m_optionCooldown;
-        }
-        else if (m_joyState[AIM_LEFT])
-        {
-            --skill;
-            skill = std::max(skill, 0);
-            m_game->setSkill(skill);
-            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
-        }
-        else if (m_joyState[AIM_RIGHT])
-        {
-            ++skill;
-            skill = std::min(skill, SKILL_MAX);
-            m_game->setSkill(skill);
-            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
-        }
-        if (m_keyStates[Key_Space])
-        {
-            game.setMode(CGame::MODE_INTRO);
-            startCountdown(COUNTDOWN_INTRO);
-        }
+        manageTitleScreen();
         return;
     }
 
@@ -703,7 +664,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
                 m_hiscores[i].score,
                 m_hiscores[i].level,
                 m_hiscores[i].name,
-                showCaret ? CARET : '\0');
+                showCaret ? CHARS_CARET : '\0');
         drawFont(bitmap, 1, y * FONT_SIZE, t, color);
         ++y;
     }

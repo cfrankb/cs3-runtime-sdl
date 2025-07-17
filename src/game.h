@@ -68,6 +68,7 @@ public:
     void attach(ISound *s);
     void setSkill(const uint8_t v);
     uint8_t skill() const;
+    int size() const;
 
     enum GameMode
     {

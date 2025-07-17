@@ -28,7 +28,7 @@
 #include "shared/IFile.h"
 #include "sounds.h"
 #include "shared/interfaces/ISound.h"
-#include "skill.h"
+#include "skills.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -715,14 +715,10 @@ void CGame::setLives(int lives)
 
 void CGame::playSound(const int id) const
 {
-#ifdef __EMSCRIPTEN__
-    (void)id;
-#else
     if (id != SOUND_NONE && m_sound != nullptr)
     {
         m_sound->play(id);
     }
-#endif
 }
 
 void CGame::playTileSound(int tileID) const
@@ -762,4 +758,9 @@ void CGame::setSkill(const uint8_t v)
 int CGame::calcScoreLife()
 {
     return SCORE_LIFE * (1 + m_skill);
+}
+
+int CGame::size() const
+{
+    return m_mapArch->size();
 }

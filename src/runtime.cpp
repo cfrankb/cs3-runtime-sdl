@@ -17,15 +17,18 @@
 */
 #include <ctime>
 #include <chrono>
+#include <cstring>
+#include <unistd.h>
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
 #include "shared/FrameSet.h"
-#include <cstring>
 #include "shared/FileWrap.h"
 #include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
 #include "shared/implementers/sn_sdl.h"
+#include "chars.h"
+#include "skills.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -53,6 +56,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_music = nullptr;
     memset(&m_app, 0, sizeof(App));
     resizeScroller();
+    m_startLevel = 0;
 }
 
 CRuntime::~CRuntime()
@@ -751,8 +755,61 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     if (m_title->getSize() == 0)
         return;
 
+    std::string savePath;
+    getFilePath(savePath);
+
     auto &title = *(*m_title)[0];
-    const auto offsetY = (HEIGHT - title.hei()) / 2;
+    const int offsetY = 12;
+    drawTitlePix(bitmap, offsetY);
+
+    const int baseY = offsetY + title.hei() + 12;
+    const Rect rect{
+        .x = 8,
+        .y = baseY,
+        .width = WIDTH - 16,
+        .height = HEIGHT - baseY - 24};
+
+    drawRect(bitmap, rect, DARKRED, false);
+
+    std::vector<std::string> items;
+    items.push_back("NEW GAME");
+    items.push_back("LOAD GAME");
+    const char *skillNames[] = {
+        "EASY",
+        "NORMAL",
+        "HARD"};
+    char tmp[32];
+    sprintf(tmp, "%s MODE", skillNames[m_game->skill()]);
+    items.push_back(tmp);
+    sprintf(tmp, "LEVEL %.2d", m_startLevel + 1);
+    items.push_back(tmp);
+    items.push_back("HIGH SCORES");
+
+    const int spacingY = 24;
+    for (int i = 0; i < items.size(); ++i)
+    {
+        const int baseY = 100 - 8;
+        const char *text = items[i].c_str();
+        const int x = (WIDTH - strlen(text) * FONT_SIZE * 2) / 2;
+        uint32_t color = i == m_curMenuItem ? YELLOW : BLUE;
+        if (i == MENU_ITEM_LOAD_GAME && !fileExists(savePath))
+        {
+            color = LIGHTGRAY;
+        }
+        drawFont(bitmap, x, baseY + i * spacingY, text, color, CLEAR, 2, 2);
+        if (i == m_curMenuItem)
+        {
+            sprintf(tmp, "%c", CHARS_TRIGHT);
+            drawFont(bitmap, 32, baseY + i * spacingY, tmp, RED, CLEAR, 2, 2);
+        }
+    }
+
+    drawScroller(bitmap);
+}
+
+void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
+{
+    auto &title = *(*m_title)[0];
     for (int y = 0; y < title.hei(); ++y)
     {
         for (int x = 0; x < title.len(); ++x)
@@ -760,27 +817,10 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
             bitmap.at(x, y + offsetY) = title.at(x, y);
         }
     }
-    if ((m_ticks / 20) & 1)
-    {
-        const Rect rect = {
-            .x = 0,
-            .y = 142,
-            .width = WIDTH,
-            .height = 21,
-        };
-        drawRect(bitmap, rect, BLACK, true);
-    }
+}
 
-    const char *skillNames[] = {
-        "EASY",
-        "NORMAL",
-        "HARD"};
-
-    char tmp[32];
-    sprintf(tmp, "%s MODE", skillNames[m_game->skill()]);
-    const int x = (WIDTH - strlen(tmp) * FONT_SIZE * 2) / 2;
-    drawFont(bitmap, x, 178, tmp, CYAN, CLEAR, 2);
-
+void CRuntime::drawScroller(CFrame &bitmap)
+{
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1 && m_credits != nullptr)
     {
@@ -801,6 +841,8 @@ void CRuntime::setupTitleScreen()
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
     m_scrollPtr = 0;
+    m_curMenuItem = 0;
+    m_maxMenuItems = 5;
 }
 
 void CRuntime::takeScreenshot()
@@ -929,4 +971,92 @@ void CRuntime::resizeScroller()
     m_scroll = new char[len + 1];
     memset(m_scroll, 32, len);
     m_scroll[len] = 0;
+}
+
+void CRuntime::manageTitleScreen()
+{
+    CGame &game = *m_game;
+    int skill = m_game->skill();
+    std::string savePath;
+    getFilePath(savePath);
+    if (m_optionCooldown)
+    {
+        --m_optionCooldown;
+    }
+    else if (m_joyState[AIM_UP] && m_curMenuItem != MENU_ITEM_HISCORE_MIN)
+    {
+        --m_curMenuItem;
+        m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+    }
+    else if (m_joyState[AIM_DOWN] && m_curMenuItem < MENU_ITEM_HISCORE_MAX)
+    {
+        ++m_curMenuItem;
+        m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+    }
+    else if (m_joyState[AIM_LEFT])
+    {
+        if (m_curMenuItem == MENU_ITEM_SKILL)
+        {
+            --skill;
+            skill = std::max(skill, 0);
+            m_game->setSkill(skill);
+        }
+        else if (m_curMenuItem == MENU_ITEM_LEVEL && m_startLevel > 0)
+        {
+            --m_startLevel;
+        }
+        m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+    }
+    else if (m_joyState[AIM_RIGHT])
+    {
+        if (m_curMenuItem == MENU_ITEM_SKILL)
+        {
+            ++skill;
+            skill = std::min(skill, SKILL_MAX);
+            m_game->setSkill(skill);
+        }
+        else if (m_curMenuItem == MENU_ITEM_LEVEL && m_startLevel < m_game->size() - 1)
+        {
+            ++m_startLevel;
+        }
+        m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+    }
+    else if (m_keyStates[Key_Space] || m_keyStates[Key_Enter])
+    {
+        if (m_curMenuItem == MENU_ITEM_NEW_GAME)
+        {
+            game.setLevel(m_startLevel);
+            game.loadLevel(false);
+            openMusicForLevel(m_startLevel);
+            game.setMode(CGame::MODE_INTRO);
+            startCountdown(COUNTDOWN_INTRO);
+        }
+        else if (m_curMenuItem == MENU_ITEM_HISCORE)
+        {
+            game.setMode(CGame::MODE_HISCORES);
+        }
+        else if (m_curMenuItem == MENU_ITEM_LOAD_GAME && fileExists(savePath))
+        {
+            load();
+        }
+    }
+}
+
+void CRuntime::setStartLevel(int level)
+{
+    m_startLevel = level;
+}
+
+bool CRuntime::fileExists(std::string &name) const
+{
+    return (access(name.c_str(), F_OK) != -1);
+}
+
+void CRuntime::getFilePath(std::string &path) const
+{
+#ifdef __EMSCRIPTEN__
+    path = SAVEGAME_FILE;
+#else
+    path = m_workspace + SAVEGAME_FILE;
+#endif
 }

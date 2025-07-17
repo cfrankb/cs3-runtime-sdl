@@ -73,6 +73,8 @@ protected:
         LIME = 0x0000ffbf | ALPHA,
         BLUE = 0x00ff0000 | ALPHA,
         CYAN = 0x00ffff00 | ALPHA,
+        RED = 0x000000ff | ALPHA,
+        DARKRED = 0x00000080 | ALPHA,
         DARKBLUE = 0x00440000 | ALPHA,
         DARKGRAY = 0x00444444 | ALPHA,
         LIGHTGRAY = 0x00A9A9A9 | ALPHA,
@@ -83,7 +85,6 @@ protected:
         COUNTDOWN_RESTART = 2,
         FONT_SIZE = 8,
         MAX_SCORES = 18,
-        CARET = 0xff,
         KEY_REPETE_DELAY = 5,
         KEY_NO_REPETE = 1,
         MAX_NAME_LENGTH = 16,
@@ -221,6 +222,7 @@ protected:
     virtual void setupTitleScreen() = 0;
     virtual void takeScreenshot() = 0;
     virtual void toggleFullscreen() = 0;
+    virtual void manageTitleScreen() = 0;
 };
 
 #endif // CGAMEMIXIN_H

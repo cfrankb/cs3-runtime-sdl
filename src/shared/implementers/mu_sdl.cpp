@@ -66,28 +66,27 @@ CMusicSDL::CMusicSDL()
         fprintf(stderr, "SDL_init failed: %s\n", SDL_GetError());
     }
 
-    // Init XM Player
-    if (InitAudioplayerStruct() != 0)
-    {
-        SDL_Log("can not init audio!");
-    }
-
-#ifndef __EMSCRIPTEN__
     if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 8192) < 0)
     {
         fprintf(stderr, "Mix_OpenAudio failed: %s\n", SDL_GetError());
         m_valid = false;
     }
 
+#ifndef __EMSCRIPTEN__
+    // Init XM Player
+    //  if (InitAudioplayerStruct() != 0)
+    {
+        //    SDL_Log("can not init audio!");
+    }
+    pthread_create(&thread1, nullptr, &playXMThread, nullptr);
+#endif
+
     // Init SDL Audio for OGG
-    auto mixMod = MIX_INIT_OGG;
+    auto mixMod = MIX_INIT_OGG | MIX_INIT_MOD;
     if (!(Mix_Init(mixMod) & mixMod))
     {
         fprintf(stderr, "Mix_Init MOD error: %s\n", Mix_GetError());
     }
-
-    pthread_create(&thread1, nullptr, &playXMThread, nullptr);
-#endif
 }
 
 CMusicSDL::~CMusicSDL()
@@ -104,7 +103,10 @@ bool CMusicSDL::open(const char *file)
         close();
     }
     bool valid = false;
-    if (strstr(file, ".ogg"))
+    if (strstr(file, ".ogg") ||
+        strstr(file, ".xm") ||
+        strstr(file, ".mid") ||
+        strstr(file, ".mp3"))
     {
         m_data.mixData = Mix_LoadMUS(file);
         if (!m_data.mixData)

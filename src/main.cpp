@@ -127,6 +127,7 @@ int main(int argc, char *args[])
     runtime.parseConfig(configFile.c_str());
     runtime.setSkill(params.skill);
     runtime.init(&maparch, params.level % maparch.size());
+    runtime.setStartLevel(params.level % maparch.size());
     if (params.fullscreen == true)
     {
         runtime.setConfig("fullscreen", "true");

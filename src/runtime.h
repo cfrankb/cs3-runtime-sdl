@@ -45,6 +45,7 @@ public:
     void setPrefix(const char *prefix);
     void setWorkspace(const char *workspace);
     void initOptions();
+    void setStartLevel(int level);
 
     typedef struct
     {
@@ -71,6 +72,7 @@ protected:
     void takeScreenshot() override;
     void sanityTest() override;
     void toggleFullscreen() override;
+    void manageTitleScreen() override;
 
     enum
     {
@@ -91,6 +93,19 @@ protected:
     char *m_credits = nullptr;
     char *m_scroll = nullptr;
     int m_scrollPtr;
+    int m_curMenuItem;
+    int m_maxMenuItems;
+    int m_startLevel;
+    enum
+    {
+        MENU_ITEM_NEW_GAME,
+        MENU_ITEM_LOAD_GAME,
+        MENU_ITEM_SKILL,
+        MENU_ITEM_LEVEL,
+        MENU_ITEM_HISCORE,
+        MENU_ITEM_HISCORE_MAX = MENU_ITEM_HISCORE,
+        MENU_ITEM_HISCORE_MIN = 0
+    };
 
 private:
     void drawTitleScreen(CFrame &bitmap);
@@ -99,5 +114,11 @@ private:
     bool isTrue(const std::string &value) const;
     void resizeScroller();
     void cleanUpCredits();
+    void drawTitleScreenV1(CFrame &bitmap);
+    void drawTitleScreenV2(CFrame &bitmap);
+    void drawScroller(CFrame &bitmap);
+    void drawTitlePix(CFrame &bitmap, const int offsetY);
     size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
+    bool fileExists(std::string &filename) const;
+    void getFilePath(std::string &path) const;
 };

@@ -18,7 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include "parseargs.h"
-#include "skill.h"
+#include "skills.h"
 
 void showHelp()
 {
