@@ -62,7 +62,6 @@ protected:
         KEY_RELEASED = 0,
         INTRO_DELAY = TICK_RATE,
         HISCORE_DELAY = 5 * TICK_RATE,
-        DEFAULT_OPTION_COOLDOWN = 3,
         CLEAR = 0,
         ALPHA = 0xff000000,
         WHITE = 0x00ffffff | ALPHA,

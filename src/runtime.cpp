@@ -762,13 +762,12 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     const int offsetY = 12;
     drawTitlePix(bitmap, offsetY);
 
-    const int baseY = offsetY + title.hei() + 12;
+    const int baseY = 2 * offsetY + title.hei();
     const Rect rect{
         .x = 8,
         .y = baseY,
         .width = WIDTH - 16,
         .height = HEIGHT - baseY - 24};
-
     drawRect(bitmap, rect, DARKRED, false);
 
     std::vector<std::string> items;
@@ -803,7 +802,6 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
             drawFont(bitmap, 32, baseY + i * spacingY, tmp, RED, CLEAR, 2, 2);
         }
     }
-
     drawScroller(bitmap);
 }
 
@@ -843,6 +841,9 @@ void CRuntime::setupTitleScreen()
     m_scrollPtr = 0;
     m_curMenuItem = 0;
     m_maxMenuItems = 5;
+    clearJoyStates();
+    clearKeyStates();
+    m_optionCooldown = MAX_OPTION_COOLDOWN;
 }
 
 void CRuntime::takeScreenshot()
@@ -983,12 +984,12 @@ void CRuntime::manageTitleScreen()
     {
         --m_optionCooldown;
     }
-    else if (m_joyState[AIM_UP] && m_curMenuItem != MENU_ITEM_HISCORE_MIN)
+    else if (m_joyState[AIM_UP] && m_curMenuItem != MENU_ITEM_MIN)
     {
         --m_curMenuItem;
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
-    else if (m_joyState[AIM_DOWN] && m_curMenuItem < MENU_ITEM_HISCORE_MAX)
+    else if (m_joyState[AIM_DOWN] && m_curMenuItem < MENU_ITEM_MAX)
     {
         ++m_curMenuItem;
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
@@ -1025,14 +1026,21 @@ void CRuntime::manageTitleScreen()
     {
         if (m_curMenuItem == MENU_ITEM_NEW_GAME)
         {
-            game.setLevel(m_startLevel);
+            if (game.level() != m_startLevel)
+            {
+                game.setLevel(m_startLevel);
+                openMusicForLevel(m_startLevel);
+            }
             game.loadLevel(false);
-            openMusicForLevel(m_startLevel);
-            game.setMode(CGame::MODE_INTRO);
             startCountdown(COUNTDOWN_INTRO);
         }
         else if (m_curMenuItem == MENU_ITEM_HISCORE)
         {
+            if (!m_scoresLoaded)
+            {
+                m_scoresLoaded = loadScores();
+            }
+            m_countdown = HISCORE_DELAY;
             game.setMode(CGame::MODE_HISCORES);
         }
         else if (m_curMenuItem == MENU_ITEM_LOAD_GAME && fileExists(savePath))

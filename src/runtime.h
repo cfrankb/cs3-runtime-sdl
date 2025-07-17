@@ -103,8 +103,10 @@ protected:
         MENU_ITEM_SKILL,
         MENU_ITEM_LEVEL,
         MENU_ITEM_HISCORE,
-        MENU_ITEM_HISCORE_MAX = MENU_ITEM_HISCORE,
-        MENU_ITEM_HISCORE_MIN = 0
+        MENU_ITEM_MAX = MENU_ITEM_HISCORE,
+        MENU_ITEM_MIN = 0,
+        DEFAULT_OPTION_COOLDOWN = 3,
+        MAX_OPTION_COOLDOWN = 6,
     };
 
 private:
@@ -114,8 +116,6 @@ private:
     bool isTrue(const std::string &value) const;
     void resizeScroller();
     void cleanUpCredits();
-    void drawTitleScreenV1(CFrame &bitmap);
-    void drawTitleScreenV2(CFrame &bitmap);
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
     size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };

@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
+      - master
       - develop
       - emscripten
   pull_request:
     branches:
+      - master
       - main
       - develop
 
