@@ -130,6 +130,7 @@ protected:
     void addLife();
     bool read(FILE *sfile);
     bool write(FILE *tfile);
+    int calcScoreLife();
 
     friend class CGameMixin;
 };

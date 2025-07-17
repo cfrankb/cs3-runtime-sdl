@@ -62,6 +62,8 @@ protected:
         KEY_RELEASED = 0,
         INTRO_DELAY = TICK_RATE,
         HISCORE_DELAY = 5 * TICK_RATE,
+        DEFAULT_OPTION_COOLDOWN = 3,
+        CLEAR = 0,
         ALPHA = 0xff000000,
         WHITE = 0x00ffffff | ALPHA,
         YELLOW = 0x0000ffff | ALPHA,
@@ -100,6 +102,7 @@ protected:
         Key_Space,
         Key_0,
         Key_9 = Key_0 + 9,
+        Key_Period,
         Key_BackSpace,
         Key_Enter,
         Key_F1,
@@ -174,11 +177,12 @@ protected:
     bool m_paused = false;
     bool m_musicMuted = false;
     int m_prompt = PROMPT_NONE;
+    int m_optionCooldown = 0;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
-    void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE);
+    void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &frame, const int x, const int y, CFrame &tile, bool alpha);

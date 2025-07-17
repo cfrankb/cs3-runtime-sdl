@@ -17,4 +17,6 @@
 */
 #pragma once
 #define SKILL_EASY 0
-#define SKILL_HARD 1
+#define SKILL_NORMAL 1
+#define SKILL_HARD 2
+#define SKILL_MAX SKILL_HARD

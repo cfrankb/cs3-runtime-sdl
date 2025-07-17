@@ -312,7 +312,8 @@ void CRuntime::preloadAssets()
     if (file.open(creditsFile.c_str(), "rb"))
     {
         const int size = file.getSize();
-        m_credits = new char[size];
+        m_credits = new char[size + 1];
+        m_credits[size] = '\0';
         file.read(m_credits, size);
         file.close();
         cleanUpCredits();
@@ -399,6 +400,9 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
             break;
         case SDLK_RETURN:
             result = Key_Enter;
+            break;
+        case SDLK_PERIOD:
+            result = Key_Period;
             break;
         default:
             return;
@@ -766,6 +770,16 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
         };
         drawRect(bitmap, rect, BLACK, true);
     }
+
+    const char *skillNames[] = {
+        "EASY",
+        "NORMAL",
+        "HARD"};
+
+    char tmp[32];
+    sprintf(tmp, "%s MODE", skillNames[m_game->skill()]);
+    const int x = (WIDTH - strlen(tmp) * FONT_SIZE * 2) / 2;
+    drawFont(bitmap, x, 178, tmp, CYAN, CLEAR, 2);
 
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1 && m_credits != nullptr)

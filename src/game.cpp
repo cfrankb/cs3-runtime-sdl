@@ -199,7 +199,7 @@ void CGame::restartGame()
     m_score = 0;
     m_lives = DEFAULT_LIVES;
     m_level = 0;
-    m_nextLife = SCORE_LIFE;
+    m_nextLife = calcScoreLife();
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
 }
@@ -503,12 +503,12 @@ void CGame::addHealth(const int hp)
     if (hp > 0)
     {
         const int maxHealth = static_cast<int>(MAX_HEALTH) / (1 + 1 * m_skill);
-        const int hpToken = hp / (1 + 2 * m_skill);
+        const int hpToken = hp / (1 + 1 * m_skill);
         m_health = std::min(m_health + hpToken, maxHealth);
     }
     else if (hp < 0 && !m_godModeTimer)
     {
-        const int hpToken = hp * (1 + 3 * m_skill);
+        const int hpToken = hp * (1 + 2 * m_skill);
         m_health = std::max(m_health + hpToken, 0);
     }
 }
@@ -568,7 +568,7 @@ void CGame::addPoints(const int points)
     m_score += points;
     if (m_score >= m_nextLife)
     {
-        m_nextLife += SCORE_LIFE;
+        m_nextLife += calcScoreLife();
         addLife();
     }
 }
@@ -755,6 +755,11 @@ uint8_t CGame::skill() const
 
 void CGame::setSkill(const uint8_t v)
 {
-    printf("skill: %d\n", v);
     m_skill = v;
+    m_nextLife = calcScoreLife();
+}
+
+int CGame::calcScoreLife()
+{
+    return SCORE_LIFE * (1 + m_skill);
 }

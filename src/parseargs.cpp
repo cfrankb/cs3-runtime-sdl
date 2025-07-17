@@ -32,6 +32,7 @@ void showHelp()
          "\n"
          "flags:\n"
          "--hard                    switch to hard mode\n"
+         "--normal                  switch to normal mode\n"
          "-f                        start in fullscreen\n"
          "-h                        show this screen\n"
          "-q                        mute music by default\n");
@@ -91,6 +92,15 @@ bool parseArgs(const int argc, char *args[], params_t &params)
         else if (strcmp(args[i], "--hard") == 0)
         {
             params.skill = SKILL_HARD;
+        }
+        else if (strcmp(args[i], "--normal") == 0)
+        {
+            params.skill = SKILL_NORMAL;
+        }
+        else if (memcmp(args[i], "--", 2) == 0)
+        {
+            fprintf(stderr, "invalid option: %s\n", args[i]);
+            result = false;
         }
         // handle switch
         else if (args[i][0] == '-')
