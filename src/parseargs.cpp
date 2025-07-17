@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include "parseargs.h"
+#include "skill.h"
 
 void showHelp()
 {
@@ -30,6 +31,8 @@ void showHelp()
          //"-s 999x999                set window size\n"
          "\n"
          "flags:\n"
+         "--hard                    switch to hard mode\n"
+         "--normal                  switch to normal mode\n"
          "-f                        start in fullscreen\n"
          "-h                        show this screen\n"
          "-q                        mute music by default\n");
@@ -40,6 +43,8 @@ void initArgs(params_t &params)
     params.fullscreen = false;
     params.level = 0;
     params.muteMusic = false;
+    params.skill = SKILL_EASY;
+    params.hardcore = false;
 }
 
 bool parseArgs(const int argc, char *args[], params_t &params)
@@ -83,6 +88,19 @@ bool parseArgs(const int argc, char *args[], params_t &params)
                 fprintf(stderr, "missing %s value on cmdline\n", paramdefs[j].name);
                 result = false;
             }
+        }
+        else if (strcmp(args[i], "--hard") == 0)
+        {
+            params.skill = SKILL_HARD;
+        }
+        else if (strcmp(args[i], "--normal") == 0)
+        {
+            params.skill = SKILL_NORMAL;
+        }
+        else if (memcmp(args[i], "--", 2) == 0)
+        {
+            fprintf(stderr, "invalid option: %s\n", args[i]);
+            result = false;
         }
         // handle switch
         else if (args[i][0] == '-')

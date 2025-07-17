@@ -28,6 +28,7 @@
 #include "shared/IFile.h"
 #include "sounds.h"
 #include "shared/interfaces/ISound.h"
+#include "skill.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -44,6 +45,7 @@ CGame::CGame()
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
+    m_skill = SKILL_EASY;
 }
 
 CGame::~CGame()
@@ -197,7 +199,7 @@ void CGame::restartGame()
     m_score = 0;
     m_lives = DEFAULT_LIVES;
     m_level = 0;
-    m_nextLife = SCORE_LIFE;
+    m_nextLife = calcScoreLife();
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
 }
@@ -274,13 +276,13 @@ void CGame::manageMonsters(int ticks)
         speeds[i] = i ? (ticks % i) == 0 : true;
     }
 
-    uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    const uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     std::vector<CActor> newMonsters;
 
     for (int i = 0; i < m_monsterCount; ++i)
     {
         CActor &actor = m_monsters[i];
-        uint8_t cs = map.at(actor.getX(), actor.getY());
+        const uint8_t cs = map.at(actor.getX(), actor.getY());
         const TileDef &def = getTileDef(cs);
         if (!speeds[def.speed])
         {
@@ -496,15 +498,18 @@ int CGame::clearAttr(uint8_t attr)
     return count;
 }
 
-void CGame::addHealth(int hp)
+void CGame::addHealth(const int hp)
 {
     if (hp > 0)
     {
-        m_health = std::min(m_health + hp, static_cast<int>(MAX_HEALTH));
+        const int maxHealth = static_cast<int>(MAX_HEALTH) / (1 + 1 * m_skill);
+        const int hpToken = hp / (1 + 1 * m_skill);
+        m_health = std::min(m_health + hpToken, maxHealth);
     }
     else if (hp < 0 && !m_godModeTimer)
     {
-        m_health = std::max(m_health + hp, 0);
+        const int hpToken = hp * (1 + 2 * m_skill);
+        m_health = std::max(m_health + hpToken, 0);
     }
 }
 
@@ -558,12 +563,12 @@ uint8_t *CGame::keys()
     return m_keys;
 }
 
-void CGame::addPoints(int points)
+void CGame::addPoints(const int points)
 {
     m_score += points;
     if (m_score >= m_nextLife)
     {
-        m_nextLife += SCORE_LIFE;
+        m_nextLife += calcScoreLife();
         addLife();
     }
 }
@@ -632,6 +637,7 @@ bool CGame::read(FILE *sfile)
     readfile(&m_godModeTimer, sizeof(m_godModeTimer));
     readfile(m_keys, sizeof(m_keys));
     readfile(&m_score, sizeof(m_score));
+    readfile(&m_skill, sizeof(m_skill));
     m_player.read(sfile);
 
     // reading map
@@ -686,6 +692,7 @@ bool CGame::write(FILE *tfile)
     writefile(&m_godModeTimer, sizeof(m_godModeTimer));
     writefile(m_keys, sizeof(m_keys));
     writefile(&m_score, sizeof(m_score));
+    writefile(&m_skill, sizeof(m_skill));
     m_player.write(tfile);
 
     // saving map
@@ -706,15 +713,19 @@ void CGame::setLives(int lives)
     m_lives = lives;
 }
 
-void CGame::playSound(int id)
+void CGame::playSound(const int id) const
 {
+#ifdef __EMSCRIPTEN__
+    (void)id;
+#else
     if (id != SOUND_NONE && m_sound != nullptr)
     {
         m_sound->play(id);
     }
+#endif
 }
 
-void CGame::playTileSound(int tileID)
+void CGame::playTileSound(int tileID) const
 {
     int snd = SOUND_NONE;
     switch (tileID)
@@ -735,4 +746,20 @@ void CGame::playTileSound(int tileID)
 void CGame::attach(ISound *s)
 {
     m_sound = s;
+}
+
+uint8_t CGame::skill() const
+{
+    return m_skill;
+}
+
+void CGame::setSkill(const uint8_t v)
+{
+    m_skill = v;
+    m_nextLife = calcScoreLife();
+}
+
+int CGame::calcScoreLife()
+{
+    return SCORE_LIFE * (1 + m_skill);
 }

@@ -62,10 +62,12 @@ public:
     static uint8_t *keys();
     void getMonsters(CActor *&monsters, int &count);
     CActor &getMonster(int i);
-    void playSound(int id);
-    void playTileSound(int tileID);
-    void setLives(int lives);
+    void playSound(const int id) const;
+    void playTileSound(const int tileID) const;
+    void setLives(const int lives);
     void attach(ISound *s);
+    void setSkill(const uint8_t v);
+    uint8_t skill() const;
 
     enum GameMode
     {
@@ -96,7 +98,7 @@ protected:
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0002,
+        VERSION = (0x0200 << 16) + 0x0003,
         MAX_KEYS = 6,
     };
 
@@ -117,16 +119,18 @@ protected:
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
+    uint8_t m_skill;
 
     int clearAttr(uint8_t attr);
     bool findMonsters();
     int addMonster(const CActor actor);
     int findMonsterAt(int x, int y);
-    void addHealth(int hp);
-    void addPoints(int points);
+    void addHealth(const int hp);
+    void addPoints(const int points);
     void addLife();
     bool read(FILE *sfile);
     bool write(FILE *tfile);
+    int calcScoreLife();
 
     friend class CGameMixin;
 };

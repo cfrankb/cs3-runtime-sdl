@@ -25,6 +25,7 @@
 #include "game.h"
 #include "maparch.h"
 #include "animator.h"
+#include "skill.h"
 
 // Check windows
 #ifdef _WIN64
@@ -87,7 +88,7 @@ CGameMixin::~CGameMixin()
     }
 }
 
-void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color)
+void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color, const uint32_t bgcolor, const int scaleX, const int scaleY)
 {
     uint8_t caret[FONT_SIZE]{
         0xff,
@@ -121,11 +122,19 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
             uint8_t bitFilter = 1;
             for (int xx = 0; xx < fontSize; ++xx)
             {
-                rgba[(yy + y) * rowPixels + xx + x] = font[yy] & bitFilter ? color : BLACK;
+                const uint32_t &pixColor = font[yy] & bitFilter ? color : bgcolor;
+                for (int stepY = 0; stepY < scaleY; ++stepY)
+                {
+                    for (int stepX = 0; stepX < scaleX; ++stepX)
+                    {
+                        if (pixColor)
+                            rgba[(yy * scaleY + y + stepY) * rowPixels + xx * scaleX + x + stepX] = pixColor;
+                    }
+                }
                 bitFilter <<= 1;
             }
         }
-        x += fontSize;
+        x += fontSize * scaleX;
     }
 }
 
@@ -485,6 +494,26 @@ void CGameMixin::mainLoop()
         }
         return;
     case CGame::MODE_TITLE:
+
+        int skill = m_game->skill();
+        if (m_optionCooldown)
+        {
+            --m_optionCooldown;
+        }
+        else if (m_joyState[AIM_LEFT])
+        {
+            --skill;
+            skill = std::max(skill, 0);
+            m_game->setSkill(skill);
+            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        }
+        else if (m_joyState[AIM_RIGHT])
+        {
+            ++skill;
+            skill = std::min(skill, SKILL_MAX);
+            m_game->setSkill(skill);
+            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        }
         if (m_keyStates[Key_Space])
         {
             game.setMode(CGame::MODE_INTRO);
@@ -891,6 +920,10 @@ bool CGameMixin::inputPlayerName()
         {
             c = k + ' ' - Key_Space;
         }
+        else if (k == Key_Period)
+        {
+            c = k + '.' - Key_Period;
+        }
         else if (k == Key_BackSpace)
         {
             m_keyRepeters[k] = KEY_REPETE_DELAY;
@@ -1004,4 +1037,9 @@ void CGameMixin::drawPreScreen(CFrame &bitmap)
     int y = (HEIGHT - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
+}
+
+void CGameMixin::setSkill(uint8_t skill)
+{
+    m_game->setSkill(skill);
 }

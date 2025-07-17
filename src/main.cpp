@@ -125,6 +125,7 @@ int main(int argc, char *args[])
     runtime.setPrefix(params.prefix.c_str());
     runtime.setWorkspace(params.workspace.c_str());
     runtime.parseConfig(configFile.c_str());
+    runtime.setSkill(params.skill);
     runtime.init(&maparch, params.level % maparch.size());
     if (params.fullscreen == true)
     {
