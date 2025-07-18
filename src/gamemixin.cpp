@@ -54,6 +54,7 @@ CGameMixin::CGameMixin()
     clearJoyStates();
     clearScores();
     clearKeyStates();
+    clearButtonStates();
 }
 
 CGameMixin::~CGameMixin()
@@ -494,7 +495,8 @@ void CGameMixin::manageGamePlay()
     {
         --m_gameMenuCooldown;
     }
-    else if (m_keyStates[Key_Escape])
+    else if (m_keyStates[Key_Escape] ||
+             m_buttonState[BUTTON_START])
     {
         m_gameMenuCooldown = GAME_MENU_COOLDOWN;
         m_prompt = PROMPT_NONE;
@@ -970,6 +972,7 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     {
         return false;
     }
+    clearButtonStates();
     clearJoyStates();
     clearKeyStates();
     m_paused = false;
@@ -1025,4 +1028,9 @@ void CGameMixin::drawPreScreen(CFrame &bitmap)
 void CGameMixin::setSkill(uint8_t skill)
 {
     m_game->setSkill(skill);
+}
+
+void CGameMixin::clearButtonStates()
+{
+    memset(m_buttonState, 0, sizeof(m_buttonState));
 }

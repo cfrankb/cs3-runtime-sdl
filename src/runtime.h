@@ -63,6 +63,8 @@ public:
 protected:
     static void cleanup();
     void preloadAssets() override;
+    bool initControllers();
+    void queryControllers();
     void initMusic();
     void initSounds();
     void keyReflector(SDL_Keycode key, uint8_t keyState);

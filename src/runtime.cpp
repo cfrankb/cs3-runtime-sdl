@@ -40,6 +40,9 @@ const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
 
+// Vector to hold pointers to opened game controllers
+std::vector<SDL_GameController *> gGameControllers;
+
 CRuntime::CRuntime() : CGameMixin()
 {
 #ifdef __EMSCRIPTEN__
@@ -204,17 +207,20 @@ void CRuntime::run()
 
 void CRuntime::doInput()
 {
+    SDL_GameController *controller;
     SDL_Event event;
+    int joystick_index;
+    int axisPivot = 0;
     while (SDL_PollEvent(&event))
     {
         uint8_t keyState = KEY_RELEASED;
+        uint8_t buttonState = BUTTON_RELEASED;
         switch (event.type)
         {
         case SDL_KEYDOWN:
             keyState = KEY_PRESSED;
         case SDL_KEYUP:
             keyReflector(event.key.keysym.sym, keyState);
-
             switch (event.key.keysym.sym)
             {
             case SDLK_UP:
@@ -251,6 +257,7 @@ void CRuntime::doInput()
 #endif
                 initMusic();
                 initSounds();
+                initControllers();
             }
             break;
 
@@ -263,11 +270,138 @@ void CRuntime::doInput()
                 toggleFullscreen();
             }
 #endif
-
             printf("SQL_QUIT\n");
             exit(0);
             break;
 
+        case SDL_CONTROLLERDEVICEADDED:
+            // A new controller has been connected
+            joystick_index = event.cdevice.which;
+            if (SDL_IsGameController(joystick_index))
+            {
+                controller = SDL_GameControllerOpen(joystick_index);
+                if (controller)
+                {
+                    gGameControllers.push_back(controller);
+                    printf("Controller ADDED: %s (Index:%d)\n",
+                           SDL_GameControllerName(controller), joystick_index);
+                }
+                else
+                {
+                    fprintf(stderr, "Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
+                }
+            }
+            break;
+
+        case SDL_CONTROLLERDEVICEREMOVED:
+            // A controller has been disconnected
+            controller = SDL_GameControllerFromInstanceID(event.cdevice.which);
+            if (controller)
+            {
+                std::string controllerName = SDL_GameControllerName(controller);
+                printf("Controller REMOVED: %s\n", controllerName.c_str());
+                // Remove controller from our list and close it
+                for (auto it = gGameControllers.begin(); it != gGameControllers.end(); ++it)
+                {
+                    if (*it == controller)
+                    {
+                        SDL_GameControllerClose(*it);
+                        gGameControllers.erase(it);
+                        break;
+                    }
+                }
+            }
+
+        case SDL_CONTROLLERBUTTONDOWN:
+            buttonState = BUTTON_PRESSED;
+
+        case SDL_CONTROLLERBUTTONUP:
+            // A controller button was released
+            controller = SDL_GameControllerFromInstanceID(event.cbutton.which);
+            switch (event.cbutton.button)
+            {
+            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+                m_joyState[AIM_UP] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+                m_joyState[AIM_DOWN] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+                m_joyState[AIM_LEFT] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+                m_joyState[AIM_RIGHT] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_A:
+                m_buttonState[BUTTON_A] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_B:
+                m_buttonState[BUTTON_B] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_X:
+                m_buttonState[BUTTON_X] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_Y:
+                m_buttonState[BUTTON_Y] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_START:
+                m_buttonState[BUTTON_START] = buttonState;
+                continue;
+            case SDL_CONTROLLER_BUTTON_BACK:
+                m_buttonState[BUTTON_BACK] = buttonState;
+                continue;
+            default:
+                printf("Controller: %s - Button %s: %s\n",
+                       SDL_GameControllerName(controller),
+                       buttonState ? "DOWN" : "UP",
+                       SDL_GameControllerGetStringForButton((SDL_GameControllerButton)event.cbutton.button));
+            }
+            break;
+
+        case SDL_CONTROLLERAXISMOTION:
+            // A controller axis moved (e.g., thumbstick, triggers)
+            controller = SDL_GameControllerFromInstanceID(event.caxis.which);
+            if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+            {
+                if (event.caxis.value < -8000)
+                {
+                    m_joyState[AIM_LEFT] = KEY_PRESSED;
+                }
+                else if (event.caxis.value > 8000)
+                {
+                    m_joyState[AIM_RIGHT] = KEY_PRESSED;
+                }
+                else
+                {
+                    m_joyState[AIM_LEFT] = KEY_RELEASED;
+                    m_joyState[AIM_RIGHT] = KEY_RELEASED;
+                }
+            }
+            else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+            {
+                if (event.caxis.value < -8000)
+                {
+                    m_joyState[AIM_UP] = KEY_PRESSED;
+                }
+                else if (event.caxis.value > 8000)
+                {
+                    m_joyState[AIM_DOWN] = KEY_PRESSED;
+                }
+                else
+                {
+                    m_joyState[AIM_UP] = KEY_RELEASED;
+                    m_joyState[AIM_DOWN] = KEY_RELEASED;
+                }
+            }
+            // Axis value ranges from -32768 to 32767
+            // Apply a deadzone to ignore small movements
+            if (event.caxis.value < -8000 || event.caxis.value > 8000)
+            {   // Example deadzone
+                //                printf("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GameControllerName(controller),
+                //                     SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)event.caxis.axis),
+                //                   event.caxis.value);
+            }
+            break;
         default:
             break;
         }
@@ -381,6 +515,7 @@ void CRuntime::preRun()
         setupTitleScreen();
         initMusic();
         initSounds();
+        initControllers();
     }
 }
 
@@ -857,6 +992,7 @@ void CRuntime::setupTitleScreen()
     m_scrollPtr = 0;
     clearJoyStates();
     clearKeyStates();
+    clearButtonStates();
     m_optionCooldown = MAX_OPTION_COOLDOWN;
     m_skill = m_game->skill();
     CMenu &menu = *m_mainMenu;
@@ -1038,7 +1174,9 @@ void CRuntime::manageMenu(CMenu *menuPtr)
         item.right();
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
-    else if (m_keyStates[Key_Space] || m_keyStates[Key_Enter])
+    else if (m_keyStates[Key_Space] ||
+             m_keyStates[Key_Enter] ||
+             m_buttonState[BUTTON_A])
     {
         if (item.role() == MENU_ITEM_NEW_GAME)
         {
@@ -1130,4 +1268,69 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
     menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
         .setRole(MENU_ITEM_MUSIC);
+}
+
+bool CRuntime::initControllers()
+{
+    // Initialize SDL's video and game controller subsystems
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
+    {
+        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n");
+        return false;
+    }
+
+    // Load game controller mappings from a file (optional, but good practice)
+    // SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+    // You can download this file from https://github.com/libsdl-org/sdl/blob/main/src/joystick/SDL_gamecontroller.c
+    // or from https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
+    // and place it next to your executable.
+    // SDL_GameControllerAddMappingsFromFile("data/gamecontrollerdb.txt");
+
+    // Check for connected controllers initially
+    for (int i = 0; i < SDL_NumJoysticks(); ++i)
+    {
+        if (SDL_IsGameController(i))
+        {
+            SDL_GameController *controller = SDL_GameControllerOpen(i);
+            if (controller)
+            {
+                gGameControllers.push_back(controller);
+                printf("Opened Game Controller: %d: %s\n", i, SDL_GameControllerName(controller));
+            }
+            else
+            {
+                fprintf(stderr, "Could not open game controller:%d! SDL_Error: %s\n", i, SDL_GetError());
+            }
+        }
+    }
+
+    if (gGameControllers.empty())
+    {
+        printf("No game controllers found. Connect one now!\n");
+    }
+    return true;
+}
+
+void CRuntime::queryControllers()
+{
+    // --- Polling (Alternative to Events for current state) ---
+    // For game logic, you often poll the state of controllers directly
+    // rather than relying purely on events, especially for continuous input.
+    for (SDL_GameController *controller : gGameControllers)
+    {
+        if (controller && SDL_GameControllerGetAttached(controller))
+        { // Check if controller is still attached
+            // Example: Check if A button is held down
+            if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A))
+            {
+                // std::cout << "Controller " << SDL_GameControllerName(controller) << ": A button is held.\n";
+            }
+
+            // Example: Get Left Stick X axis value
+            Sint16 leftStickX = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
+            // You'd typically normalize this value (-32768 to 32767) to -1.0 to 1.0
+            // and apply a deadzone.
+            // if (leftStickX < -8000 || leftStickX > 8000) { /* use value */ }
+        }
+    }
 }

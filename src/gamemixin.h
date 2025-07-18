@@ -60,6 +60,8 @@ protected:
         NO_ANIMZ = 255,
         KEY_PRESSED = 1,
         KEY_RELEASED = 0,
+        BUTTON_PRESSED = 1,
+        BUTTON_RELEASED = 0,
         INTRO_DELAY = TICK_RATE,
         HISCORE_DELAY = 5 * TICK_RATE,
         CLEAR = 0,
@@ -139,6 +141,17 @@ protected:
         INVALID = -1,
     };
 
+    enum
+    {
+        BUTTON_A = 0,
+        BUTTON_B,
+        BUTTON_X,
+        BUTTON_Y,
+        BUTTON_START,
+        BUTTON_BACK,
+        Button_Count,
+        JoyAims = 4,
+    };
     uint8_t m_keyStates[Key_Count];
     uint8_t m_keyRepeters[Key_Count];
 
@@ -158,7 +171,8 @@ protected:
     };
 
     hiscore_t m_hiscores[MAX_SCORES];
-    uint8_t m_joyState[4];
+    uint8_t m_joyState[JoyAims];
+    uint8_t m_buttonState[Button_Count];
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
     CFrameSet *m_tiles = nullptr;
@@ -200,6 +214,7 @@ protected:
     void clearScores();
     void clearKeyStates();
     void clearJoyStates();
+    void clearButtonStates();
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
