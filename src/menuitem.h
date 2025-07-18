@@ -21,14 +21,14 @@ public:
     ~CMenuItem();
 
     void disable(const bool value = true);
-    bool isDisabled();
+    bool isDisabled() const;
     void left();
     void right();
-    int value();
-    int role();
-    CMenu *menu();
+    int value() const;
+    int role() const;
+    CMenu *menu() const;
     void setRole(const int action = ROLE_NONE);
-    std::string str();
+    std::string str() const;
 
 protected:
     std::vector<std::string> m_options;

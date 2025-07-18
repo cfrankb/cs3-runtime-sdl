@@ -59,6 +59,7 @@ CRuntime::CRuntime() : CGameMixin()
     resizeScroller();
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
+    m_gameMenu = new CMenu(MENUID_GAMEMENU);
 }
 
 CRuntime::~CRuntime()
@@ -92,6 +93,11 @@ CRuntime::~CRuntime()
     {
         delete m_mainMenu;
     }
+
+    if (m_gameMenu)
+    {
+        delete m_gameMenu;
+    }
 }
 
 void CRuntime::paint()
@@ -107,6 +113,11 @@ void CRuntime::paint()
         break;
     case CGame::MODE_LEVEL:
         drawScreen(bitmap);
+        if (m_gameMenuActive)
+        {
+            fazeScreen(bitmap);
+            drawMenu(bitmap, *m_gameMenu, 75, 2, 2, FONT_SIZE);
+        }
         break;
     case CGame::MODE_HISCORES:
         drawScores(bitmap);
@@ -414,6 +425,9 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
             break;
         case SDLK_PERIOD:
             result = Key_Period;
+            break;
+        case SDLK_ESCAPE:
+            result = Key_Escape;
             break;
         default:
             return;
@@ -756,10 +770,10 @@ void CRuntime::addTrailSlash(std::string &path)
     }
 }
 
-void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY)
+void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY, const int paddingY)
 {
     char tmp[4];
-    const int spacingY = scaleY * FONT_SIZE + FONT_SIZE;
+    const int spacingY = scaleY * FONT_SIZE + paddingY;
     for (size_t i = 0; i < menu.size(); ++i)
     {
         CMenuItem &item = menu.at(i);
@@ -801,7 +815,8 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     const int menuBaseY = 100 - 8;
     const int scaleX = 2;
     const int scaleY = 2;
-    drawMenu(bitmap, menu, menuBaseY, scaleX, scaleY);
+    const int paddingY = FONT_SIZE;
+    drawMenu(bitmap, menu, menuBaseY, scaleX, scaleY, paddingY);
     drawScroller(bitmap);
 }
 
@@ -984,11 +999,20 @@ void CRuntime::resizeScroller()
 
 void CRuntime::manageTitleScreen()
 {
-    CGame &game = *m_game;
-    int skill = m_game->skill();
+    manageMenu(m_mainMenu);
+}
 
-    CMenu &menu = *m_mainMenu;
+void CRuntime::manageGameMenu()
+{
+    manageMenu(m_gameMenu);
+}
+
+void CRuntime::manageMenu(CMenu *menuPtr)
+{
+    CGame &game = *m_game;
+    CMenu &menu = *menuPtr;
     CMenuItem &item = menu.current();
+    int oldValue = item.role() ? item.value() : 0;
     if (m_optionCooldown)
     {
         --m_optionCooldown;
@@ -1022,6 +1046,7 @@ void CRuntime::manageTitleScreen()
                 game.setLevel(m_startLevel);
                 openMusicForLevel(m_startLevel);
             }
+            m_gameMenuActive = false;
             game.loadLevel(false);
             game.setSkill(m_skill);
             startCountdown(COUNTDOWN_INTRO);
@@ -1039,7 +1064,19 @@ void CRuntime::manageTitleScreen()
                  !item.isDisabled())
         {
             load();
+            m_gameMenuActive = false;
         }
+        else if (item.role() == MENU_ITEM_SAVE_GAME)
+        {
+            save();
+            m_gameMenuActive = false;
+        }
+    }
+
+    if (item.role() == MENU_ITEM_MUSIC &&
+        oldValue != item.value())
+    {
+        item.value() ? stopMusic() : startMusic();
     }
 }
 
@@ -1060,4 +1097,29 @@ const std::string CRuntime::getSavePath() const
 #else
     return m_workspace + SAVEGAME_FILE;
 #endif
+}
+
+void CRuntime::fazeScreen(CFrame &bitmap)
+{
+    for (int y = 0; y < bitmap.hei(); ++y)
+    {
+        for (int x = 0; x < bitmap.len(); ++x)
+        {
+            bitmap.at(x, y) =
+                ((bitmap.at(x, y) >> 2) & 0x2f2f2f) | ALPHA;
+        }
+    }
+}
+
+void CRuntime::toggleGameMenu()
+{
+    m_gameMenuActive = !m_gameMenuActive;
+    CMenu &menu = *m_gameMenu;
+    menu.clear();
+    menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
+    menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
+        .disable(!fileExists(getSavePath()));
+    menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
+    menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
+        .setRole(MENU_ITEM_MUSIC);
 }

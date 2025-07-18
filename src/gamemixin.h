@@ -82,6 +82,7 @@ protected:
         TILE_SIZE = 16,
         COUNTDOWN_INTRO = 1,
         COUNTDOWN_RESTART = 2,
+        GAME_MENU_COOLDOWN = 10,
         FONT_SIZE = 8,
         MAX_SCORES = 18,
         KEY_REPETE_DELAY = 5,
@@ -105,6 +106,7 @@ protected:
         Key_Period,
         Key_BackSpace,
         Key_Enter,
+        Key_Escape,
         Key_F1,
         Key_F2,
         Key_F3,
@@ -178,6 +180,8 @@ protected:
     bool m_musicMuted = false;
     int m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
+    bool m_gameMenuActive = false;
+    int m_gameMenuCooldown = 0;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -222,6 +226,8 @@ protected:
     virtual void takeScreenshot() = 0;
     virtual void toggleFullscreen() = 0;
     virtual void manageTitleScreen() = 0;
+    virtual void toggleGameMenu() = 0;
+    virtual void manageGameMenu() = 0;
 };
 
 #endif // CGAMEMIXIN_H

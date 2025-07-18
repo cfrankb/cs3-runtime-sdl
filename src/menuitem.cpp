@@ -66,7 +66,7 @@ void CMenuItem::right()
     }
 }
 
-std::string CMenuItem::str()
+std::string CMenuItem::str() const
 {
     char tmp[256];
     if (m_type == ITEM_RANGE)
@@ -89,9 +89,9 @@ std::string CMenuItem::str()
     }
 }
 
-int CMenuItem::value()
+int CMenuItem::value() const
 {
-    return *m_value;
+    return m_value ? *m_value : 0;
 }
 
 void CMenuItem::disable(const bool value)
@@ -99,12 +99,12 @@ void CMenuItem::disable(const bool value)
     m_disabled = value;
 }
 
-bool CMenuItem::isDisabled()
+bool CMenuItem::isDisabled() const
 {
     return m_disabled;
 }
 
-int CMenuItem::role()
+int CMenuItem::role() const
 {
     return m_role;
 }
@@ -114,7 +114,7 @@ void CMenuItem::setRole(const int role)
     m_role = role;
 }
 
-CMenu *CMenuItem::menu()
+CMenu *CMenuItem::menu() const
 {
     return m_menu;
 }

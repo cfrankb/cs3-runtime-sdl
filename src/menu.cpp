@@ -48,7 +48,7 @@ void CMenu::down()
         ++m_currentItem;
 }
 
-int CMenu::index()
+int CMenu::index() const
 {
     return m_currentItem;
 }
@@ -56,9 +56,15 @@ int CMenu::index()
 void CMenu::clear()
 {
     m_items.clear();
+    setCurrent(0);
 }
 
-int CMenu::id()
+int CMenu::id() const
 {
     return m_menuid;
+}
+
+void CMenu::setCurrent(const int i)
+{
+    m_currentItem = i;
 }

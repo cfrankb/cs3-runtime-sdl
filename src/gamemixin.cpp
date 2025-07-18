@@ -489,6 +489,28 @@ void CGameMixin::mainLoop()
 void CGameMixin::manageGamePlay()
 {
     CGame &game = *m_game;
+
+    if (m_gameMenuCooldown)
+    {
+        --m_gameMenuCooldown;
+    }
+    else if (m_keyStates[Key_Escape])
+    {
+        m_gameMenuCooldown = GAME_MENU_COOLDOWN;
+        m_prompt = PROMPT_NONE;
+        m_paused = false;
+        m_keyRepeters[Key_Escape] = 0;
+        toggleGameMenu();
+        return;
+    }
+
+    if (m_gameMenuActive)
+    {
+        // disable loop while menu is active
+        manageGameMenu();
+        return;
+    }
+
     if (!m_paused && handlePrompts())
     {
         return;
@@ -879,11 +901,11 @@ bool CGameMixin::inputPlayerName()
         }
         else if (k == Key_Space)
         {
-            c = k + ' ' - Key_Space;
+            c = ' ';
         }
         else if (k == Key_Period)
         {
-            c = k + '.' - Key_Period;
+            c = '.';
         }
         else if (k == Key_BackSpace)
         {

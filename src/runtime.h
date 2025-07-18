@@ -74,11 +74,8 @@ protected:
     void sanityTest() override;
     void toggleFullscreen() override;
     void manageTitleScreen() override;
-
-    enum
-    {
-        FONT_SIZE = 8,
-    };
+    void toggleGameMenu() override;
+    void manageGameMenu() override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -97,14 +94,19 @@ protected:
     int m_startLevel;
     int m_skill;
     CMenu *m_mainMenu = nullptr;
+    CMenu *m_gameMenu = nullptr;
     enum
     {
+        FONT_SIZE = 8,
         MENUID_MAINMENU = 0x10,
+        MENUID_GAMEMENU = 0x11,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME = 0x101,
-        MENU_ITEM_SKILL = 0x102,
-        MENU_ITEM_LEVEL = 0x103,
-        MENU_ITEM_HISCORES = 0x104,
+        MENU_ITEM_SAVE_GAME = 0x102,
+        MENU_ITEM_SKILL = 0x103,
+        MENU_ITEM_LEVEL = 0x104,
+        MENU_ITEM_HISCORES = 0x105,
+        MENU_ITEM_MUSIC,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
     };
@@ -121,5 +123,7 @@ private:
     size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
-    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY);
+    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY, const int paddingY);
+    void fazeScreen(CFrame &bitmap);
+    void manageMenu(CMenu *menuPtr);
 };

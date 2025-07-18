@@ -14,11 +14,12 @@ public:
     CMenuItem &at(int i);
     void up();
     void down();
-    int index();
+    int index() const;
     void clear();
     CMenuItem &current();
     CMenuItem &last();
-    int id();
+    int id() const;
+    void setCurrent(const int i);
 
 protected:
 private:
