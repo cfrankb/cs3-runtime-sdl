@@ -22,6 +22,7 @@
 
 class ISound;
 class CFrameSet;
+class CMenu;
 typedef std::vector<std::string> StringVector;
 
 class CRuntime : public CGameMixin
@@ -93,18 +94,17 @@ protected:
     char *m_credits = nullptr;
     char *m_scroll = nullptr;
     int m_scrollPtr;
-    int m_curMenuItem;
-    int m_maxMenuItems;
     int m_startLevel;
+    int m_skill;
+    CMenu *m_mainMenu = nullptr;
     enum
     {
-        MENU_ITEM_NEW_GAME,
-        MENU_ITEM_LOAD_GAME,
-        MENU_ITEM_SKILL,
-        MENU_ITEM_LEVEL,
-        MENU_ITEM_HISCORE,
-        MENU_ITEM_MAX = MENU_ITEM_HISCORE,
-        MENU_ITEM_MIN = 0,
+        MENUID_MAINMENU = 0x10,
+        MENU_ITEM_NEW_GAME = 0x100,
+        MENU_ITEM_LOAD_GAME = 0x101,
+        MENU_ITEM_SKILL = 0x102,
+        MENU_ITEM_LEVEL = 0x103,
+        MENU_ITEM_HISCORES = 0x104,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
     };
@@ -119,6 +119,7 @@ private:
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
     size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
-    bool fileExists(std::string &filename) const;
-    void getFilePath(std::string &path) const;
+    bool fileExists(const std::string &filename) const;
+    const std::string getSavePath() const;
+    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY);
 };
