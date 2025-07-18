@@ -388,6 +388,7 @@ void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
     openMusicForLevel(m_game->level());
+    printf("volume: %d\n", m_music->getVolume());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -777,14 +778,14 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int 
     for (size_t i = 0; i < menu.size(); ++i)
     {
         CMenuItem &item = menu.at(i);
-        const char *text = item.str().c_str();
-        const int x = (WIDTH - strlen(text) * FONT_SIZE * scaleX) / 2;
+        std::string text = item.str();
+        const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
         uint32_t color = i == menu.index() ? YELLOW : BLUE;
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
         }
-        drawFont(bitmap, x, baseY + i * spacingY, text, color, CLEAR, scaleX, scaleY);
+        drawFont(bitmap, x, baseY + i * spacingY, text.c_str(), color, CLEAR, scaleX, scaleY);
         if (i == menu.index())
         {
             sprintf(tmp, "%c", CHARS_TRIGHT);
@@ -1041,6 +1042,12 @@ void CRuntime::manageMenu(CMenu *menuPtr)
     {
         if (item.role() == MENU_ITEM_NEW_GAME)
         {
+            if (menu.id() == MENUID_GAMEMENU)
+            {
+                setupTitleScreen();
+                return;
+            }
+
             if (game.level() != m_startLevel)
             {
                 game.setLevel(m_startLevel);
@@ -1101,12 +1108,13 @@ const std::string CRuntime::getSavePath() const
 
 void CRuntime::fazeScreen(CFrame &bitmap)
 {
+    const uint32_t colorFilter = 0x2f2f2f;
     for (int y = 0; y < bitmap.hei(); ++y)
     {
         for (int x = 0; x < bitmap.len(); ++x)
         {
             bitmap.at(x, y) =
-                ((bitmap.at(x, y) >> 2) & 0x2f2f2f) | ALPHA;
+                ((bitmap.at(x, y) >> 2) & colorFilter) | ALPHA;
         }
     }
 }

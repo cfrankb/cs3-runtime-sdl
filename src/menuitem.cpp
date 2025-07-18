@@ -5,6 +5,7 @@ CMenuItem::CMenuItem(const std::string &tmpl, const int role, CMenu *menu)
     m_role = role;
     m_tmpl = tmpl;
     m_menu = menu;
+    m_type = ITEM_STATIC;
 }
 
 CMenuItem::CMenuItem(const std::string &tmpl, const int rangeMin, const int rangeMax, int *value)

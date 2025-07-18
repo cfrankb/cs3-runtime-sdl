@@ -32,6 +32,8 @@ public:
     virtual void close();
     virtual bool isValid();
     virtual const char *signature() const;
+    int getVolume() override;
+    void setVolume(int volume) override;
     static int type() { return m_type; }
     static int isPlaying() { return m_playing; }
     enum

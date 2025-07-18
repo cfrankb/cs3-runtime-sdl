@@ -26,6 +26,8 @@ public:
     virtual void stop() = 0;
     virtual void close() = 0;
     virtual bool isValid() = 0;
+    virtual int getVolume() = 0;
+    virtual void setVolume(int volume) = 0;
     virtual const char *signature() const = 0;
 
 protected:

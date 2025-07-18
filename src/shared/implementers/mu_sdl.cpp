@@ -200,3 +200,14 @@ const char *CMusicSDL::signature() const
 {
     return "lgck-music-sdl";
 }
+
+int CMusicSDL::getVolume()
+{
+    return Mix_VolumeMusic(-1);
+}
+
+void CMusicSDL::setVolume(int v)
+{
+    // MIX_MAX_VOLUME 128
+    Mix_VolumeMusic(v);
+}
