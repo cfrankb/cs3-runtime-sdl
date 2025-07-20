@@ -74,7 +74,7 @@ void CMenu::setCurrent(const int i)
 
 int CMenu::height() const
 {
-    return (m_scaleY * FONT_SIZE + m_padding) * size();
+    return size() ? (m_scaleY * FONT_SIZE + m_padding) * size() - m_padding : 0;
 }
 
 const int CMenu::scaleX() const

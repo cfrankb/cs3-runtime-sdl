@@ -31,14 +31,14 @@ public:
     ~CGame();
 
     bool init();
-    bool loadLevel(bool restart);
-    bool move(int dir);
-    void manageMonsters(int ticks);
-    void managePlayer(uint8_t *joystate);
-    static Pos translate(const Pos &p, int aim);
+    bool loadLevel(const bool restart);
+    bool move(const int dir);
+    void manageMonsters(const int ticks);
+    void managePlayer(const uint8_t *joystate);
+    static Pos translate(const Pos &p, const int aim);
     void consume();
-    static bool hasKey(uint8_t c);
-    void addKey(uint8_t c);
+    static bool hasKey(const uint8_t c);
+    void addKey(const uint8_t c);
     bool goalCount() const;
     static CMap &getMap();
     void nextLevel();
@@ -48,17 +48,17 @@ public:
     int mode() const;
     bool isPlayerDead();
     void killPlayer();
-    bool isGameOver();
+    bool isGameOver() const;
     CActor &player();
-    int score();
-    int lives();
-    int diamonds();
-    int health();
+    int score() const;
+    int lives() const;
+    int diamonds() const;
+    int health() const;
     void setMapArch(CMapArch *arch);
-    void setLevel(int levelId);
-    int level();
-    int godModeTimer();
-    int playerSpeed();
+    void setLevel(const int levelId);
+    int level() const;
+    int godModeTimer() const;
+    int playerSpeed() const;
     static uint8_t *keys();
     void getMonsters(CActor *&monsters, int &count);
     CActor &getMonster(int i);
@@ -69,10 +69,11 @@ public:
     void setSkill(const uint8_t v);
     uint8_t skill() const;
     int size() const;
+    void resetStats();
 
     enum GameMode
     {
-        MODE_INTRO,
+        MODE_LEVEL_INTRO,
         MODE_LEVEL,
         MODE_RESTART,
         MODE_GAMEOVER,
@@ -101,6 +102,12 @@ private:
         INVALID = -1,
         VERSION = (0x0200 << 16) + 0x0003,
         MAX_KEYS = 6,
+        SOUND_NONE = 0x00,
+        SOUND_GRUUP,
+        SOUND_KEY,
+        SOUND_0009,
+        SOUND_COIN1,
+        SOUND_OUCHFAST
     };
 
     int m_lives = 0;
@@ -113,6 +120,8 @@ private:
     int32_t m_extraSpeedTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
     int m_mode;
+    int m_introHint = 0;
+
     // monsters
     CActor *m_monsters;
     int m_monsterCount;
@@ -122,16 +131,17 @@ private:
     ISound *m_sound = nullptr;
     uint8_t m_skill;
 
-    int clearAttr(uint8_t attr);
+    int clearAttr(const uint8_t attr);
     bool findMonsters();
     int addMonster(const CActor actor);
-    int findMonsterAt(int x, int y);
+    int findMonsterAt(const int x, const int y) const;
     void addHealth(const int hp);
     void addPoints(const int points);
     void addLife();
     bool read(FILE *sfile);
     bool write(FILE *tfile);
     int calcScoreLife();
+    const char *nextHint();
 
     friend class CGameMixin;
 };

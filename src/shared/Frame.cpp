@@ -957,9 +957,8 @@ void CFrame::enlarge()
     updateMap();
 }
 
-void CFrame::shiftUP()
+void CFrame::shiftUP(const bool wrap)
 {
-
     uint32_t *t = new uint32_t[m_nLen];
 
     // copy first line to buffer
@@ -972,12 +971,15 @@ void CFrame::shiftUP()
     }
 
     // copy first line to last
-    memcpy(&at(0, m_nHei - 1), t, sizeof(uint32_t) * m_nLen);
+    if (wrap)
+        memcpy(&at(0, m_nHei - 1), t, sizeof(uint32_t) * m_nLen);
+    else
+        memset(&at(0, m_nHei - 1), 0, sizeof(uint32_t) * m_nLen);
 
-    delete []t;
+    delete[] t;
 }
 
-void CFrame::shiftDOWN()
+void CFrame::shiftDOWN(const bool wrap)
 {
     uint32_t *t = new uint32_t[m_nLen];
 
@@ -991,34 +993,42 @@ void CFrame::shiftDOWN()
     }
 
     // copy first line to last
-    memcpy(m_rgb, t, sizeof(uint32_t) * m_nLen);
-    delete []t;
-
+    if (wrap)
+        memcpy(m_rgb, t, sizeof(uint32_t) * m_nLen);
+    else
+        memset(m_rgb, 0, sizeof(uint32_t) * m_nLen);
+    delete[] t;
 }
 
-void CFrame::shiftLEFT()
+void CFrame::shiftLEFT(const bool wrap)
 {
     for (int y = 0; y < m_nHei; ++y)
     {
-        uint32_t c = at(0, y);
+        const uint32_t c = at(0, y);
         for (int x = 0; x < m_nLen - 1; ++x)
         {
             at(x, y) = at(x + 1, y);
         }
-        at(m_nLen - 1, y) = c;
+        if (wrap)
+            at(m_nLen - 1, y) = c;
+        else
+            at(m_nLen - 1, y) = 0;
     }
 }
 
-void CFrame::shiftRIGHT()
+void CFrame::shiftRIGHT(const bool wrap)
 {
     for (int y = 0; y < m_nHei; ++y)
     {
-        uint32_t c = at(m_nLen - 1, y);
+        const uint32_t c = at(m_nLen - 1, y);
         for (int x = 0; x < m_nLen - 1; ++x)
         {
             at(m_nLen - 1 - x, y) = at(m_nLen - 2 - x, y);
         }
-        at(0, y) = c;
+        if (wrap)
+            at(0, y) = c;
+        else
+            at(0, y) = 0;
     }
 }
 
@@ -1235,6 +1245,26 @@ void CFrame::fill(unsigned int rgba)
     for (int i = 0; i < m_nLen * m_nHei; ++i)
     {
         m_rgb[i] = rgba;
+    }
+}
+
+void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
+{
+    for (int y = 0; y < frame.m_nHei; ++y)
+    {
+        if (by + y >= m_nHei)
+        {
+            break;
+        }
+        for (int x = 0; x < frame.m_nLen; ++x)
+        {
+            if (bx + x >= m_nLen)
+            {
+                break;
+            }
+            if (!tr || frame.at(x, y))
+                at(bx + x, by + y) = frame.at(x, y);
+        }
     }
 }
 

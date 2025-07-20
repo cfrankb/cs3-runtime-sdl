@@ -26,13 +26,24 @@
 #include "tilesdata.h"
 #include "maparch.h"
 #include "shared/IFile.h"
-#include "sounds.h"
 #include "shared/interfaces/ISound.h"
 #include "skills.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+
+const char *g_hints[] = {
+    "Blue Mushroom gives Extra Life",
+    "Learn Monster Patterns to Beat Them.",
+    "Higher Scores = Extra Lives",
+    "Exploit Monster Blind Spots.",
+    "VamPlants can absorb other Monsters",
+    "Pickup Items to Reveal Passages",
+    "Beware Dark Purple Monsters.",
+    "Run Pass Slow Monsters.",
+    "Pink Insects Can Lash Onto You.",
+};
 
 CGame::CGame()
 {
@@ -158,12 +169,13 @@ bool CGame::init()
 bool CGame::loadLevel(bool restart)
 {
     printf("loading level: %d ...\n", m_level + 1);
-    setMode(restart ? MODE_RESTART : MODE_INTRO);
+    setMode(restart ? MODE_RESTART : MODE_LEVEL_INTRO);
 
     // extract level from MapArch
     map = *(m_mapArch->at(m_level));
 
     printf("level loaded\n");
+    m_introHint = rand() % (sizeof(g_hints) / sizeof(g_hints[0]));
 
     Pos pos = map.findFirst(TILES_ANNIE2);
     printf("Player at: %d %d\n", pos.x, pos.y);
@@ -196,12 +208,17 @@ void CGame::restartLevel()
 
 void CGame::restartGame()
 {
-    m_score = 0;
-    m_lives = DEFAULT_LIVES;
+    resetStats();
     m_level = 0;
+}
+
+void CGame::resetStats()
+{
     m_nextLife = calcScoreLife();
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
+    m_score = 0;
+    m_lives = DEFAULT_LIVES;
 }
 
 void CGame::setLevel(int levelId)
@@ -209,7 +226,7 @@ void CGame::setLevel(int levelId)
     m_level = levelId;
 }
 
-int CGame::level()
+int CGame::level() const
 {
     return m_level;
 }
@@ -254,7 +271,7 @@ int CGame::addMonster(const CActor actor)
     return m_monsterCount;
 }
 
-int CGame::findMonsterAt(int x, int y)
+int CGame::findMonsterAt(const int x, const int y) const
 {
     for (int i = 0; i < m_monsterCount; ++i)
     {
@@ -349,7 +366,7 @@ void CGame::manageMonsters(int ticks)
         {
             for (uint8_t i = 0; i < sizeof(dirs); ++i)
             {
-                Pos p = CGame::translate(Pos{actor.getX(), actor.getY()}, dirs[i]);
+                const Pos p = CGame::translate(Pos{actor.getX(), actor.getY()}, dirs[i]);
                 const uint8_t ct = map.at(p.x, p.y);
                 const TileDef &defT = getTileDef(ct);
                 if (defT.type == TYPE_PLAYER)
@@ -365,7 +382,7 @@ void CGame::manageMonsters(int ticks)
                 }
                 else if (defT.type == TYPE_MONSTER)
                 {
-                    int j = findMonsterAt(p.x, p.y);
+                    const int j = findMonsterAt(p.x, p.y);
                     if (j == INVALID)
                         continue;
                     CActor &m = m_monsters[j];
@@ -384,7 +401,7 @@ void CGame::manageMonsters(int ticks)
     }
 }
 
-void CGame::managePlayer(uint8_t *joystate)
+void CGame::managePlayer(const uint8_t *joystate)
 {
     m_godModeTimer = std::max(m_godModeTimer - 1, 0);
     m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
@@ -406,7 +423,7 @@ void CGame::managePlayer(uint8_t *joystate)
     }
 }
 
-Pos CGame::translate(const Pos &p, int aim)
+Pos CGame::translate(const Pos &p, const int aim)
 {
     Pos t = p;
 
@@ -440,7 +457,7 @@ Pos CGame::translate(const Pos &p, int aim)
     return t;
 }
 
-bool CGame::hasKey(uint8_t c)
+bool CGame::hasKey(const uint8_t c)
 {
     for (uint32_t i = 0; i < sizeof(m_keys); ++i)
     {
@@ -452,7 +469,7 @@ bool CGame::hasKey(uint8_t c)
     return false;
 }
 
-void CGame::addKey(uint8_t c)
+void CGame::addKey(const uint8_t c)
 {
     for (uint32_t i = 0; i < sizeof(m_keys); ++i)
     {
@@ -473,7 +490,7 @@ bool CGame::goalCount() const
     return m_diamonds;
 }
 
-int CGame::clearAttr(uint8_t attr)
+int CGame::clearAttr(const uint8_t attr)
 {
     int count = 0;
     for (int y = 0; y < map.hei(); ++y)
@@ -510,6 +527,7 @@ void CGame::addHealth(const int hp)
     {
         const int hpToken = hp * (1 + 2 * m_skill);
         m_health = std::max(m_health + hpToken, 0);
+        playSound(SOUND_OUCHFAST);
     }
 }
 
@@ -533,27 +551,27 @@ void CGame::killPlayer()
     m_lives = m_lives ? m_lives - 1 : 0;
 }
 
-bool CGame::isGameOver()
+bool CGame::isGameOver() const
 {
     return m_lives == 0;
 }
 
-int CGame::score()
+int CGame::score() const
 {
     return m_score;
 }
 
-int CGame::lives()
+int CGame::lives() const
 {
     return m_lives;
 }
 
-int CGame::diamonds()
+int CGame::diamonds() const
 {
     return m_diamonds;
 }
 
-int CGame::health()
+int CGame::health() const
 {
     return m_health;
 }
@@ -578,12 +596,12 @@ void CGame::addLife()
     m_lives = std::min(m_lives + 1, static_cast<int>(MAX_LIVES));
 }
 
-int CGame::godModeTimer()
+int CGame::godModeTimer() const
 {
     return m_godModeTimer;
 }
 
-int CGame::playerSpeed()
+int CGame::playerSpeed() const
 {
     return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
 }
@@ -763,4 +781,9 @@ int CGame::calcScoreLife()
 int CGame::size() const
 {
     return m_mapArch->size();
+}
+
+const char *CGame::nextHint()
+{
+    return g_hints[m_introHint];
 }

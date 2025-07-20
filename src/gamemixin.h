@@ -62,7 +62,7 @@ protected:
         KEY_RELEASED = 0,
         BUTTON_PRESSED = 1,
         BUTTON_RELEASED = 0,
-        INTRO_DELAY = TICK_RATE,
+        INTRO_DELAY = TICK_RATE * 3,
         HISCORE_DELAY = 5 * TICK_RATE,
         CLEAR = 0,
         ALPHA = 0xff000000,
@@ -191,7 +191,10 @@ protected:
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
+    void fazeScreen(CFrame &bitmap, const int shift);
+    void drawViewPort(CFrame &bitmap, const int mx, const int my, const int cols, const int rows);
     void drawLevelIntro(CFrame &bitmap);
+    void drawPreview(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     inline void drawKeys(CFrame &bitmap);

@@ -107,6 +107,7 @@ void loop_handler(void *arg)
 
 int main(int argc, char *args[])
 {
+    srand(time(NULL));
     CRuntime runtime;
     CMapArch maparch;
     params_t params;

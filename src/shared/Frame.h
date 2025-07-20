@@ -20,7 +20,7 @@
 // CFrame
 
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 
 class CFrameSet;
 class CDotArray;
@@ -123,10 +123,10 @@ public:
     void clear();
     void shrink();
     const CSS3Map &getMap() const;
-    void shiftUP();
-    void shiftDOWN();
-    void shiftLEFT();
-    void shiftRIGHT();
+    void shiftUP(const bool wrap = true);
+    void shiftDOWN(const bool wrap = true);
+    void shiftLEFT(const bool wrap = true);
+    void shiftRIGHT(const bool wrap = true);
     void inverse();
     void shadow(int factor);
     static const char *getChunkType();
@@ -137,6 +137,7 @@ public:
     void fade(int factor);
     CFrame *toAlphaGray(int mx = 0, int my = 0, int cx = -1, int cy = -1);
     void fill(unsigned int rgba);
+    void drawAt(CFrame &frame, int bx, int by, bool tr);
 
     // Implementation
 public:

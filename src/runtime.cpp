@@ -109,7 +109,7 @@ void CRuntime::paint()
     bitmap.fill(BLACK);
     switch (m_game->mode())
     {
-    case CGame::MODE_INTRO:
+    case CGame::MODE_LEVEL_INTRO:
     case CGame::MODE_RESTART:
     case CGame::MODE_GAMEOVER:
         drawLevelIntro(bitmap);
@@ -118,7 +118,7 @@ void CRuntime::paint()
         drawScreen(bitmap);
         if (m_gameMenuActive)
         {
-            fazeScreen(bitmap);
+            fazeScreen(bitmap, 2);
             drawMenu(bitmap, *m_gameMenu, (_HEIGHT - m_gameMenu->height()) / 2);
         }
         break;
@@ -998,7 +998,8 @@ void CRuntime::setupTitleScreen()
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
-    menu.addItem(CMenuItem("%s MODE", {"EASY", "NORMAL", "HARD"}, &m_skill));
+    menu.addItem(CMenuItem("%s MODE", {"EASY", "NORMAL", "HARD"}, &m_skill))
+        .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
@@ -1175,7 +1176,9 @@ void CRuntime::manageMenu(CMenu &menu)
              m_keyStates[Key_Enter] ||
              m_buttonState[BUTTON_A])
     {
-        if (item.role() == MENU_ITEM_NEW_GAME)
+        if (item.role() == MENU_ITEM_NEW_GAME ||
+            item.role() == MENU_ITEM_SKILL ||
+            item.role() == MENU_ITEM_LEVEL)
         {
             if (menu.id() == MENUID_GAMEMENU)
             {
@@ -1183,6 +1186,7 @@ void CRuntime::manageMenu(CMenu &menu)
                 return;
             }
 
+            game.resetStats();
             if (game.level() != m_startLevel)
             {
                 game.setLevel(m_startLevel);
@@ -1246,19 +1250,6 @@ const std::string CRuntime::getSavePath() const
 #else
     return m_workspace + SAVEGAME_FILE;
 #endif
-}
-
-void CRuntime::fazeScreen(CFrame &bitmap)
-{
-    const uint32_t colorFilter = 0x2f2f2f;
-    for (int y = 0; y < bitmap.hei(); ++y)
-    {
-        for (int x = 0; x < bitmap.len(); ++x)
-        {
-            bitmap.at(x, y) =
-                ((bitmap.at(x, y) >> 2) & colorFilter) | ALPHA;
-        }
-    }
 }
 
 void CRuntime::toggleGameMenu()

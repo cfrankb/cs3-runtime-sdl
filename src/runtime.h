@@ -111,6 +111,8 @@ protected:
         MENU_ITEM_HISCORES,
         MENU_ITEM_MUSIC,
         MENU_ITEM_MUSIC_VOLUME,
+        MENU_ITEM_X_AXIS_SENTIVITY,
+        MENU_ITEM_Y_AXIS_SENTIVITY,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
@@ -131,6 +133,5 @@ private:
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
     void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
-    void fazeScreen(CFrame &bitmap);
     void manageMenu(CMenu &menu);
 };
