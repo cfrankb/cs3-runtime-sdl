@@ -56,7 +56,7 @@ public:
     bool write(FILE *tfile);
     void reverveDir();
 
-protected:
+private:
     uint8_t m_x;
     uint8_t m_y;
     uint8_t m_type;

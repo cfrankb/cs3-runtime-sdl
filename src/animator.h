@@ -29,7 +29,7 @@ public:
     int offset();
     bool isSpecialCase(uint8_t tileID);
 
-protected:
+private:
     using animzSeq_t = struct
     {
         uint8_t srcTile;

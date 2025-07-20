@@ -72,7 +72,7 @@ public:
     void shift(int aim);
     void debug();
 
-protected:
+private:
     uint16_t m_len;
     uint16_t m_hei;
     uint8_t *m_map;

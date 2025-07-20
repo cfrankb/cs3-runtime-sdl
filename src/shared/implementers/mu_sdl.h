@@ -25,13 +25,13 @@ class CMusicSDL : public IMusic
 {
 public:
     CMusicSDL();
-    virtual ~CMusicSDL();
-    virtual bool open(const char *file);
-    virtual bool play(int loop = -1);
-    virtual void stop();
-    virtual void close();
-    virtual bool isValid();
-    virtual const char *signature() const;
+    ~CMusicSDL() override;
+    bool open(const char *file) override;
+    bool play(int loop = -1) override;
+    void stop() override;
+    void close() override;
+    bool isValid() override;
+    const char *signature() const override;
     int getVolume() override;
     void setVolume(int volume) override;
     static int type() { return m_type; }

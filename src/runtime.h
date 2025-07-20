@@ -17,6 +17,7 @@
 */
 #include "gamemixin.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include <vector>
 #include <unordered_map>
 
@@ -64,7 +65,6 @@ protected:
     static void cleanup();
     void preloadAssets() override;
     bool initControllers();
-    void queryControllers();
     void initMusic();
     void initSounds();
     void keyReflector(SDL_Keycode key, uint8_t keyState);
@@ -95,6 +95,7 @@ protected:
     int m_scrollPtr;
     int m_startLevel;
     int m_skill;
+    int m_volume = 10;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
     enum
@@ -103,14 +104,18 @@ protected:
         MENUID_MAINMENU = 0x10,
         MENUID_GAMEMENU = 0x11,
         MENU_ITEM_NEW_GAME = 0x100,
-        MENU_ITEM_LOAD_GAME = 0x101,
-        MENU_ITEM_SAVE_GAME = 0x102,
-        MENU_ITEM_SKILL = 0x103,
-        MENU_ITEM_LEVEL = 0x104,
-        MENU_ITEM_HISCORES = 0x105,
+        MENU_ITEM_LOAD_GAME,
+        MENU_ITEM_SAVE_GAME,
+        MENU_ITEM_SKILL,
+        MENU_ITEM_LEVEL,
+        MENU_ITEM_HISCORES,
         MENU_ITEM_MUSIC,
+        MENU_ITEM_MUSIC_VOLUME,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
+        MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
+        MUSIC_VOLUME_MAX = MIX_MAX_VOLUME,
+        SCALE2X = 2,
     };
 
 private:
@@ -125,7 +130,7 @@ private:
     size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
-    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY, const int paddingY);
+    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
     void fazeScreen(CFrame &bitmap);
-    void manageMenu(CMenu *menuPtr);
+    void manageMenu(CMenu &menu);
 };

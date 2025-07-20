@@ -15,8 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CGAMEMIXIN_H
-#define CGAMEMIXIN_H
+
+#pragma once
 
 #ifdef USE_QFILE
 #include <QTimer>
@@ -133,16 +133,8 @@ protected:
         PROMPT_SAVE,
         PROMPT_RESTART_LEVEL,
         PROMPT_HARDCORE,
-        PROMPT_TOGGLE_MUSIC
-    };
-
-    enum
-    {
+        PROMPT_TOGGLE_MUSIC,
         INVALID = -1,
-    };
-
-    enum
-    {
         BUTTON_A = 0,
         BUTTON_B,
         BUTTON_X,
@@ -150,7 +142,7 @@ protected:
         BUTTON_START,
         BUTTON_BACK,
         Button_Count,
-        JoyAims = 4,
+        JOY_AIMS = 4,
     };
     uint8_t m_keyStates[Key_Count];
     uint8_t m_keyRepeters[Key_Count];
@@ -171,7 +163,7 @@ protected:
     };
 
     hiscore_t m_hiscores[MAX_SCORES];
-    uint8_t m_joyState[JoyAims];
+    uint8_t m_joyState[JOY_AIMS];
     uint8_t m_buttonState[Button_Count];
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
@@ -244,5 +236,3 @@ protected:
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
 };
-
-#endif // CGAMEMIXIN_H

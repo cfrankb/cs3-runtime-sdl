@@ -119,7 +119,7 @@ void CRuntime::paint()
         if (m_gameMenuActive)
         {
             fazeScreen(bitmap);
-            drawMenu(bitmap, *m_gameMenu, 75, 2, 2, FONT_SIZE);
+            drawMenu(bitmap, *m_gameMenu, (_HEIGHT - m_gameMenu->height()) / 2);
         }
         break;
     case CGame::MODE_HISCORES:
@@ -275,7 +275,6 @@ void CRuntime::doInput()
             break;
 
         case SDL_CONTROLLERDEVICEADDED:
-            // A new controller has been connected
             joystick_index = event.cdevice.which;
             if (SDL_IsGameController(joystick_index))
             {
@@ -294,13 +293,11 @@ void CRuntime::doInput()
             break;
 
         case SDL_CONTROLLERDEVICEREMOVED:
-            // A controller has been disconnected
             controller = SDL_GameControllerFromInstanceID(event.cdevice.which);
             if (controller)
             {
                 std::string controllerName = SDL_GameControllerName(controller);
                 printf("Controller REMOVED: %s\n", controllerName.c_str());
-                // Remove controller from our list and close it
                 for (auto it = gGameControllers.begin(); it != gGameControllers.end(); ++it)
                 {
                     if (*it == controller)
@@ -316,7 +313,6 @@ void CRuntime::doInput()
             buttonState = BUTTON_PRESSED;
 
         case SDL_CONTROLLERBUTTONUP:
-            // A controller button was released
             controller = SDL_GameControllerFromInstanceID(event.cbutton.which);
             switch (event.cbutton.button)
             {
@@ -359,9 +355,9 @@ void CRuntime::doInput()
             break;
 
         case SDL_CONTROLLERAXISMOTION:
-            // A controller axis moved (e.g., thumbstick, triggers)
             controller = SDL_GameControllerFromInstanceID(event.caxis.which);
-            if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
+            if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
+                event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX)
             {
                 if (event.caxis.value < -8000)
                 {
@@ -377,7 +373,8 @@ void CRuntime::doInput()
                     m_joyState[AIM_RIGHT] = KEY_RELEASED;
                 }
             }
-            else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
+            else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY ||
+                     event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY)
             {
                 if (event.caxis.value < -8000)
                 {
@@ -395,11 +392,11 @@ void CRuntime::doInput()
             }
             // Axis value ranges from -32768 to 32767
             // Apply a deadzone to ignore small movements
-            if (event.caxis.value < -8000 || event.caxis.value > 8000)
-            {   // Example deadzone
-                //                printf("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GameControllerName(controller),
-                //                     SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)event.caxis.axis),
-                //                   event.caxis.value);
+            else if (event.caxis.value < -8000 || event.caxis.value > 8000)
+            { // Example deadzone
+                printf("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GameControllerName(controller),
+                       SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)event.caxis.axis),
+                       event.caxis.value);
             }
             break;
         default:
@@ -906,14 +903,16 @@ void CRuntime::addTrailSlash(std::string &path)
     }
 }
 
-void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int scaleX, const int scaleY, const int paddingY)
+void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
 {
-    char tmp[4];
+    const int scaleX = menu.scaleX();
+    const int scaleY = menu.scaleY();
+    const int paddingY = menu.paddingY();
     const int spacingY = scaleY * FONT_SIZE + paddingY;
     for (size_t i = 0; i < menu.size(); ++i)
     {
-        CMenuItem &item = menu.at(i);
-        std::string text = item.str();
+        const CMenuItem &item = menu.at(i);
+        const std::string text = item.str();
         const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
         uint32_t color = i == menu.index() ? YELLOW : BLUE;
         if (item.isDisabled())
@@ -923,7 +922,9 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY, const int 
         drawFont(bitmap, x, baseY + i * spacingY, text.c_str(), color, CLEAR, scaleX, scaleY);
         if (i == menu.index())
         {
-            sprintf(tmp, "%c", CHARS_TRIGHT);
+            char tmp[2];
+            tmp[0] = CHARS_TRIGHT;
+            tmp[1] = '\0';
             drawFont(bitmap, 32, baseY + i * spacingY, tmp, RED, CLEAR, scaleX, scaleY);
         }
     }
@@ -949,10 +950,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 
     CMenu &menu = *m_mainMenu;
     const int menuBaseY = 100 - 8;
-    const int scaleX = 2;
-    const int scaleY = 2;
-    const int paddingY = FONT_SIZE;
-    drawMenu(bitmap, menu, menuBaseY, scaleX, scaleY, paddingY);
+    drawMenu(bitmap, menu, menuBaseY);
     drawScroller(bitmap);
 }
 
@@ -1136,18 +1134,17 @@ void CRuntime::resizeScroller()
 
 void CRuntime::manageTitleScreen()
 {
-    manageMenu(m_mainMenu);
+    manageMenu(*m_mainMenu);
 }
 
 void CRuntime::manageGameMenu()
 {
-    manageMenu(m_gameMenu);
+    manageMenu(*m_gameMenu);
 }
 
-void CRuntime::manageMenu(CMenu *menuPtr)
+void CRuntime::manageMenu(CMenu &menu)
 {
     CGame &game = *m_game;
-    CMenu &menu = *menuPtr;
     CMenuItem &item = menu.current();
     int oldValue = item.role() ? item.value() : 0;
     if (m_optionCooldown)
@@ -1223,6 +1220,13 @@ void CRuntime::manageMenu(CMenu *menuPtr)
     {
         item.value() ? stopMusic() : startMusic();
     }
+    else if (item.role() == MENU_ITEM_MUSIC_VOLUME &&
+             oldValue != item.value())
+    {
+        int volume = std::min(item.value() * MUSIC_VOLUME_STEPS,
+                              static_cast<int>(MUSIC_VOLUME_MAX));
+        m_music->setVolume(volume);
+    }
 }
 
 void CRuntime::setStartLevel(int level)
@@ -1268,6 +1272,8 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
     menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
         .setRole(MENU_ITEM_MUSIC);
+    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+        .setRole(MENU_ITEM_MUSIC_VOLUME);
 }
 
 bool CRuntime::initControllers()
@@ -1309,28 +1315,4 @@ bool CRuntime::initControllers()
         printf("No game controllers found. Connect one now!\n");
     }
     return true;
-}
-
-void CRuntime::queryControllers()
-{
-    // --- Polling (Alternative to Events for current state) ---
-    // For game logic, you often poll the state of controllers directly
-    // rather than relying purely on events, especially for continuous input.
-    for (SDL_GameController *controller : gGameControllers)
-    {
-        if (controller && SDL_GameControllerGetAttached(controller))
-        { // Check if controller is still attached
-            // Example: Check if A button is held down
-            if (SDL_GameControllerGetButton(controller, SDL_CONTROLLER_BUTTON_A))
-            {
-                // std::cout << "Controller " << SDL_GameControllerName(controller) << ": A button is held.\n";
-            }
-
-            // Example: Get Left Stick X axis value
-            Sint16 leftStickX = SDL_GameControllerGetAxis(controller, SDL_CONTROLLER_AXIS_LEFTX);
-            // You'd typically normalize this value (-32768 to 32767) to -1.0 to 1.0
-            // and apply a deadzone.
-            // if (leftStickX < -8000 || leftStickX > 8000) { /* use value */ }
-        }
-    }
 }

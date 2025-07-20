@@ -83,7 +83,7 @@ public:
         MODE_TITLE
     };
 
-protected:
+private:
     enum
     {
         DEFAULT_MAX_MONSTERS = 128,

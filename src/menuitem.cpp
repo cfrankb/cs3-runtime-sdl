@@ -8,12 +8,14 @@ CMenuItem::CMenuItem(const std::string &tmpl, const int role, CMenu *menu)
     m_type = ITEM_STATIC;
 }
 
-CMenuItem::CMenuItem(const std::string &tmpl, const int rangeMin, const int rangeMax, int *value)
+CMenuItem::CMenuItem(const std::string &tmpl, const int rangeMin, const int rangeMax, int *value, int start, int factor)
 {
     m_tmpl = tmpl;
     m_rangeMin = rangeMin;
     m_rangeMax = rangeMax;
     m_value = value;
+    m_factor = factor;
+    m_start = start;
     m_type = ITEM_RANGE;
 }
 
@@ -72,7 +74,7 @@ std::string CMenuItem::str() const
     char tmp[256];
     if (m_type == ITEM_RANGE)
     {
-        sprintf(tmp, m_tmpl.c_str(), (*m_value) + 1);
+        sprintf(tmp, m_tmpl.c_str(), ((*m_value) + m_start) * m_factor);
         return tmp;
     }
     else if (m_type == ITEM_OPTIONS)
@@ -95,9 +97,10 @@ int CMenuItem::value() const
     return m_value ? *m_value : 0;
 }
 
-void CMenuItem::disable(const bool value)
+CMenuItem &CMenuItem::disable(const bool value)
 {
     m_disabled = value;
+    return *this;
 }
 
 bool CMenuItem::isDisabled() const
@@ -110,9 +113,10 @@ int CMenuItem::role() const
     return m_role;
 }
 
-void CMenuItem::setRole(const int role)
+CMenuItem &CMenuItem::setRole(const int role)
 {
     m_role = role;
+    return *this;
 }
 
 CMenu *CMenuItem::menu() const

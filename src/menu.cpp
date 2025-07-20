@@ -1,9 +1,12 @@
 #include "menu.h"
 
-CMenu::CMenu(const int menuid, CMenu *parent)
+CMenu::CMenu(const int menuid, const int scaleX, const int scaleY, const int padding, CMenu *parent)
 {
     m_parent = parent;
     m_menuid = menuid;
+    m_scaleX = scaleX;
+    m_scaleY = scaleY;
+    m_padding = padding;
 }
 
 CMenu::~CMenu()
@@ -16,7 +19,7 @@ CMenuItem &CMenu::addItem(const CMenuItem &menuItem)
     return last();
 }
 
-size_t CMenu::size()
+size_t CMenu::size() const
 {
     return m_items.size();
 }
@@ -67,4 +70,24 @@ int CMenu::id() const
 void CMenu::setCurrent(const int i)
 {
     m_currentItem = i;
+}
+
+int CMenu::height() const
+{
+    return (m_scaleY * FONT_SIZE + m_padding) * size();
+}
+
+const int CMenu::scaleX() const
+{
+    return m_scaleX;
+}
+
+const int CMenu::scaleY() const
+{
+    return m_scaleY;
+}
+
+const int CMenu::paddingY() const
+{
+    return m_padding;
 }

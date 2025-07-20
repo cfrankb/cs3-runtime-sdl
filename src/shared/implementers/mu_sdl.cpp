@@ -105,7 +105,6 @@ bool CMusicSDL::open(const char *file)
     bool valid = false;
     if (strstr(file, ".ogg") ||
         strstr(file, ".xm") ||
-        strstr(file, ".mid") ||
         strstr(file, ".mp3"))
     {
         m_data.mixData = Mix_LoadMUS(file);
