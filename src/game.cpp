@@ -153,6 +153,7 @@ void CGame::consume()
         if (clearAttr(attr))
         {
             playSound(SOUND_0009);
+            m_secretTimer = SECRET_TIMER;
         }
     }
 }
@@ -204,6 +205,7 @@ void CGame::restartLevel()
 {
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
+    m_secretTimer = 0;
 }
 
 void CGame::restartGame()
@@ -328,7 +330,8 @@ void CGame::manageMonsters(int ticks)
             }
             for (uint8_t i = 0; i < sizeof(dirs); ++i)
             {
-                if (actor.isPlayerThere(dirs[i]))
+                if (actor.getAim() != dirs[i] &&
+                    actor.isPlayerThere(dirs[i]))
                 {
                     // apply health damages
                     addHealth(def.health);
@@ -405,6 +408,7 @@ void CGame::managePlayer(const uint8_t *joystate)
 {
     m_godModeTimer = std::max(m_godModeTimer - 1, 0);
     m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
+    m_secretTimer = std::max(m_secretTimer - 1, 0);
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -412,10 +416,10 @@ void CGame::managePlayer(const uint8_t *joystate)
         const TileDef &def = getTileDef(pu);
         addHealth(def.health);
     }
-    uint8_t aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    const uint8_t aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     for (uint8_t i = 0; i < 4; ++i)
     {
-        uint8_t aim = aims[i];
+        const uint8_t aim = aims[i];
         if (joystate[aim] && move(aim))
         {
             break;
@@ -682,6 +686,7 @@ bool CGame::read(FILE *sfile)
     {
         m_monsters[i].read(sfile);
     }
+    m_secretTimer = 0;
     return true;
 }
 
@@ -773,7 +778,7 @@ void CGame::setSkill(const uint8_t v)
     m_nextLife = calcScoreLife();
 }
 
-int CGame::calcScoreLife()
+int CGame::calcScoreLife() const
 {
     return SCORE_LIFE * (1 + m_skill);
 }
@@ -786,4 +791,9 @@ int CGame::size() const
 const char *CGame::nextHint()
 {
     return g_hints[m_introHint];
+}
+
+int CGame::secretTimer() const
+{
+    return m_secretTimer;
 }

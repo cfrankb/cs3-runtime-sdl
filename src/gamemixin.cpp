@@ -319,6 +319,13 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, DARKGRAY, true);
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, LIGHTGRAY, false);
 
+    if (game.secretTimer())
+    {
+        const char *t = "SECRET !";
+        const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+        drawFont(bitmap, x, bitmap.hei() - 12, t, CYAN, CLEAR);
+    }
+
     // draw health bar
     drawRect(bitmap, Rect{4, bitmap.hei() - 12, std::min(game.health() / 2, bitmap.len() - 4), 8},
              game.godModeTimer() ? WHITE : LIME, true);
@@ -711,7 +718,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
 
     for (uint32_t i = 0; i < MAX_SCORES; ++i)
     {
-        uint32_t color = i & INTERLINES ? CYAN : BLUE;
+        uint32_t color = i & INTERLINES ? LIGHTGRAY : DARKGRAY;
         if (m_recordScore && m_scoreRank == i)
         {
             color = YELLOW;

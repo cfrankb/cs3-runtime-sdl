@@ -97,6 +97,7 @@ private:
         MAX_LIVES = 99,
         GODMODE_TIMER = 100,
         EXTRASPEED_TIMER = 200,
+        SECRET_TIMER = 12,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
@@ -118,6 +119,7 @@ private:
     int m_diamonds = 0;
     int32_t m_godModeTimer = 0;
     int32_t m_extraSpeedTimer = 0;
+    int32_t m_secretTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
     int m_mode;
     int m_introHint = 0;
@@ -140,7 +142,8 @@ private:
     void addLife();
     bool read(FILE *sfile);
     bool write(FILE *tfile);
-    int calcScoreLife();
+    int calcScoreLife() const;
+    int secretTimer() const;
     const char *nextHint();
 
     friend class CGameMixin;

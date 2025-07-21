@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <unistd.h>
 #include <stdio.h>
+#include <time.h>
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
