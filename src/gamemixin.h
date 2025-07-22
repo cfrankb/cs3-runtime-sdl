@@ -34,6 +34,7 @@ class CFrame;
 class CMapArch;
 class CAnimator;
 class IMusic;
+class CRecorder;
 
 class CGameMixin
 {
@@ -71,6 +72,7 @@ protected:
         PURPLE = 0x00ff00ff | ALPHA,
         BLACK = 0x00000000 | ALPHA,
         GREEN = 0x0000ff00 | ALPHA,
+        DARKGREEN = 0x00008000 | ALPHA,
         LIME = 0x0000ffbf | ALPHA,
         BLUE = 0x00ff0000 | ALPHA,
         CYAN = 0x00ffff00 | ALPHA,
@@ -173,6 +175,7 @@ protected:
     uint8_t *m_fontData = nullptr;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
+    CRecorder *m_recorder = nullptr;
     int m_playerFrameOffset = 0;
     int m_healthRef = 0;
     int m_countdown = 0;
@@ -227,7 +230,7 @@ protected:
     virtual bool loadScores() = 0;
     virtual bool saveScores() = 0;
     virtual bool read(FILE *sfile, std::string &name);
-    virtual bool write(FILE *tfile, std::string &name);
+    virtual bool write(FILE *tfile, const std::string &name);
     virtual void stopMusic() = 0;
     virtual void startMusic() = 0;
     virtual void setZoom(bool zoom);
@@ -238,4 +241,9 @@ protected:
     virtual void manageTitleScreen() = 0;
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
+
+private:
+    void stopRecorder();
+    void recordGame();
+    void playbackGame();
 };

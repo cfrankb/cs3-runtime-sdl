@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include <vector>
 #include <stdint.h>
 #include <cstdio>
 #include "actor.h"
@@ -70,6 +71,7 @@ public:
     uint8_t skill() const;
     int size() const;
     void resetStats();
+    void parseHints(const char *data);
 
     enum GameMode
     {
@@ -132,6 +134,7 @@ private:
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
     uint8_t m_skill;
+    std::vector<std::string> m_hints;
 
     int clearAttr(const uint8_t attr);
     bool findMonsters();

@@ -27,6 +27,7 @@
 #include "animator.h"
 #include "skills.h"
 #include "chars.h"
+#include "recorder.h"
 
 // Check windows
 #ifdef _WIN64
@@ -55,6 +56,7 @@ CGameMixin::CGameMixin()
     clearScores();
     clearKeyStates();
     clearButtonStates();
+    m_recorder = new CRecorder;
 }
 
 CGameMixin::~CGameMixin()
@@ -87,6 +89,11 @@ CGameMixin::~CGameMixin()
     if (m_fontData)
     {
         delete[] m_fontData;
+    }
+
+    if (m_recorder)
+    {
+        delete m_recorder;
     }
 }
 
@@ -311,8 +318,17 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         tx = sprintf(tmp, "DIAMONDS %.2d ", game.diamonds());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, YELLOW);
         bx += tx;
-        sprintf(tmp, "LIVES %.2d ", game.lives());
+        tx = sprintf(tmp, "LIVES %.2d ", game.lives());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
+        bx += tx;
+        if (m_recorder->isRecording())
+        {
+            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "REC!", WHITE, RED);
+        }
+        else if (m_recorder->isReading())
+        {
+            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
+        }
     }
 
     // draw bottom rect
@@ -530,7 +546,20 @@ void CGameMixin::mainLoop()
 void CGameMixin::manageGamePlay()
 {
     CGame &game = *m_game;
+    uint8_t joyState[JOY_AIMS];
+    memcpy(joyState, m_joyState, JOY_AIMS);
 
+    if (m_recorder->isRecording())
+    {
+        m_recorder->append(joyState);
+    }
+    else if (m_recorder->isReading())
+    {
+        if (!m_recorder->get(joyState))
+        {
+            stopRecorder();
+        }
+    }
     if (m_gameMenuCooldown)
     {
         --m_gameMenuCooldown;
@@ -538,6 +567,7 @@ void CGameMixin::manageGamePlay()
     else if (m_keyStates[Key_Escape] ||
              m_buttonState[BUTTON_START])
     {
+        stopRecorder();
         m_gameMenuCooldown = GAME_MENU_COOLDOWN;
         m_prompt = PROMPT_NONE;
         m_paused = false;
@@ -555,18 +585,20 @@ void CGameMixin::manageGamePlay()
 
     if (!m_paused && handlePrompts())
     {
+        stopRecorder();
         return;
     }
 
     handleFunctionKeys();
     if (m_paused)
     {
+        stopRecorder();
         return;
     }
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
-        game.managePlayer(m_joyState);
+        game.managePlayer(joyState);
     }
 
     if (m_ticks % 3 == 0)
@@ -575,7 +607,7 @@ void CGameMixin::manageGamePlay()
         {
             m_playerFrameOffset = 7;
         }
-        else if (*(reinterpret_cast<uint32_t *>(m_joyState)))
+        else if (*(reinterpret_cast<uint32_t *>(joyState)))
         {
             m_playerFrameOffset = (m_playerFrameOffset + 1) % 7;
         }
@@ -591,6 +623,7 @@ void CGameMixin::manageGamePlay()
 
     if (game.isPlayerDead())
     {
+        stopRecorder();
         game.killPlayer();
 
         if (!game.isGameOver())
@@ -615,6 +648,7 @@ void CGameMixin::manageGamePlay()
 
 void CGameMixin::nextLevel()
 {
+    stopRecorder();
     m_healthRef = 0;
     m_game->nextLevel();
     sanityTest();
@@ -770,6 +804,8 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
         "F4 Pause Game",
 #ifndef __EMSCRIPTEN__
         "F5 Toggle Full Screen",
+        "F6 Playback Level",
+        "F7 Record Level",
         "F8 Take Screenshot (in-game only)",
 #endif
         "F9 Load savegame",
@@ -886,6 +922,14 @@ void CGameMixin::handleFunctionKeys()
 #ifndef __EMSCRIPTEN__
         case Key_F5:
             toggleFullscreen();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+        case Key_F6:
+            playbackGame();
+            m_keyRepeters[k] = KEY_NO_REPETE;
+            break;
+        case Key_F7:
+            recordGame();
             m_keyRepeters[k] = KEY_NO_REPETE;
             break;
         case Key_F8:
@@ -1035,7 +1079,7 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     return true;
 }
 
-bool CGameMixin::write(FILE *tfile, std::string &name)
+bool CGameMixin::write(FILE *tfile, const std::string &name)
 {
     auto writefile = [tfile](auto ptr, auto size)
     {
@@ -1101,4 +1145,32 @@ void CGameMixin::drawPreview(CFrame &bitmap)
     const int mx = std::max(map->len() - cols, 0);
     drawViewPort(bitmap, mx, 0, cols, rows);
     fazeScreen(bitmap, 3);
+}
+
+void CGameMixin::stopRecorder()
+{
+    if (!m_recorder->isStopped())
+    {
+        m_recorder->stop();
+    }
+}
+
+void CGameMixin::recordGame()
+{
+    if (m_recorder->isRecording())
+        return;
+    const std::string name = "test";
+    FILE *tfile = fopen("test.rec", "wb");
+    write(tfile, name);
+    fseek(tfile, 0, SEEK_END);
+    m_recorder->start(tfile, true);
+}
+
+void CGameMixin::playbackGame()
+{
+    m_recorder->stop();
+    std::string name;
+    FILE *sfile = fopen("test.rec", "rb");
+    read(sfile, name);
+    m_recorder->start(sfile, false);
 }

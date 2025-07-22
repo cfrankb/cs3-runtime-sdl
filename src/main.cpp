@@ -17,15 +17,19 @@
 */
 #include <algorithm>
 #include <unistd.h>
-#include <stdio.h>
-#include <time.h>
+#include <cstdlib>
+#include <ctime>
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
 #include "shared/implementers/mu_sdl.h"
+#include "tests.h"
 
 const uint32_t FPS = 24;
 const uint32_t SLEEP = 1000 / FPS;
+uint32_t lastTick = 0;
+bool skip = false;
+uint32_t sleepDelay = SLEEP;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -69,10 +73,6 @@ extern "C"
 }
 #endif
 
-uint32_t lastTick = 0;
-bool skip = false;
-uint32_t sleepDelay = SLEEP;
-
 void loop_handler(void *arg)
 {
     uint32_t currTick = SDL_GetTicks();
@@ -83,14 +83,12 @@ void loop_handler(void *arg)
         uint32_t bticks = SDL_GetTicks();
         runtime->doInput();
         runtime->run();
-
         uint32_t btime = SDL_GetTicks();
         if (!skip)
         {
             runtime->paint();
         }
         uint32_t atime = SDL_GetTicks();
-
         uint32_t ptime = atime - btime;
         if (ptime < SLEEP)
         {
@@ -108,7 +106,8 @@ void loop_handler(void *arg)
 
 int main(int argc, char *args[])
 {
-    srand(time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
+    // test_recorder();
     CRuntime runtime;
     CMapArch maparch;
     params_t params;

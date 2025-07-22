@@ -33,18 +33,6 @@ CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
-const char *g_hints[] = {
-    "Blue Mushroom gives Extra Life",
-    "Learn Monster Patterns to Beat Them.",
-    "Higher Scores = Extra Lives",
-    "Exploit Monster Blind Spots.",
-    "VamPlants can absorb other Monsters",
-    "Pickup Items to Reveal Passages",
-    "Beware Dark Purple Monsters.",
-    "Run Pass Slow Monsters.",
-    "Pink Insects Can Lash Onto You.",
-};
-
 CGame::CGame()
 {
     printf("staring up version: 0x%.8x\n", VERSION);
@@ -176,7 +164,8 @@ bool CGame::loadLevel(bool restart)
     map = *(m_mapArch->at(m_level));
 
     printf("level loaded\n");
-    m_introHint = rand() % (sizeof(g_hints) / sizeof(g_hints[0]));
+    m_introHint = rand() % m_hints.size();
+    m_secretTimer = 0;
 
     Pos pos = map.findFirst(TILES_ANNIE2);
     printf("Player at: %d %d\n", pos.x, pos.y);
@@ -790,10 +779,55 @@ int CGame::size() const
 
 const char *CGame::nextHint()
 {
-    return g_hints[m_introHint];
+    return m_hints[m_introHint].c_str();
 }
 
 int CGame::secretTimer() const
 {
     return m_secretTimer;
+}
+
+void CGame::parseHints(const char *data)
+{
+    m_hints.clear();
+    char *t = new char[strlen(data) + 1];
+    strcpy(t, data);
+    int line = 1;
+    char *p = t;
+    while (p && *p)
+    {
+        char *en = strstr(p, "\n");
+        if (en)
+        {
+            *en = 0;
+        }
+        char *er = strstr(p, "\r");
+        if (er)
+        {
+            *er = 0;
+        }
+        char *e = er > en ? er : en;
+        while (*p == ' ' || *p == '\t')
+        {
+            ++p;
+        }
+        char *c = strstr(p, "#");
+        if (c)
+        {
+            *c = '\0';
+        }
+        int i = strlen(p) - 1;
+        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
+        {
+            p[i] = '\0';
+            --i;
+        }
+        if (p[0])
+        {
+            m_hints.push_back(p);
+        }
+        p = e ? e + 1 : nullptr;
+        ++line;
+    }
+    delete[] t;
 }

@@ -476,6 +476,24 @@ void CRuntime::preloadAssets()
     {
         fprintf(stderr, "failed to open %s\n", creditsFile.c_str());
     }
+
+    const std::string hintsFile = m_prefix + m_config["hints"];
+    printf("loading: %s\n", hintsFile.c_str());
+    if (file.open(hintsFile.c_str(), "rb"))
+    {
+        const int size = file.getSize();
+        char *tmp = new char[size + 1];
+        tmp[size] = '\0';
+        file.read(tmp, size);
+        file.close();
+        m_game->parseHints(tmp);
+        printf("-> loaded %s: %d bytes\n", hintsFile.c_str(), size);
+        delete[] tmp;
+    }
+    else
+    {
+        fprintf(stderr, "failed to open %s\n", hintsFile.c_str());
+    }
 }
 
 void CRuntime::cleanUpCredits()
@@ -1272,7 +1290,7 @@ bool CRuntime::initControllers()
     // Initialize SDL's video and game controller subsystems
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
     {
-        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n");
+        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
 
