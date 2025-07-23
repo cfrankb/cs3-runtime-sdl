@@ -17,4 +17,4 @@
 */
 #pragma once
 
-void test_recorder();
+bool test_recorder();

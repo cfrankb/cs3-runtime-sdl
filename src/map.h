@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include <unordered_map>
 #include <string>

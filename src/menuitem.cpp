@@ -81,7 +81,7 @@ void CMenuItem::right()
     }
     else if (m_type == ITEM_OPTIONS)
     {
-        if (value < m_options.size() - 1)
+        if (value < static_cast<int>(m_options.size() - 1))
             ++value;
     }
 }

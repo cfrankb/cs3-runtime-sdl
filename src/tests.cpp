@@ -18,10 +18,12 @@
 #include "recorder.h"
 #include <cstring>
 
-void test_recorder()
+bool test_recorder()
 {
+    printf("test_recorder\n");
+
     FILE *tfile;
-    CRecorder rec;
+    CRecorder rec(5);
     tfile = fopen("test0000.rec", "wb");
     rec.start(tfile, true);
     rec.stop();
@@ -62,7 +64,7 @@ void test_recorder()
     rec.stop();
 
     FILE *sfile = fopen("test0001.rec", "rb");
-    rec.start(tfile, false);
+    rec.start(sfile, false);
     uint8_t output[4];
     for (size_t i = 0; i < sizeof(data); ++i)
     {
@@ -71,7 +73,7 @@ void test_recorder()
         if (!result)
         {
             printf("premature exit\n");
-            break;
+            return false;
         }
         uint8_t k = 0xff;
         for (int j = 0; j < 4; ++j)
@@ -82,11 +84,13 @@ void test_recorder()
                 break;
             }
         }
-        // printf("%-2d %.2x %.2x\n", i, data[i], k);
+        //    printf("%-2d %.2x %.2x\n", i, data[i], k);
         if (data[i] != k)
         {
-            printf("mismatch at %d [%x %x]\n", i, data[i], k);
+            printf("mismatch at %ld [%.2x %.2x]\n", i, data[i], k);
+            return false;
         }
     }
     rec.stop();
+    return true;
 }

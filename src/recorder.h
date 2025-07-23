@@ -23,7 +23,7 @@
 class CRecorder
 {
 public:
-    CRecorder();
+    CRecorder(const size_t bufSize = MAX_ENTRIES);
     ~CRecorder();
 
     bool start(FILE *file, bool isWrite);
@@ -53,6 +53,7 @@ private:
     uint32_t m_size;
     uint32_t m_batchSize;
     uint8_t *m_buffer = nullptr;
+    size_t m_bufSize;
     FILE *m_file = nullptr;
     size_t m_offset;
 

@@ -19,9 +19,10 @@
 #include <cstring>
 #include "recorder.h"
 
-CRecorder::CRecorder()
+CRecorder::CRecorder(const size_t bufSize)
 {
-    m_buffer = new uint8_t[MAX_ENTRIES];
+    m_bufSize = bufSize;
+    m_buffer = new uint8_t[m_bufSize];
     m_mode = MODE_CLOSED;
 }
 
@@ -32,6 +33,7 @@ CRecorder::~CRecorder()
 
 bool CRecorder::start(FILE *file, bool isWrite)
 {
+    const char SIG[] = {'R', 'E', 'C', '!'};
     auto readFile = [file](auto ptr, auto size)
     {
         return fread(ptr, size, 1, file) == 1;
@@ -40,38 +42,37 @@ bool CRecorder::start(FILE *file, bool isWrite)
     {
         return fwrite(ptr, size, 1, file) == 1;
     };
-
     m_newInfo = true;
     m_index = 0;
     m_count = 0;
     m_size = 0;
 
-    uint32_t version = VERSION;
     m_mode = isWrite ? MODE_WRITE : MODE_READ;
     m_file = file;
     if (m_file && m_mode == MODE_WRITE)
     {
+        const uint32_t version = VERSION;
         const uint8_t placeholder[] = {0, 0, 0, 0};
-        writeFile("REC!", 4);
-        writeFile(&version, 4);
+        writeFile(SIG, sizeof(SIG));
+        writeFile(&version, sizeof(version));
         m_offset = ftell(file);
-        writeFile(placeholder, 4); // placeholder for datasize
+        writeFile(placeholder, sizeof(placeholder)); // placeholder for datasize
     }
     else if (m_file && m_mode == MODE_READ)
     {
-        // TODO check signature
-        char sig[5];
-        readFile(sig, 4);
-        if (memcmp(sig, "REC!", 4) != 0)
+        uint32_t version = 0xffff;
+        char sig[sizeof(SIG)];
+        readFile(sig, sizeof(sig));
+        if (memcmp(sig, SIG, sizeof(SIG)) != 0)
         {
             fprintf(stderr, "signature mismatch:\n");
         }
-        readFile(&version, 4);
+        readFile(&version, sizeof(version));
         if (version != VERSION)
         {
-            fprintf(stderr, "version mismatch:\n");
+            fprintf(stderr, "version mismatch: 0x%.8x\n", version);
         }
-        readFile(&m_size, 4); // total datasize of data
+        readFile(&m_size, sizeof(m_size)); // total datasize of data
         readNextBatch();
     }
     else
@@ -85,11 +86,10 @@ bool CRecorder::start(FILE *file, bool isWrite)
 
 bool CRecorder::readNextBatch()
 {
-    m_batchSize = std::min(static_cast<uint32_t>(MAX_ENTRIES), m_size);
+    m_batchSize = std::min(static_cast<uint32_t>(m_bufSize), m_size);
     m_size -= m_batchSize;
     fread(m_buffer, m_batchSize, 1, m_file);
     m_index = 0;
-    m_newInfo = true;
     return true;
 }
 
@@ -110,7 +110,6 @@ void CRecorder::append(const uint8_t *input)
     else if (m_current == data)
     {
         ++m_count;
-
         if (m_count == MAX_CPT)
         {
             storeData(false);
@@ -130,7 +129,7 @@ void CRecorder::storeData(bool finalize)
     if (m_count && !m_newInfo)
         m_buffer[m_index++] = m_current | (m_count << 4);
     m_count = 0;
-    if ((m_index == MAX_ENTRIES) || finalize)
+    if ((m_index == m_bufSize) || finalize)
     {
         dump();
     }
@@ -151,7 +150,6 @@ void CRecorder::nextData()
     const uint8_t data = m_buffer[m_index++];
     m_current = data & MAX_CPT;
     m_count = data >> 4;
-    // printf(">>>> %.2x x %.2x\n", m_count, m_current);
 }
 
 bool CRecorder::get(uint8_t *output)
@@ -162,7 +160,7 @@ bool CRecorder::get(uint8_t *output)
         m_newInfo = false;
         --m_count;
     }
-    else if (m_count)
+    else if (m_count != 0)
     {
         --m_count;
     }
@@ -198,7 +196,7 @@ void CRecorder::stop()
     {
         storeData(true);
         fseek(m_file, m_offset, SEEK_SET);
-        fwrite(&m_size, 4, 1, m_file);
+        fwrite(&m_size, sizeof(m_size), 1, m_file);
     }
     m_mode = MODE_CLOSED;
     if (m_file)

@@ -36,6 +36,8 @@ class CAnimator;
 class IMusic;
 class CRecorder;
 
+#define RGBA(R, G, B) (R | (G << 8) | (B << 16) | 0xff000000)
+
 class CGameMixin
 {
 public:
@@ -67,20 +69,25 @@ protected:
         HISCORE_DELAY = 5 * TICK_RATE,
         CLEAR = 0,
         ALPHA = 0xff000000,
-        WHITE = 0x00ffffff | ALPHA,
-        YELLOW = 0x0000ffff | ALPHA,
-        PURPLE = 0x00ff00ff | ALPHA,
-        BLACK = 0x00000000 | ALPHA,
-        GREEN = 0x0000ff00 | ALPHA,
-        DARKGREEN = 0x00008000 | ALPHA,
-        LIME = 0x0000ffbf | ALPHA,
-        BLUE = 0x00ff0000 | ALPHA,
-        CYAN = 0x00ffff00 | ALPHA,
-        RED = 0x000000ff | ALPHA,
-        DARKRED = 0x00000080 | ALPHA,
-        DARKBLUE = 0x00440000 | ALPHA,
-        DARKGRAY = 0x00444444 | ALPHA,
-        LIGHTGRAY = 0x00A9A9A9 | ALPHA,
+        WHITE = RGBA(0xff, 0xff, 0xff),      // #ffffff
+        YELLOW = RGBA(0xff, 0xff, 0x00),     // #ffff00
+        PURPLE = RGBA(0xff, 0x00, 0xff),     // #ff00ff
+        DARKPURPLE = RGBA(0x4a, 0x45, 0x98), // #4a4598
+        BLACK = RGBA(0x00, 0x00, 0x00),      // #000000
+        GREEN = RGBA(0x00, 0xff, 0x00),      // #00ff00
+        DARKGREEN = RGBA(0x00, 0x80, 0x00),  // #008000
+        LIME = RGBA(0xbf, 0xff, 0x00),       // #bfff00
+        BLUE = RGBA(0x00, 0x00, 0xff),       // #0000ff
+        MIDBLUE = RGBA(0x00, 0x00, 0x80),    // #000080
+        CYAN = RGBA(0x00, 0xff, 0xff),       // #00ffff
+        RED = RGBA(0xff, 0x00, 0x00),        // #ff0000
+        DARKRED = RGBA(0x80, 0x00, 0x00),    // #800000
+        DARKBLUE = RGBA(0x00, 0x00, 0x44),   // #000044
+        DARKGRAY = RGBA(0x44, 0x44, 0x44),   // #444444
+        GRAY = RGBA(0x88, 0x88, 0x88),       // #808080
+        LIGHTGRAY = RGBA(0xa9, 0xa9, 0xa9),  // #a9a9a9
+        ORANGE = RGBA(0xf5, 0x9b, 0x14),     // #f59b14
+        PINK = RGBA(0xff, 0xc3, 0xff),       // #ffc8ff
         _WIDTH = 320,
         _HEIGHT = 240,
         TILE_SIZE = 16,
@@ -197,9 +204,9 @@ protected:
     void fazeScreen(CFrame &bitmap, const int shift);
     void drawViewPort(CFrame &bitmap, const int mx, const int my, const int cols, const int rows);
     void drawLevelIntro(CFrame &bitmap);
-    void drawPreview(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
+    void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, uint32_t color);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &frame, const int x, const int y, CFrame &tile, bool alpha);
     void nextLevel();
@@ -209,6 +216,7 @@ protected:
     int rankScore();
     void drawScores(CFrame &bitmap);
     bool inputPlayerName();
+    bool handleInputString(char *inputDest, const size_t limit);
     void clearScores();
     void clearKeyStates();
     void clearJoyStates();
@@ -216,11 +224,11 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
-    inline int getWidth()
+    inline int getWidth() const
     {
         return _WIDTH;
     }
-    inline int getHeight()
+    inline int getHeight() const
     {
         return _HEIGHT;
     }

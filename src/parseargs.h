@@ -26,6 +26,7 @@ typedef struct
     bool muteMusic;
     bool fullscreen;
     bool hardcore;
+    bool tests;
     uint8_t skill;
     std::string mapArch;
     std::string workspace;

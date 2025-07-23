@@ -81,7 +81,7 @@ def main():
             'INC=',
             'LDFLAGS=',
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
-            'CXXFLAGS=-O3',
+            'CXXFLAGS=-O3 -Wall',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
@@ -119,7 +119,7 @@ def main():
             'INC=',
             'LIBS=-lopenal -lidbfs.js',
             'LDFLAGS=',
-            '''CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -sSDL2_MIXER_FORMATS='["ogg","mod","mp3"]' -O3''',
+            '''CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -sSDL2_MIXER_FORMATS='["ogg","mod"]' -O3''',
             'PARGS=--preload-file data --emrun -O2 -sWASM=1 -sALLOW_MEMORY_GROWTH -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE=--shell-file src/template/body.html'
         ]

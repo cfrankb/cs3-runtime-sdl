@@ -18,7 +18,7 @@
 #pragma once
 #include <vector>
 #include <string>
-#include <stdint.h>
+#include <cstdint>
 
 class IFile;
 class CMap;

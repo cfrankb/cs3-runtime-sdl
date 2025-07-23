@@ -80,7 +80,6 @@ void loop_handler(void *arg)
     if (meantime >= sleepDelay)
     {
         CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
-        uint32_t bticks = SDL_GetTicks();
         runtime->doInput();
         runtime->run();
         uint32_t btime = SDL_GetTicks();
@@ -107,7 +106,6 @@ void loop_handler(void *arg)
 int main(int argc, char *args[])
 {
     srand(static_cast<unsigned int>(time(NULL)));
-    // test_recorder();
     CRuntime runtime;
     CMapArch maparch;
     params_t params;
@@ -117,6 +115,8 @@ int main(int argc, char *args[])
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
     if (!parseArgs(argc, args, params))
         return EXIT_FAILURE;
+    if (params.tests)
+        test_recorder();
     if (!maparch.read(params.mapArch.c_str()))
     {
         fprintf(stderr, "failed to read maparch: %s %s\n", params.mapArch.c_str(), maparch.lastError());

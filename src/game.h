@@ -110,7 +110,9 @@ private:
         SOUND_KEY,
         SOUND_0009,
         SOUND_COIN1,
-        SOUND_OUCHFAST
+        SOUND_OUCHFAST,
+        SOUND_POUF,
+        SOUND_POW,
     };
 
     int m_lives = 0;

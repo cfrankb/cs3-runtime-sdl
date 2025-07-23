@@ -717,7 +717,7 @@ int CGameMixin::rankScore()
     }
 
     int32_t i;
-    for (i = 0; i < MAX_SCORES; ++i)
+    for (i = 0; i < static_cast<int32_t>(MAX_SCORES); ++i)
     {
         if (score > m_hiscores[i].score)
         {
@@ -725,7 +725,7 @@ int CGameMixin::rankScore()
         }
     }
 
-    for (int32_t j = MAX_SCORES - 2; j >= i; --j)
+    for (int32_t j = static_cast<int32_t>(MAX_SCORES - 2); j >= i; --j)
     {
         m_hiscores[j + 1] = m_hiscores[j];
     }
@@ -753,7 +753,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     for (uint32_t i = 0; i < MAX_SCORES; ++i)
     {
         uint32_t color = i & INTERLINES ? LIGHTGRAY : DARKGRAY;
-        if (m_recordScore && m_scoreRank == i)
+        if (m_recordScore && m_scoreRank == static_cast<int>(i))
         {
             color = YELLOW;
         }
@@ -952,14 +952,13 @@ void CGameMixin::handleFunctionKeys()
     }
 }
 
-bool CGameMixin::inputPlayerName()
+bool CGameMixin::handleInputString(char *inputDest, const size_t limit)
 {
     auto range = [](uint16_t keyCode, uint16_t start, uint16_t end)
     {
         return keyCode >= start && keyCode <= end;
     };
 
-    int j = m_scoreRank;
     for (int k = 0; k < Key_Count; ++k)
     {
         m_keyRepeters[k] ? --m_keyRepeters[k] : 0;
@@ -996,10 +995,10 @@ bool CGameMixin::inputPlayerName()
         else if (k == Key_BackSpace)
         {
             m_keyRepeters[k] = KEY_REPETE_DELAY;
-            int i = strlen(m_hiscores[j].name);
+            int i = strlen(inputDest);
             if (i > 0)
             {
-                m_hiscores[j].name[i - 1] = '\0';
+                inputDest[i - 1] = '\0';
             }
             continue;
         }
@@ -1013,16 +1012,23 @@ bool CGameMixin::inputPlayerName()
             m_keyRepeters[k] = 0;
             continue;
         }
-        if (strlen(m_hiscores[j].name) == sizeof(m_hiscores[j].name) - 1)
+        if (strlen(inputDest) == limit - 1)
         {
             // already at maxlenght
             continue;
         }
         m_keyRepeters[k] = KEY_REPETE_DELAY;
         char s[2] = {c, 0};
-        strcat(m_hiscores[j].name, s);
+        strcat(inputDest, s);
     }
     return false;
+}
+
+bool CGameMixin::inputPlayerName()
+{
+    const int j = m_scoreRank;
+    return handleInputString(m_hiscores[j].name,
+                             sizeof(m_hiscores[j].name));
 }
 
 void CGameMixin::enableHiScore()
@@ -1091,8 +1097,8 @@ bool CGameMixin::write(FILE *tfile, const std::string &name)
     writefile(&m_healthRef, sizeof(m_healthRef));
     writefile(&m_countdown, sizeof(m_countdown));
 
-    size_t ptr = ftell(tfile);
-    size_t size = name.size();
+    const size_t ptr = ftell(tfile);
+    const size_t size = name.size();
     writefile(&size, sizeof(uint16_t));
     writefile(name.c_str(), name.size());
     fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
@@ -1103,8 +1109,8 @@ bool CGameMixin::write(FILE *tfile, const std::string &name)
 void CGameMixin::drawPreScreen(CFrame &bitmap)
 {
     const char t[] = "CLICK TO START";
-    int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
-    int y = (HEIGHT - FONT_SIZE) / 2;
+    const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+    const int y = (HEIGHT - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
 }
@@ -1135,18 +1141,6 @@ void CGameMixin::fazeScreen(CFrame &bitmap, const int shift)
     }
 }
 
-void CGameMixin::drawPreview(CFrame &bitmap)
-{
-    CMap *map = &m_game->getMap();
-    CGame &game = *m_game;
-
-    const int rows = std::min(static_cast<int>(HEIGHT / TILE_SIZE), map->hei());
-    const int cols = std::min(static_cast<int>(WIDTH / TILE_SIZE), map->len());
-    const int mx = std::max(map->len() - cols, 0);
-    drawViewPort(bitmap, mx, 0, cols, rows);
-    fazeScreen(bitmap, 3);
-}
-
 void CGameMixin::stopRecorder()
 {
     if (!m_recorder->isStopped())
@@ -1159,8 +1153,15 @@ void CGameMixin::recordGame()
 {
     if (m_recorder->isRecording())
         return;
+    m_recorder->stop();
     const std::string name = "test";
-    FILE *tfile = fopen("test.rec", "wb");
+    const std::string path = "test.rec";
+    FILE *tfile = fopen(path.c_str(), "wb");
+    if (!tfile)
+    {
+        fprintf(stderr, "cannot create: %s\n", path.c_str());
+        return;
+    }
     write(tfile, name);
     fseek(tfile, 0, SEEK_END);
     m_recorder->start(tfile, true);
@@ -1170,7 +1171,42 @@ void CGameMixin::playbackGame()
 {
     m_recorder->stop();
     std::string name;
-    FILE *sfile = fopen("test.rec", "rb");
+    const std::string path = "test.rec";
+    FILE *sfile = fopen(path.c_str(), "rb");
+    if (!sfile)
+    {
+        fprintf(stderr, "cannot read: %s\n", path.c_str());
+        return;
+    }
     read(sfile, name);
+    openMusicForLevel(m_game->level());
     m_recorder->start(sfile, false);
+}
+
+void CGameMixin::plotLine(CFrame &bitmap, int x0, int y0, const int x1, const int y1, uint32_t color)
+{
+    auto dx = abs(x1 - x0);
+    auto sx = x0 < x1 ? 1 : -1;
+    auto dy = -abs(y1 - y0);
+    auto sy = y0 < y1 ? 1 : -1;
+    auto error = dx + dy;
+    while (true)
+    {
+        bitmap.at(x0, y0) = color;
+        auto e2 = 2 * error;
+        if (e2 >= dy)
+        {
+            if (x0 == x1)
+                break;
+            error += dy;
+            x0 += sx;
+        }
+        if (e2 <= dx)
+        {
+            if (y0 == y1)
+                break;
+            error += dx;
+            y0 += sy;
+        }
+    }
 }

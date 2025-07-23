@@ -779,7 +779,7 @@ int CGame::size() const
 
 const char *CGame::nextHint()
 {
-    return m_hints[m_introHint].c_str();
+    return m_hints.size() ? m_hints[m_introHint].c_str() : "";
 }
 
 int CGame::secretTimer() const

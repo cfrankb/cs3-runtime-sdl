@@ -210,7 +210,6 @@ void CRuntime::doInput()
     SDL_GameController *controller;
     SDL_Event event;
     int joystick_index;
-    int axisPivot = 0;
     while (SDL_PollEvent(&event))
     {
         uint8_t keyState = KEY_RELEASED;
@@ -405,6 +404,31 @@ void CRuntime::doInput()
     }
 }
 
+bool CRuntime::fetchFile(const std::string &path, char **dest, const bool terminator)
+{
+    CFileWrap file;
+    printf("loading: %s\n", path.c_str());
+    if (file.open(path.c_str(), "rb"))
+    {
+        const int size = file.getSize();
+        char *data = new char[terminator ? size + 1 : size];
+        if (terminator)
+        {
+            data[size] = '\0';
+        }
+        file.read(data, size);
+        file.close();
+        printf("-> loaded %s: %d bytes\n", path.c_str(), size);
+        *dest = data;
+        return true;
+    }
+    else
+    {
+        fprintf(stderr, "failed to open %s\n", path.c_str());
+        return false;
+    }
+}
+
 void CRuntime::preloadAssets()
 {
     CFileWrap file;
@@ -412,8 +436,9 @@ void CRuntime::preloadAssets()
         &m_tiles,
         &m_animz,
         &m_annie,
+        &m_title,
     };
-    for (int i = 0; i < m_assetFiles.size(); ++i)
+    for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
         const std::string filename = m_prefix + m_assetFiles[i];
         *frameSets[i] = new CFrameSet();
@@ -433,66 +458,20 @@ void CRuntime::preloadAssets()
     }
 
     const std::string fontName = m_prefix + m_config["font"];
-    printf("loading: %s\n", fontName.c_str());
-    if (file.open(fontName.c_str(), "rb"))
-    {
-        const int size = file.getSize();
-        m_fontData = new uint8_t[size];
-        file.read(m_fontData, size);
-        file.close();
-        printf("-> loaded %s: %d bytes\n", fontName.c_str(), size);
-    }
-    else
-    {
-        fprintf(stderr, "failed to open %s\n", fontName.c_str());
-    }
-
-    // extracting title
-    m_title = new CFrameSet();
-    const std::string titlePix = m_prefix + m_config["titlepix"];
-    if (file.open(titlePix.c_str(), "rb"))
-    {
-        m_title->extract(file);
-        file.close();
-    }
-    else
-    {
-        fprintf(stderr, "failed to open %s\n", titlePix.c_str());
-    }
+    fetchFile(fontName, reinterpret_cast<char **>(&m_fontData), false);
 
     const std::string creditsFile = m_prefix + m_config["credits"];
-    printf("loading: %s\n", creditsFile.c_str());
-    if (file.open(creditsFile.c_str(), "rb"))
+    if (fetchFile(creditsFile, &m_credits, true))
     {
-        const int size = file.getSize();
-        m_credits = new char[size + 1];
-        m_credits[size] = '\0';
-        file.read(m_credits, size);
-        file.close();
         cleanUpCredits();
-        printf("-> loaded %s: %d bytes\n", creditsFile.c_str(), size);
-    }
-    else
-    {
-        fprintf(stderr, "failed to open %s\n", creditsFile.c_str());
     }
 
+    char *tmp;
     const std::string hintsFile = m_prefix + m_config["hints"];
-    printf("loading: %s\n", hintsFile.c_str());
-    if (file.open(hintsFile.c_str(), "rb"))
+    if (fetchFile(hintsFile, &tmp, true))
     {
-        const int size = file.getSize();
-        char *tmp = new char[size + 1];
-        tmp[size] = '\0';
-        file.read(tmp, size);
-        file.close();
         m_game->parseHints(tmp);
-        printf("-> loaded %s: %d bytes\n", hintsFile.c_str(), size);
         delete[] tmp;
-    }
-    else
-    {
-        fprintf(stderr, "failed to open %s\n", hintsFile.c_str());
     }
 }
 
@@ -732,7 +711,7 @@ void CRuntime::initSounds()
 {
     auto m_sound = new CSndSDL();
     CFileWrap file;
-    for (int i = 0; i < m_soundFiles.size(); ++i)
+    for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
         const auto soundName = m_prefix + std::string("sounds/") + m_soundFiles[i];
         if (file.open(soundName.c_str(), "rb"))
@@ -763,7 +742,6 @@ void CRuntime::openMusicForLevel(int i)
 
 void CRuntime::splitString2(const std::string &str, StringVector &list)
 {
-    int i = 0;
     unsigned int j = 0;
     bool inQuote = false;
     std::string item;
@@ -784,7 +762,6 @@ void CRuntime::splitString2(const std::string &str, StringVector &list)
             {
                 ++j;
             }
-            i = j;
             item.clear();
             continue;
         }
@@ -932,13 +909,14 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
         const CMenuItem &item = menu.at(i);
         const std::string text = item.str();
         const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
-        uint32_t color = i == menu.index() ? YELLOW : BLUE;
+        uint32_t color = static_cast<int>(i) == menu.index() ? static_cast<uint32_t>(YELLOW)
+                                                             : static_cast<uint32_t>(BLUE);
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
         }
         drawFont(bitmap, x, baseY + i * spacingY, text.c_str(), color, CLEAR, scaleX, scaleY);
-        if (i == menu.index())
+        if (static_cast<int>(i) == menu.index())
         {
             char tmp[2];
             tmp[0] = CHARS_TRIGHT;
@@ -989,7 +967,8 @@ void CRuntime::drawScroller(CFrame &bitmap)
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1 && m_credits != nullptr)
     {
-        memcpy(m_scroll, m_scroll + 1, scrollerBufSize() - 1);
+        for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
+            m_scroll[i] = m_scroll[i + 1];
         m_scroll[scrollerBufSize() - 1] = m_credits[m_scrollPtr];
         ++m_scrollPtr;
         if (m_scrollPtr >= strlen(m_credits) - 1)
@@ -1101,7 +1080,6 @@ void CRuntime::initOptions()
 // Function to toggle fullscreen mode
 void CRuntime::toggleFullscreen()
 {
-    Uint32 flags = SDL_GetWindowFlags(m_app.window);
     if (m_app.isFullscreen)
     {
         m_app.isFullscreen = false;
@@ -1321,7 +1299,7 @@ bool CRuntime::initControllers()
 
     if (gGameControllers.empty())
     {
-        printf("No game controllers found. Connect one now!\n");
+        fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
     return true;
 }

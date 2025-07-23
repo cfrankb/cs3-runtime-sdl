@@ -64,7 +64,7 @@ void CMenu::up()
 
 void CMenu::down()
 {
-    if (m_currentItem < m_items.size() - 1)
+    if (m_currentItem < static_cast<int>(m_items.size() - 1))
         ++m_currentItem;
 }
 

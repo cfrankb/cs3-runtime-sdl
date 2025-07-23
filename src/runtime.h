@@ -92,7 +92,7 @@ protected:
     CFrameSet *m_title;
     char *m_credits = nullptr;
     char *m_scroll = nullptr;
-    int m_scrollPtr;
+    uint32_t m_scrollPtr;
     int m_startLevel;
     int m_skill;
     int m_volume = 10;
@@ -134,4 +134,5 @@ private:
     const std::string getSavePath() const;
     void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
     void manageMenu(CMenu &menu);
+    bool fetchFile(const std::string &path, char **dest, const bool terminator);
 };

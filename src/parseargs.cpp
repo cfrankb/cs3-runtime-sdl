@@ -33,6 +33,7 @@ void showHelp()
          "flags:\n"
          "--hard                    switch to hard mode\n"
          "--normal                  switch to normal mode\n"
+         "-t                        run tests\n"
          "-f                        start in fullscreen\n"
          "-h                        show this screen\n"
          "-q                        mute music by default\n");
@@ -45,6 +46,7 @@ void initArgs(params_t &params)
     params.muteMusic = false;
     params.skill = SKILL_EASY;
     params.hardcore = false;
+    params.tests = false;
 }
 
 bool parseArgs(const int argc, char *args[], params_t &params)
@@ -105,10 +107,14 @@ bool parseArgs(const int argc, char *args[], params_t &params)
         // handle switch
         else if (args[i][0] == '-')
         {
-            for (int j = 1; j < strlen(args[i]); ++j)
+            for (size_t j = 1; j < strlen(args[i]); ++j)
             {
                 switch (args[i][j])
                 {
+                case 't':
+                    printf("tests\n");
+                    params.tests = true;
+                    break;
                 case 'f':
                     printf("fullscreen\n");
                     params.fullscreen = true;
