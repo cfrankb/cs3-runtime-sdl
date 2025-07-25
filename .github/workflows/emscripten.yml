@@ -7,6 +7,7 @@ on:
       - master
       - develop
       - emscripten
+      - camera
   pull_request:
     branches:
       - master

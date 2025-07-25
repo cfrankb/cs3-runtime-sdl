@@ -20,14 +20,14 @@
 #include <stdint.h>
 #include "map.h"
 
-enum JoyAim
+enum JoyAim : uint8_t
 {
     AIM_UP = 0,
     AIM_DOWN = 1,
     AIM_LEFT = 2,
     AIM_RIGHT = 3,
     TOTAL_AIMS = 4,
-    AIM_NONE = -1
+    AIM_NONE = 0xff,
 };
 
 class CActor

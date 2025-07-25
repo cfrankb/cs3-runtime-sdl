@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
@@ -87,7 +88,7 @@ protected:
         GRAY = RGBA(0x88, 0x88, 0x88),       // #808080
         LIGHTGRAY = RGBA(0xa9, 0xa9, 0xa9),  // #a9a9a9
         ORANGE = RGBA(0xf5, 0x9b, 0x14),     // #f59b14
-        PINK = RGBA(0xff, 0xc3, 0xff),       // #ffc8ff
+        PINK = RGBA(0xe0, 0xa3, 0xe0),       // #e0a8e0
         _WIDTH = 320,
         _HEIGHT = 240,
         TILE_SIZE = 16,
@@ -103,6 +104,11 @@ protected:
         CARET_SPEED = 8,
         INTERLINES = 2,
         Y_STATUS = 2,
+        PLAYER_FRAMES = 8,
+        PLAYER_HIT_FRAME = 7,
+        PLAYER_STD_FRAMES = 7,
+        ANIMZ_INSECT1_FRAMES = 8,
+        INSECT1_MAX_OFFSET = 7,
     };
 
     enum KeyCode : uint8_t
@@ -198,17 +204,24 @@ protected:
     int m_optionCooldown = 0;
     bool m_gameMenuActive = false;
     int m_gameMenuCooldown = 0;
+    int m_cx;
+    int m_cy;
+    uint8_t m_lastAim;
+    std::vector<uint8_t> m_cameraMotion;
+    uint32_t m_idle;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void fazeScreen(CFrame &bitmap, const int shift);
-    void drawViewPort(CFrame &bitmap, const int mx, const int my, const int cols, const int rows);
+    void drawViewPort(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, uint32_t color);
     inline void drawKeys(CFrame &bitmap);
-    inline void drawTile(CFrame &frame, const int x, const int y, CFrame &tile, bool alpha);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, bool alpha);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, Rect &rect);
+    inline CFrame *tile2Frame(const uint8_t tileID);
     void nextLevel();
     void restartLevel();
     void restartGame();
@@ -224,6 +237,9 @@ protected:
     void manageGamePlay();
     void handleFunctionKeys();
     bool handlePrompts();
+    void centerCamera();
+    void directCamera(const uint8_t aim);
+    void moveCamera();
     inline int getWidth() const
     {
         return _WIDTH;

@@ -160,6 +160,20 @@ void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const uint32_t color,
     }
 }
 
+void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, Rect &rect)
+{
+    const int width = bitmap.len();
+    uint32_t *dest = bitmap.getRGB() + x + y * width;
+    for (int row = 0; row < rect.height; ++row)
+    {
+        for (int col = 0; col < rect.width; ++col)
+        {
+            dest[col] = tile.at(col + rect.x, row + rect.y);
+        }
+        dest += width;
+    }
+}
+
 void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, bool alpha)
 {
     const int width = bitmap.len();
@@ -251,23 +265,11 @@ void CGameMixin::drawKeys(CFrame &bitmap)
 
 void CGameMixin::drawScreen(CFrame &bitmap)
 {
-    CMap *map = &m_game->getMap();
-    CGame &game = *m_game;
-
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
-    const int rows = std::min(maxRows, map->hei());
-    const int cols = std::min(maxCols, map->len());
-
-    const int lmx = std::max(0, game.player().getX() - cols / 2);
-    const int lmy = std::max(0, game.player().getY() - rows / 2);
-    const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
-    const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
-
     // draw viewport
-    drawViewPort(bitmap, mx, my, cols, rows);
+    CGame &game = *m_game;
+    drawViewPort(bitmap);
 
-    if (m_playerFrameOffset == 7)
+    if (m_playerFrameOffset == PLAYER_HIT_FRAME)
     {
         bitmap.shiftLEFT(false);
         bitmap.shiftLEFT(false);
@@ -352,53 +354,99 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawKeys(bitmap);
 }
 
-void CGameMixin::drawViewPort(CFrame &bitmap, const int mx, const int my, const int cols, const int rows)
+CFrame *CGameMixin::tile2Frame(const uint8_t tileID)
+{
+    CGame &game = *m_game;
+    CFrame *tile;
+    if (tileID == TILES_STOP || tileID == TILES_BLANK || m_animator->isSpecialCase(tileID))
+    {
+        // skip blank tiles and special cases
+        tile = nullptr;
+    }
+    else if (tileID == TILES_ANNIE2)
+    {
+        CFrameSet &annie = *m_annie;
+        tile = annie[game.player().getAim() * PLAYER_FRAMES + m_playerFrameOffset];
+    }
+    else
+    {
+        int j = m_animator->at(tileID);
+        if (j == NO_ANIMZ)
+        {
+            CFrameSet &tiles = *m_tiles;
+            tile = tiles[tileID];
+        }
+        else
+        {
+            CFrameSet &animz = *m_animz;
+            tile = animz[j];
+        }
+    }
+    return tile;
+}
+
+void CGameMixin::drawViewPort(CFrame &bitmap)
 {
     CMap *map = &m_game->getMap();
-    CGame &game = *m_game;
-    CFrameSet &tiles = *m_tiles;
-    CFrameSet &animz = *m_animz;
-    CFrameSet &annie = *m_annie;
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map->hei());
+    const int cols = std::min(maxCols, map->len());
+    const int mx = m_cx / 2;
+    const int ox = m_cx & 1;
+    const int my = m_cy / 2;
+    const int oy = m_cy & 1;
+    const int halfOffset = TILE_SIZE / 2;
+    const int tileSize = TILE_SIZE;
+
     bitmap.fill(BLACK);
-    for (int y = 0; y < rows; ++y)
+    int py = oy ? -halfOffset : 0;
+    for (int y = 0; y < rows + oy; ++y)
     {
-        for (int x = 0; x < cols; ++x)
+        bool firstY = oy && y == 0;
+        bool lastY = oy && y == rows;
+        int px = ox ? -halfOffset : 0;
+        for (int x = 0; x < cols + ox; ++x)
         {
+            bool firstX = ox && x == 0;
+            bool lastX = ox && x == cols;
             uint8_t tileID = map->at(x + mx, y + my);
-            CFrame *tile;
-            if (tileID == TILES_STOP || tileID == TILES_BLANK || m_animator->isSpecialCase(tileID))
+            CFrame *tile = tile2Frame(tileID);
+            if (tile)
             {
-                // skip blank tiles and special cases
-                continue;
-            }
-            else if (tileID == TILES_ANNIE2)
-            {
-                tile = annie[game.player().getAim() * 8 + m_playerFrameOffset];
-            }
-            else
-            {
-                int j = m_animator->at(tileID);
-                if (j == NO_ANIMZ)
+                if (firstX || firstY || lastX || lastY)
                 {
-                    tile = tiles[tileID];
+                    Rect rect{
+                        .x = !firstX ? 0 : halfOffset,
+                        .y = !firstY ? 0 : halfOffset,
+                        .width = !(firstX || lastX) ? tileSize : halfOffset,
+                        .height = !(firstY || lastY) ? tileSize : halfOffset,
+                    };
+                    drawTile(bitmap,
+                             !firstX ? px : 0,
+                             !firstY ? py : 0,
+                             *tile, rect);
                 }
                 else
                 {
-                    tile = animz[j];
+                    drawTile(bitmap, px, py, *tile, false);
                 }
             }
-            drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
+            px += TILE_SIZE;
         }
+        py += TILE_SIZE;
     }
 
-    const int offset = m_animator->offset() & 7;
+    // overlay special case monsters
+    CGame &game = *m_game;
+    const int offset = m_animator->offset() & INSECT1_MAX_OFFSET;
     CActor *monsters;
     int count;
     game.getMonsters(monsters, count);
     for (int i = 0; i < count; ++i)
     {
         const CActor &monster = monsters[i];
-        if (monster.within(mx, my, mx + cols, my + rows))
+        if (monster.within(mx, my, mx + cols + ox, my + rows + oy))
         {
             const uint8_t tileID = map->at(monster.getX(), monster.getY());
             if (!m_animator->isSpecialCase(tileID))
@@ -406,12 +454,58 @@ void CGameMixin::drawViewPort(CFrame &bitmap, const int mx, const int my, const 
                 continue;
             }
             // special case animations
+            CFrameSet &animz = *m_animz;
             const int x = monster.getX() - mx;
             const int y = monster.getY() - my;
-            CFrame *tile = animz[monster.getAim() * 8 + ANIMZ_INSECT1 + offset];
-            drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
+            CFrame *tile = animz[monster.getAim() * ANIMZ_INSECT1_FRAMES + ANIMZ_INSECT1 + offset];
+
+            bool firstY = oy && y == 0;
+            bool lastY = oy && y == rows;
+            bool firstX = ox && x == 0;
+            bool lastX = ox && x == cols;
+
+            int px = x * TILE_SIZE;
+            int py = y * TILE_SIZE;
+            if (x && ox)
+                px -= halfOffset;
+            if (y && oy)
+                py -= halfOffset;
+
+            if (firstX || firstY || lastX || lastY)
+            {
+                Rect rect{
+                    .x = !firstX ? 0 : halfOffset,
+                    .y = !firstY ? 0 : halfOffset,
+                    .width = !(firstX || lastX) ? tileSize : halfOffset,
+                    .height = !(firstY || lastY) ? tileSize : halfOffset,
+                };
+                drawTile(bitmap, px, py, *tile, rect);
+            }
+            else
+            {
+                drawTile(bitmap, px, py, *tile, false);
+            }
         }
     }
+}
+
+void CGameMixin::centerCamera()
+{
+    CMap *map = &m_game->getMap();
+    CGame &game = *m_game;
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map->hei());
+    const int cols = std::min(maxCols, map->len());
+    const int lmx = std::max(0, game.player().getX() - cols / 2);
+    const int lmy = std::max(0, game.player().getY() - rows / 2);
+    const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
+    const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
+    m_cx = mx * 2;
+    m_cy = my * 2;
+    m_lastAim = AIM_NONE;
+    m_cameraMotion.clear();
+    m_idle = 0;
 }
 
 void CGameMixin::drawLevelIntro(CFrame &bitmap)
@@ -543,6 +637,115 @@ void CGameMixin::mainLoop()
     manageGamePlay();
 }
 
+void CGameMixin::directCamera(const uint8_t aim)
+{
+    CGame &game = *m_game;
+    CMap &map = CGame::getMap();
+    int mx = m_cx / 2;
+    int my = m_cy / 2;
+    const CActor &player = game.player();
+
+    bool moveCamera = false;
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map.hei());
+    const int cols = std::min(maxCols, map.len());
+
+    switch (aim)
+    {
+    case AIM_UP:
+        if (player.getY() - my < rows / 3)
+        {
+            moveCamera = true;
+        }
+        break;
+    case AIM_DOWN:
+        if (player.getY() - my > rows - rows / 3)
+        {
+            moveCamera = true;
+        }
+        break;
+    case AIM_LEFT:
+        if (player.getX() - mx < cols / 3)
+        {
+            moveCamera = true;
+        }
+        break;
+    case AIM_RIGHT:
+        if (player.getX() - mx > cols - cols / 3)
+        {
+            moveCamera = true;
+        }
+        break;
+    }
+
+    if (moveCamera)
+    {
+        m_cameraMotion.push_back(aim);
+        m_cameraMotion.push_back(aim);
+    }
+}
+
+void CGameMixin::moveCamera()
+{
+    uint8_t aim = AIM_NONE;
+    if (m_cameraMotion.size() == 0 && m_idle >= 2)
+    {
+        aim = m_lastAim;
+    }
+    else if (m_cameraMotion.size() != 0)
+    {
+        aim = m_cameraMotion.front();
+        m_cameraMotion.erase(m_cameraMotion.begin());
+    }
+    if (aim == AIM_NONE)
+    {
+        return;
+    }
+
+    CMap &map = CGame::getMap();
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map.hei());
+    const int cols = std::min(maxCols, map.len());
+
+    const int mx = m_cx / 2;
+    const int my = m_cy / 2;
+    const int x = m_game->player().getX() - mx;
+    const int y = m_game->player().getY() - my;
+
+    if (aim == AIM_UP)
+    {
+        if (m_cy > 0 && y < rows - 4)
+            --m_cy;
+        else
+            m_lastAim = AIM_NONE;
+    }
+    else if (aim == AIM_DOWN)
+    {
+        if (m_cy < (map.hei() - rows) * 2 &&
+            y > 4)
+            ++m_cy;
+        else
+            m_lastAim = AIM_NONE;
+    }
+    else if (aim == AIM_LEFT)
+    {
+        if (m_cx > 0 && x < cols - 4)
+            --m_cx;
+        else
+            m_lastAim = AIM_NONE;
+    }
+    else if (aim == AIM_RIGHT)
+    {
+        if (m_cx < (map.len() - cols) * 2 &&
+            x > 4)
+            ++m_cx;
+        else
+            m_lastAim = AIM_NONE;
+    }
+}
+
 void CGameMixin::manageGamePlay()
 {
     CGame &game = *m_game;
@@ -598,18 +801,33 @@ void CGameMixin::manageGamePlay()
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
-        game.managePlayer(joyState);
+        const uint8_t aim = game.managePlayer(joyState);
+        if (aim != AIM_NONE)
+        {
+            m_lastAim = aim;
+            directCamera(aim);
+            m_idle = 0;
+        }
+        else
+        {
+            ++m_idle;
+        }
     }
 
     if (m_ticks % 3 == 0)
     {
-        if (game.health() < m_healthRef && m_playerFrameOffset != 7)
+        moveCamera();
+    }
+
+    if (m_ticks % 3 == 0)
+    {
+        if (game.health() < m_healthRef && m_playerFrameOffset != PLAYER_HIT_FRAME)
         {
-            m_playerFrameOffset = 7;
+            m_playerFrameOffset = PLAYER_HIT_FRAME;
         }
         else if (*(reinterpret_cast<uint32_t *>(joyState)))
         {
-            m_playerFrameOffset = (m_playerFrameOffset + 1) % 7;
+            m_playerFrameOffset = (m_playerFrameOffset + 1) % PLAYER_STD_FRAMES;
         }
         else
         {
@@ -655,12 +873,14 @@ void CGameMixin::nextLevel()
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(false);
     openMusicForLevel(m_game->level());
+    centerCamera();
 }
 
 void CGameMixin::restartLevel()
 {
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(true);
+    centerCamera();
 }
 
 void CGameMixin::restartGame()
@@ -691,6 +911,7 @@ void CGameMixin::init(CMapArch *maparch, int index)
     sanityTest();
     m_countdown = INTRO_DELAY;
     m_game->loadLevel(false);
+    centerCamera();
 }
 
 void CGameMixin::changeZoom()

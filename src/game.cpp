@@ -393,7 +393,7 @@ void CGame::manageMonsters(int ticks)
     }
 }
 
-void CGame::managePlayer(const uint8_t *joystate)
+uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
     m_godModeTimer = std::max(m_godModeTimer - 1, 0);
     m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
@@ -411,9 +411,10 @@ void CGame::managePlayer(const uint8_t *joystate)
         const uint8_t aim = aims[i];
         if (joystate[aim] && move(aim))
         {
-            break;
+            return aim;
         }
     }
+    return AIM_NONE;
 }
 
 Pos CGame::translate(const Pos &p, const int aim)
