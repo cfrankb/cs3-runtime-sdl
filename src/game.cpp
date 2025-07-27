@@ -70,6 +70,11 @@ CActor &CGame::player()
     return m_player;
 }
 
+const CActor &CGame::playerConst() const
+{
+    return m_player;
+}
+
 bool CGame::move(int aim)
 {
     if (m_player.canMove(aim))

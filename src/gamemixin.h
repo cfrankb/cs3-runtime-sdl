@@ -206,9 +206,6 @@ protected:
     int m_gameMenuCooldown = 0;
     int m_cx;
     int m_cy;
-    uint8_t m_lastAim;
-    std::vector<uint8_t> m_cameraMotion;
-    uint32_t m_idle;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -219,8 +216,8 @@ protected:
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, uint32_t color);
     inline void drawKeys(CFrame &bitmap);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, bool alpha);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, Rect &rect);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect);
     inline CFrame *tile2Frame(const uint8_t tileID);
     void nextLevel();
     void restartLevel();
@@ -238,7 +235,6 @@ protected:
     void handleFunctionKeys();
     bool handlePrompts();
     void centerCamera();
-    void directCamera(const uint8_t aim);
     void moveCamera();
     inline int getWidth() const
     {

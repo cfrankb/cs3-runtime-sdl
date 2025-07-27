@@ -160,7 +160,7 @@ void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const uint32_t color,
     }
 }
 
-void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, Rect &rect)
+void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect)
 {
     const int width = bitmap.len();
     uint32_t *dest = bitmap.getRGB() + x + y * width;
@@ -174,7 +174,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
     }
 }
 
-void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, bool alpha)
+void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha)
 {
     const int width = bitmap.len();
     const uint32_t *tileData = tile.getRGB();
@@ -356,7 +356,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
 CFrame *CGameMixin::tile2Frame(const uint8_t tileID)
 {
-    CGame &game = *m_game;
+    const CGame &game = *m_game;
     CFrame *tile;
     if (tileID == TILES_STOP || tileID == TILES_BLANK || m_animator->isSpecialCase(tileID))
     {
@@ -366,11 +366,11 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID)
     else if (tileID == TILES_ANNIE2)
     {
         CFrameSet &annie = *m_annie;
-        tile = annie[game.player().getAim() * PLAYER_FRAMES + m_playerFrameOffset];
+        tile = annie[game.playerConst().getAim() * PLAYER_FRAMES + m_playerFrameOffset];
     }
     else
     {
-        int j = m_animator->at(tileID);
+        uint16_t j = m_animator->at(tileID);
         if (j == NO_ANIMZ)
         {
             CFrameSet &tiles = *m_tiles;
@@ -503,9 +503,6 @@ void CGameMixin::centerCamera()
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
     m_cx = mx * 2;
     m_cy = my * 2;
-    m_lastAim = AIM_NONE;
-    m_cameraMotion.clear();
-    m_idle = 0;
 }
 
 void CGameMixin::drawLevelIntro(CFrame &bitmap)
@@ -637,72 +634,8 @@ void CGameMixin::mainLoop()
     manageGamePlay();
 }
 
-void CGameMixin::directCamera(const uint8_t aim)
-{
-    CGame &game = *m_game;
-    CMap &map = CGame::getMap();
-    int mx = m_cx / 2;
-    int my = m_cy / 2;
-    const CActor &player = game.player();
-
-    bool moveCamera = false;
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
-    const int rows = std::min(maxRows, map.hei());
-    const int cols = std::min(maxCols, map.len());
-
-    switch (aim)
-    {
-    case AIM_UP:
-        if (player.getY() - my < rows / 3)
-        {
-            moveCamera = true;
-        }
-        break;
-    case AIM_DOWN:
-        if (player.getY() - my > rows - rows / 3)
-        {
-            moveCamera = true;
-        }
-        break;
-    case AIM_LEFT:
-        if (player.getX() - mx < cols / 3)
-        {
-            moveCamera = true;
-        }
-        break;
-    case AIM_RIGHT:
-        if (player.getX() - mx > cols - cols / 3)
-        {
-            moveCamera = true;
-        }
-        break;
-    }
-
-    if (moveCamera)
-    {
-        m_cameraMotion.push_back(aim);
-        m_cameraMotion.push_back(aim);
-    }
-}
-
 void CGameMixin::moveCamera()
 {
-    uint8_t aim = AIM_NONE;
-    if (m_cameraMotion.size() == 0 && m_idle >= 2)
-    {
-        aim = m_lastAim;
-    }
-    else if (m_cameraMotion.size() != 0)
-    {
-        aim = m_cameraMotion.front();
-        m_cameraMotion.erase(m_cameraMotion.begin());
-    }
-    if (aim == AIM_NONE)
-    {
-        return;
-    }
-
     CMap &map = CGame::getMap();
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
@@ -714,36 +647,19 @@ void CGameMixin::moveCamera()
     const int x = m_game->player().getX() - mx;
     const int y = m_game->player().getY() - my;
 
-    if (aim == AIM_UP)
-    {
-        if (m_cy > 0 && y < rows - 4)
-            --m_cy;
-        else
-            m_lastAim = AIM_NONE;
-    }
-    else if (aim == AIM_DOWN)
-    {
-        if (m_cy < (map.hei() - rows) * 2 &&
-            y > 4)
-            ++m_cy;
-        else
-            m_lastAim = AIM_NONE;
-    }
-    else if (aim == AIM_LEFT)
-    {
-        if (m_cx > 0 && x < cols - 4)
-            --m_cx;
-        else
-            m_lastAim = AIM_NONE;
-    }
-    else if (aim == AIM_RIGHT)
-    {
-        if (m_cx < (map.len() - cols) * 2 &&
-            x > 4)
-            ++m_cx;
-        else
-            m_lastAim = AIM_NONE;
-    }
+    const int hDeadZone = cols / 2 - 1;
+    const int vDeadZone = rows / 2 - 1;
+
+    if (m_cy > 0 && y < vDeadZone)
+        --m_cy;
+    else if (m_cy < (map.hei() - rows) * 2 &&
+             y > rows - vDeadZone)
+        ++m_cy;
+    else if (m_cx > 0 && x < hDeadZone)
+        --m_cx;
+    else if (m_cx < (map.len() - cols) * 2 &&
+             x > cols - hDeadZone)
+        ++m_cx;
 }
 
 void CGameMixin::manageGamePlay()
@@ -801,17 +717,7 @@ void CGameMixin::manageGamePlay()
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
-        const uint8_t aim = game.managePlayer(joyState);
-        if (aim != AIM_NONE)
-        {
-            m_lastAim = aim;
-            directCamera(aim);
-            m_idle = 0;
-        }
-        else
-        {
-            ++m_idle;
-        }
+        game.managePlayer(joyState);
     }
 
     if (m_ticks % 3 == 0)

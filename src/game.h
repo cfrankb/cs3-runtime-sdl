@@ -51,6 +51,7 @@ public:
     void killPlayer();
     bool isGameOver() const;
     CActor &player();
+    const CActor &playerConst() const;
     int score() const;
     int lives() const;
     int diamonds() const;
