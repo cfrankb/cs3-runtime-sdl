@@ -107,14 +107,13 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
     for (int i = 0; i < textSize; ++i)
     {
         uint8_t c = static_cast<uint8_t>(text[i]);
-        const uint8_t *font = nullptr;
-        font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
-                                 : m_fontData + (c - ' ') * fontOffset;
+        const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+                                                : m_fontData + (c - ' ') * fontOffset;
         for (int yy = 0; yy < fontSize; ++yy)
         {
-            uint8_t bitFilter = 1;
             for (int xx = 0; xx < fontSize; ++xx)
             {
+                const uint8_t bitFilter = 1 << xx;
                 const uint32_t &pixColor = font[yy] & bitFilter ? color : bgcolor;
                 for (int stepY = 0; stepY < scaleY; ++stepY)
                 {
@@ -124,7 +123,6 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const u
                             rgba[(yy * scaleY + y + stepY) * rowPixels + xx * scaleX + x + stepX] = pixColor;
                     }
                 }
-                bitFilter <<= 1;
             }
         }
         x += fontSize * scaleX;
@@ -720,7 +718,7 @@ void CGameMixin::manageGamePlay()
         game.managePlayer(joyState);
     }
 
-    if (m_ticks % 3 == 0)
+    if (m_ticks % cameraSpeed() == 0)
     {
         moveCamera();
     }
@@ -1336,4 +1334,9 @@ void CGameMixin::plotLine(CFrame &bitmap, int x0, int y0, const int x1, const in
             y0 += sy;
         }
     }
+}
+
+int CGameMixin::cameraSpeed() const
+{
+    return std::max(m_game->playerSpeed() - 1, 1);
 }

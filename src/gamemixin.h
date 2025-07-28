@@ -236,6 +236,7 @@ protected:
     bool handlePrompts();
     void centerCamera();
     void moveCamera();
+    int cameraSpeed() const;
     inline int getWidth() const
     {
         return _WIDTH;
