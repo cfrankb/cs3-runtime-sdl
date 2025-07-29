@@ -109,6 +109,8 @@ protected:
         PLAYER_STD_FRAMES = 7,
         ANIMZ_INSECT1_FRAMES = 8,
         INSECT1_MAX_OFFSET = 7,
+        CAMERA_MODE_STATIC = 0,
+        CAMERA_MODE_DYNAMIC = 1,
     };
 
     enum KeyCode : uint8_t
@@ -206,11 +208,13 @@ protected:
     int m_gameMenuCooldown = 0;
     int m_cx;
     int m_cy;
+    int m_cameraMode = CAMERA_MODE_STATIC;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void fazeScreen(CFrame &bitmap, const int shift);
-    void drawViewPort(CFrame &bitmap);
+    void drawViewPortDynamic(CFrame &bitmap);
+    void drawViewPortStatic(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
@@ -237,6 +241,7 @@ protected:
     void centerCamera();
     void moveCamera();
     int cameraSpeed() const;
+    void setCameraMode(const int mode);
     inline int getWidth() const
     {
         return _WIDTH;

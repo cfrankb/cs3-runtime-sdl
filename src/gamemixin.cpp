@@ -265,7 +265,10 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 {
     // draw viewport
     CGame &game = *m_game;
-    drawViewPort(bitmap);
+    if (m_cameraMode == CAMERA_MODE_DYNAMIC)
+        drawViewPortDynamic(bitmap);
+    else if (m_cameraMode == CAMERA_MODE_STATIC)
+        drawViewPortStatic(bitmap);
 
     if (m_playerFrameOffset == PLAYER_HIT_FRAME)
     {
@@ -383,7 +386,7 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID)
     return tile;
 }
 
-void CGameMixin::drawViewPort(CFrame &bitmap)
+void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 {
     CMap *map = &m_game->getMap();
     const int maxRows = HEIGHT / TILE_SIZE;
@@ -483,6 +486,57 @@ void CGameMixin::drawViewPort(CFrame &bitmap)
             {
                 drawTile(bitmap, px, py, *tile, false);
             }
+        }
+    }
+}
+
+void CGameMixin::drawViewPortStatic(CFrame &bitmap)
+{
+    CMap *map = &m_game->getMap();
+    CGame &game = *m_game;
+
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map->hei());
+    const int cols = std::min(maxCols, map->len());
+
+    const int lmx = std::max(0, game.player().getX() - cols / 2);
+    const int lmy = std::max(0, game.player().getY() - rows / 2);
+    const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
+    const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
+
+    CFrameSet &animz = *m_animz;
+    bitmap.fill(BLACK);
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            uint8_t tileID = map->at(x + mx, y + my);
+            CFrame *tile = tile2Frame(tileID);
+            if (tile)
+                drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
+        }
+    }
+
+    const int offset = m_animator->offset() & 7;
+    CActor *monsters;
+    int count;
+    game.getMonsters(monsters, count);
+    for (int i = 0; i < count; ++i)
+    {
+        const CActor &monster = monsters[i];
+        if (monster.within(mx, my, mx + cols, my + rows))
+        {
+            const uint8_t tileID = map->at(monster.getX(), monster.getY());
+            if (!m_animator->isSpecialCase(tileID))
+            {
+                continue;
+            }
+            // special case animations
+            const int x = monster.getX() - mx;
+            const int y = monster.getY() - my;
+            CFrame *tile = animz[monster.getAim() * 8 + ANIMZ_INSECT1 + offset];
+            drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
         }
     }
 }
@@ -1339,4 +1393,9 @@ void CGameMixin::plotLine(CFrame &bitmap, int x0, int y0, const int x1, const in
 int CGameMixin::cameraSpeed() const
 {
     return std::max(m_game->playerSpeed() - 1, 1);
+}
+
+void CGameMixin::setCameraMode(const int mode)
+{
+    m_cameraMode = mode & 1;
 }
