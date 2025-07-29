@@ -705,6 +705,7 @@ void CRuntime::load()
     }
     m_game->setMode(CGame::MODE_LEVEL);
     openMusicForLevel(m_game->level());
+    centerCamera();
 }
 
 void CRuntime::initSounds()
@@ -1190,6 +1191,7 @@ void CRuntime::manageMenu(CMenu &menu)
             }
             m_gameMenuActive = false;
             game.loadLevel(false);
+            centerCamera();
             game.setSkill(m_skill);
             startCountdown(COUNTDOWN_INTRO);
         }
