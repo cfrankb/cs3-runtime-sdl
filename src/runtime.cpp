@@ -67,10 +67,13 @@ CRuntime::CRuntime() : CGameMixin()
 
 CRuntime::~CRuntime()
 {
-    SDL_DestroyTexture(m_app.texture);
-    SDL_DestroyRenderer(m_app.renderer);
-    SDL_DestroyWindow(m_app.window);
-    SDL_Quit();
+    if (m_app.window)
+    {
+        SDL_DestroyTexture(m_app.texture);
+        SDL_DestroyRenderer(m_app.renderer);
+        SDL_DestroyWindow(m_app.window);
+        SDL_Quit();
+    }
 
     if (m_music)
     {
@@ -147,6 +150,7 @@ void CRuntime::paint()
 
 bool CRuntime::SDLInit()
 {
+    printf("SDL Init()\n");
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -472,6 +476,42 @@ void CRuntime::preloadAssets()
     {
         m_game->parseHints(tmp);
         delete[] tmp;
+    }
+
+    const std::string helpFile = m_prefix + m_config["help"];
+    if (fetchFile(helpFile, &tmp, true))
+    {
+        parseHelp(tmp);
+        delete[] tmp;
+    }
+}
+
+void CRuntime::parseHelp(char *text)
+{
+    const char marker[] = {'_', '_', 'E', 'M', ' '};
+    m_helptext.clear();
+    char *p = text;
+    while (p && *p)
+    {
+        char *n = strstr(p, "\n");
+        if (n)
+            *n = 0;
+        char *r = strstr(p, "\r");
+        if (r)
+            *r = 0;
+        char *e = std::max(r, n);
+        if (memcmp(p, marker, sizeof(marker)) == 0)
+        {
+#ifndef __EMSCRIPTEN__
+            m_helptext.push_back(p + sizeof(marker));
+#endif
+        }
+        else
+        {
+            m_helptext.push_back(p);
+        }
+        // next line
+        p = e ? e + 1 : nullptr;
     }
 }
 

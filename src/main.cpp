@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
@@ -33,7 +34,7 @@ uint32_t sleepDelay = SLEEP;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-#define PREFIX "data/"
+#define DEFAULT_PREFIX "data/"
 #define DEFAULT_MAPARCH "levels.mapz"
 #define CONF_FILE "game.cfg"
 
@@ -103,18 +104,38 @@ void loop_handler(void *arg)
     }
 }
 
+const std::string getPrefix()
+{
+    char *appdir_env = std::getenv("APPDIR");
+    if (appdir_env)
+    {
+        // std::string appDir = appdir_env;
+        printf("APPDIR environment variable found: %s\n", appdir_env);
+        // Construct the full path to your embedded data (e.g., an image)
+        std::filesystem::path data_file_path = std::filesystem::path(appdir_env) / "usr" / "share" / "data" / "";
+        return data_file_path;
+    }
+    else
+    {
+        printf("APPDIR environment variable not found.\n");
+        // Fallback or error handling: If not running as AppImage,
+        return DEFAULT_PREFIX;
+    }
+}
+
 int main(int argc, char *args[])
 {
     srand(static_cast<unsigned int>(time(NULL)));
-    CRuntime runtime;
     CMapArch maparch;
     params_t params;
     params.muteMusic = false;
     params.level = 0;
-    params.prefix = PREFIX;
+    params.prefix = getPrefix();
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
     if (!parseArgs(argc, args, params))
         return EXIT_FAILURE;
+    CRuntime runtime;
+    printf("prefix: %s\n", params.prefix.c_str());
     if (params.tests)
         test_recorder();
     if (!maparch.read(params.mapArch.c_str()))

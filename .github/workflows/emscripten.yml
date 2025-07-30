@@ -3,16 +3,10 @@ name: Emscripten C++ WebAssembly Build
 on:
   push:
     branches:
-      - main
       - master
-      - develop
-      - emscripten
-      - camera
   pull_request:
     branches:
       - master
-      - main
-      - develop
 
 jobs:
   build-wasm:

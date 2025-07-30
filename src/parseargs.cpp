@@ -17,6 +17,7 @@
 */
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include "parseargs.h"
 #include "skills.h"
 
@@ -47,6 +48,25 @@ void initArgs(params_t &params)
     params.skill = SKILL_EASY;
     params.hardcore = false;
     params.tests = false;
+    params.verbose = false;
+}
+
+void verbose(const char *path)
+{
+    printf("app:%s\n", path);
+    try
+    {
+        // Get the current working directory
+        std::filesystem::path currentPath = std::filesystem::current_path();
+
+        // Print the path to the console
+        printf("Current folder (std::filesystem): %s\n", currentPath.c_str());
+    }
+    catch (const std::filesystem::filesystem_error &e)
+    {
+        // Handle potential errors (e.g., permissions issues)
+        fprintf(stderr, "Filesystem error: %s\n", e.what());
+    }
 }
 
 bool parseArgs(const int argc, char *args[], params_t &params)
@@ -111,6 +131,11 @@ bool parseArgs(const int argc, char *args[], params_t &params)
             {
                 switch (args[i][j])
                 {
+                case 'v':
+                    printf("verbose\n");
+                    verbose(args[0]);
+                    params.verbose = true;
+                    break;
                 case 't':
                     printf("tests\n");
                     params.tests = true;

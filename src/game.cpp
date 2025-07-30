@@ -593,6 +593,7 @@ void CGame::addPoints(const int points)
 void CGame::addLife()
 {
     m_lives = std::min(m_lives + 1, static_cast<int>(MAX_LIVES));
+    playSound(SOUND_POWERUP);
 }
 
 int CGame::godModeTimer() const

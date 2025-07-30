@@ -1,0 +1,27 @@
+
+!HELP
+!====
+
+Use cursor keys to move.
+
+Collect all the diamonds to move to the
+next level. Avoid monsters and other
+hazards.
+
+Pick up objects to open up secret
+passages.
+
+F1 Help
+F2 Restart Game
+F3 Erase Scores
+F4 Pause Game
+__EM F5 Toggle Full Screen
+__EM F6 Playback Level
+__EM F7 Record Level
+__EM F8 Take Screenshot (in-game only)
+F9 Load savegame
+F10 Save savegame
+F11 Toggle Music
+F12 Harcore Mode
+
+~PRESS [F1] AGAIN TO RETURN TO THE GAME.

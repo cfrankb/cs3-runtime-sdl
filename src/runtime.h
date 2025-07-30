@@ -135,4 +135,5 @@ private:
     void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
     void manageMenu(CMenu &menu);
     bool fetchFile(const std::string &path, char **dest, const bool terminator);
+    void parseHelp(char *text);
 };

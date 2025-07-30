@@ -1,0 +1,78 @@
+name: C++ AppImage Build (Linux - g++)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.cpp'
+      - '**.h'
+      - 'Makefile'
+      - 'CMakeLists.txt' # If you use CMake to find libs, include it
+      - '.github/workflows/appimage-build.yml' # Trigger if this workflow file changes
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.cpp'
+      - '**.h'
+      - 'Makefile'
+      - 'CMakeLists.txt'
+      - '.github/workflows/appimage-build.yml'
+
+jobs:
+  build-appimage:
+    runs-on: ubuntu-latest # AppImage requires a Linux environment
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Build Dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake
+        sudo apt install -y libsdl2-dev libsdl2-mixer-dev zlib1g-dev
+        sudo apt install -y python3
+        sudo apt install -y libxmp-dev
+        sudo apt install -y libmpg123-dev libogg-dev libvorbis-dev libflac-dev libopusfile-dev
+        sudo apt install -y wget zip
+
+    - name: Compile C++ Application
+      run: |
+        python3 bin/gen.py sdl2
+        mkdir -p build
+        make
+      # env: # Optional: set environment variables if your Makefile needs them
+      #   BUILD_TYPE: Release
+
+    - name: Verify Executable Exists (Optional)
+      # Replace 'my_game_app' with the actual name of your executable
+      # And 'bin/' with the directory where your Makefile puts the executable
+      run: |
+        ls -l build/cs3-runtime
+        file build/cs3-runtime
+        ldd build/cs3-runtime
+
+    - name: Download linuxdeploy and plugins
+      # linuxdeploy is the tool used to create AppImages
+      # It needs plugins for specific runtimes like Qt, GTK, or general desktop integration
+      run: |
+        wget -q -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O packages/bin/linuxdeploy-x86_64.AppImage
+        chmod +x packages/bin/linuxdeploy-x86_64.AppImage
+
+
+    - name: Create AppDir and Collect Dependencies
+      # This step uses linuxdeploy to create the AppDir, which is the core of the AppImage.
+      # It bundles your executable and its runtime dependencies.
+      run: |
+        make -C packages
+
+    - name: Upload AppImage Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ github.event.repository.name }}-AppImage
+        path: |
+          packages/cs3-runtime.AppImage
