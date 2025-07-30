@@ -45,6 +45,10 @@ void splitString(const std::string str, StringVector &list)
 uint8_t *readFile(const char *fname)
 {
     FILE *sfile = fopen(fname, "rb");
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     uint8_t *data = nullptr;
     if (sfile)
     {
@@ -53,7 +57,7 @@ uint8_t *readFile(const char *fname)
         fseek(sfile, 0, SEEK_SET);
         data = new uint8_t[size + 1];
         data[size] = 0;
-        fread(data, size, 1, sfile);
+        readfile(data, size);
         fclose(sfile);
     }
     else
@@ -255,6 +259,10 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
     printf("fetching: %s\n", fname);
 
     FILE *sfile = fopen(fname, "rb");
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     if (!sfile)
     {
         sprintf(tmp, "can't open file: %s", fname);
@@ -266,7 +274,7 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
     delete[] tmp;
 
     char sig[4];
-    fread(sig, sizeof(sig), 1, sfile);
+    readfile(sig, sizeof(sig));
     if (memcmp(sig, "MAPZ", 4) == 0)
     {
         fclose(sfile);

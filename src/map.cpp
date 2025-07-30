@@ -169,8 +169,12 @@ bool CMap::read(IFile &file)
 
 bool CMap::read(FILE *sfile)
 {
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     char sig[4];
-    fread(sig, sizeof(SIG), 1, sfile);
+    readfile(sig, sizeof(SIG));
     if (memcmp(sig, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
@@ -178,7 +182,7 @@ bool CMap::read(FILE *sfile)
         return false;
     }
     uint16_t ver = 0;
-    fread(&ver, sizeof(VERSION), 1, sfile);
+    readfile(&ver, sizeof(VERSION));
     if (ver > VERSION)
     {
         m_lastError = "bad version";
@@ -187,23 +191,23 @@ bool CMap::read(FILE *sfile)
     }
     uint16_t len = 0;
     uint16_t hei = 0;
-    fread(&len, sizeof(uint8_t), 1, sfile);
-    fread(&hei, sizeof(uint8_t), 1, sfile);
+    readfile(&len, sizeof(uint8_t));
+    readfile(&hei, sizeof(uint8_t));
     len = len ? len : MAX_SIZE;
     hei = hei ? hei : MAX_SIZE;
     resize(len, hei, true);
-    fread(m_map, len * hei, 1, sfile);
+    readfile(m_map, len * hei);
     m_attrs.clear();
     uint16_t attrCount = 0;
-    fread(&attrCount, sizeof(attrCount), 1, sfile);
+    readfile(&attrCount, sizeof(attrCount));
     for (int i = 0; i < attrCount; ++i)
     {
         uint8_t x;
         uint8_t y;
         uint8_t a;
-        fread(&x, sizeof(x), 1, sfile);
-        fread(&y, sizeof(y), 1, sfile);
-        fread(&a, sizeof(a), 1, sfile);
+        readfile(&x, sizeof(x));
+        readfile(&y, sizeof(y));
+        readfile(&a, sizeof(a));
         setAttr(x, y, a);
     }
     extrahdr_t hdr;
@@ -211,17 +215,17 @@ bool CMap::read(FILE *sfile)
     m_title = "";
     // read title
     size_t ptr = ftell(sfile);
-    if (fread(&hdr, sizeof(hdr), 1, sfile) != 0)
+    if (readfile(&hdr, sizeof(hdr)))
     {
         if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0) && (hdr.ver == XTR_VER))
         {
             // printf("reading4: %s %d\n", hdr.sig, hdr.ver);
             uint16_t size = 0;
-            if (fread(&size, 1, 1, sfile) != 0)
+            if (readfile(&size, 1))
             {
                 char tmp[MAX_TITLE + 1];
                 tmp[size] = 0;
-                if (fread(tmp, size, 1, sfile) != 0)
+                if (readfile(tmp, size) != 0)
                 {
                     m_title = tmp;
                 }

@@ -11,7 +11,7 @@
 			Move around maps and triggers switches to reveal secrets.
 			Avoid monsters and other hazards to complete all the levels.</p>
 	</description>
-	<launchable type="desktop-id">cs3-runtime.desktop</launchable>
+	<launchable type="desktop-id">com.cfrankb.cs3-runtime.desktop</launchable>
 	<url type="vcs-browser">https://github.com/cfrankb/cs3-runtime-sdl</url>
 	<url type="homepage">https://github.com/cfrankb/cs3-runtime-sdl</url>
 	<screenshots>

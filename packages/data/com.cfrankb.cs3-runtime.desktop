@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Creepspread III
+Comment=A fun 2D puzzle action maze game about collecting diamonds and avoiding hazards
+Exec=cs3-runtime
+Terminal=false
+Icon=cs3-runtime
+Type=Application
+Categories=Game

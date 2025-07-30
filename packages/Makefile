@@ -1,10 +1,10 @@
 APP_NAME = cs3-runtime
 EXECUTABLE = ../build/${APP_NAME}
-DATAPATH = ../data
+DATAPATH = ../data/*
 APPDIR = $(APP_NAME).AppDir
 APP_ICON = data/${APP_NAME}.png # Path to your application icon
 APP_DATA = $(APPDIR)/usr/share/data
-DESKTOP_FILE = data/my_game.desktop # Path to your .desktop file
+DESKTOP_FILE = data/com.cfrankb.cs3-runtime.desktop # Path to your .desktop file
 APP_ID = com.cfrankb.$(APP_NAME)
 APP_DESKTOP_FILE = $(APPDIR)/usr/share/applications/$(APP_ID).desktop
 
@@ -16,7 +16,7 @@ SDL2_MIXER_LIB_PATH = ${PREFIX}/lib/libSDL2_mixer.so
 # Rule to create the AppImage
 appimage: clean_appimage $(EXECUTABLE)
 	# Create the basic AppDir structure
-	mkdir -p $(APPDIR)/usr/usr/data
+	mkdir -p $(APPDIR)/usr/share/data
 	mkdir -p $(APPDIR)/usr/bin
 	mkdir -p $(APPDIR)/usr/lib
 	mkdir -p $(APPDIR)/usr/share/applications
@@ -29,18 +29,11 @@ appimage: clean_appimage $(EXECUTABLE)
 	# Copy essential assets (e.g., res/ folder)
 	cp -r ${DATAPATH} ${APP_DATA} # Put assets next to executable, or in a specific data folder
 	cp data/com.cfrankb.cs3-runtime.appdata.xml $(APPDIR)/usr/share/metainfo
-	#cp -r ${DATAPATH} .
 
 	# Create a .desktop file for your application (important for desktop integration)
 	# This file describes your application to the desktop environment.
 	# It should point to your executable relative to the AppDir's usr/bin.
-	echo "[Desktop Entry]" > $(APP_DESKTOP_FILE)
-	echo "Name=$(APP_NAME)" >> $(APP_DESKTOP_FILE)
-	echo "Exec=${APP_NAME}" >> $(APP_DESKTOP_FILE)
-	echo "Icon=$(APP_NAME)" >> $(APP_DESKTOP_FILE)
-	echo "Type=Application" >> $(APP_DESKTOP_FILE)
-	echo "Categories=Game;" >> $(APP_DESKTOP_FILE)
-	# Add any other relevant desktop file entries
+	cp $(DESKTOP_FILE) $(APP_DESKTOP_FILE)
 
 	# Copy your application icon (used by the .desktop file)
 	cp $(APP_ICON) $(APPDIR)/usr/share/icons/hicolor/256x256/apps/$(APP_NAME).png

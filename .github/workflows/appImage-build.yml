@@ -77,4 +77,4 @@ jobs:
       with:
         name: ${{ github.event.repository.name }}-AppImage
         path: |
-          packages/cs3-runtime-x86_64.AppImage
+          packages/Creepspread_III-x86_64.AppImage

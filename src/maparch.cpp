@@ -174,11 +174,15 @@ bool CMapArch::read(const char *filename)
     } Header;
 
     FILE *sfile = fopen(filename, "rb");
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     if (sfile)
     {
         Header hdr;
         // read header
-        fread(&hdr, 12, 1, sfile);
+        readfile(&hdr, sizeof(Header));
         // check signature
         if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
         {
@@ -194,7 +198,7 @@ bool CMapArch::read(const char *filename)
         // read index
         fseek(sfile, hdr.offset, SEEK_SET);
         uint32_t *indexPtr = new uint32_t[hdr.count];
-        fread(indexPtr, 4 * hdr.count, 1, sfile);
+        readfile(indexPtr, sizeof(uint32_t) * hdr.count);
         forget();
         m_maps = new CMap *[hdr.count];
         m_size = hdr.count;
@@ -211,7 +215,7 @@ bool CMapArch::read(const char *filename)
     }
     else
     {
-        m_lastError = "can't read file";
+        m_lastError = "can't read file[0]";
     }
     return sfile != nullptr;
 }
@@ -268,13 +272,17 @@ const char *CMapArch::signature()
 bool CMapArch::extract(const char *filename)
 {
     FILE *sfile = fopen(filename, "rb");
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     if (!sfile)
     {
         m_lastError = "can't read header";
         return false;
     }
     char sig[4];
-    fread(sig, 4, 1, sfile);
+    readfile(sig, 4);
     fclose(sfile);
 
     if (memcmp(sig, MAAZ_SIG, sizeof(MAAZ_SIG)) == 0)
@@ -299,10 +307,14 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
     } Header;
 
     FILE *sfile = fopen(filename, "rb");
+    auto readfile = [sfile](auto ptr, auto size)
+    {
+        return fread(ptr, size, 1, sfile) == 1;
+    };
     if (sfile)
     {
         Header hdr;
-        fread(&hdr, 12, 1, sfile);
+        readfile(&hdr, sizeof(Header));
         // check signature
         if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
         {
@@ -310,7 +322,7 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
         }
         fseek(sfile, hdr.offset, SEEK_SET);
         uint32_t *indexPtr = new uint32_t[hdr.count];
-        fread(indexPtr, 4 * hdr.count, 1, sfile);
+        readfile(indexPtr, sizeof(uint32_t) * hdr.count);
         index.clear();
         for (int i = 0; i < hdr.count; ++i)
         {
