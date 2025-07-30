@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - 'master'
+      - 'develop'
     tags:
       - 'v*'
   pull_request:
@@ -55,6 +56,7 @@ jobs:
           cp -R data/* setup/data
           cp build/*.exe setup
           cp LICENSE setup
+          cp $GITHUB_WORKSPACE/deps/bin/libxmp-lite.dll setup
           ls -l setup
 
       - name: Upload Windows executable

@@ -3,7 +3,7 @@ name: C++ AppImage Build (Linux - g++)
 on:
   push:
     branches:
-      - main
+      - master
       - develop
     paths:
       - '**.cpp'
@@ -14,7 +14,7 @@ on:
       - '.github/workflows/appImage-build.yml' # Trigger if this workflow file changes
   pull_request:
     branches:
-      - main
+      - master
       - develop
     paths:
       - '**.cpp'

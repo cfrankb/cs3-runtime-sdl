@@ -107,7 +107,7 @@ def main():
             f'INC=-I{prefix}/include',
             f'LDFLAGS=-L{prefix}/lib -Wl,-t',
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
-            'CXXFLAGS=-O3 -pthread',
+            'CXXFLAGS=-O3 -pthread -std=c++17',
             'PARGS=',
             'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]

@@ -3,5 +3,5 @@ https://www.freedesktop.org/software/appstream/docs/chap-Quickstart.html#sect-Qu
 https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html#tag-developer
 appstreamcli validate --pedantic packages/data/cs3-runtime.appdata.xml
 https://hughsie.github.io/oars/generate.html
-
+https://github.com/ximion/appstream
  make && ./build/cs3-runtime -w workspace/ 0 --hard -t -m data/levels.mapz

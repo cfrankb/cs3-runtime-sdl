@@ -109,11 +109,9 @@ const std::string getPrefix()
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
     {
-        // std::string appDir = appdir_env;
         printf("APPDIR environment variable found: %s\n", appdir_env);
         // Construct the full path to your embedded data (e.g., an image)
-        std::filesystem::path data_file_path = std::filesystem::path(appdir_env) / "usr" / "share" / "data" / "";
-        return data_file_path;
+        return std::string(appdir_env) + "/usr/share/data/";
     }
     else
     {
