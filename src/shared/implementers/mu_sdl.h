@@ -39,7 +39,6 @@ public:
     enum
     {
         TYPE_NONE,
-        TYPE_XM,
         TYPE_OGG
     };
 
