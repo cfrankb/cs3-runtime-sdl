@@ -1064,8 +1064,8 @@ void CRuntime::takeScreenshot()
     std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
     std::tm *localTime = std::localtime(&currentTime);
     sprintf(filename, "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
-            1900 + localTime->tm_year,
-            localTime->tm_mon,
+            localTime->tm_year + 1900,
+            localTime->tm_mon + 1,
             localTime->tm_mday,
             localTime->tm_hour,
             localTime->tm_min,
@@ -1115,6 +1115,20 @@ void CRuntime::initOptions()
     {
         printf("is full screen?\n");
         toggleFullscreen();
+    }
+    if (m_config["viewport"] == "static")
+    {
+        m_cameraMode = CAMERA_MODE_STATIC;
+        printf("using viewport static\n");
+    }
+    else if (m_config["viewport"] == "dynamic")
+    {
+        m_cameraMode = CAMERA_MODE_DYNAMIC;
+        printf("using viewport dynamic\n");
+    }
+    else
+    {
+        printf("using viewport default\n");
     }
 }
 

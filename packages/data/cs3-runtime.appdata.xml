@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>cs3-runtime</id>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>GPL-3.0</project_license>
+	<name>Creepspread III</name>
+	<summary>Puzzle action game about collecting diamonds and avoiding hazards</summary>
+	<description>
+		<p>Collect all the diamonds to move to the next level;. Move around maps and triggers switches to reveal secrets. Avoid monsters and other hazards to complete all the levels.</p>
+	</description>
+	<launchable type="desktop-id">cs3-runtime.desktop</launchable>
+	<url type="homepage">https://github.com/cfrankb/cs3-runtime-sdl</url>
+	<screenshots>
+		<screenshot type="default">
+			<image>https://cfrankb.com/games/ems/images/screenshot20250630-104230.png</image>
+		</screenshot>
+	</screenshots>
+	<provides>
+		<id>cs3-runtime.desktop</id>
+	</provides>
+</component>
