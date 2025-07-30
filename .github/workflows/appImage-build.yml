@@ -10,7 +10,7 @@ on:
       - '**.h'
       - 'Makefile'
       - 'CMakeLists.txt' # If you use CMake to find libs, include it
-      - '.github/workflows/appimage-build.yml' # Trigger if this workflow file changes
+      - '.github/workflows/appImage-build.yml' # Trigger if this workflow file changes
   pull_request:
     branches:
       - main
@@ -21,6 +21,7 @@ on:
       - 'Makefile'
       - 'CMakeLists.txt'
       - '.github/workflows/appimage-build.yml'
+      - 'packages/**'
 
 jobs:
   build-appimage:

@@ -26,7 +26,7 @@ appimage: clean_appimage $(EXECUTABLE)
 
 	# Copy essential assets (e.g., res/ folder)
 	cp -r ${DATAPATH} ${APP_DATA} # Put assets next to executable, or in a specific data folder
-	cp data/cs3-runtime.appdata.xml $(APPDIR)/usr/share/metainfo
+	cp data/com.cfrankb.cs3-runtime.appdata.xml $(APPDIR)/usr/share/metainfo
 	#cp -r ${DATAPATH} .
 
 	# Create a .desktop file for your application (important for desktop integration)

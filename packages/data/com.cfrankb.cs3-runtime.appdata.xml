@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>com.cfrankb.cs3-runtime</id>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>GPL-3.0</project_license>
+	<name>Creepspread III</name>
+	<summary>Charming 2D puzzle/action game about collecting diamonds and avoiding hazards</summary>
+	<description>
+		<p> Explore a magical world, solve puzzles, and collect treasures in this
+            charming 2D game. Collect all the diamonds to move to the next level.
+			Move around maps and triggers switches to reveal secrets.
+			Avoid monsters and other hazards to complete all the levels.</p>
+	</description>
+	<launchable type="desktop-id">cs3-runtime.desktop</launchable>
+	<url type="vcs-browser">https://github.com/cfrankb/cs3-runtime-sdl</url>
+	<url type="homepage">https://github.com/cfrankb/cs3-runtime-sdl</url>
+	<screenshots>
+		<screenshot type="default">
+			<caption>Level 1</caption>
+			<image>https://cfrankb.com/games/ems/images/screenshot20250630-104230.png</image>
+		</screenshot>
+	</screenshots>
+ 	<developer id="com.cfrankb">
+        <name>Francois Blanchette</name>
+    	<url type="homepage">https://cfrankb.com</url> 
+	</developer>
+	<provides>
+		<id>cs3-runtime.desktop</id>
+	</provides>
+    <content_rating type="oars-1.0">
+      <content_attribute id="violence-cartoon">mild</content_attribute>
+      <content_attribute id="violence-fantasy">mild</content_attribute>
+    </content_rating>
+  	<releases>
+      <release version="0.5-alpha" date="2015-07-30">
+        <description>
+          <p>Initial appImage Release</p>
+        </description>
+       </release>
+  	</releases>	
+</component>
