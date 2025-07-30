@@ -5,6 +5,8 @@ APPDIR = $(APP_NAME).AppDir
 APP_ICON = data/${APP_NAME}.png # Path to your application icon
 APP_DATA = $(APPDIR)/usr/share/data
 DESKTOP_FILE = data/my_game.desktop # Path to your .desktop file
+APP_ID = com.cfrankb.$(APP_NAME)
+APP_DESKTOP_FILE = $(APPDIR)/usr/share/applications/$(APP_ID).desktop
 
 # Define paths to your installed SDL2 and SDL2_mixer libraries
 PREFIX=/usr/local
@@ -32,12 +34,12 @@ appimage: clean_appimage $(EXECUTABLE)
 	# Create a .desktop file for your application (important for desktop integration)
 	# This file describes your application to the desktop environment.
 	# It should point to your executable relative to the AppDir's usr/bin.
-	echo "[Desktop Entry]" > $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
-	echo "Name=$(APP_NAME)" >> $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
-	echo "Exec=${APP_NAME}" >> $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
-	echo "Icon=$(APP_NAME)" >> $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
-	echo "Type=Application" >> $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
-	echo "Categories=Game;" >> $(APPDIR)/usr/share/applications/$(APP_NAME).desktop
+	echo "[Desktop Entry]" > $(APP_DESKTOP_FILE)
+	echo "Name=$(APP_NAME)" >> $(APP_DESKTOP_FILE)
+	echo "Exec=${APP_NAME}" >> $(APP_DESKTOP_FILE)
+	echo "Icon=$(APP_NAME)" >> $(APP_DESKTOP_FILE)
+	echo "Type=Application" >> $(APP_DESKTOP_FILE)
+	echo "Categories=Game;" >> $(APP_DESKTOP_FILE)
 	# Add any other relevant desktop file entries
 
 	# Copy your application icon (used by the .desktop file)
@@ -54,7 +56,7 @@ appimage: clean_appimage $(EXECUTABLE)
 	bin/linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir $(APPDIR) \
 	              --executable $(APPDIR)/usr/bin/${APP_NAME} \
 	              --output appimage \
-	              --desktop-file $(APPDIR)/usr/share/applications/$(APP_NAME).desktop \
+	              --desktop-file $(APP_DESKTOP_FILE) \
 	              --icon-file $(APP_ICON)
 	ls -la .
 	#--appimage-extract

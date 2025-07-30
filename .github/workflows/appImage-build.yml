@@ -9,6 +9,7 @@ on:
       - '**.cpp'
       - '**.h'
       - 'Makefile'
+      - 'packages/Makefile'
       - 'CMakeLists.txt' # If you use CMake to find libs, include it
       - '.github/workflows/appImage-build.yml' # Trigger if this workflow file changes
   pull_request:
