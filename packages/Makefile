@@ -2,16 +2,12 @@ APP_NAME = cs3-runtime
 EXECUTABLE = ../build/${APP_NAME}
 DATAPATH = ../data/*
 APPDIR = $(APP_NAME).AppDir
-APP_ICON = data/${APP_NAME}.png # Path to your application icon
 APP_DATA = $(APPDIR)/usr/share/data
-DESKTOP_FILE = data/com.cfrankb.cs3-runtime.desktop # Path to your .desktop file
 APP_ID = com.cfrankb.$(APP_NAME)
+APP_ICON = data/${APP_NAME}.png
+DESKTOP_FILE = data/$(APP_ID).desktop
 APP_DESKTOP_FILE = $(APPDIR)/usr/share/applications/$(APP_ID).desktop
 
-# Define paths to your installed SDL2 and SDL2_mixer libraries
-PREFIX=/usr/local
-SDL2_LIB_PATH = ${PREFIX}/lib/libSDL2.so
-SDL2_MIXER_LIB_PATH = ${PREFIX}/lib/libSDL2_mixer.so
 
 # Rule to create the AppImage
 appimage: clean_appimage $(EXECUTABLE)

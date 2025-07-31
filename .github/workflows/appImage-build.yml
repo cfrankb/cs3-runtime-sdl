@@ -10,8 +10,8 @@ on:
       - '**.h'
       - 'Makefile'
       - 'packages/Makefile'
-      - 'CMakeLists.txt' # If you use CMake to find libs, include it
-      - '.github/workflows/appImage-build.yml' # Trigger if this workflow file changes
+      - '.github/workflows/appImage-build.yml'
+      - 'packages/data/**'
   pull_request:
     branches:
       - master
@@ -21,12 +21,12 @@ on:
       - '**.h'
       - 'Makefile'
       - 'CMakeLists.txt'
-      - '.github/workflows/appimage-build.yml'
-      - 'packages/**'
+      - '.github/workflows/appImage-build.yml'
+      - 'packages/data/**'
 
 jobs:
   build-appimage:
-    runs-on: ubuntu-latest # AppImage requires a Linux environment
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -51,24 +51,20 @@ jobs:
       #   BUILD_TYPE: Release
 
     - name: Verify Executable Exists (Optional)
-      # Replace 'my_game_app' with the actual name of your executable
-      # And 'bin/' with the directory where your Makefile puts the executable
       run: |
         ls -l build/cs3-runtime
         file build/cs3-runtime
         ldd build/cs3-runtime
 
     - name: Download linuxdeploy and plugins
-      # linuxdeploy is the tool used to create AppImages
-      # It needs plugins for specific runtimes like Qt, GTK, or general desktop integration
       run: |
         wget -q -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O packages/bin/linuxdeploy-x86_64.AppImage
         chmod +x packages/bin/linuxdeploy-x86_64.AppImage
 
 
     - name: Create AppDir and Collect Dependencies
-      # This step uses linuxdeploy to create the AppDir, which is the core of the AppImage.
-      # It bundles your executable and its runtime dependencies.
+      # This step uses linuxdeploy to create the AppDir, which is the core of the AppImage
+      # and bundles the executable and its runtime dependencies.
       run: |
         make -C packages
 

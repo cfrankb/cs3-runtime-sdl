@@ -10,22 +10,18 @@ on:
 
 jobs:
   build-wasm:
-    runs-on: ubuntu-latest # Emscripten is primarily developed for Linux/macOS. Ubuntu is a good choice.
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Emscripten SDK
-      # This action automatically downloads and activates the Emscripten SDK.
-      # You can specify a version, e.g., '3.1.45'
       uses: mymindstorm/setup-emsdk@v12
       with:
-        version: 'latest' # Use the latest stable Emscripten SDK version
-        # If you need a specific version: version: '3.1.45'
+        version: 'latest'
 
     - name: Verify Emscripten Setup
-      # Check if emcc and em++ are in PATH
       run: |
         emcc --version
         em++ --version

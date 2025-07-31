@@ -11,14 +11,23 @@ EXIT_FAILURE = 1
 def prepare_deps(deps, fname):
     lines = []
     basename = ntpath.basename(fname)
-    name = basename.replace('.cpp', '')
-    fname_h = fname.replace('.cpp', '.h')
     ref = fname
-    if os.path.isfile(fname_h):
-        ref += f' {fname_h}'
-    lines.append(f'$(BPATH)/{name}$(EXT): {ref}')
-    lines.append(f'\t$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@')
-    deps.append(f'{name}')
+    if fname.endswith('.cpp'):
+        name = basename[0:-4]#  '.cpp' >> ''
+        fname_h = fname[0:-4] + '.h'# '.cpp' >> '.h'
+        if os.path.isfile(fname_h):
+            ref += f' {fname_h}'
+        lines.append(f'$(BPATH)/{name}$(EXT): {ref}')
+        lines.append(f'\t$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@')
+        deps.append(f'{name}$(EXT)')
+    elif fname.endswith('.rc'):
+        #windres icon.rc -O coff -o icon.res
+        name = basename[0:-3]# '.rc' >> ''
+        lines.append(f'$(BPATH)/{name}.res: {ref}')
+        lines.append(f'\t$(WINDRES) $< -O coff -o $@')
+        deps.append(f'{name}.res')
+    else:
+        print(f'no receipe for unhandled file: {fname}\n')
     return '\n'.join(lines)
 
 
@@ -31,7 +40,7 @@ def get_deps_blocks(extra_path):
         for f in glob.glob(pattern):
             deps_blocks.append(prepare_deps(deps, f))
 
-    objs = ' '.join(f'$(BPATH)/{x}$(EXT)' for x in deps)
+    objs = ' '.join(f'$(BPATH)/{x}' for x in deps)
     lines = []
     lines.append(f'$(TARGET): $(DEPS)')
     lines.append(
@@ -101,9 +110,12 @@ def main():
         print("type `make` to generare binary.")
         ext = '.o'
     elif sys.argv[1] == 'mingw32-sdl2':
+        arch = 'x86_64-w64'
+        extra_paths = ['src/*.rc']
         prefix = sys.argv[2] if len(sys.argv) == 3 else '/sdl2-windows'
         vars = [
-            'CXX=x86_64-w64-mingw32-g++',
+            f'WINDRES={arch}-mingw32-windres',
+            f'CXX={arch}-mingw32-g++',
             f'INC=-I{prefix}/include',
             f'LDFLAGS=-L{prefix}/lib -Wl,-t',
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
