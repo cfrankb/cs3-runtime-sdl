@@ -15,16 +15,16 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "recorder.h"
+#include "../src/recorder.h"
 #include <cstring>
 
 bool test_recorder()
 {
-    printf("test_recorder\n");
+    printf("==> test_recorder()\n");
 
     FILE *tfile;
     CRecorder rec(5);
-    tfile = fopen("test0000.rec", "wb");
+    tfile = fopen("tests/out/test0000.rec", "wb");
     rec.start(tfile, true);
     rec.stop();
 
@@ -51,7 +51,7 @@ bool test_recorder()
         DOWN, DOWN, DOWN};                  // 32
 
     uint8_t input[4];
-    tfile = fopen("test0001.rec", "wb");
+    tfile = fopen("tests/out/test0001.rec", "wb");
     rec.start(tfile, true);
     for (size_t i = 0; i < sizeof(data); ++i)
     {
@@ -63,7 +63,7 @@ bool test_recorder()
     }
     rec.stop();
 
-    FILE *sfile = fopen("test0001.rec", "rb");
+    FILE *sfile = fopen("tests/out/test0001.rec", "rb");
     rec.start(sfile, false);
     uint8_t output[4];
     for (size_t i = 0; i < sizeof(data); ++i)

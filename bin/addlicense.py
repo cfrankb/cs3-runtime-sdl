@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from os.path import join
 import os
 import glob

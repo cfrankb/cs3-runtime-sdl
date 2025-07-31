@@ -4,3 +4,4 @@ build/*
 workspace/*
 notes.txt
 /Makefile
+tests/out/*

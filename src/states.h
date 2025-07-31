@@ -1,6 +1,6 @@
 /*
     cs3-runtime-sdl
-    Copyright (C) 2025  Francois Blanchette
+    Copyright (C) 2025 Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,20 +16,40 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#include <string>
+
+#include <cstdio>
 #include <cstdint>
+#include <string>
+#include <unordered_map>
 
-typedef struct
+class IFile;
+
+class CStates
 {
-    int level;
-    std::string prefix;
-    bool muteMusic;
-    bool fullscreen;
-    bool hardcore;
-    bool verbose;
-    uint8_t skill;
-    std::string mapArch;
-    std::string workspace;
-} params_t;
 
-bool parseArgs(const int argc, char *args[], params_t &params);
+public:
+    CStates();
+    ~CStates();
+
+    void setU(const uint8_t k, const uint16_t v);
+    void setS(const uint8_t k, const std::string &v);
+    uint16_t getU(const uint8_t k);
+    const char *getS(const uint8_t k);
+
+    bool read(IFile &sfile);
+    bool write(IFile &tfile);
+    bool read(FILE *sfile);
+    bool write(FILE *tfile);
+
+    void debug();
+    void clear();
+
+private:
+    std::unordered_map<uint8_t, std::string> m_stateS;
+    std::unordered_map<uint8_t, uint16_t> m_stateU;
+
+    enum
+    {
+        MAX_STRING = 256
+    };
+};

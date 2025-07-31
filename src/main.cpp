@@ -24,7 +24,6 @@
 #include "maparch.h"
 #include "parseargs.h"
 #include "shared/implementers/mu_sdl.h"
-#include "tests.h"
 
 const uint32_t FPS = 24;
 const uint32_t SLEEP = 1000 / FPS;
@@ -134,8 +133,6 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     CRuntime runtime;
     printf("prefix: %s\n", params.prefix.c_str());
-    if (params.tests)
-        test_recorder();
     if (!maparch.read(params.mapArch.c_str()))
     {
         fprintf(stderr, "failed to read maparch: %s %s\n", params.mapArch.c_str(), maparch.lastError());

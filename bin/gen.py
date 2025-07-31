@@ -31,20 +31,23 @@ def prepare_deps(deps, fname):
     return '\n'.join(lines)
 
 
-def get_deps_blocks(extra_path):
+def get_deps_blocks(extra_path, excluded):
     paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"] + extra_path
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
     for pattern in paths:
         for f in glob.glob(pattern):
-            deps_blocks.append(prepare_deps(deps, f))
+            if ntpath.basename(f) not in excluded:
+                deps_blocks.append(prepare_deps(deps, f))
 
     objs = ' '.join(f'$(BPATH)/{x}' for x in deps)
     lines = []
     lines.append(f'$(TARGET): $(DEPS)')
     lines.append(
-        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)')
+        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)' \
+        f'&& echo "to run app: $(TARGET)"'
+    )
     deps_blocks.append('\n'.join(lines))
     lines = []
     lines.append('clean:')
@@ -76,15 +79,39 @@ python bin/gen.py mingw32-sdl2
 
 '''.strip()
 
+class Params:
+    def __init__(self, argv):
+        self.tests = False
+        self.action = ''
+        self.prefix = ''
+        for i in range(1, len(argv)):
+            if argv[i] == '-t':
+                self.tests = True
+            elif self.action == '':
+                self.action = argv[i]
+            elif self.prefix == '':
+                self.prefix = argv[i]
+            else:
+                print(f'extra arg at pos {i} ignored: "{argv[i]}"')
+
+    def has_prefix(self):
+        return self.prefix != ''
+
 # https://www.reddit.com/r/C_Programming/comments/18xgs92/fixing_a_github_action_to_build_my_c_project_for/
 def main():
+    params = Params(sys.argv)
     extra_paths = []
-    if (len(sys.argv) == 2 and sys.argv[1] not in options) or \
-        (len(sys.argv) == 3 and sys.argv[1] not in ['sdl2-static', 'mingw32-sdl2']) or \
-        (len(sys.argv) != 2 and len(sys.argv) != 3):
+    excluded = []
+    bname = 'cs3-runtime'
+    if params.tests:
+        excluded += ['main.cpp']
+        extra_paths += ['tests/*.cpp']
+        bname = 'tests'
+
+    if params.action not in options:
         print(help_text)
         exit(EXIT_FAILURE)
-    elif sys.argv[1] == 'sdl2':
+    elif params.action == 'sdl2':
         vars = [
             'CXX=g++',
             'INC=',
@@ -92,12 +119,12 @@ def main():
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3 -Wall',
             'PARGS=',
-            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
-    elif sys.argv[1] == 'sdl2-static':
-        prefix = sys.argv[2] if len(sys.argv) == 3 else '/usr/local'
+    elif params.action == 'sdl2-static':
+        prefix = params.prefix if params.has_prefix() else '/usr/local'
         vars = [
             'CXX=g++',
             f'INC=-I{prefix}/include',
@@ -105,14 +132,14 @@ def main():
             'LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
             'PARGS=',
-            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
-    elif sys.argv[1] == 'mingw32-sdl2':
+    elif params.action == 'mingw32-sdl2':
         arch = 'x86_64-w64'
-        extra_paths = ['src/*.rc']
-        prefix = sys.argv[2] if len(sys.argv) == 3 else '/sdl2-windows'
+        extra_paths += ['src/*.rc']
+        prefix = params.prefix if params.has_prefix() else '/sdl2-windows'
         vars = [
             f'WINDRES={arch}-mingw32-windres',
             f'CXX={arch}-mingw32-g++',
@@ -121,11 +148,13 @@ def main():
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread -std=c++17',
             'PARGS=',
-            'BPATH=build', 'BNAME=cs3-runtime', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', 'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
-    elif sys.argv[1] == 'emsdl2':
+    elif params.action == 'emsdl2':
+        if params.tests:
+            print("tests unsupported for this config")
         vars = [
             'CXX=em++',
             'INC=',
@@ -139,7 +168,8 @@ def main():
         ext = '.o'
     print("type `make clean` to delete the content of the build folder.")
 
-    deps_blocks, objs = get_deps_blocks(extra_paths)
+
+    deps_blocks, objs = get_deps_blocks(extra_paths, excluded)
     vars.append(f'DEPS={objs}')
     vars.append(f'EXT={ext}')
     with open('Makefile', 'w') as tfile:
