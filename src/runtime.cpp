@@ -30,6 +30,7 @@
 #include "chars.h"
 #include "skills.h"
 #include "menu.h"
+#include "strhelper.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -781,39 +782,6 @@ void CRuntime::openMusicForLevel(int i)
     }
 }
 
-void CRuntime::splitString2(const std::string &str, StringVector &list)
-{
-    unsigned int j = 0;
-    bool inQuote = false;
-    std::string item;
-    while (j < str.length())
-    {
-        if (str[j] == '"')
-        {
-            inQuote = !inQuote;
-        }
-        else if (!isspace(str[j]) || inQuote)
-        {
-            item += str[j];
-        }
-        if (!inQuote && isspace(str[j]))
-        {
-            list.emplace_back(item);
-            while (isspace(str[j]) && j < str.length())
-            {
-                ++j;
-            }
-            item.clear();
-            continue;
-        }
-        ++j;
-    }
-    if (item.size())
-    {
-        list.emplace_back(item);
-    }
-}
-
 bool CRuntime::parseConfig(const char *filename)
 {
     CFileWrap file;
@@ -832,32 +800,7 @@ bool CRuntime::parseConfig(const char *filename)
     int line = 1;
     while (p && *p)
     {
-        char *en = strstr(p, "\n");
-        if (en)
-        {
-            *en = 0;
-        }
-        char *er = strstr(p, "\r");
-        if (er)
-        {
-            *er = 0;
-        }
-        char *e = er > en ? er : en;
-        char *c = strstr(p, "#");
-        if (c)
-        {
-            *c = 0;
-        }
-        while (*p == ' ' || *p == '\t')
-        {
-            ++p;
-        }
-        int i = strlen(p) - 1;
-        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
-        {
-            p[i] = '\0';
-            --i;
-        }
+        char *next = processLine(p);
         if (p[0] == '[')
         {
             ++p;
@@ -902,7 +845,7 @@ bool CRuntime::parseConfig(const char *filename)
                 fprintf(stderr, "item for unknown section %s on line %d\n", section.c_str(), line);
             }
         }
-        p = e ? e + 1 : nullptr;
+        p = next;
         ++line;
     }
     delete[] tmp;

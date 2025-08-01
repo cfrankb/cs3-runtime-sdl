@@ -28,7 +28,7 @@ license_lua = license_cpp.replace('/*', '--[[').replace('*/', ']]--')
 # from lgckutil.license import *
 
 specs = [
-    'src',
+    'src', 'tests'
 ]
 
 

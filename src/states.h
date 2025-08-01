@@ -31,10 +31,10 @@ public:
     CStates();
     ~CStates();
 
-    void setU(const uint8_t k, const uint16_t v);
-    void setS(const uint8_t k, const std::string &v);
-    uint16_t getU(const uint8_t k);
-    const char *getS(const uint8_t k);
+    void setU(const uint16_t k, const uint16_t v);
+    void setS(const uint16_t k, const std::string &v);
+    uint16_t getU(const uint16_t k);
+    const char *getS(const uint16_t k);
 
     bool read(IFile &sfile);
     bool write(IFile &tfile);
@@ -45,11 +45,13 @@ public:
     void clear();
 
 private:
-    std::unordered_map<uint8_t, std::string> m_stateS;
-    std::unordered_map<uint8_t, uint16_t> m_stateU;
+    std::unordered_map<uint16_t, std::string> m_stateS;
+    std::unordered_map<uint16_t, uint16_t> m_stateU;
 
     enum
     {
-        MAX_STRING = 256
+        MAX_STRING = 256,
+        COUNT_BYTES = sizeof(uint16_t),
+        LEN_BYTES = sizeof(uint16_t),
     };
 };

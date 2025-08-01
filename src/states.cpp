@@ -26,7 +26,7 @@ CStates::~CStates()
 {
 }
 
-void CStates::setU(const uint8_t k, const uint16_t v)
+void CStates::setU(const uint16_t k, const uint16_t v)
 {
     if (v)
         m_stateU[k] = v;
@@ -34,7 +34,7 @@ void CStates::setU(const uint8_t k, const uint16_t v)
         m_stateU.erase(k);
 }
 
-void CStates::setS(const uint8_t k, const std::string &v)
+void CStates::setS(const uint16_t k, const std::string &v)
 {
     if (v.size())
         m_stateS[k] = v;
@@ -42,7 +42,7 @@ void CStates::setS(const uint8_t k, const std::string &v)
         m_stateS.erase(k);
 }
 
-uint16_t CStates::getU(const uint8_t k)
+uint16_t CStates::getU(const uint16_t k)
 {
     if (m_stateU.count(k))
         return m_stateU[k];
@@ -50,7 +50,7 @@ uint16_t CStates::getU(const uint8_t k)
         return 0;
 }
 
-const char *CStates::getS(const uint8_t k)
+const char *CStates::getS(const uint16_t k)
 {
     if (m_stateS.count(k))
         return m_stateS[k].c_str();
@@ -66,23 +66,23 @@ bool CStates::read(IFile &sfile)
     };
 
     size_t count = 0;
-    readfile(&count, 1);
+    readfile(&count, COUNT_BYTES);
     m_stateU.clear();
     for (size_t i = 0; i < count; ++i)
     {
-        uint8_t k = 0;
+        uint16_t k = 0;
         uint16_t v = 0;
         readfile(&k, sizeof(k));
         readfile(&v, sizeof(v));
         m_stateU[k] = v;
     }
     char *v = new char[MAX_STRING];
-    readfile(&count, 1);
+    readfile(&count, COUNT_BYTES);
     m_stateS.clear();
     for (size_t i = 0; i < count; ++i)
     {
-        uint8_t k = 0;
-        uint8_t len = 0;
+        uint16_t k = 0;
+        uint16_t len = 0;
         readfile(&k, sizeof(k));
         readfile(&len, sizeof(len));
         v[len] = '\0';
@@ -101,7 +101,7 @@ bool CStates::write(IFile &tfile)
     };
 
     size_t count = m_stateU.size();
-    writefile(&count, 1);
+    writefile(&count, COUNT_BYTES);
     for (const auto &[k, v] : m_stateU)
     {
         writefile(&k, sizeof(k));
@@ -109,12 +109,12 @@ bool CStates::write(IFile &tfile)
     }
 
     count = m_stateS.size();
-    writefile(&count, 1);
+    writefile(&count, COUNT_BYTES);
     for (const auto &[k, v] : m_stateS)
     {
         writefile(&k, sizeof(k));
         size_t len = v.size();
-        writefile(&len, 1);
+        writefile(&len, LEN_BYTES);
         writefile(v.c_str(), len);
     }
     return true;
@@ -128,25 +128,25 @@ bool CStates::read(FILE *sfile)
     };
 
     size_t count = 0;
-    readfile(&count, 1);
+    readfile(&count, COUNT_BYTES);
     m_stateU.clear();
     for (size_t i = 0; i < count; ++i)
     {
-        uint8_t k = 0;
+        uint16_t k = 0;
         uint16_t v = 0;
-        readfile(&k, 1);
-        readfile(&v, 2);
+        readfile(&k, sizeof(k));
+        readfile(&v, sizeof(v));
         m_stateU[k] = v;
     }
     char *v = new char[MAX_STRING];
-    readfile(&count, 1);
+    readfile(&count, COUNT_BYTES);
     m_stateS.clear();
     for (size_t i = 0; i < count; ++i)
     {
-        uint8_t k = 0;
-        uint8_t len = 0;
-        readfile(&k, 1);
-        readfile(&len, 1);
+        uint16_t k = 0;
+        uint16_t len = 0;
+        readfile(&k, sizeof(k));
+        readfile(&len, sizeof(len));
         v[len] = '\0';
         readfile(v, len);
         m_stateS[k] = v;
@@ -163,7 +163,7 @@ bool CStates::write(FILE *tfile)
     };
 
     size_t count = m_stateU.size();
-    writefile(&count, 1);
+    writefile(&count, COUNT_BYTES);
     for (const auto &[k, v] : m_stateU)
     {
         writefile(&k, sizeof(k));
@@ -171,12 +171,12 @@ bool CStates::write(FILE *tfile)
     }
 
     count = m_stateS.size();
-    writefile(&count, 1);
+    writefile(&count, COUNT_BYTES);
     for (const auto &[k, v] : m_stateS)
     {
         writefile(&k, sizeof(k));
         size_t len = v.size();
-        writefile(&len, 1);
+        writefile(&len, LEN_BYTES);
         writefile(v.c_str(), len);
     }
     return true;
@@ -190,15 +190,15 @@ void CStates::clear()
 
 void CStates::debug()
 {
-    printf("\n**** m_stateU: %d\n\n", m_stateU.size());
+    printf("\n**** m_stateU: %ld\n\n", m_stateU.size());
     for (const auto &[k, v] : m_stateU)
     {
-        printf("[%d] => [%d]\n", k, v);
+        printf("[%d / 0x%.2x] => [%d / 0x%.2x]\n", k, k, v, v);
     }
 
-    printf("\n***** m_stateS: %d\n\n", m_stateS.size());
+    printf("\n***** m_stateS: %ld\n\n", m_stateS.size());
     for (const auto &[k, v] : m_stateS)
     {
-        printf("[%d] => [%s]\n", k, v.c_str());
+        printf("[%d / 0x%.2x] => [%s]\n", k, k, v.c_str());
     }
 }

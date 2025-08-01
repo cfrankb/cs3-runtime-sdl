@@ -18,6 +18,8 @@
 #pragma once
 #include <string>
 #include <list>
+#include <vector>
+#include <list>
 const char *toUpper(char *s);
 char *getUUID();
 bool copyFile(const std::string in, const std::string out, std::string &errMsg);

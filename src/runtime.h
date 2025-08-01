@@ -122,7 +122,6 @@ protected:
 
 private:
     void drawTitleScreen(CFrame &bitmap);
-    void splitString2(const std::string &str, StringVector &list);
     void addTrailSlash(std::string &path);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
