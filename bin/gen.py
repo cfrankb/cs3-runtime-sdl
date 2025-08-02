@@ -148,7 +148,7 @@ def main():
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread -std=c++17',
             'PARGS=',
-            'BPATH=build', 'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
         ext = '.o'

@@ -35,6 +35,7 @@ jobs:
             pkg-config \
             wget \
             unzip \
+            zip \
             python3 \
             git
 
@@ -60,11 +61,12 @@ jobs:
           ls -l setup
 
       - name: Compress to zip file
-        working-directory: ${{ runner.temp }}\build\release
         run: |
           cd setup
-          7z a Creepspread_III_mingw-win32.zip *
-          dir /s
+          zip -r Creepspread_III_mingw-win32.zip *
+          ls -l
+          mv Creepspread_III_mingw-win32.zip ..
+          ls -l ..
 
       - name: Release
         uses: softprops/action-gh-release@v1
@@ -72,7 +74,7 @@ jobs:
         with:
           files: |
             LICENSE
-            setup/*.zip
+            *.zip
 
       - name: Upload Windows executable
         uses: actions/upload-artifact@master
