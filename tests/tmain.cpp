@@ -16,20 +16,44 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cstdio>
+#include <functional>
+#include <vector>
+#include <typeinfo>
 #include "t_recorder.h"
 #include "t_states.h"
 #include "t_stateparser.h"
+#include "t_maparch.h"
+
+#define FCT(x) {x, #x}
+using Function = std::function<bool(void)>;
+struct Test
+{
+    Function f;
+    const char *s;
+};
 
 int main(int argc, char *args[])
 {
-
     printf("running tests\n");
     printf("==============\n\n");
 
-    int failed = !test_recorder() +
-                 !test_states() +
-                 !test_stateparser();
+    std::vector<Test> fct = {
+        FCT(test_recorder),
+        FCT(test_states),
+        FCT(test_stateparser),
+        FCT(test_maparch),
+    };
 
-    printf("\n\n###### failed: %d\n", failed);
+    int failed = 0;
+    for (size_t i = 0; i < fct.size(); ++i)
+    {
+        printf("==> %s()\n", fct[i].s);
+        failed += !fct[i].f();
+    }
+
+    if (failed)
+        fprintf(stderr, "\n\n###### failed: %d\n", failed);
+    else
+        printf("\n\n###### completed\n");
     return failed != 0;
 }

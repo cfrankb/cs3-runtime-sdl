@@ -29,6 +29,7 @@ CMapArch::CMapArch()
     m_max = GROW_BY;
     m_size = 0;
     m_maps = new CMap *[m_max];
+    memset(m_maps, 0, sizeof(CMap *) * m_max);
 }
 
 CMapArch::~CMapArch()
@@ -52,7 +53,8 @@ void CMapArch::forget()
     {
         for (int i = 0; i < m_size; ++i)
         {
-            delete m_maps[i];
+            if (m_maps[i])
+                delete m_maps[i];
         }
         delete[] m_maps;
         m_maps = nullptr;

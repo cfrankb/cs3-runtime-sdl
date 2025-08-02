@@ -64,6 +64,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
+    m_title = nullptr;
 }
 
 CRuntime::~CRuntime()
@@ -275,7 +276,7 @@ void CRuntime::doInput()
             }
 #endif
             printf("SQL_QUIT\n");
-            exit(0);
+            m_isRunning = false;
             break;
 
         case SDL_CONTROLLERDEVICEADDED:
@@ -869,7 +870,7 @@ void CRuntime::setWorkspace(const char *workspace)
     addTrailSlash(m_workspace);
 }
 
-void CRuntime::addTrailSlash(std::string &path)
+std::string &CRuntime::addTrailSlash(std::string &path)
 {
     if (path.size() == 0)
     {
@@ -880,6 +881,7 @@ void CRuntime::addTrailSlash(std::string &path)
     {
         path += "/";
     }
+    return path;
 }
 
 void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
@@ -1301,4 +1303,9 @@ bool CRuntime::initControllers()
         fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
     return true;
+}
+
+bool CRuntime::isRunning() const
+{
+    return m_isRunning;
 }

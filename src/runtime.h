@@ -48,6 +48,8 @@ public:
     void setWorkspace(const char *workspace);
     void initOptions();
     void setStartLevel(int level);
+    bool isRunning() const;
+    static std::string &addTrailSlash(std::string &path);
 
     typedef struct
     {
@@ -98,6 +100,7 @@ protected:
     int m_volume = 10;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
+    bool m_isRunning = true;
     enum
     {
         FONT_SIZE = 8,
@@ -122,7 +125,6 @@ protected:
 
 private:
     void drawTitleScreen(CFrame &bitmap);
-    void addTrailSlash(std::string &path);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
     void cleanUpCredits();

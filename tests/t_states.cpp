@@ -46,8 +46,6 @@ static bool checkState(CStates &states, const char *context)
 
 bool test_states()
 {
-    printf("==> test_states()\n");
-
     CStates states;
     states.setU(k2, v2);
     states.setS(k1, v1);

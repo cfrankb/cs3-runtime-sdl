@@ -1,6 +1,6 @@
 /*
     cs3-runtime-sdl
-    Copyright (C) 2025 Francois Blanchette
+    Copyright (C) 2024  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,3 +42,4 @@ const uint8_t * getCustomChars();
 #define CHARS_BRICK            0x91
 #define CHARS_WALL             0x92
 #define CHARS_CRUSHER          0x93
+#define CHARS_COPYRIGHT        0x94

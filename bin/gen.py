@@ -110,7 +110,7 @@ def main():
 
     if params.action not in options:
         print(help_text)
-        exit(EXIT_FAILURE)
+        return EXIT_FAILURE
     elif params.action == 'sdl2':
         vars = [
             'CXX=g++',

@@ -32,4 +32,4 @@ typedef struct
     std::string workspace;
 } params_t;
 
-bool parseArgs(const int argc, char *args[], params_t &params);
+bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit);

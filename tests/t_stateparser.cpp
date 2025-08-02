@@ -31,10 +31,33 @@ bool checkValue(CStateParser &parser, const char *k, const uint16_t v)
     return true;
 }
 
+bool checkState(CStates &states, const uint16_t k, const uint16_t v)
+{
+    const auto a = states.getU(k);
+    if (a != v)
+    {
+        fprintf(stderr, "key %u / %.2x contains wrong value %.2x -- was expecting %.2x\n",
+                k, k, a, v);
+        return false;
+    }
+    return true;
+}
+
+bool checkState(CStates &states, const uint16_t k, const std::string v)
+{
+    const auto a = states.getS(k);
+    if (a != v)
+    {
+        fprintf(stderr, "key %u / %.2x contains wrong value `%s` -- was expecting `%s`\n",
+                k, k, a, v.c_str());
+        return false;
+    }
+    return true;
+}
+
 bool test_stateparser()
 {
-    printf("==> test_stateparser()\n");
-
+    // Create state aliases
     CStateParser parser;
     parser.parse(
         "KITTY 128\n"
@@ -44,25 +67,42 @@ bool test_stateparser()
         "\n"
         " ALANA 0x1990");
 
-    if (!checkValue(parser, "KITTY", 128))
+    enum
+    {
+        KITTY = 128,
+        SONIA = 0x90,
+        HENRI = 1,
+        KOALA = 0xffff,
+        ALANA = 0x1990,
+    };
+
+    if (!checkValue(parser, "KITTY", KITTY))
         return false;
-    if (!checkValue(parser, "SONIA", 0x90))
+    if (!checkValue(parser, "SONIA", SONIA))
         return false;
-    if (!checkValue(parser, "HENRI", 1))
+    if (!checkValue(parser, "HENRI", HENRI))
         return false;
-    if (!checkValue(parser, "KOALA", 0xffff))
+    if (!checkValue(parser, "KOALA", KOALA))
         return false;
-    if (!checkValue(parser, "ALANA", 0x1990))
+    if (!checkValue(parser, "ALANA", ALANA))
         return false;
 
-    parser.debug();
+    //  parser.debug();
 
+    // populate state entities using aliases
     CStates states;
     parser.parseStates("KITTY 64\n"
                        "SONIA 0x2020\n"
                        "HENRI Sunny_Outside",
                        states);
-    states.debug();
 
+    if (!checkState(states, KITTY, 64))
+        return false;
+    if (!checkState(states, SONIA, 0x2020))
+        return false;
+    if (!checkState(states, HENRI, "Sunny_Outside"))
+        return false;
+
+    // states.debug();
     return true;
 }

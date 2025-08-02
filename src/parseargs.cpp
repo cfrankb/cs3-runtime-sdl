@@ -26,8 +26,8 @@ void showHelp()
     puts("\ncs3v2-runtime\n"
          "\n"
          "options:\n"
-         "-p <prefix>               set game prefix path\n"
-         "-m <maparch>              set maparch override\n"
+         "-p <prefix>               set data path prefix\n"
+         "-m <maparch>              set maparch override (full path)\n"
          "-w <workspace>            set user workspace\n"
          //"-s 999x999                set window size\n"
          "\n"
@@ -35,7 +35,7 @@ void showHelp()
          "--hard                    switch to hard mode\n"
          "--normal                  switch to normal mode\n"
          "-f                        start in fullscreen\n"
-         "-h                        show this screen\n"
+         "-h --help                 show this screen\n"
          "-q                        mute music by default\n");
 }
 
@@ -67,7 +67,7 @@ void verbose(const char *path)
     }
 }
 
-bool parseArgs(const int argc, char *args[], params_t &params)
+bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
 {
     typedef struct
     {
@@ -117,6 +117,12 @@ bool parseArgs(const int argc, char *args[], params_t &params)
         {
             params.skill = SKILL_NORMAL;
         }
+        else if (strcmp(args[i], "--help") == 0)
+        {
+            showHelp();
+            appExit = true;
+            return true;
+        }
         else if (memcmp(args[i], "--", 2) == 0)
         {
             fprintf(stderr, "invalid option: %s\n", args[i]);
@@ -144,7 +150,8 @@ bool parseArgs(const int argc, char *args[], params_t &params)
                     break;
                 case 'h':
                     showHelp();
-                    return EXIT_SUCCESS;
+                    appExit = true;
+                    return true;
                 default:
                     fprintf(stderr, "invalid switch: %c\n", args[i][j]);
                     result = false;

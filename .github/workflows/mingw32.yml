@@ -59,6 +59,21 @@ jobs:
           cp $GITHUB_WORKSPACE/deps/bin/libxmp-lite.dll setup
           ls -l setup
 
+      - name: Compress to zip file
+        working-directory: ${{ runner.temp }}\build\release
+        run: |
+          cd setup
+          7z a Creepspread_III_mingw-win32.zip *
+          dir /s
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            LICENSE
+            setup/*.zip
+
       - name: Upload Windows executable
         uses: actions/upload-artifact@master
         with:

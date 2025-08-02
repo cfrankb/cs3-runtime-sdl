@@ -68,6 +68,14 @@ jobs:
       run: |
         make -C packages
 
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: |
+          packages/*.AppImage
+          LICENSE
+
     - name: Upload AppImage Artifact
       uses: actions/upload-artifact@v4
       with:
