@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      - develop
+      #- develop
     paths:
       - '**.cpp'
       - '**.h'
@@ -12,17 +12,11 @@ on:
       - 'packages/Makefile'
       - '.github/workflows/appImage-build.yml'
       - 'packages/data/**'
+    tags:
+      - 'v*'
   pull_request:
     branches:
       - master
-      - develop
-    paths:
-      - '**.cpp'
-      - '**.h'
-      - 'Makefile'
-      - 'CMakeLists.txt'
-      - '.github/workflows/appImage-build.yml'
-      - 'packages/data/**'
 
 jobs:
   build-appimage:
@@ -82,3 +76,4 @@ jobs:
         name: ${{ github.event.repository.name }}-AppImage
         path: |
           packages/Creepspread_III-x86_64.AppImage
+        retention-days: 7

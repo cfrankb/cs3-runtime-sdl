@@ -23,13 +23,13 @@ BEGIN
         // Language and Charset: 0409 = English (US), 04B0 = Unicode (typically UTF-16)
         BLOCK "040904B0"
         BEGIN
-            VALUE "CompanyName", "Your Awesome Company LLC\0"
-            VALUE "FileDescription", "My Awesome App\0"
+            //VALUE "CompanyName", "Your Awesome Company LLC\0"
+            VALUE "FileDescription", "2D Puzzle/Action Game\0"
             VALUE "FileVersion", "1.0.0.0\0"
-            VALUE "InternalName", "myapp\0" // Internal name of the executable
-            VALUE "LegalCopyright", "Copyright (C) 2025 Your Name/Company. All rights reserved.\0"
-            VALUE "OriginalFilename", "myapp.exe\0"
-            VALUE "ProductName", "My Awesome Application\0"
+            VALUE "InternalName", "cs3v2\0" // Internal name of the executable
+            VALUE "LegalCopyright", "Copyright (C) 2025 Francois Blanchette. All rights reserved.\0"
+            VALUE "OriginalFilename", "cs3-runtime.exe\0"
+            VALUE "ProductName", "Creepspread III: Nan'O Lost\0"
             VALUE "ProductVersion", "1.0.0.0\0"
             VALUE "BuildDate", __DATE__ " " __TIME__ "\0" // Example: Embed build date/time
         END

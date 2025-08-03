@@ -168,7 +168,6 @@ int main(int argc, char *args[])
 
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
-    emscripten_set_interval(playXM, 30, nullptr);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
     while (runtime.isRunning())

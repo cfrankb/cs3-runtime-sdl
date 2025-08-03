@@ -8,31 +8,33 @@ EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
 
+def strip_ext(s):
+    i = s.rfind('.')
+    return s[0:i]
+
 def prepare_deps(deps, fname):
     lines = []
     basename = ntpath.basename(fname)
     ref = fname
     if fname.endswith('.cpp'):
-        name = basename[0:-4]#  '.cpp' >> ''
-        fname_h = fname[0:-4] + '.h'# '.cpp' >> '.h'
+        name = strip_ext(basename)
+        fname_h = strip_ext(fname) + '.h'
         if os.path.isfile(fname_h):
             ref += f' {fname_h}'
         lines.append(f'$(BPATH)/{name}$(EXT): {ref}')
         lines.append(f'\t$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@')
         deps.append(f'{name}$(EXT)')
     elif fname.endswith('.rc'):
-        #windres icon.rc -O coff -o icon.res
-        name = basename[0:-3]# '.rc' >> ''
-        lines.append(f'$(BPATH)/{name}.res: {ref}')
+        name = strip_ext(basename)+'.res'
+        lines.append(f'$(BPATH)/{name}: {ref}')
         lines.append(f'\t$(WINDRES) $< -O coff -o $@')
-        deps.append(f'{name}.res')
+        deps.append(f'{name}')
     else:
         print(f'no receipe for unhandled file: {fname}\n')
     return '\n'.join(lines)
 
 
-def get_deps_blocks(extra_path, excluded):
-    paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"] + extra_path
+def get_deps_blocks(paths, excluded):
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
@@ -97,15 +99,14 @@ class Params:
     def has_prefix(self):
         return self.prefix != ''
 
-# https://www.reddit.com/r/C_Programming/comments/18xgs92/fixing_a_github_action_to_build_my_c_project_for/
 def main():
     params = Params(sys.argv)
-    extra_paths = []
+    paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"]
     excluded = []
     bname = 'cs3-runtime'
     if params.tests:
         excluded += ['main.cpp']
-        extra_paths += ['tests/*.cpp']
+        paths += ['tests/*.cpp']
         bname = 'tests'
 
     if params.action not in options:
@@ -138,7 +139,7 @@ def main():
         ext = '.o'
     elif params.action == 'mingw32-sdl2':
         arch = 'x86_64-w64'
-        extra_paths += ['src/*.rc']
+        paths += ['src/*.rc']
         prefix = params.prefix if params.has_prefix() else '/sdl2-windows'
         vars = [
             f'WINDRES={arch}-mingw32-windres',
@@ -169,7 +170,7 @@ def main():
     print("type `make clean` to delete the content of the build folder.")
 
 
-    deps_blocks, objs = get_deps_blocks(extra_paths, excluded)
+    deps_blocks, objs = get_deps_blocks(paths, excluded)
     vars.append(f'DEPS={objs}')
     vars.append(f'EXT={ext}')
     with open('Makefile', 'w') as tfile:
