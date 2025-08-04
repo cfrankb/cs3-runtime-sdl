@@ -114,6 +114,7 @@ private:
         SOUND_OUCHFAST,
         SOUND_POUF,
         SOUND_POW,
+        SOUND_POWERUP,
     };
 
     int m_lives = 0;

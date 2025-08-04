@@ -1,6 +1,12 @@
 .vscode/*
 backup/*
 build/*
+buildx/*
 workspace/*
 notes.txt
-Makefile
+/Makefile
+tests/out/*
+setup/*
+images/originals
+#VERSION
+CMakeLists.txt

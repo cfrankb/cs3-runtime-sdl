@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 from os.path import join
 import os
 import glob
@@ -26,7 +28,7 @@ license_lua = license_cpp.replace('/*', '--[[').replace('*/', ']]--')
 # from lgckutil.license import *
 
 specs = [
-    'src',
+    'src', 'tests'
 ]
 
 

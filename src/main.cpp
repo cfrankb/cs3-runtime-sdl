@@ -19,11 +19,11 @@
 #include <unistd.h>
 #include <cstdlib>
 #include <ctime>
+#include <filesystem>
+#include <string>
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
-#include "shared/implementers/mu_sdl.h"
-#include "tests.h"
 
 const uint32_t FPS = 24;
 const uint32_t SLEEP = 1000 / FPS;
@@ -33,7 +33,7 @@ uint32_t sleepDelay = SLEEP;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-#define PREFIX "data/"
+#define DEFAULT_PREFIX "data/"
 #define DEFAULT_MAPARCH "levels.mapz"
 #define CONF_FILE "game.cfg"
 
@@ -41,7 +41,6 @@ uint32_t sleepDelay = SLEEP;
 #include <emscripten.h>
 #include <emscripten/html5.h>
 CRuntime *g_runtime = nullptr;
-extern void playXM(void *userData);
 extern "C"
 {
     int savegame(int x)
@@ -103,29 +102,63 @@ void loop_handler(void *arg)
     }
 }
 
+const std::string getPrefix()
+{
+    char *appdir_env = std::getenv("APPDIR");
+    if (appdir_env)
+    {
+        printf("APPDIR environment variable found: %s\n", appdir_env);
+        // Construct the full path to your embedded data (e.g., an image)
+        return std::string(appdir_env) + "/usr/share/data/";
+    }
+    else
+    {
+        printf("APPDIR environment variable not found.\n");
+        // Fallback or error handling: If not running as AppImage,
+        const std::vector<std::string> paths = {
+            "data",
+            "/usr/local/share/cs3-runtime",
+            "/usr/share/cs3-runtime",
+        };
+        for (const auto &path : paths)
+        {
+            if (std::filesystem::is_directory(path))
+            {
+                return path + "/";
+            }
+        }
+        return DEFAULT_PREFIX;
+    }
+}
+
 int main(int argc, char *args[])
 {
     srand(static_cast<unsigned int>(time(NULL)));
-    CRuntime runtime;
     CMapArch maparch;
+    CRuntime runtime;
     params_t params;
     params.muteMusic = false;
     params.level = 0;
-    params.prefix = PREFIX;
+    params.prefix = getPrefix();
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
-    if (!parseArgs(argc, args, params))
+    bool appExit = false;
+    if (!parseArgs(argc, args, params, appExit))
         return EXIT_FAILURE;
-    if (params.tests)
-        test_recorder();
+    if (appExit)
+        return EXIT_SUCCESS;
     if (!maparch.read(params.mapArch.c_str()))
     {
         fprintf(stderr, "failed to read maparch: %s %s\n", params.mapArch.c_str(), maparch.lastError());
         return EXIT_FAILURE;
     }
-    std::string configFile = params.prefix + CONF_FILE;
+    std::string configFile = CRuntime::addTrailSlash(params.prefix) + CONF_FILE;
     runtime.setPrefix(params.prefix.c_str());
     runtime.setWorkspace(params.workspace.c_str());
-    runtime.parseConfig(configFile.c_str());
+    if (!runtime.parseConfig(configFile.c_str()))
+    {
+        printf("failed to parse config file: %s\n", configFile.c_str());
+        return EXIT_FAILURE;
+    }
     runtime.setSkill(params.skill);
     runtime.init(&maparch, params.level % maparch.size());
     runtime.setStartLevel(params.level % maparch.size());
@@ -145,12 +178,12 @@ int main(int argc, char *args[])
     runtime.initOptions();
     runtime.preRun();
     runtime.paint();
+
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
-    emscripten_set_interval(playXM, 30, nullptr);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
-    while (true)
+    while (runtime.isRunning())
     {
         loop_handler(&runtime);
     }

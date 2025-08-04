@@ -963,45 +963,10 @@ void CGameMixin::drawScores(CFrame &bitmap)
 void CGameMixin::drawHelpScreen(CFrame &bitmap)
 {
     bitmap.fill(BLACK);
-    const char *helptext[]{
-        "",
-        "!HELP",
-        "!====",
-        "",
-        "Use cursor keys to move.",
-        "",
-        "Collect all the diamonds to move to the",
-        "next level. Avoid monsters and other",
-        "hazards.",
-        "",
-        "Pick up objects to open up secret",
-        "passages.",
-        "",
-        "F1 Help",
-        "F2 Restart Game",
-        "F3 Erase Scores",
-        "F4 Pause Game",
-#ifndef __EMSCRIPTEN__
-        "F5 Toggle Full Screen",
-        "F6 Playback Level",
-        "F7 Record Level",
-        "F8 Take Screenshot (in-game only)",
-#endif
-        "F9 Load savegame",
-        "F10 Save savegame ",
-        "F11 Toggle Music",
-        "F12 Harcore Mode",
-        "",
-        "~PRESS [F1] AGAIN TO RETURN TO THE GAME.",
-    };
-
-    char t[50];
     int y = 0;
-
-    for (size_t i = 0; i < sizeof(helptext) / sizeof(helptext[0]); ++i)
+    for (size_t i = 0; i < m_helptext.size(); ++i)
     {
-        strcpy(t, helptext[i]);
-        char *p = t;
+        const char *p = m_helptext[i].c_str();
         int x = 0;
         auto color = WHITE;
         if (p[0] == '~')

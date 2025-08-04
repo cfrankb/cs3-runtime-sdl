@@ -1,0 +1,49 @@
+#include "winver.h" // For standard version info definitions
+
+IDI_ICON1 ICON "packages/data/cs3-runtime.ico"
+
+// -------------------------------------------------------------------------
+// VERSION INFORMATION BLOCK
+// -------------------------------------------------------------------------
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0          // File version (major, minor, patch, build)
+ PRODUCTVERSION 1,0,0,0         // Product version
+ FILEFLAGSMASK 0x3fL            // Mask for all valid bits in FILEFLAGS
+#ifdef _DEBUG
+ FILEFLAGS 0x1L                  // VS_FF_DEBUG: Set if this is a debug build
+#else
+ FILEFLAGS 0x0L                  // No special flags for release build
+#endif
+ FILEOS 0x4L                     // VOS_NT_WINDOWS: Target operating system is Windows NT/2000/XP/Vista/7/8/10...
+ FILETYPE 0x1L                   // VFT_APP: File is an application
+ FILESUBTYPE 0x0L                // VFT2_UNKNOWN: File subtype is unknown
+BEGIN
+    BLOCK "StringFileInfo"       // String information block
+    BEGIN
+        // Language and Charset: 0409 = English (US), 04B0 = Unicode (typically UTF-16)
+        BLOCK "040904B0"
+        BEGIN
+            //VALUE "CompanyName", "Your Awesome Company LLC\0"
+            VALUE "FileDescription", "2D Puzzle/Action Game\0"
+            VALUE "FileVersion", "1.0.0.0\0"
+            VALUE "InternalName", "cs3v2\0" // Internal name of the executable
+            VALUE "LegalCopyright", "Copyright (C) 2025 Francois Blanchette. All rights reserved.\0"
+            VALUE "OriginalFilename", "cs3-runtime.exe\0"
+            VALUE "ProductName", "Creepspread III: Nan'O Lost\0"
+            VALUE "ProductVersion", "1.0.0.0\0"
+            VALUE "BuildDate", __DATE__ " " __TIME__ "\0" // Example: Embed build date/time
+        END
+    END
+    BLOCK "VarFileInfo"          // Variable information block (contains translation info)
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0 // Specify available language/codepage pairs
+    END
+END
+
+// -------------------------------------------------------------------------
+// APPLICATION MANIFEST BLOCK
+// The '1' is the resource ID (can be 1), RT_MANIFEST is the resource type.
+// "app.manifest" is the path to your manifest XML file.
+// -------------------------------------------------------------------------
+
+1 RT_MANIFEST "packages/data/app.manifest"

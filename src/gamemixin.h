@@ -191,6 +191,7 @@ protected:
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
     CRecorder *m_recorder = nullptr;
+    std::vector<std::string> m_helptext;
     int m_playerFrameOffset = 0;
     int m_healthRef = 0;
     int m_countdown = 0;

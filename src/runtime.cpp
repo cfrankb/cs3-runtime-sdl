@@ -30,6 +30,7 @@
 #include "chars.h"
 #include "skills.h"
 #include "menu.h"
+#include "strhelper.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -63,14 +64,18 @@ CRuntime::CRuntime() : CGameMixin()
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
+    m_title = nullptr;
 }
 
 CRuntime::~CRuntime()
 {
-    SDL_DestroyTexture(m_app.texture);
-    SDL_DestroyRenderer(m_app.renderer);
-    SDL_DestroyWindow(m_app.window);
-    SDL_Quit();
+    if (m_app.window)
+    {
+        SDL_DestroyTexture(m_app.texture);
+        SDL_DestroyRenderer(m_app.renderer);
+        SDL_DestroyWindow(m_app.window);
+        SDL_Quit();
+    }
 
     if (m_music)
     {
@@ -147,6 +152,7 @@ void CRuntime::paint()
 
 bool CRuntime::SDLInit()
 {
+    printf("SDL Init()\n");
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -270,7 +276,7 @@ void CRuntime::doInput()
             }
 #endif
             printf("SQL_QUIT\n");
-            exit(0);
+            m_isRunning = false;
             break;
 
         case SDL_CONTROLLERDEVICEADDED:
@@ -472,6 +478,42 @@ void CRuntime::preloadAssets()
     {
         m_game->parseHints(tmp);
         delete[] tmp;
+    }
+
+    const std::string helpFile = m_prefix + m_config["help"];
+    if (fetchFile(helpFile, &tmp, true))
+    {
+        parseHelp(tmp);
+        delete[] tmp;
+    }
+}
+
+void CRuntime::parseHelp(char *text)
+{
+    const char marker[] = {'_', '_', 'E', 'M', ' '};
+    m_helptext.clear();
+    char *p = text;
+    while (p && *p)
+    {
+        char *n = strstr(p, "\n");
+        if (n)
+            *n = 0;
+        char *r = strstr(p, "\r");
+        if (r)
+            *r = 0;
+        char *e = std::max(r, n);
+        if (memcmp(p, marker, sizeof(marker)) == 0)
+        {
+#ifndef __EMSCRIPTEN__
+            m_helptext.push_back(p + sizeof(marker));
+#endif
+        }
+        else
+        {
+            m_helptext.push_back(p);
+        }
+        // next line
+        p = e ? e + 1 : nullptr;
     }
 }
 
@@ -741,39 +783,6 @@ void CRuntime::openMusicForLevel(int i)
     }
 }
 
-void CRuntime::splitString2(const std::string &str, StringVector &list)
-{
-    unsigned int j = 0;
-    bool inQuote = false;
-    std::string item;
-    while (j < str.length())
-    {
-        if (str[j] == '"')
-        {
-            inQuote = !inQuote;
-        }
-        else if (!isspace(str[j]) || inQuote)
-        {
-            item += str[j];
-        }
-        if (!inQuote && isspace(str[j]))
-        {
-            list.emplace_back(item);
-            while (isspace(str[j]) && j < str.length())
-            {
-                ++j;
-            }
-            item.clear();
-            continue;
-        }
-        ++j;
-    }
-    if (item.size())
-    {
-        list.emplace_back(item);
-    }
-}
-
 bool CRuntime::parseConfig(const char *filename)
 {
     CFileWrap file;
@@ -792,32 +801,7 @@ bool CRuntime::parseConfig(const char *filename)
     int line = 1;
     while (p && *p)
     {
-        char *en = strstr(p, "\n");
-        if (en)
-        {
-            *en = 0;
-        }
-        char *er = strstr(p, "\r");
-        if (er)
-        {
-            *er = 0;
-        }
-        char *e = er > en ? er : en;
-        char *c = strstr(p, "#");
-        if (c)
-        {
-            *c = 0;
-        }
-        while (*p == ' ' || *p == '\t')
-        {
-            ++p;
-        }
-        int i = strlen(p) - 1;
-        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
-        {
-            p[i] = '\0';
-            --i;
-        }
+        char *next = processLine(p);
         if (p[0] == '[')
         {
             ++p;
@@ -862,7 +846,7 @@ bool CRuntime::parseConfig(const char *filename)
                 fprintf(stderr, "item for unknown section %s on line %d\n", section.c_str(), line);
             }
         }
-        p = e ? e + 1 : nullptr;
+        p = next;
         ++line;
     }
     delete[] tmp;
@@ -886,7 +870,7 @@ void CRuntime::setWorkspace(const char *workspace)
     addTrailSlash(m_workspace);
 }
 
-void CRuntime::addTrailSlash(std::string &path)
+std::string &CRuntime::addTrailSlash(std::string &path)
 {
     if (path.size() == 0)
     {
@@ -897,6 +881,7 @@ void CRuntime::addTrailSlash(std::string &path)
     {
         path += "/";
     }
+    return path;
 }
 
 void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
@@ -1024,8 +1009,8 @@ void CRuntime::takeScreenshot()
     std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
     std::tm *localTime = std::localtime(&currentTime);
     sprintf(filename, "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
-            1900 + localTime->tm_year,
-            localTime->tm_mon,
+            localTime->tm_year + 1900,
+            localTime->tm_mon + 1,
             localTime->tm_mday,
             localTime->tm_hour,
             localTime->tm_min,
@@ -1075,6 +1060,20 @@ void CRuntime::initOptions()
     {
         printf("is full screen?\n");
         toggleFullscreen();
+    }
+    if (m_config["viewport"] == "static")
+    {
+        m_cameraMode = CAMERA_MODE_STATIC;
+        printf("using viewport static\n");
+    }
+    else if (m_config["viewport"] == "dynamic")
+    {
+        m_cameraMode = CAMERA_MODE_DYNAMIC;
+        printf("using viewport dynamic\n");
+    }
+    else
+    {
+        printf("using viewport default\n");
     }
 }
 
@@ -1304,4 +1303,9 @@ bool CRuntime::initControllers()
         fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
     return true;
+}
+
+bool CRuntime::isRunning() const
+{
+    return m_isRunning;
 }

@@ -15,32 +15,36 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <string.h>
+#include <cstring>
 #include <ctype.h>
-#include <cstdlib>
 #include <cstdio>
-#include <string>
-#include <list>
 #include <zlib.h>
+#include <filesystem>
+#include "helper.h"
 #ifdef USE_QFILE
-    #define FILEWRAP QFileWrap
-    #include "../shared/qtgui/qfilewrap.h"
+#define FILEWRAP QFileWrap
+#include "../shared/qtgui/qfilewrap.h"
 #else
-    #define FILEWRAP CFileWrap
-    #include "../shared/FileWrap.h"
+#define FILEWRAP CFileWrap
+#include "../shared/FileWrap.h"
 #endif
+
+namespace fs = std::filesystem;
 
 const char *toUpper(char *s)
 {
-    for (unsigned int i=0; i < strlen(s);++i){
-        if (isalpha(s[i])) {
+    for (unsigned int i = 0; i < strlen(s); ++i)
+    {
+        if (isalpha(s[i]))
+        {
             s[i] = toupper(s[i]);
         }
     }
     return s;
 }
 
-int upperClean(int c) {
+int upperClean(int c)
+{
     return isalnum(c) ? ::toupper(c) : '_';
 }
 
@@ -55,85 +59,109 @@ char *getUUID()
             rand() & 0xffff,
             rand() & 0xffff,
             rand() & 0xffff,
-            rand() & 0xffff
-            );
+            rand() & 0xffff);
     return uuid;
 }
 
-bool copyFile(const std::string in, const std::string out, std::string & errMsg)
+bool copyFile(const std::string in, const std::string out, std::string &errMsg)
 {
     bool result = true;
     FILEWRAP sfile;
     FILEWRAP tfile;
-    if (sfile.open(in.c_str())) {
+    if (sfile.open(in.c_str()))
+    {
         int size = sfile.getSize();
         char *buf = new char[size];
         sfile.read(buf, size);
         sfile.close();
-        if (tfile.open(out.c_str(), "wb")) {
+        if (tfile.open(out.c_str(), "wb"))
+        {
             tfile.write(buf, size);
             tfile.close();
-        } else {
-            char * tmp = new char[out.length() + 128];
+        }
+        else
+        {
+            char *tmp = new char[out.length() + 128];
             sprintf(tmp, "couldn't write: %s", out.c_str());
             errMsg = tmp;
             result = false;
             delete[] tmp;
         }
-        delete [] buf;
-    } else {
-        char * tmp =  new char[in.length() + 128];
+        delete[] buf;
+    }
+    else
+    {
+        char *tmp = new char[in.length() + 128];
         sprintf(tmp, "couldn't read: %s", in.c_str());
         errMsg = tmp;
         result = false;
-        delete []tmp;
+        delete[] tmp;
     }
     return result;
 }
 
-bool concat(const std::list<std::string> files, std::string out, std::string & msg)
+bool concat(const std::list<std::string> files, std::string out, std::string &msg)
 {
     FILEWRAP tfile;
     bool result = true;
-    if (tfile.open(out.c_str(), "wb")) {
-        for (std::list<std::string>::const_iterator iterator = files.begin(), end = files.end(); iterator != end; ++iterator) {
+    if (tfile.open(out.c_str(), "wb"))
+    {
+        for (std::list<std::string>::const_iterator iterator = files.begin(), end = files.end(); iterator != end; ++iterator)
+        {
             FILEWRAP sfile;
             std::string in = *iterator;
-            if (sfile.open(in.c_str())) {
+            if (sfile.open(in.c_str()))
+            {
                 int size = sfile.getSize();
                 char *buf = new char[size];
                 sfile.read(buf, size);
                 sfile.close();
                 tfile.write(buf, size);
-                delete [] buf;
-            } else {
+                delete[] buf;
+            }
+            else
+            {
                 char *tmp = new char[in.length() + 128];
                 sprintf(tmp, "couldn't read: %s", in.c_str());
                 msg = tmp;
                 result = false;
-                delete []tmp;
+                delete[] tmp;
                 break;
             }
         }
         tfile.close();
-    } else {
+    }
+    else
+    {
         char *tmp = new char[out.length() + 128];
         sprintf(tmp, "couldn't write: %s", out.c_str());
         msg = tmp;
         result = false;
-        delete []tmp;
+        delete[] tmp;
     }
     return result;
 }
 
-int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long & out_size)
+int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long &out_size)
 {
     out_size = ::compressBound(in_size);
-    *out_data = new unsigned char [out_size];
+    *out_data = new unsigned char[out_size];
     return ::compress2(
-                *out_data,
-                &out_size,
-                in_data,
-                in_size,
-                Z_DEFAULT_COMPRESSION);
+        *out_data,
+        &out_size,
+        in_data,
+        in_size,
+        Z_DEFAULT_COMPRESSION);
+}
+
+uint64_t getFileSize(const std::string &filename)
+{
+    try
+    {
+        return fs::file_size(filename);
+    }
+    catch (const fs::filesystem_error &e)
+    {
+        throw std::runtime_error("Error accessing file: " + std::string(e.what()));
+    }
 }

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Creepspread III
+Comment=Vibrant retro action-puzzler with tight platforming and a pumping chiptune soundtrack
+Exec=cs3-runtime
+Terminal=false
+Icon=cs3-runtime
+Type=Application
+Categories=Game

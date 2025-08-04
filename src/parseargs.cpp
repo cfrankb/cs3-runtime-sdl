@@ -17,6 +17,7 @@
 */
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include "parseargs.h"
 #include "skills.h"
 
@@ -25,17 +26,16 @@ void showHelp()
     puts("\ncs3v2-runtime\n"
          "\n"
          "options:\n"
-         "-p <prefix>               set game prefix path\n"
-         "-m <maparch>              set maparch override\n"
+         "-p <prefix>               set data path prefix\n"
+         "-m <maparch>              set maparch override (full path)\n"
          "-w <workspace>            set user workspace\n"
          //"-s 999x999                set window size\n"
          "\n"
          "flags:\n"
          "--hard                    switch to hard mode\n"
          "--normal                  switch to normal mode\n"
-         "-t                        run tests\n"
          "-f                        start in fullscreen\n"
-         "-h                        show this screen\n"
+         "-h --help                 show this screen\n"
          "-q                        mute music by default\n");
 }
 
@@ -46,10 +46,28 @@ void initArgs(params_t &params)
     params.muteMusic = false;
     params.skill = SKILL_EASY;
     params.hardcore = false;
-    params.tests = false;
+    params.verbose = false;
 }
 
-bool parseArgs(const int argc, char *args[], params_t &params)
+void verbose(const char *path)
+{
+    printf("app:%s\n", path);
+    try
+    {
+        // Get the current working directory
+        std::filesystem::path currentPath = std::filesystem::current_path();
+
+        // Print the path to the console
+        printf("Current folder (std::filesystem): %s\n", currentPath.c_str());
+    }
+    catch (const std::filesystem::filesystem_error &e)
+    {
+        // Handle potential errors (e.g., permissions issues)
+        fprintf(stderr, "Filesystem error: %s\n", e.what());
+    }
+}
+
+bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
 {
     typedef struct
     {
@@ -99,6 +117,12 @@ bool parseArgs(const int argc, char *args[], params_t &params)
         {
             params.skill = SKILL_NORMAL;
         }
+        else if (strcmp(args[i], "--help") == 0)
+        {
+            showHelp();
+            appExit = true;
+            return true;
+        }
         else if (memcmp(args[i], "--", 2) == 0)
         {
             fprintf(stderr, "invalid option: %s\n", args[i]);
@@ -111,9 +135,10 @@ bool parseArgs(const int argc, char *args[], params_t &params)
             {
                 switch (args[i][j])
                 {
-                case 't':
-                    printf("tests\n");
-                    params.tests = true;
+                case 'v':
+                    printf("verbose\n");
+                    verbose(args[0]);
+                    params.verbose = true;
                     break;
                 case 'f':
                     printf("fullscreen\n");
@@ -125,7 +150,8 @@ bool parseArgs(const int argc, char *args[], params_t &params)
                     break;
                 case 'h':
                     showHelp();
-                    return EXIT_SUCCESS;
+                    appExit = true;
+                    return true;
                 default:
                     fprintf(stderr, "invalid switch: %c\n", args[i][j]);
                     result = false;

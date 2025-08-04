@@ -30,6 +30,7 @@ typedef struct
 } Pos;
 
 class IFile;
+class CStates;
 
 class CMap
 {
@@ -59,6 +60,8 @@ public:
     bool fromMemory(uint8_t *mem);
     const char *title();
     void setTitle(const char *title);
+    const AttrMap &attrs() { return m_attrs; }
+    CStates &states();
 
     enum : uint16_t
     {
@@ -73,6 +76,13 @@ public:
     void debug();
 
 private:
+    enum
+    {
+        XTR_VER0 = 0,
+        XTR_VER1 = 1,
+    };
+
+    CStates *m_states;
     uint16_t m_len;
     uint16_t m_hei;
     uint8_t *m_map;

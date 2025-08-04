@@ -26,10 +26,10 @@ typedef struct
     bool muteMusic;
     bool fullscreen;
     bool hardcore;
-    bool tests;
+    bool verbose;
     uint8_t skill;
     std::string mapArch;
     std::string workspace;
 } params_t;
 
-bool parseArgs(const int argc, char *args[], params_t &params);
+bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit);

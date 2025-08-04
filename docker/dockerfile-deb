@@ -1,0 +1,24 @@
+FROM debian:bookworm
+
+# Install build tools
+RUN apt update && apt install -y \
+    build-essential \
+    cmake \
+    fakeroot \
+    lintian
+    #cpack \
+
+# Set workdir and copy source
+WORKDIR /app
+COPY . .
+
+# Build and package
+#RUN cmake -DCMAKE_INSTALL_PREFIX=/usr . && \
+#    make && \
+#    make install DESTDIR=package && \
+#    cpack -G DEB && \
+#    lintian my-cpp-app-1.0.0-Linux.deb || true
+
+WORKDIR /workspace
+CMD ["/bin/bash"]
+#CMD ["bash"]

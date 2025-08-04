@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+	<id>com.cfrankb.cs3-runtime</id>
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>GPL-3.0</project_license>
+	<name>Creepspread III</name>
+	<summary>Vibrant retro action-puzzler with tight platforming and a pumping chiptune soundtrack</summary>
+	<description>
+		<p>Fast-paced retro arcade game with tracker music.
+ Creepspread III is an intense, retro-themed arcade experience that
+ fuses classic gameplay with a pulse-pounding soundtrack. The game
+ features a unique, dynamic audio system built on tracker music,
+ alongside high-speed pixel graphics that deliver a challenging
+ and nostalgic feel.</p>
+	</description>
+	<launchable type="desktop-id">com.cfrankb.cs3-runtime.desktop</launchable>
+	<url type="vcs-browser">https://github.com/cfrankb/cs3-runtime-sdl</url>
+	<url type="homepage">https://github.com/cfrankb/cs3-runtime-sdl</url>
+	<screenshots>
+		<screenshot type="default">
+			<caption>Level 1</caption>
+			<image>https://cfrankb.com/games/ems/images/screenshot20250630-104230.png</image>
+		</screenshot>
+	</screenshots>
+ 	<developer id="com.cfrankb">
+        <name>Francois Blanchette</name>
+    	<url type="homepage">https://cfrankb.com</url> 
+	</developer>
+	<provides>
+		<id>cs3-runtime.desktop</id>
+	</provides>
+    <content_rating type="oars-1.0">
+      <content_attribute id="violence-cartoon">mild</content_attribute>
+      <content_attribute id="violence-fantasy">mild</content_attribute>
+    </content_rating>
+  	<releases>
+      <release version="0.5-alpha" date="2015-07-30">
+        <description>
+          <p>Initial appImage Release</p>
+        </description>
+       </release>
+  	</releases>	
+</component>

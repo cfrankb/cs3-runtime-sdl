@@ -47,7 +47,7 @@ public:
     static bool indexFromFile(const char *filename, IndexVector &index);
     static bool indexFromMemory(uint8_t *ptr, IndexVector &index);
 
-private:
+protected:
     void allocSpace();
     enum
     {
