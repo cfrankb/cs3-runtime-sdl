@@ -5,15 +5,19 @@ now = datetime.now().astimezone()
 
 APP_LONG_NAME = 'Creepspread III'
 APP_NAME = 'cs3-runtime'
+APP_STATUS = 'stable'
+URGENCY = 'medium'
 AUTHOR = 'Francois Blanchette'
 AUTHOR_EMAIL = 'fb2000x@yahoo.ca'
 CONTACT = AUTHOR_EMAIL
 DESTINATION = 'games'
-DESCRIPTION = 'Retro 2D action/puzzle game with music and maps'
-LONG_DESCRIPTION = '''Fast-paced tracker-based arcade game.
-Creepspread III is a retro-themed game featuring tracker music,
-modular audio support, and high-speed pixel graphics.
-This package includes the binary, runtime data, and sample levels.'''
+DESCRIPTION = 'Vibrant retro action-puzzler with tight platforming and a pumping chiptune soundtrack'
+LONG_DESCRIPTION = '''Fast-paced retro arcade game with tracker music.
+ Creepspread III is an intense, retro-themed arcade experience that
+ fuses classic gameplay with a pulse-pounding soundtrack. The game
+ features a unique, dynamic audio system built on tracker music,
+ alongside high-speed pixel graphics that deliver a challenging
+ and nostalgic feel.'''
 
 VERSION = '1.0.0'
 try:
@@ -29,7 +33,7 @@ CHANGES = '\n'.join([f"  * {line}" for line in [
     'Improved SDL2 rendering and input',
 ]])
 
-CHANGELOG = f'''{APP_NAME} ({VERSION}) stable; urgency=medium
+CHANGELOG = f'''{APP_NAME} ({VERSION}) {APP_STATUS}; urgency={URGENCY}
 
 {CHANGES}
 

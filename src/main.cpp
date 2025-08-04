@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
+#include <string>
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
@@ -114,6 +115,18 @@ const std::string getPrefix()
     {
         printf("APPDIR environment variable not found.\n");
         // Fallback or error handling: If not running as AppImage,
+        const std::vector<std::string> paths = {
+            "data",
+            "/usr/local/share/cs3-runtime",
+            "/usr/share/cs3-runtime",
+        };
+        for (const auto &path : paths)
+        {
+            if (std::filesystem::is_directory(path))
+            {
+                return path + "/";
+            }
+        }
         return DEFAULT_PREFIX;
     }
 }

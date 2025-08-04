@@ -4,12 +4,14 @@
 	<metadata_license>CC0-1.0</metadata_license>
 	<project_license>GPL-3.0</project_license>
 	<name>Creepspread III</name>
-	<summary>Charming 2D puzzle/action game about collecting diamonds and avoiding hazards</summary>
+	<summary>Vibrant retro action-puzzler with tight platforming and a pumping chiptune soundtrack</summary>
 	<description>
-		<p> Explore a magical world, solve puzzles, and collect treasures in this
-            charming 2D game. Collect all the diamonds to move to the next level.
-			Move around maps and triggers switches to reveal secrets.
-			Avoid monsters and other hazards to complete all the levels.</p>
+		<p>Fast-paced retro arcade game with tracker music.
+ Creepspread III is an intense, retro-themed arcade experience that
+ fuses classic gameplay with a pulse-pounding soundtrack. The game
+ features a unique, dynamic audio system built on tracker music,
+ alongside high-speed pixel graphics that deliver a challenging
+ and nostalgic feel.</p>
 	</description>
 	<launchable type="desktop-id">com.cfrankb.cs3-runtime.desktop</launchable>
 	<url type="vcs-browser">https://github.com/cfrankb/cs3-runtime-sdl</url>
