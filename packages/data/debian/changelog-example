@@ -1,0 +1,7 @@
+cs3-runtime (1.0.0) stable; urgency=medium
+
+  * Initial release.
+  * Added tracker music support via libxmp
+  * Improved SDL2 rendering and input
+
+ -- Your Name <you@example.com>  Sun, 03 Aug 2025 04:32:00 -0400

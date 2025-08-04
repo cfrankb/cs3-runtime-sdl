@@ -73,6 +73,8 @@ makefile generator
 possible values are:
     {', '.join(options)}
 
+use -t to build the unit tests
+
 examples:
 
 python bin/gen.py sdl2

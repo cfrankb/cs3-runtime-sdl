@@ -1,0 +1,7 @@
+cs3-runtime (1.0.0) stable; urgency=medium
+
+  * Initial release
+  * Added tracker music support via libxmp
+  * Improved SDL2 rendering and input
+
+ -- Francois Blanchette <fb2000x@yahoo.ca>  Mon, 04 Aug 2025 13:26:40 +0000

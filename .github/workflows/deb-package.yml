@@ -1,0 +1,46 @@
+name: Build Debian Package
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+    tags:
+      - 'v*'
+
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            fakeroot \
+            lintian \
+            zlib1g-dev \
+            libsdl2-dev \
+            libsdl2-mixer-dev \
+            libxmp-dev \
+            pkg-config \
+            licensecheck
+
+      - name: Create .deb package with CPack
+        run: |
+          ./packages/bin/make-deb.sh
+
+      - name: Upload built package
+        uses: actions/upload-artifact@v4
+        with:
+          name: debian-package
+          path: build/*.deb
