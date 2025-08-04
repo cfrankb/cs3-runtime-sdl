@@ -13,26 +13,30 @@ CONTACT = AUTHOR_EMAIL
 DESTINATION = 'games'
 DESCRIPTION = 'Vibrant retro action-puzzler with tight platforming and a pumping chiptune soundtrack'
 LONG_DESCRIPTION = '''Fast-paced retro arcade game with tracker music.
- Creepspread III is an intense, retro-themed arcade experience that
- fuses classic gameplay with a pulse-pounding soundtrack. The game
- features a unique, dynamic audio system built on tracker music,
- alongside high-speed pixel graphics that deliver a challenging
- and nostalgic feel.'''
+Creepspread III is an intense, retro-themed arcade experience that
+fuses classic gameplay with a pulse-pounding soundtrack. The game
+features a unique, dynamic audio system built on tracker music,
+alongside high-speed pixel graphics that deliver a challenging
+and nostalgic feel.'''
 
-VERSION = '1.0.0'
-try:
-    with open('VERSION') as s:
-        VERSION = s.read()
-except:
-    print(f"No VERSION file -- using {VERSION}")
-
-
-CHANGES = '\n'.join([f"  * {line}" for line in [
+HISTORY = [
     'Initial release',
     'Added tracker music support via libxmp',
     'Improved SDL2 rendering and input',
-]])
+]
 
+VERSION = '1.0.0'
+with open('HISTORY') as s:
+    data = s.read()
+    block = data.split('\n\n',1)[0]
+    VERSION = block.split('\n',1)[0]
+    HISTORY = block.split('\n')[1:]
+
+CHANGES = '\n'.join([f"  * {line}" for line in HISTORY])
+
+VERSION_SHORT = '.'.join(VERSION.split('.')[0:2])
+
+# create CHANGELOG
 CHANGELOG = f'''{APP_NAME} ({VERSION}) {APP_STATUS}; urgency={URGENCY}
 
 {CHANGES}
@@ -42,6 +46,24 @@ CHANGELOG = f'''{APP_NAME} ({VERSION}) {APP_STATUS}; urgency={URGENCY}
 
 with open ('packages/data/debian/changelog', 'w') as t:
     t.write(CHANGELOG)
+
+MAN_PAGE = f'''
+.TH YOURGAME 6 "{now.strftime("%B %Y")}" "{APP_LONG_NAME} {VERSION}" "User Commands"
+.SH NAME
+{APP_NAME} \- {DESCRIPTION}
+.SH SYNOPSIS
+.B {APP_NAME}
+.SH DESCRIPTION
+\\fB{APP_LONG_NAME}\\fP {LONG_DESCRIPTION}
+.SH AUTHOR
+Written by {AUTHOR} <{AUTHOR_EMAIL}>.
+.SH LICENSE
+Licensed under the GNU GPLv3.
+'''.strip()
+
+with open (f'packages/data/debian/{APP_NAME}.6', 'w') as t:
+    t.write(MAN_PAGE)
+
 
 DEPENDS = ', '.join([
     "libc6 (>= 2.27)",
@@ -173,4 +195,3 @@ with open('CMakeLists.txt', 'w') as t:
     t.write('\n'.join(lines))
 
 print('CMakeList.txt created')
-
