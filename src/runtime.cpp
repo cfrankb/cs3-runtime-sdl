@@ -119,7 +119,7 @@ void CRuntime::paint()
     case CGame::MODE_GAMEOVER:
         drawLevelIntro(bitmap);
         break;
-    case CGame::MODE_LEVEL:
+    case CGame::MODE_PLAY:
         drawScreen(bitmap);
         if (m_gameMenuActive)
         {
@@ -696,7 +696,7 @@ void CRuntime::save()
     std::string path = m_workspace + SAVEGAME_FILE;
 #endif
 
-    if (m_game->mode() != CGame::MODE_LEVEL)
+    if (m_game->mode() != CGame::MODE_PLAY)
     {
         fprintf(stderr, "cannot save while not playing\n");
         return;
@@ -745,7 +745,7 @@ void CRuntime::load()
     {
         fprintf(stderr, "can't read:%s\n", path.c_str());
     }
-    m_game->setMode(CGame::MODE_LEVEL);
+    m_game->setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
     centerCamera();
 }

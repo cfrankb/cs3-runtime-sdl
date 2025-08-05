@@ -15,10 +15,24 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
-#define EVENT_NONE 0
-#define EVENT_SECRET 1
-#define EVENT_EXTRA_LIFE 2
-#define EVENT_SUGAR_RUSH 3
-#define EVENT_GOD_MODE 4
-#define EVENT_SUGAR 5
+#include "statedata.h"
+
+#define DEF(x) {#x, x}
+
+const std::vector<KeyOption> g_keyOptions = {
+    DEF(TIMEOUT),
+    DEF(POS_ORIGIN),
+    DEF(POS_EXIT),
+    DEF(MSG1),
+    DEF(MSG2),
+    DEF(MSG3),
+    DEF(USERDEF1),
+    DEF(USERDEF2),
+    DEF(USERDEF3),
+    DEF(USERDEF4),
+};
+
+const std::vector<KeyOption> &getKeyOptions()
+{
+    return g_keyOptions;
+}

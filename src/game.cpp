@@ -29,6 +29,7 @@
 #include "shared/interfaces/ISound.h"
 #include "skills.h"
 #include "events.h"
+#include "sounds.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -121,6 +122,13 @@ void CGame::consume()
         addHealth(def.health);
     }
 
+    if (isFruit(pu))
+    {
+        ++m_sugar;
+        if (m_sugar != SUGAR_RUSH_LEVEL)
+            m_events.push_back(EVENT_SUGAR);
+    }
+
     // apply flags
     if (def.flags & FLAG_EXTRA_LIFE)
     {
@@ -134,10 +142,11 @@ void CGame::consume()
         m_events.push_back(EVENT_GOD_MODE);
     }
 
-    if (def.flags & FLAG_EXTRA_SPEED)
+    if (def.flags & FLAG_EXTRA_SPEED || m_sugar == SUGAR_RUSH_LEVEL)
     {
         m_extraSpeedTimer = EXTRASPEED_TIMER;
         m_events.push_back(EVENT_SUGAR_RUSH);
+        m_sugar = 0;
     }
 
     // trigger key
@@ -201,8 +210,11 @@ void CGame::nextLevel()
 
 void CGame::restartLevel()
 {
+    m_events.clear();
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
+    m_sugar = 0;
+    loadLevel(true);
 }
 
 void CGame::restartGame()
@@ -608,6 +620,11 @@ int CGame::playerSpeed() const
     return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
 }
 
+bool CGame::hasExtraSpeed() const
+{
+    return m_extraSpeedTimer != 0;
+}
+
 void CGame::getMonsters(CActor *&monsters, int &count)
 {
     monsters = m_monsters;
@@ -658,6 +675,7 @@ bool CGame::read(FILE *sfile)
     readfile(m_keys, sizeof(m_keys));
     readfile(&m_score, sizeof(m_score));
     readfile(&m_skill, sizeof(m_skill));
+    readfile(&m_sugar, sizeof(m_sugar));
     m_player.read(sfile);
 
     // reading map
@@ -714,6 +732,7 @@ bool CGame::write(FILE *tfile)
     writefile(m_keys, sizeof(m_keys));
     writefile(&m_score, sizeof(m_score));
     writefile(&m_skill, sizeof(m_skill));
+    writefile(&m_sugar, sizeof(m_sugar));
     m_player.write(tfile);
 
     // saving map
@@ -747,7 +766,6 @@ void CGame::playTileSound(int tileID) const
     int snd = SOUND_NONE;
     switch (tileID)
     {
-    case TILES_FLOWERS_2:
     case TILES_CHEST:
     case TILES_NECKLESS:
         snd = SOUND_COIN1;
@@ -862,4 +880,9 @@ bool CGame::isFruit(const uint8_t tileID) const
             return true;
     }
     return false;
+}
+
+int CGame::sugar() const
+{
+    return m_sugar;
 }

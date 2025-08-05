@@ -56,6 +56,8 @@ public:
     int lives() const;
     int diamonds() const;
     int health() const;
+    int sugar() const;
+    bool hasExtraSpeed() const;
     void setMapArch(CMapArch *arch);
     void setLevel(const int levelId);
     int level() const;
@@ -78,22 +80,24 @@ public:
     enum GameMode
     {
         MODE_LEVEL_INTRO,
-        MODE_LEVEL,
+        MODE_PLAY,
         MODE_RESTART,
         MODE_GAMEOVER,
         MODE_CLICKSTART,
         MODE_HISCORES,
         MODE_IDLE,
         MODE_HELP,
-        MODE_TITLE
+        MODE_TITLE,
+        MODE_TIMEOUT,
     };
 
 private:
     enum
     {
+        SUGAR_RUSH_LEVEL = 5,
         DEFAULT_MAX_MONSTERS = 128,
         GROWBY_MONSTERS = 64,
-        MAX_HEALTH = 255,
+        MAX_HEALTH = 200,
         DEFAULT_HEALTH = 64,
         DEFAULT_LIVES = 5,
         LEVEL_BONUS = 500,
@@ -106,15 +110,6 @@ private:
         INVALID = -1,
         VERSION = (0x0200 << 16) + 0x0003,
         MAX_KEYS = 6,
-        SOUND_NONE = 0x00,
-        SOUND_GRUUP,
-        SOUND_KEY,
-        SOUND_0009,
-        SOUND_COIN1,
-        SOUND_OUCHFAST,
-        SOUND_POUF,
-        SOUND_POW,
-        SOUND_POWERUP,
     };
 
     int m_lives = 0;
@@ -123,6 +118,7 @@ private:
     int m_score = 0;
     int m_nextLife = SCORE_LIFE;
     int m_diamonds = 0;
+    int m_sugar = 0;
     int32_t m_godModeTimer = 0;
     int32_t m_extraSpeedTimer = 0;
     static uint8_t m_keys[MAX_KEYS];

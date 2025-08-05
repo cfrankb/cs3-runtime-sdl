@@ -68,7 +68,7 @@ protected:
         BUTTON_RELEASED = 0,
         INTRO_DELAY = TICK_RATE * 3,
         HISCORE_DELAY = 5 * TICK_RATE,
-        EVENT_COUNTDOWN_DELAY = 3 * TICK_RATE / 4,
+        EVENT_COUNTDOWN_DELAY = TICK_RATE,
         CLEAR = 0,
         ALPHA = 0xff000000,
         WHITE = RGBA(0xff, 0xff, 0xff),      // #ffffff
@@ -223,6 +223,7 @@ protected:
     void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, uint32_t color);
+    inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect);

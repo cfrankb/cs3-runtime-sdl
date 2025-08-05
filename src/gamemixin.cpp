@@ -29,6 +29,8 @@
 #include "chars.h"
 #include "recorder.h"
 #include "events.h"
+#include "states.h"
+#include "statedata.h"
 
 // Check windows
 #ifdef _WIN64
@@ -335,6 +337,17 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         {
             drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
         }
+        const int sugar = game.sugar();
+        tmp[0] = CHARS_BUTTERFLY;
+        tmp[1] = '\0';
+        for (int i = 0; i < 5; ++i)
+        {
+            if (i < sugar)
+                drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, RED);
+            else
+                drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, DARKGRAY);
+            ++bx;
+        }
     }
 
     // draw bottom rect
@@ -349,6 +362,13 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         drawFont(bitmap, x, bitmap.hei() - 12, t, CYAN, CLEAR);
     }
 
+    if (game.hasExtraSpeed())
+    {
+        tmp[0] = CHARS_SMILEY;
+        tmp[1] = '\0';
+        drawFont(bitmap, 220 / 2, bitmap.hei() - 12, tmp, YELLOW, CLEAR);
+    }
+
     // draw health bar
     drawRect(bitmap, Rect{4, bitmap.hei() - 12, std::min(game.health() / 2, bitmap.len() - 4), 8},
              game.godModeTimer() ? WHITE : LIME, true);
@@ -357,6 +377,24 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // draw keys
     drawKeys(bitmap);
+
+    // draw timeout
+    drawTimeout(bitmap);
+}
+
+void CGameMixin::drawTimeout(CFrame &bitmap)
+{
+    CMap *map = &m_game->getMap();
+    CStates &states = map->states();
+    const uint16_t timeout = states.getU(TIMEOUT);
+    if (timeout)
+    {
+        char tmp[16];
+        sprintf(tmp, "%.2d", timeout);
+        int x = WIDTH - 2 * FONT_SIZE * strlen(tmp) - FONT_SIZE;
+        int y = 16;
+        drawFont(bitmap, x, y, tmp, ORANGE, CLEAR, 2, 2);
+    }
 }
 
 CFrame *CGameMixin::tile2Frame(const uint8_t tileID)
@@ -582,6 +620,9 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         break;
     case CGame::MODE_GAMEOVER:
         strcpy(t, "GAME OVER");
+        break;
+    case CGame::MODE_TIMEOUT:
+        strcpy(t, "OUT OF TIME");
     };
 
     const int x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
@@ -603,7 +644,6 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         const int y = HEIGHT - FONT_SIZE * 4;
         drawFont(bitmap, x, y, hint, CYAN);
     }
-
     m_currentEvent = EVENT_NONE;
 }
 
@@ -661,7 +701,7 @@ void CGameMixin::mainLoop()
         }
         else
         {
-            game.setMode(CGame::MODE_LEVEL);
+            setupTitleScreen();
         }
         break;
     case CGame::MODE_IDLE:
@@ -680,7 +720,7 @@ void CGameMixin::mainLoop()
         }
         else
         {
-            m_game->setMode(CGame::MODE_LEVEL);
+            m_game->setMode(CGame::MODE_PLAY);
             m_keyRepeters[Key_F1] = 1;
         }
         return;
@@ -859,8 +899,8 @@ void CGameMixin::nextLevel()
 
 void CGameMixin::restartLevel()
 {
+    m_game->restartLevel();
     startCountdown(COUNTDOWN_INTRO);
-    m_game->loadLevel(true);
     centerCamera();
 }
 
@@ -1396,15 +1436,19 @@ const char *CGameMixin::getEventText()
     }
     else if (m_currentEvent == EVENT_EXTRA_LIFE)
     {
-        return "EXTRA LIFE !";
+        return "EXTRA LIFE";
     }
     else if (m_currentEvent == EVENT_SUGAR_RUSH)
     {
-        return "SUGAR RUSH !";
+        return "SUGAR RUSH";
     }
     else if (m_currentEvent == EVENT_GOD_MODE)
     {
         return "GOD MODE !";
+    }
+    else if (m_currentEvent == EVENT_SUGAR)
+    {
+        return "SUGAR";
     }
     else
     {

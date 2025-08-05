@@ -202,3 +202,36 @@ void CStates::debug()
         printf("[%d / 0x%.2x] => [%s]\n", k, k, v.c_str());
     }
 }
+
+void CStates::getValues(std::vector<StateValuePair> &pairs)
+{
+    // C++ 20 not supported yet
+    // std::format("0x{:02x}", v)
+    pairs.clear();
+    char tmp1[16];
+    char tmp2[16];
+    for (const auto &[k, v] : m_stateU)
+    {
+        sprintf(tmp1, "0x%.2x", v);
+        sprintf(tmp2, "%d", v);
+        pairs.push_back({k, v ? tmp1 : "", v ? tmp2 : ""});
+    }
+
+    for (const auto &[k, v] : m_stateS)
+    {
+        pairs.push_back({k, v, ""});
+    }
+}
+
+void CStates::operator=(const CStates &s)
+{
+    for (const auto &[k, v] : s.m_stateU)
+    {
+        m_stateU[k] = v;
+    }
+
+    for (const auto &[k, v] : s.m_stateS)
+    {
+        m_stateS[k] = v;
+    }
+}
