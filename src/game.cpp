@@ -28,6 +28,7 @@
 #include "shared/IFile.h"
 #include "shared/interfaces/ISound.h"
 #include "skills.h"
+#include "events.h"
 
 CMap map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -123,17 +124,20 @@ void CGame::consume()
     // apply flags
     if (def.flags & FLAG_EXTRA_LIFE)
     {
+        m_events.push_back(EVENT_EXTRA_LIFE);
         addLife();
     }
 
     if (def.flags & FLAG_GODMODE)
     {
         m_godModeTimer = GODMODE_TIMER;
+        m_events.push_back(EVENT_GOD_MODE);
     }
 
     if (def.flags & FLAG_EXTRA_SPEED)
     {
         m_extraSpeedTimer = EXTRASPEED_TIMER;
+        m_events.push_back(EVENT_SUGAR_RUSH);
     }
 
     // trigger key
@@ -146,7 +150,7 @@ void CGame::consume()
         if (clearAttr(attr))
         {
             playSound(SOUND_0009);
-            m_secretTimer = SECRET_TIMER;
+            m_events.push_back(EVENT_SECRET);
         }
     }
 }
@@ -170,7 +174,7 @@ bool CGame::loadLevel(bool restart)
 
     printf("level loaded\n");
     m_introHint = rand() % m_hints.size();
-    m_secretTimer = 0;
+    m_events.clear();
 
     Pos pos = map.findFirst(TILES_ANNIE2);
     printf("Player at: %d %d\n", pos.x, pos.y);
@@ -199,7 +203,6 @@ void CGame::restartLevel()
 {
     m_godModeTimer = 0;
     m_extraSpeedTimer = 0;
-    m_secretTimer = 0;
 }
 
 void CGame::restartGame()
@@ -402,7 +405,6 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
     m_godModeTimer = std::max(m_godModeTimer - 1, 0);
     m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
-    m_secretTimer = std::max(m_secretTimer - 1, 0);
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -682,7 +684,7 @@ bool CGame::read(FILE *sfile)
     {
         m_monsters[i].read(sfile);
     }
-    m_secretTimer = 0;
+    m_events.clear();
     return true;
 }
 
@@ -789,11 +791,6 @@ const char *CGame::nextHint()
     return m_hints.size() ? m_hints[m_introHint].c_str() : "";
 }
 
-int CGame::secretTimer() const
-{
-    return m_secretTimer;
-}
-
 void CGame::parseHints(const char *data)
 {
     m_hints.clear();
@@ -837,4 +834,32 @@ void CGame::parseHints(const char *data)
         ++line;
     }
     delete[] t;
+}
+
+int CGame::getEvent()
+{
+    int event = EVENT_NONE;
+    if (m_events.size() > 0)
+    {
+        event = m_events.at(0);
+        m_events.erase(m_events.begin());
+    }
+    return event;
+}
+
+bool CGame::isFruit(const uint8_t tileID) const
+{
+    const uint8_t fruits[] = {
+        TILES_APPLE,
+        TILES_FRUIT1,
+        TILES_WATERMEL,
+        TILES_POIRE,
+        TILES_PUMPKIN,
+    };
+    for (size_t i = 0; i < sizeof(fruits); ++i)
+    {
+        if (tileID == fruits[i])
+            return true;
+    }
+    return false;
 }

@@ -44,7 +44,7 @@ void initArgs(params_t &params)
     params.fullscreen = false;
     params.level = 0;
     params.muteMusic = false;
-    params.skill = SKILL_EASY;
+    params.skill = SKILL_NORMAL;
     params.hardcore = false;
     params.verbose = false;
 }

@@ -56,7 +56,7 @@ $ emrun build/cs3v2.html
 <b>Building the docker image</b>
 
 ```
-$ sudo docker build -t sdl2-mingw32-static . -f docker/dockerfile-mingw32-static
+$ sudo docker build -t sdl2-mingw32-static . -f packages/docker/dockerfile-mingw32-static
 ```
 
 <b>Deleting an existing image</b>

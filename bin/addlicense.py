@@ -25,19 +25,16 @@ license_cpp = f'''/*
 
 license_lua = license_cpp.replace('/*', '--[[').replace('*/', ']]--')
 
-# from lgckutil.license import *
-
 specs = [
     'src', 'tests'
 ]
-
 
 def scan_folder(folder):
     folders = [x[0] for x in os.walk(folder) if '/build/' not in x[0]]
     for x in folders[1:]:
         scan_folder(x)
 
-    for ext in ['*.h', '*.cpp']:
+    for ext in ['*.h', '*.cpp', '*.rc']:
         for x in glob.glob(f'{folder}/{ext}'):
             if 'version.h' in x or 'ss_' in x:
                 continue

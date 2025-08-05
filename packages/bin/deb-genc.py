@@ -18,6 +18,7 @@ fuses classic gameplay with a pulse-pounding soundtrack. The game
 features a unique, dynamic audio system built on tracker music,
 alongside high-speed pixel graphics that deliver a challenging
 and nostalgic feel.'''
+PACKAGE_HOMEPAGE = 'https://github.com/cfrankb/cs3-runtime-sdl'
 
 HISTORY = [
     'Initial release',
@@ -166,6 +167,7 @@ lines = [
     f'set(CPACK_PACKAGE_DESCRIPTION "{DESCRIPTION}")',
     f'set(CPACK_PACKAGE_CONTACT "{CONTACT}")',
     f'set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "{LONG_DESCRIPTION}")',
+    f'set(CPACK_PACKAGE_HOMEPAGE_URL "{PACKAGE_HOMEPAGE}")',
     '',
     'file(COPY "${CMAKE_SOURCE_DIR}/packages/data/debian/changelog" DESTINATION ${CMAKE_BINARY_DIR})',
     'execute_process(COMMAND gzip -9 -c "${CMAKE_BINARY_DIR}/changelog"',

@@ -68,6 +68,7 @@ protected:
         BUTTON_RELEASED = 0,
         INTRO_DELAY = TICK_RATE * 3,
         HISCORE_DELAY = 5 * TICK_RATE,
+        EVENT_COUNTDOWN_DELAY = 3 * TICK_RATE / 4,
         CLEAR = 0,
         ALPHA = 0xff000000,
         WHITE = RGBA(0xff, 0xff, 0xff),      // #ffffff
@@ -210,6 +211,8 @@ protected:
     int m_cx;
     int m_cy;
     int m_cameraMode = CAMERA_MODE_STATIC;
+    int m_currentEvent;
+    int m_eventCountdown;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -232,6 +235,7 @@ protected:
     void drawScores(CFrame &bitmap);
     bool inputPlayerName();
     bool handleInputString(char *inputDest, const size_t limit);
+    const char *getEventText();
     void clearScores();
     void clearKeyStates();
     void clearJoyStates();

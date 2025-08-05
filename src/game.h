@@ -73,6 +73,7 @@ public:
     int size() const;
     void resetStats();
     void parseHints(const char *data);
+    int getEvent();
 
     enum GameMode
     {
@@ -100,7 +101,6 @@ private:
         MAX_LIVES = 99,
         GODMODE_TIMER = 100,
         EXTRASPEED_TIMER = 200,
-        SECRET_TIMER = 12,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
@@ -125,10 +125,10 @@ private:
     int m_diamonds = 0;
     int32_t m_godModeTimer = 0;
     int32_t m_extraSpeedTimer = 0;
-    int32_t m_secretTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
     int m_mode;
     int m_introHint = 0;
+    std::vector<int> m_events;
 
     // monsters
     CActor *m_monsters;
@@ -150,8 +150,8 @@ private:
     bool read(FILE *sfile);
     bool write(FILE *tfile);
     int calcScoreLife() const;
-    int secretTimer() const;
     const char *nextHint();
+    bool isFruit(const uint8_t tileID) const;
 
     friend class CGameMixin;
 };

@@ -28,6 +28,7 @@
 #include "skills.h"
 #include "chars.h"
 #include "recorder.h"
+#include "events.h"
 
 // Check windows
 #ifdef _WIN64
@@ -57,6 +58,8 @@ CGameMixin::CGameMixin()
     clearKeyStates();
     clearButtonStates();
     m_recorder = new CRecorder;
+    m_eventCountdown = 0;
+    m_currentEvent = EVENT_NONE;
 }
 
 CGameMixin::~CGameMixin()
@@ -338,9 +341,10 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, DARKGRAY, true);
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, LIGHTGRAY, false);
 
-    if (game.secretTimer())
+    // draw current event text
+    if (m_currentEvent != EVENT_NONE)
     {
-        const char *t = "SECRET !";
+        const char *t = getEventText();
         const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
         drawFont(bitmap, x, bitmap.hei() - 12, t, CYAN, CLEAR);
     }
@@ -599,6 +603,8 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         const int y = HEIGHT - FONT_SIZE * 4;
         drawFont(bitmap, x, y, hint, CYAN);
     }
+
+    m_currentEvent = EVENT_NONE;
 }
 
 void CGameMixin::mainLoop()
@@ -765,6 +771,23 @@ void CGameMixin::manageGamePlay()
     {
         stopRecorder();
         return;
+    }
+
+    if (m_eventCountdown > 0)
+    {
+        --m_eventCountdown;
+    }
+    else if (m_currentEvent == EVENT_NONE)
+    {
+        m_currentEvent = game.getEvent();
+        if (m_currentEvent)
+        {
+            m_eventCountdown = EVENT_COUNTDOWN_DELAY;
+        }
+    }
+    else
+    {
+        m_currentEvent = EVENT_NONE;
     }
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
@@ -1363,4 +1386,28 @@ int CGameMixin::cameraSpeed() const
 void CGameMixin::setCameraMode(const int mode)
 {
     m_cameraMode = mode & 1;
+}
+
+const char *CGameMixin::getEventText()
+{
+    if (m_currentEvent == EVENT_SECRET)
+    {
+        return "SECRET !";
+    }
+    else if (m_currentEvent == EVENT_EXTRA_LIFE)
+    {
+        return "EXTRA LIFE !";
+    }
+    else if (m_currentEvent == EVENT_SUGAR_RUSH)
+    {
+        return "SUGAR RUSH !";
+    }
+    else if (m_currentEvent == EVENT_GOD_MODE)
+    {
+        return "GOD MODE !";
+    }
+    else
+    {
+        return "";
+    }
 }

@@ -16,4 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-bool test_maparch();
+#define EVENT_NONE 0
+#define EVENT_SECRET 1
+#define EVENT_EXTRA_LIFE 2
+#define EVENT_SUGAR_RUSH 3
+#define EVENT_GOD_MODE 4
