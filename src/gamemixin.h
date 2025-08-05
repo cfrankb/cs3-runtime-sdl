@@ -48,6 +48,7 @@ public:
     inline bool within(int val, int min, int max);
     void enableHiScore();
     void setSkill(uint8_t skill);
+    static int tickRate();
 
 #ifdef USE_QFILE
 protected slots:
@@ -69,27 +70,6 @@ protected:
         INTRO_DELAY = TICK_RATE * 3,
         HISCORE_DELAY = 5 * TICK_RATE,
         EVENT_COUNTDOWN_DELAY = TICK_RATE,
-        CLEAR = 0,
-        ALPHA = 0xff000000,
-        WHITE = RGBA(0xff, 0xff, 0xff),      // #ffffff
-        YELLOW = RGBA(0xff, 0xff, 0x00),     // #ffff00
-        PURPLE = RGBA(0xff, 0x00, 0xff),     // #ff00ff
-        DARKPURPLE = RGBA(0x4a, 0x45, 0x98), // #4a4598
-        BLACK = RGBA(0x00, 0x00, 0x00),      // #000000
-        GREEN = RGBA(0x00, 0xff, 0x00),      // #00ff00
-        DARKGREEN = RGBA(0x00, 0x80, 0x00),  // #008000
-        LIME = RGBA(0xbf, 0xff, 0x00),       // #bfff00
-        BLUE = RGBA(0x00, 0x00, 0xff),       // #0000ff
-        MIDBLUE = RGBA(0x00, 0x00, 0x80),    // #000080
-        CYAN = RGBA(0x00, 0xff, 0xff),       // #00ffff
-        RED = RGBA(0xff, 0x00, 0x00),        // #ff0000
-        DARKRED = RGBA(0x80, 0x00, 0x00),    // #800000
-        DARKBLUE = RGBA(0x00, 0x00, 0x44),   // #000044
-        DARKGRAY = RGBA(0x44, 0x44, 0x44),   // #444444
-        GRAY = RGBA(0x88, 0x88, 0x88),       // #808080
-        LIGHTGRAY = RGBA(0xa9, 0xa9, 0xa9),  // #a9a9a9
-        ORANGE = RGBA(0xf5, 0x9b, 0x14),     // #f59b14
-        PINK = RGBA(0xe0, 0xa3, 0xe0),       // #e0a8e0
         _WIDTH = 320,
         _HEIGHT = 240,
         TILE_SIZE = 16,
@@ -112,6 +92,31 @@ protected:
         INSECT1_MAX_OFFSET = 7,
         CAMERA_MODE_STATIC = 0,
         CAMERA_MODE_DYNAMIC = 1,
+    };
+
+    enum Color : uint32_t
+    {
+        CLEAR = 0,
+        ALPHA = 0xff000000,
+        WHITE = RGBA(0xff, 0xff, 0xff),      // #ffffff
+        YELLOW = RGBA(0xff, 0xff, 0x00),     // #ffff00
+        PURPLE = RGBA(0xff, 0x00, 0xff),     // #ff00ff
+        DARKPURPLE = RGBA(0x4a, 0x45, 0x98), // #4a4598
+        BLACK = RGBA(0x00, 0x00, 0x00),      // #000000
+        GREEN = RGBA(0x00, 0xff, 0x00),      // #00ff00
+        DARKGREEN = RGBA(0x00, 0x80, 0x00),  // #008000
+        LIME = RGBA(0xbf, 0xff, 0x00),       // #bfff00
+        BLUE = RGBA(0x00, 0x00, 0xff),       // #0000ff
+        MIDBLUE = RGBA(0x00, 0x00, 0x80),    // #000080
+        CYAN = RGBA(0x00, 0xff, 0xff),       // #00ffff
+        RED = RGBA(0xff, 0x00, 0x00),        // #ff0000
+        DARKRED = RGBA(0x80, 0x00, 0x00),    // #800000
+        DARKBLUE = RGBA(0x00, 0x00, 0x44),   // #000044
+        DARKGRAY = RGBA(0x44, 0x44, 0x44),   // #444444
+        GRAY = RGBA(0x88, 0x88, 0x88),       // #808080
+        LIGHTGRAY = RGBA(0xa9, 0xa9, 0xa9),  // #a9a9a9
+        ORANGE = RGBA(0xf5, 0x9b, 0x14),     // #f59b14
+        PINK = RGBA(0xe0, 0xa3, 0xe0),       // #e0a8e0
     };
 
     enum KeyCode : uint8_t
@@ -142,7 +147,7 @@ protected:
         Key_Count
     };
 
-    enum
+    enum Prompt
     {
         PROMPT_NONE,
         PROMPT_ERASE_SCORES,
@@ -152,7 +157,16 @@ protected:
         PROMPT_RESTART_LEVEL,
         PROMPT_HARDCORE,
         PROMPT_TOGGLE_MUSIC,
+    };
+
+    enum
+    {
         INVALID = -1,
+        JOY_AIMS = 4,
+    };
+
+    enum Button
+    {
         BUTTON_A = 0,
         BUTTON_B,
         BUTTON_X,
@@ -160,8 +174,8 @@ protected:
         BUTTON_START,
         BUTTON_BACK,
         Button_Count,
-        JOY_AIMS = 4,
     };
+
     uint8_t m_keyStates[Key_Count];
     uint8_t m_keyRepeters[Key_Count];
 
@@ -204,7 +218,7 @@ protected:
     bool m_hiscoreEnabled = false;
     bool m_paused = false;
     bool m_musicMuted = false;
-    int m_prompt = PROMPT_NONE;
+    Prompt m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
     bool m_gameMenuActive = false;
     int m_gameMenuCooldown = 0;
@@ -213,16 +227,17 @@ protected:
     int m_cameraMode = CAMERA_MODE_STATIC;
     int m_currentEvent;
     int m_eventCountdown;
+    int m_timer;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
-    void fazeScreen(CFrame &bitmap, const int shift);
+    void fazeScreen(CFrame &bitmap, const int bitShift);
     void drawViewPortDynamic(CFrame &bitmap);
     void drawViewPortStatic(CFrame &bitmap);
     void drawLevelIntro(CFrame &bitmap);
-    void drawFont(CFrame &frame, int x, int y, const char *text, const uint32_t color = WHITE, const uint32_t bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
-    void drawRect(CFrame &frame, const Rect &rect, const uint32_t color = GREEN, bool fill = true);
-    void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, uint32_t color);
+    void drawFont(CFrame &frame, int x, int y, const char *text, Color color = WHITE, Color bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
+    void drawRect(CFrame &frame, const Rect &rect, const Color color = GREEN, bool fill = true);
+    void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, const Color color);
     inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha);

@@ -31,16 +31,15 @@ public:
     CGame();
     ~CGame();
 
-    bool init();
-    bool loadLevel(const bool restart);
-    bool move(const int dir);
+    bool loadLevel(const int mode);
+    bool move(const JoyAim dir);
     void manageMonsters(const int ticks);
     uint8_t managePlayer(const uint8_t *joystate);
     static Pos translate(const Pos &p, const int aim);
     void consume();
     static bool hasKey(const uint8_t c);
     void addKey(const uint8_t c);
-    bool goalCount() const;
+    int goalCount() const;
     static CMap &getMap();
     void nextLevel();
     void restartLevel();
@@ -54,14 +53,13 @@ public:
     const CActor &playerConst() const;
     int score() const;
     int lives() const;
-    int diamonds() const;
     int health() const;
     int sugar() const;
     bool hasExtraSpeed() const;
     void setMapArch(CMapArch *arch);
     void setLevel(const int levelId);
     int level() const;
-    int godModeTimer() const;
+    bool isGodMode() const;
     int playerSpeed() const;
     static uint8_t *keys();
     void getMonsters(CActor *&monsters, int &count);
@@ -146,7 +144,7 @@ private:
     bool read(FILE *sfile);
     bool write(FILE *tfile);
     int calcScoreLife() const;
-    const char *nextHint();
+    const char *getHintText();
     bool isFruit(const uint8_t tileID) const;
 
     friend class CGameMixin;

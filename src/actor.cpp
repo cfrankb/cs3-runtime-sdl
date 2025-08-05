@@ -21,13 +21,13 @@
 #include "sprtypes.h"
 #include <cstdio>
 
-uint8_t AIMS[] = {
+const JoyAim g_aims[] = {
     AIM_DOWN, AIM_RIGHT, AIM_UP, AIM_LEFT,
     AIM_UP, AIM_LEFT, AIM_DOWN, AIM_RIGHT,
     AIM_RIGHT, AIM_UP, AIM_LEFT, AIM_DOWN,
     AIM_LEFT, AIM_DOWN, AIM_RIGHT, AIM_UP};
 
-CActor::CActor(uint8_t x, uint8_t y, uint8_t type, uint8_t aim)
+CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAim aim)
 {
     m_x = x;
     m_y = y;
@@ -36,7 +36,7 @@ CActor::CActor(uint8_t x, uint8_t y, uint8_t type, uint8_t aim)
     m_pu = TILES_BLANK;
 }
 
-CActor::CActor(const Pos &pos, uint8_t type, uint8_t aim)
+CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim)
 {
     m_x = pos.x;
     m_y = pos.y;
@@ -49,7 +49,7 @@ CActor::~CActor()
 {
 }
 
-bool CActor::canMove(int aim)
+bool CActor::canMove(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
     const Pos &pos = Pos{m_x, m_y};
@@ -83,7 +83,7 @@ bool CActor::canMove(int aim)
     return false;
 }
 
-void CActor::move(const int aim)
+void CActor::move(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
     uint8_t c = map.at(m_x, m_y);
@@ -125,13 +125,13 @@ void CActor::setXY(const Pos &pos)
     m_y = pos.y;
 }
 
-int CActor::findNextDir(const bool reverse)
+JoyAim CActor::findNextDir(const bool reverse)
 {
     const int aim = m_aim ^ (1 & reverse);
     int i = TOTAL_AIMS - 1;
     while (i >= 0)
     {
-        int newAim = AIMS[aim * TOTAL_AIMS + i];
+        const JoyAim &newAim = g_aims[aim * TOTAL_AIMS + i];
         if (canMove(newAim))
         {
             return newAim;
@@ -141,24 +141,24 @@ int CActor::findNextDir(const bool reverse)
     return AIM_NONE;
 }
 
-uint8_t CActor::getAim() const
+JoyAim CActor::getAim() const
 {
     return m_aim;
 }
 
-void CActor::setAim(const uint8_t aim)
+void CActor::setAim(const JoyAim aim)
 {
     m_aim = aim;
 }
 
-bool CActor::isPlayerThere(uint8_t aim) const
+bool CActor::isPlayerThere(JoyAim aim) const
 {
     const uint8_t c = tileAt(aim);
     const TileDef &def = getTileDef(c);
     return def.type == TYPE_PLAYER;
 }
 
-uint8_t CActor::tileAt(uint8_t aim) const
+uint8_t CActor::tileAt(JoyAim aim) const
 {
     CMap &map = CGame::getMap();
     const Pos &p = CGame::translate(Pos{m_x, m_y}, aim);
@@ -206,4 +206,25 @@ bool CActor::write(FILE *tfile)
     writefile(&m_aim, sizeof(m_aim));
     writefile(&m_pu, sizeof(m_pu));
     return true;
+}
+
+JoyAim operator^=(JoyAim &aim, int i)
+{
+    if (aim == AIM_UP)
+    {
+        return AIM_DOWN;
+    }
+    else if (aim == AIM_DOWN)
+    {
+        return AIM_UP;
+    }
+    else if (aim == AIM_LEFT)
+    {
+        return AIM_RIGHT;
+    }
+    else if (aim == AIM_RIGHT)
+    {
+        return AIM_LEFT;
+    }
+    return aim;
 }

@@ -30,26 +30,28 @@ enum JoyAim : uint8_t
     AIM_NONE = 0xff,
 };
 
+JoyAim operator^=(JoyAim &aim, int i);
+
 class CActor
 {
 
 public:
-    CActor(uint8_t x = 0, uint8_t y = 0, uint8_t type = 0, uint8_t aim = 0);
-    CActor(const Pos &pos, uint8_t type = 0, uint8_t aim = 0);
+    CActor(const uint8_t x = 0, const uint8_t y = 0, const uint8_t type = 0, const JoyAim aim = AIM_UP);
+    CActor(const Pos &pos, uint8_t type = 0, JoyAim aim = AIM_UP);
     ~CActor();
 
-    bool canMove(int aim);
-    void move(const int aim);
+    bool canMove(const JoyAim aim);
+    void move(const JoyAim aim);
     uint8_t getX() const;
     uint8_t getY() const;
     uint8_t getPU() const;
     void setPU(const uint8_t c);
     void setXY(const Pos &pos);
-    uint8_t getAim() const;
-    void setAim(const uint8_t aim);
-    int findNextDir(const bool reverse = false);
-    bool isPlayerThere(uint8_t aim) const;
-    uint8_t tileAt(uint8_t aim) const;
+    JoyAim getAim() const;
+    void setAim(const JoyAim aim);
+    JoyAim findNextDir(const bool reverse = false);
+    bool isPlayerThere(JoyAim aim) const;
+    uint8_t tileAt(JoyAim aim) const;
     void setType(const uint8_t type);
     bool within(const int x1, const int y1, const int x2, const int y2) const;
     bool read(FILE *sfile);
@@ -60,7 +62,7 @@ private:
     uint8_t m_x;
     uint8_t m_y;
     uint8_t m_type;
-    uint8_t m_aim;
+    JoyAim m_aim;
     uint8_t m_pu;
 
     friend class CGame;

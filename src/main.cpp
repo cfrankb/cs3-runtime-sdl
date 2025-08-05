@@ -25,7 +25,7 @@
 #include "maparch.h"
 #include "parseargs.h"
 
-const uint32_t FPS = 24;
+const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
 uint32_t lastTick = 0;
 bool skip = false;

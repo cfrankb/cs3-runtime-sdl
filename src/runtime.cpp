@@ -117,6 +117,7 @@ void CRuntime::paint()
     case CGame::MODE_LEVEL_INTRO:
     case CGame::MODE_RESTART:
     case CGame::MODE_GAMEOVER:
+    case CGame::MODE_TIMEOUT:
         drawLevelIntro(bitmap);
         break;
     case CGame::MODE_PLAY:
@@ -895,8 +896,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
         const CMenuItem &item = menu.at(i);
         const std::string text = item.str();
         const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
-        uint32_t color = static_cast<int>(i) == menu.index() ? static_cast<uint32_t>(YELLOW)
-                                                             : static_cast<uint32_t>(BLUE);
+        Color color = static_cast<int>(i) == menu.index() ? YELLOW : BLUE;
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
@@ -1129,6 +1129,10 @@ void CRuntime::resizeScroller()
     m_scroll[len] = 0;
 }
 
+/**
+ * @brief handle events for the title screen
+ *
+ */
 void CRuntime::manageTitleScreen()
 {
     manageMenu(*m_mainMenu);
@@ -1189,7 +1193,7 @@ void CRuntime::manageMenu(CMenu &menu)
                 openMusicForLevel(m_startLevel);
             }
             m_gameMenuActive = false;
-            game.loadLevel(false);
+            game.loadLevel(CGame::MODE_LEVEL_INTRO);
             centerCamera();
             game.setSkill(m_skill);
             startCountdown(COUNTDOWN_INTRO);
