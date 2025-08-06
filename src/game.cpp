@@ -15,10 +15,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <unordered_map>
 #include <cstring>
 #include <stdarg.h>
 #include <string>
 #include <vector>
+#include <set>
 #include "game.h"
 #include "map.h"
 #include "actor.h"
@@ -1154,9 +1156,46 @@ bool CGame::isFruit(const uint8_t tileID) const
         TILES_POIRE,
         TILES_PUMPKIN,
     };
-    for (size_t i = 0; i < sizeof(fruits); ++i)
+    for (const auto &fruit : fruits)
     {
-        if (tileID == fruits[i])
+        if (tileID == fruit)
+            return true;
+    }
+    return false;
+}
+
+bool CGame::isBonusItem(const uint8_t tileID) const
+{
+    const uint8_t tresures[] = {
+        TILES_NECKLESS,
+        TILES_CHEST,
+        TILES_CAROTTE,
+        TILES_CAROTTE_2,
+        TILES_MAGICBOX,
+        TILES_MAGICBOT,
+        TILES_LIGHTBUL,
+        TILES_ROPE,
+        TILES_SHIELD,
+        TILES_CLOVER,
+        TILES_1ST_AID,
+        TILES_VIALS,
+        TILES_VIALS_2,
+        TILES_VIALS_3,
+        TILES_FLOWERS,
+        TILES_FLOWERS_2,
+        TILES_TRIFORCE,
+        TILES_ORB,
+        TILES_TNTSTICK,
+        TILES_BALLON1,
+        TILES_SMALL_MUSH0,
+        TILES_SMALL_MUSH1,
+        TILES_SMALL_MUSH2,
+        TILES_SMALL_MUSH3,
+        TILES_MUSHROOM,
+    };
+    for (const auto &tresure : tresures)
+    {
+        if (tileID == tresure)
             return true;
     }
     return false;
@@ -1170,4 +1209,43 @@ bool CGame::isFruit(const uint8_t tileID) const
 int CGame::sugar() const
 {
     return m_sugar;
+}
+
+/**
+ * @brief Generate a statistical report for the map
+ *
+ * @param report
+ */
+
+void CGame::generateMapReport(MapReport &report)
+{
+    std::unordered_map<uint8_t, int> tiles;
+    for (int y = 0; y < map.hei(); ++y)
+    {
+        for (int x = 0; x < map.len(); ++x)
+        {
+            const auto &tile = map.at(x, y);
+            tiles[tile] += 1;
+        }
+    }
+
+    std::unordered_map<uint8_t, int> secrets;
+    const AttrMap &attrs = map.attrs();
+    for (const auto &[k, v] : attrs)
+    {
+        ++secrets[v];
+    }
+    report.bonuses = 0;
+    report.fruits = 0;
+    report.secrets = secrets.size();
+    for (const auto [tile, count] : tiles)
+    {
+        const TileDef &def = getTileDef(tile);
+        if (def.type != TYPE_PICKUP)
+            continue;
+        if (isFruit(tile))
+            report.fruits += count;
+        if (isBonusItem(tile))
+            report.bonuses += count;
+    }
 }

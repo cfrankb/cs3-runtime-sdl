@@ -114,6 +114,13 @@ private:
         VERSION = (0x0200 << 16) + 0x0003,
     };
 
+    struct MapReport
+    {
+        int fruits;
+        int bonuses;
+        int secrets;
+    };
+
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;
@@ -150,6 +157,8 @@ private:
     int calcScoreLife() const;
     const char *getHintText();
     bool isFruit(const uint8_t tileID) const;
+    bool isBonusItem(const uint8_t tileID) const;
+    void generateMapReport(MapReport &report);
 
     friend class CGameMixin;
 };

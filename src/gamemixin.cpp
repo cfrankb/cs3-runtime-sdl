@@ -390,11 +390,17 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
     {
         char tmp[16];
         sprintf(tmp, "%.d", timeout);
-        const int scaleX = timeout > 10 ? 3 : 5;
-        const int scaleY = timeout > 10 ? 4 : 5;
+        const bool lowTime = timeout <= 15;
+        const int scaleX = !lowTime ? 3 : 5;
+        const int scaleY = !lowTime ? 4 : 5;
         const int x = WIDTH - scaleX * FONT_SIZE * strlen(tmp) - FONT_SIZE;
-        const int y = 16;
-        drawFont(bitmap, x, y, tmp, YELLOW, CLEAR, scaleX, scaleY);
+        const int y = 2 * FONT_SIZE;
+        Color color = YELLOW;
+        if (lowTime && (m_ticks >> 3) & 1)
+        {
+            color = ORANGE;
+        }
+        drawFont(bitmap, x, y, tmp, color, CLEAR, scaleX, scaleY);
     }
 }
 
@@ -1435,18 +1441,25 @@ const char *CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
 {
     if (m_currentEvent == EVENT_SECRET)
     {
+        scaleX = 2;
+        color = CYAN;
         return "SECRET !";
     }
     else if (m_currentEvent == EVENT_EXTRA_LIFE)
     {
+        scaleX = 2;
+        color = GREEN;
         return "EXTRA LIFE";
     }
     else if (m_currentEvent == EVENT_SUGAR_RUSH)
     {
-        baseY -= 4;
+        baseY -= FONT_SIZE / 2;
         scaleX = 3;
         scaleY = 3;
-        color = LIME;
+        if ((m_ticks >> 3) & 1)
+            color = LIME;
+        else
+            color = ORANGE;
         return "SUGAR RUSH";
     }
     else if (m_currentEvent == EVENT_GOD_MODE)
