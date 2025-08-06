@@ -10,3 +10,4 @@ Pink Insects Can Lash Onto You.
 Gray Octopuses Are Deadly !
 VamPlants Drain You Health
 Water Do Moderate Damages
+Eat Fruits => Sugar Rush

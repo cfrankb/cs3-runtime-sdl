@@ -139,7 +139,10 @@ void CRuntime::paint()
         break;
     case CGame::MODE_TITLE:
         drawTitleScreen(bitmap);
-    }
+        break;
+    case CGame::MODE_IDLE:
+        break;
+    };
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
     SDL_RenderClear(m_app.renderer);

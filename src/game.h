@@ -31,7 +31,27 @@ public:
     CGame();
     ~CGame();
 
-    bool loadLevel(const int mode);
+    enum GameMode : uint8_t
+    {
+        MODE_LEVEL_INTRO,
+        MODE_PLAY,
+        MODE_RESTART,
+        MODE_GAMEOVER,
+        MODE_CLICKSTART,
+        MODE_HISCORES,
+        MODE_IDLE,
+        MODE_HELP,
+        MODE_TITLE,
+        MODE_TIMEOUT,
+    };
+
+    enum : uint32_t
+    {
+        SUGAR_RUSH_LEVEL = 5,
+        MAX_KEYS = 6,
+    };
+
+    bool loadLevel(const GameMode mode);
     bool move(const JoyAim dir);
     void manageMonsters(const int ticks);
     uint8_t managePlayer(const uint8_t *joystate);
@@ -44,8 +64,8 @@ public:
     void nextLevel();
     void restartLevel();
     void restartGame();
-    void setMode(int mode);
-    int mode() const;
+    void setMode(const GameMode mode);
+    GameMode mode() const;
     bool isPlayerDead();
     void killPlayer();
     bool isGameOver() const;
@@ -75,24 +95,9 @@ public:
     void parseHints(const char *data);
     int getEvent();
 
-    enum GameMode
-    {
-        MODE_LEVEL_INTRO,
-        MODE_PLAY,
-        MODE_RESTART,
-        MODE_GAMEOVER,
-        MODE_CLICKSTART,
-        MODE_HISCORES,
-        MODE_IDLE,
-        MODE_HELP,
-        MODE_TITLE,
-        MODE_TIMEOUT,
-    };
-
 private:
     enum
     {
-        SUGAR_RUSH_LEVEL = 5,
         DEFAULT_MAX_MONSTERS = 128,
         GROWBY_MONSTERS = 64,
         MAX_HEALTH = 200,
@@ -107,7 +112,6 @@ private:
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
         VERSION = (0x0200 << 16) + 0x0003,
-        MAX_KEYS = 6,
     };
 
     int m_lives = 0;
@@ -120,7 +124,7 @@ private:
     int32_t m_godModeTimer = 0;
     int32_t m_extraSpeedTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
-    int m_mode;
+    GameMode m_mode;
     int m_introHint = 0;
     std::vector<int> m_events;
 

@@ -102,6 +102,18 @@ CGameMixin::~CGameMixin()
     }
 }
 
+/**
+ * @brief Draw String at screen coordonates (x,y)
+ *
+ * @param frame targe pixmap buffer
+ * @param x x-pos
+ * @param y y-pos
+ * @param text null terminated string
+ * @param color text color
+ * @param bgcolor background color. use Clear for transparent
+ * @param scaleX x-scalling factor for font
+ * @param scaleY y-scalling factor for font
+ */
 void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const Color color, const Color bgcolor, const int scaleX, const int scaleY)
 {
     uint32_t *rgba = frame.getRGB();
@@ -255,7 +267,7 @@ void CGameMixin::drawKeys(CFrame &bitmap)
     int y = HEIGHT - TILE_SIZE;
     int x = WIDTH - TILE_SIZE;
     const uint8_t *keys = game.keys();
-    for (int i = 0; i < 6; ++i)
+    for (size_t i = 0; i < CGame::MAX_KEYS; ++i)
     {
         uint8_t k = keys[i];
         if (k)
@@ -337,17 +349,8 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         {
             drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
         }
-        const int sugar = game.sugar();
-        tmp[0] = CHARS_BUTTERFLY;
-        tmp[1] = '\0';
-        for (int i = 0; i < 5; ++i)
-        {
-            if (i < sugar)
-                drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, RED);
-            else
-                drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, DARKGRAY);
-            ++bx;
-        }
+
+        drawSugarMeter(bitmap, bx);
     }
 
     // draw bottom rect
@@ -355,25 +358,21 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, LIGHTGRAY, false);
 
     // draw current event text
-    if (m_currentEvent != EVENT_NONE)
-    {
-        const char *t = getEventText();
-        const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
-        drawFont(bitmap, x, bitmap.hei() - 12, t, CYAN, CLEAR);
-    }
+    drawEventText(bitmap);
+
+    // draw health bar
+    const int hpWidth = std::min(game.health() / 2, bitmap.len() - 4);
+    drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+             game.isGodMode() ? WHITE : LIME, true);
+    drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+             WHITE, false);
 
     if (game.hasExtraSpeed())
     {
         tmp[0] = CHARS_SMILEY;
         tmp[1] = '\0';
-        drawFont(bitmap, 220 / 2, bitmap.hei() - 12, tmp, YELLOW, CLEAR);
+        drawFont(bitmap, hpWidth + 12, bitmap.hei() - 12, tmp, YELLOW, CLEAR);
     }
-
-    // draw health bar
-    drawRect(bitmap, Rect{4, bitmap.hei() - 12, std::min(game.health() / 2, bitmap.len() - 4), 8},
-             game.isGodMode() ? WHITE : LIME, true);
-    drawRect(bitmap, Rect{4, bitmap.hei() - 12, std::min(game.health() / 2, bitmap.len() - 4), 8},
-             WHITE, false);
 
     // draw keys
     drawKeys(bitmap);
@@ -390,10 +389,12 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
     if (timeout)
     {
         char tmp[16];
-        sprintf(tmp, "%.2d", timeout);
-        int x = WIDTH - 2 * FONT_SIZE * strlen(tmp) - FONT_SIZE;
-        int y = 16;
-        drawFont(bitmap, x, y, tmp, ORANGE, CLEAR, 2, 2);
+        sprintf(tmp, "%.d", timeout);
+        const int scaleX = timeout > 10 ? 3 : 5;
+        const int scaleY = timeout > 10 ? 4 : 5;
+        const int x = WIDTH - scaleX * FONT_SIZE * strlen(tmp) - FONT_SIZE;
+        const int y = 16;
+        drawFont(bitmap, x, y, tmp, YELLOW, CLEAR, scaleX, scaleY);
     }
 }
 
@@ -728,9 +729,9 @@ void CGameMixin::mainLoop()
     case CGame::MODE_TITLE:
         manageTitleScreen();
         return;
+    case CGame::MODE_PLAY:
+        manageGamePlay();
     }
-
-    manageGamePlay();
 }
 
 void CGameMixin::moveCamera()
@@ -814,54 +815,8 @@ void CGameMixin::manageGamePlay()
         return;
     }
 
-    if (m_eventCountdown > 0)
-    {
-        --m_eventCountdown;
-    }
-    else if (m_currentEvent == EVENT_NONE)
-    {
-        m_currentEvent = game.getEvent();
-        if (m_currentEvent)
-        {
-            m_eventCountdown = EVENT_COUNTDOWN_DELAY;
-        }
-    }
-    else
-    {
-        m_currentEvent = EVENT_NONE;
-    }
-
-    // printf("timer:%d\n", m_timer);
-    if (m_timer)
-    {
-        --m_timer;
-    }
-    else
-    {
-        m_timer = TICK_RATE;
-        CStates &states = game.getMap().states();
-        uint16_t timeout = states.getU(TIMEOUT);
-        //  printf("timeout: %u\n", timeout);
-        if (timeout == 1)
-        {
-            game.killPlayer();
-            if (game.isGameOver())
-            {
-                game.setMode(CGame::MODE_GAMEOVER);
-            }
-            else
-            {
-                startCountdown(COUNTDOWN_INTRO);
-                game.loadLevel(CGame::MODE_TIMEOUT);
-                centerCamera();
-            }
-            states.setU(TIMEOUT, 0);
-        }
-        else if (timeout > 0)
-        {
-            states.setU(TIMEOUT, timeout - 1);
-        }
-    }
+    manageCurrentEvent();
+    manageTimer();
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
@@ -1461,7 +1416,22 @@ void CGameMixin::setCameraMode(const int mode)
     m_cameraMode = mode & 1;
 }
 
-const char *CGameMixin::getEventText()
+void CGameMixin::drawEventText(CFrame &bitmap)
+{
+    if (m_currentEvent != EVENT_NONE)
+    {
+        Color color = CYAN;
+        int scaleX = 1;
+        int scaleY = 1;
+        int baseY = bitmap.hei() - 4;
+        const char *t = getEventText(scaleX, scaleY, baseY, color);
+        const int x = (WIDTH - strlen(t) * FONT_SIZE * scaleX) / 2;
+        const int y = baseY - FONT_SIZE * scaleY;
+        drawFont(bitmap, x, y, t, color, CLEAR, scaleX, scaleY);
+    }
+}
+
+const char *CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color &color)
 {
     if (m_currentEvent == EVENT_SECRET)
     {
@@ -1473,15 +1443,23 @@ const char *CGameMixin::getEventText()
     }
     else if (m_currentEvent == EVENT_SUGAR_RUSH)
     {
+        baseY -= 4;
+        scaleX = 3;
+        scaleY = 3;
+        color = LIME;
         return "SUGAR RUSH";
     }
     else if (m_currentEvent == EVENT_GOD_MODE)
     {
+        scaleX = 2;
+        color = WHITE;
         return "GOD MODE !";
     }
     else if (m_currentEvent == EVENT_SUGAR)
     {
-        return "SUGAR";
+        scaleX = 2;
+        color = PURPLE;
+        return "YUMMY";
     }
     else
     {
@@ -1492,4 +1470,72 @@ const char *CGameMixin::getEventText()
 int CGameMixin::tickRate()
 {
     return TICK_RATE;
+}
+
+void CGameMixin::manageCurrentEvent()
+{
+    if (m_eventCountdown > 0)
+    {
+        --m_eventCountdown;
+    }
+    else if (m_currentEvent == EVENT_NONE)
+    {
+        m_currentEvent = m_game->getEvent();
+        if (m_currentEvent)
+        {
+            m_eventCountdown = EVENT_COUNTDOWN_DELAY;
+        }
+    }
+    else
+    {
+        m_currentEvent = EVENT_NONE;
+    }
+}
+
+void CGameMixin::manageTimer()
+{
+    CGame &game = *m_game;
+    if (m_timer)
+    {
+        --m_timer;
+    }
+    else
+    {
+        m_timer = TICK_RATE;
+        CStates &states = game.getMap().states();
+        uint16_t timeout = states.getU(TIMEOUT);
+        if (timeout == 1)
+        {
+            game.killPlayer();
+            if (game.isGameOver())
+            {
+                game.setMode(CGame::MODE_GAMEOVER);
+            }
+            else
+            {
+                startCountdown(COUNTDOWN_INTRO);
+                game.loadLevel(CGame::MODE_TIMEOUT);
+                centerCamera();
+                m_timer = TICK_RATE;
+            }
+        }
+        else if (timeout > 0)
+        {
+            states.setU(TIMEOUT, timeout - 1);
+        }
+    }
+}
+
+void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
+{
+    CGame &game = *m_game;
+    const int sugar = game.sugar();
+    for (int i = 0; i < (int)CGame::SUGAR_RUSH_LEVEL; ++i)
+    {
+        Rect rect{.x = bx * (int)FONT_SIZE + i * 5, .y = Y_STATUS + 2, .width = 4, .height = 4};
+        if (static_cast<int>(i) < sugar)
+            drawRect(bitmap, rect, RED, true);
+        else
+            drawRect(bitmap, rect, WHITE, false);
+    }
 }

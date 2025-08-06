@@ -116,7 +116,7 @@ protected:
         GRAY = RGBA(0x88, 0x88, 0x88),       // #808080
         LIGHTGRAY = RGBA(0xa9, 0xa9, 0xa9),  // #a9a9a9
         ORANGE = RGBA(0xf5, 0x9b, 0x14),     // #f59b14
-        PINK = RGBA(0xe0, 0xa3, 0xe0),       // #e0a8e0
+        PINK = RGBA(0xe0, 0xa8, 0xe0),       // #e0a8e0
     };
 
     enum KeyCode : uint8_t
@@ -240,6 +240,7 @@ protected:
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, const Color color);
     inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
+    inline void drawSugarMeter(CFrame &bitmap, const int bx);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect);
     inline CFrame *tile2Frame(const uint8_t tileID);
@@ -251,7 +252,10 @@ protected:
     void drawScores(CFrame &bitmap);
     bool inputPlayerName();
     bool handleInputString(char *inputDest, const size_t limit);
-    const char *getEventText();
+    void drawEventText(CFrame &bitmap);
+    const char *getEventText(int &scaleX, int &scaleY, int &baseY, Color &color);
+    void manageCurrentEvent();
+    void manageTimer();
     void clearScores();
     void clearKeyStates();
     void clearJoyStates();

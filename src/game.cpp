@@ -200,7 +200,7 @@ void CGame::consume()
  * @return true - upon success
  * @return false
  */
-bool CGame::loadLevel(const int mode)
+bool CGame::loadLevel(const GameMode mode)
 {
     printf("loading level: %d ...\n", m_level + 1);
     setMode(mode);
@@ -669,7 +669,7 @@ void CGame::addHealth(const int hp)
  * @param mode
  *        possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
  */
-void CGame::setMode(int mode)
+void CGame::setMode(const GameMode mode)
 {
     m_mode = mode;
 }
@@ -680,7 +680,7 @@ void CGame::setMode(int mode)
  * @return int
  *         possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
  */
-int CGame::mode() const
+CGame::GameMode CGame::mode() const
 {
     return m_mode;
 }
@@ -1001,6 +1001,8 @@ void CGame::playTileSound(int tileID) const
     case TILES_NECKLESS:
         snd = SOUND_COIN1;
         break;
+    case TILES_POIRE:
+    case TILES_PUMPKIN:
     case TILES_FRUIT1:
     case TILES_APPLE:
         snd = SOUND_GRUUP;
