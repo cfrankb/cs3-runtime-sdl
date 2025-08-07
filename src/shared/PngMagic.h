@@ -17,7 +17,7 @@
 */
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 class CFrame;
 class CFrameSet;
 class IFile;

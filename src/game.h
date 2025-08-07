@@ -17,7 +17,7 @@
 */
 #pragma once
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include "actor.h"
 #include "map.h"
@@ -112,6 +112,8 @@ private:
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
         VERSION = (0x0200 << 16) + 0x0003,
+        SECRET_ATTR_MIN = 0x01,
+        SECRET_ATTR_MAX = 0x7f,
     };
 
     struct MapReport

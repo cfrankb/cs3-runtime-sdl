@@ -17,7 +17,7 @@
 */
 #pragma once
 #include <stdio.h>
-#include <stdint.h>
+#include <cstdint>
 #include "map.h"
 
 enum JoyAim : uint8_t

@@ -25,6 +25,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
@@ -92,6 +93,7 @@ protected:
         INSECT1_MAX_OFFSET = 7,
         CAMERA_MODE_STATIC = 0,
         CAMERA_MODE_DYNAMIC = 1,
+        FAZ_INV_SHIFT = 1,
     };
 
     enum Color : uint32_t
@@ -241,9 +243,9 @@ protected:
     inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
     inline void drawSugarMeter(CFrame &bitmap, const int bx);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect);
-    inline CFrame *tile2Frame(const uint8_t tileID);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    inline CFrame *tile2Frame(const uint8_t tileID, bool &inverted, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void nextLevel();
     void restartLevel();
     void restartGame();
@@ -253,7 +255,7 @@ protected:
     bool inputPlayerName();
     bool handleInputString(char *inputDest, const size_t limit);
     void drawEventText(CFrame &bitmap);
-    const char *getEventText(int &scaleX, int &scaleY, int &baseY, Color &color);
+    std::string getEventText(int &scaleX, int &scaleY, int &baseY, Color &color);
     void manageCurrentEvent();
     void manageTimer();
     void clearScores();
@@ -267,6 +269,7 @@ protected:
     void moveCamera();
     int cameraSpeed() const;
     void setCameraMode(const int mode);
+    inline uint32_t fazFilter(int shift) const;
     inline int getWidth() const
     {
         return _WIDTH;

@@ -20,7 +20,7 @@
 
 #include <string>
 #include <unordered_map>
-#include <stdint.h>
+#include <cstdint>
 #include "ISerial.h"
 
 class CFrame;

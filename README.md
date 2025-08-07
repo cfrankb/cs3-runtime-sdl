@@ -15,13 +15,13 @@ Using the SDL2 libraries as a base, the game can now run as a desktop app or in 
 ![alt text](images/3552as3552as3552.png)
 
 
-![alt text](images/screenshot20250630-104230.png)
+![alt text](images/screenshot20250807-225257.png)
 
-![alt text](images/screenshot20250630-104318.png)
+![alt text](images/screenshot20250807-225306.png)
 
-![alt text](images/screenshot20250630-104356.png)
+![alt text](images/screenshot20250807-225315.png)
 
-![alt text](images/screenshot20250615-002035.png)
+![alt text](images/screenshot20250807-225339.png)
 
 
 

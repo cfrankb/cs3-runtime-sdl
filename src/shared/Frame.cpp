@@ -30,7 +30,7 @@
 #include "CRC.h"
 #include "IFile.h"
 #include "helper.h"
-#include <stdint.h>
+#include <cstdint>
 
 /////////////////////////////////////////////////////////////////////////////
 // CFrame

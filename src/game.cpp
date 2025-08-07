@@ -33,7 +33,7 @@
 #include "events.h"
 #include "sounds.h"
 
-CMap map(30, 30);
+CMap g_map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 
@@ -79,7 +79,7 @@ CGame::~CGame()
  */
 CMap &CGame::getMap()
 {
-    return map;
+    return g_map;
 }
 
 /**
@@ -169,12 +169,16 @@ void CGame::consume()
 
     if (def.flags & FLAG_GODMODE)
     {
+        if (!m_godModeTimer)
+            playSound(SOUND_POWERUP3);
         m_godModeTimer = GODMODE_TIMER;
         m_events.push_back(EVENT_GOD_MODE);
     }
 
     if (def.flags & FLAG_EXTRA_SPEED || m_sugar == SUGAR_RUSH_LEVEL)
     {
+        if (!m_extraSpeedTimer)
+            playSound(SOUND_POWERUP2);
         m_extraSpeedTimer = EXTRASPEED_TIMER;
         m_events.push_back(EVENT_SUGAR_RUSH);
         m_sugar = 0;
@@ -183,10 +187,10 @@ void CGame::consume()
     // trigger key
     int x = m_player.getX();
     int y = m_player.getY();
-    uint8_t attr = map.getAttr(x, y);
+    uint8_t attr = g_map.getAttr(x, y);
     if (attr != 0)
     {
-        map.setAttr(x, y, 0);
+        g_map.setAttr(x, y, 0);
         if (clearAttr(attr))
         {
             playSound(SOUND_0009);
@@ -208,16 +212,16 @@ bool CGame::loadLevel(const GameMode mode)
     setMode(mode);
 
     // extract level from MapArch
-    map = *(m_mapArch->at(m_level));
+    g_map = *(m_mapArch->at(m_level));
 
     printf("level loaded\n");
     m_introHint = rand() % m_hints.size();
     m_events.clear();
 
-    Pos pos = map.findFirst(TILES_ANNIE2);
+    Pos pos = g_map.findFirst(TILES_ANNIE2);
     printf("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
-    m_diamonds = map.count(TILES_DIAMOND);
+    m_diamonds = g_map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
     m_health = DEFAULT_HEALTH;
     findMonsters();
@@ -316,11 +320,11 @@ void CGame::setMapArch(CMapArch *arch)
 bool CGame::findMonsters()
 {
     m_monsterCount = 0;
-    for (int y = 0; y < map.hei(); ++y)
+    for (int y = 0; y < g_map.hei(); ++y)
     {
-        for (int x = 0; x < map.len(); ++x)
+        for (int x = 0; x < g_map.len(); ++x)
         {
-            uint8_t c = map.at(x, y);
+            uint8_t c = g_map.at(x, y);
             const TileDef &def = getTileDef(c);
             if (def.type == TYPE_MONSTER ||
                 def.type == TYPE_VAMPLANT ||
@@ -395,7 +399,7 @@ void CGame::manageMonsters(int ticks)
     for (int i = 0; i < m_monsterCount; ++i)
     {
         CActor &actor = m_monsters[i];
-        const uint8_t cs = map.at(actor.getX(), actor.getY());
+        const uint8_t cs = g_map.at(actor.getX(), actor.getY());
         const TileDef &def = getTileDef(cs);
         if (!speeds[def.speed])
         {
@@ -464,7 +468,7 @@ void CGame::manageMonsters(int ticks)
             for (uint8_t i = 0; i < sizeof(dirs); ++i)
             {
                 const Pos p = CGame::translate(Pos{actor.getX(), actor.getY()}, dirs[i]);
-                const uint8_t ct = map.at(p.x, p.y);
+                const uint8_t ct = g_map.at(p.x, p.y);
                 const TileDef &defT = getTileDef(ct);
                 if (defT.type == TYPE_PLAYER)
                 {
@@ -473,7 +477,7 @@ void CGame::manageMonsters(int ticks)
                 }
                 else if (defT.type == TYPE_SWAMP)
                 {
-                    map.set(p.x, p.y, TILES_VAMPLANT);
+                    g_map.set(p.x, p.y, TILES_VAMPLANT);
                     newMonsters.push_back(CActor(p.x, p.y, TYPE_VAMPLANT));
                     break;
                 }
@@ -484,7 +488,7 @@ void CGame::manageMonsters(int ticks)
                         continue;
                     CActor &m = m_monsters[j];
                     m.setType(TYPE_VAMPLANT);
-                    map.set(p.x, p.y, TILES_VAMPLANT);
+                    g_map.set(p.x, p.y, TILES_VAMPLANT);
                     break;
                 }
             }
@@ -541,7 +545,7 @@ Pos CGame::translate(const Pos &p, const int aim)
         }
         break;
     case AIM_DOWN:
-        if (t.y < map.hei() - 1)
+        if (t.y < g_map.hei() - 1)
         {
             ++t.y;
         }
@@ -553,7 +557,7 @@ Pos CGame::translate(const Pos &p, const int aim)
         }
         break;
     case AIM_RIGHT:
-        if (t.x < map.len() - 1)
+        if (t.x < g_map.len() - 1)
         {
             ++t.x;
         }
@@ -622,22 +626,22 @@ int CGame::goalCount() const
 int CGame::clearAttr(const uint8_t attr)
 {
     int count = 0;
-    for (int y = 0; y < map.hei(); ++y)
+    for (int y = 0; y < g_map.hei(); ++y)
     {
-        for (int x = 0; x < map.len(); ++x)
+        for (int x = 0; x < g_map.len(); ++x)
         {
-            const uint8_t tileAttr = map.getAttr(x, y);
+            const uint8_t tileAttr = g_map.getAttr(x, y);
             if (tileAttr == attr)
             {
                 ++count;
-                const uint8_t tile = map.at(x, y);
+                const uint8_t tile = g_map.at(x, y);
                 const TileDef &def = getTileDef(tile);
                 if (def.type == TYPE_DIAMOND)
                 {
                     --m_diamonds;
                 }
-                map.set(x, y, TILES_BLANK);
-                map.setAttr(x, y, 0);
+                g_map.set(x, y, TILES_BLANK);
+                g_map.setAttr(x, y, 0);
             }
         }
     }
@@ -1000,11 +1004,14 @@ void CGame::playTileSound(int tileID) const
     switch (tileID)
     {
     case TILES_CHEST:
-    case TILES_NECKLESS:
+    case TILES_AMULET1:
         snd = SOUND_COIN1;
         break;
-    case TILES_POIRE:
-    case TILES_PUMPKIN:
+    case TILES_JELLYJAR:
+    case TILES_STRAWBERRY:
+    case TILES_KIWI:
+    case TILES_PEAR:
+    case TILES_CHERRY:
     case TILES_FRUIT1:
     case TILES_APPLE:
         snd = SOUND_GRUUP;
@@ -1152,9 +1159,12 @@ bool CGame::isFruit(const uint8_t tileID) const
     const uint8_t fruits[] = {
         TILES_APPLE,
         TILES_FRUIT1,
-        TILES_WATERMEL,
-        TILES_POIRE,
-        TILES_PUMPKIN,
+        TILES_WATERMELON,
+        TILES_PEAR,
+        TILES_CHERRY,
+        TILES_STRAWBERRY,
+        TILES_KIWI,
+        TILES_JELLYJAR,
     };
     for (const auto &fruit : fruits)
     {
@@ -1167,31 +1177,27 @@ bool CGame::isFruit(const uint8_t tileID) const
 bool CGame::isBonusItem(const uint8_t tileID) const
 {
     const uint8_t tresures[] = {
-        TILES_NECKLESS,
+        TILES_AMULET1,
         TILES_CHEST,
-        TILES_CAROTTE,
-        TILES_CAROTTE_2,
-        TILES_MAGICBOX,
-        TILES_MAGICBOT,
+        TILES_GIFTBOX,
         TILES_LIGHTBUL,
-        TILES_ROPE,
+        TILES_SCROLL1,
         TILES_SHIELD,
         TILES_CLOVER,
         TILES_1ST_AID,
-        TILES_VIALS,
-        TILES_VIALS_2,
-        TILES_VIALS_3,
+        TILES_POTION1,
+        TILES_POTION2,
+        TILES_POTION3,
         TILES_FLOWERS,
         TILES_FLOWERS_2,
         TILES_TRIFORCE,
         TILES_ORB,
         TILES_TNTSTICK,
-        TILES_BALLON1,
         TILES_SMALL_MUSH0,
         TILES_SMALL_MUSH1,
         TILES_SMALL_MUSH2,
         TILES_SMALL_MUSH3,
-        TILES_MUSHROOM,
+        TILES_REDBOOK,
     };
     for (const auto &tresure : tresures)
     {
@@ -1220,20 +1226,22 @@ int CGame::sugar() const
 void CGame::generateMapReport(MapReport &report)
 {
     std::unordered_map<uint8_t, int> tiles;
-    for (int y = 0; y < map.hei(); ++y)
+    for (int y = 0; y < g_map.hei(); ++y)
     {
-        for (int x = 0; x < map.len(); ++x)
+        for (int x = 0; x < g_map.len(); ++x)
         {
-            const auto &tile = map.at(x, y);
+            const auto &tile = g_map.at(x, y);
             tiles[tile] += 1;
         }
     }
 
     std::unordered_map<uint8_t, int> secrets;
-    const AttrMap &attrs = map.attrs();
+    const AttrMap &attrs = g_map.attrs();
     for (const auto &[k, v] : attrs)
     {
-        ++secrets[v];
+        if (v >= SECRET_ATTR_MIN &&
+            v <= SECRET_ATTR_MAX)
+            ++secrets[v];
     }
     report.bonuses = 0;
     report.fruits = 0;
