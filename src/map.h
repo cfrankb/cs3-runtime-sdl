@@ -23,11 +23,19 @@
 #include <string>
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
-typedef struct
+struct Pos
 {
     uint16_t x;
     uint16_t y;
-} Pos;
+    bool operator==(const Pos &other) const
+    {
+        return x == other.x && y == other.y;
+    }
+    bool operator!=(const Pos &other) const
+    {
+        return x != other.x || y != other.y;
+    }
+};
 
 class IFile;
 class CStates;
@@ -62,6 +70,8 @@ public:
     void setTitle(const char *title);
     const AttrMap &attrs() { return m_attrs; }
     CStates &states();
+    static uint16_t toKey(const uint8_t x, const uint8_t y);
+    static Pos toPos(const uint16_t key);
 
     enum : uint16_t
     {
@@ -90,5 +100,4 @@ private:
     AttrMap m_attrs;
     std::string m_lastError;
     std::string m_title;
-    static uint16_t toKey(const uint8_t x, const uint8_t y);
 };

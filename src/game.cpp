@@ -32,6 +32,13 @@
 #include "skills.h"
 #include "events.h"
 #include "sounds.h"
+#include "states.h"
+#include "statedata.h"
+
+#ifdef USE_QFILE
+#include <QDebug>
+#define printf qDebug
+#endif
 
 CMap g_map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
@@ -120,6 +127,10 @@ bool CGame::move(const JoyAim aim)
     return false;
 }
 
+/**
+ * @brief player consumes tile at current position
+ *
+ */
 void CGame::consume()
 {
     const uint8_t pu = m_player.getPU();
@@ -191,7 +202,12 @@ void CGame::consume()
     if (attr != 0)
     {
         g_map.setAttr(x, y, 0);
-        if (clearAttr(attr))
+        if (attr >= MSG0 && g_map.states().hasS(attr))
+        {
+            // Messsage Event (scrolls, books etc)
+            m_events.push_back(attr);
+        }
+        else if (clearAttr(attr))
         {
             playSound(SOUND_0009);
             m_events.push_back(EVENT_SECRET);
@@ -215,13 +231,29 @@ bool CGame::loadLevel(const GameMode mode)
     g_map = *(m_mapArch->at(m_level));
 
     printf("level loaded\n");
-    m_introHint = rand() % m_hints.size();
+    if (m_hints.size() == 0)
+    {
+        printf("hints not loaded\n");
+    }
+    m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
     m_events.clear();
 
-    Pos pos = g_map.findFirst(TILES_ANNIE2);
+    // Use origin pos if available
+    CStates &states = g_map.states();
+    const uint16_t origin = states.getU(POS_ORIGIN);
+    Pos pos;
+    if (origin != 0)
+    {
+        pos = CMap::toPos(origin);
+        g_map.set(pos.x, pos.y, TILES_ANNIE2);
+    }
+    else
+    {
+        pos = g_map.findFirst(TILES_ANNIE2);
+    }
     printf("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
-    m_diamonds = g_map.count(TILES_DIAMOND);
+    m_diamonds = states.hasU(MAP_GOAL) ? states.getU(MAP_GOAL) : g_map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
     m_health = DEFAULT_HEALTH;
     findMonsters();
@@ -1001,21 +1033,13 @@ void CGame::playSound(const int id) const
 void CGame::playTileSound(int tileID) const
 {
     int snd = SOUND_NONE;
-    switch (tileID)
+    if (tileID == TILES_CHEST || tileID == TILES_AMULET1)
     {
-    case TILES_CHEST:
-    case TILES_AMULET1:
         snd = SOUND_COIN1;
-        break;
-    case TILES_JELLYJAR:
-    case TILES_STRAWBERRY:
-    case TILES_KIWI:
-    case TILES_PEAR:
-    case TILES_CHERRY:
-    case TILES_FRUIT1:
-    case TILES_APPLE:
+    }
+    else if (isFruit(tileID))
+    {
         snd = SOUND_GRUUP;
-        break;
     }
     playSound(snd);
 }
@@ -1091,7 +1115,6 @@ void CGame::parseHints(const char *data)
     m_hints.clear();
     char *t = new char[strlen(data) + 1];
     strcpy(t, data);
-    int line = 1;
     char *p = t;
     while (p && *p)
     {
@@ -1126,7 +1149,6 @@ void CGame::parseHints(const char *data)
             m_hints.push_back(p);
         }
         p = e ? e + 1 : nullptr;
-        ++line;
     }
     delete[] t;
 }

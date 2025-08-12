@@ -25,13 +25,27 @@ enum StateValue : uint16_t
     TIMEOUT = 0x01,
     POS_ORIGIN = 0x02,
     POS_EXIT = 0x03,
+    MAP_GOAL = 0x04,
     USERDEF1 = 0x80,
     USERDEF2,
     USERDEF3,
     USERDEF4,
-    MSG1 = 0xf0,
+    MSG0 = 0xf0,
+    MSG1,
     MSG2,
     MSG3,
+    MSG4,
+    MSG5,
+    MSG6,
+    MSG7,
+    MSG8,
+    MSG9,
+    MSGA,
+    MSGB,
+    MSGC,
+    MSGD,
+    MSGE,
+    MSGF
 };
 
 enum StateType

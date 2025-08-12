@@ -120,7 +120,7 @@ def main():
             'INC=',
             'LDFLAGS=',
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
-            'CXXFLAGS=-O3 -Wall',
+            'CXXFLAGS=-O3 -Wall -Wextra',
             'PARGS=',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]

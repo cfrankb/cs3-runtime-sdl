@@ -208,7 +208,7 @@ bool CActor::write(FILE *tfile)
     return true;
 }
 
-JoyAim operator^=(JoyAim &aim, int i)
+JoyAim operator^=(JoyAim &aim, int)
 {
     if (aim == AIM_UP)
     {
@@ -227,4 +227,9 @@ JoyAim operator^=(JoyAim &aim, int i)
         return AIM_LEFT;
     }
     return aim;
+}
+
+const Pos CActor::pos() const
+{
+    return Pos{.x = m_x, .y = m_y};
 }
