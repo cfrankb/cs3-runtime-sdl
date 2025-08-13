@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <algorithm>
 #include "game.h"
 #include "map.h"
 #include "actor.h"
@@ -248,6 +249,7 @@ bool CGame::loadLevel(const GameMode mode)
     memset(m_keys, 0, sizeof(m_keys));
     m_health = DEFAULT_HEALTH;
     findMonsters();
+    m_sfx.clear();
     return true;
 }
 
@@ -641,9 +643,9 @@ int CGame::goalCount() const
 int CGame::clearAttr(const uint8_t attr)
 {
     int count = 0;
-    for (int y = 0; y < g_map.hei(); ++y)
+    for (uint16_t y = 0; y < g_map.hei(); ++y)
     {
-        for (int x = 0; x < g_map.len(); ++x)
+        for (uint16_t x = 0; x < g_map.len(); ++x)
         {
             const uint8_t tileAttr = g_map.getAttr(x, y);
             if (tileAttr == attr)
@@ -657,6 +659,7 @@ int CGame::clearAttr(const uint8_t attr)
                 }
                 g_map.set(x, y, TILES_BLANK);
                 g_map.setAttr(x, y, 0);
+                m_sfx.push_back(sfx_t{.x = x, .y = y, .sfx = SFX_SPARKLE, .timeout = SPARKLE_TIMEOUT});
             }
         }
     }
@@ -1254,4 +1257,16 @@ void CGame::generateMapReport(MapReport &report)
         if (isBonusItem(tile))
             report.bonuses += count;
     }
+}
+
+std::vector<sfx_t> &CGame::getSfx()
+{
+    return m_sfx;
+}
+
+void CGame::purgeSfx()
+{
+    m_sfx.erase(std::remove_if(m_sfx.begin(), m_sfx.end(), [](auto &sfx)
+                               { --sfx.timeout; return sfx.timeout == 0; }),
+                m_sfx.end());
 }

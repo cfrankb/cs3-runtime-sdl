@@ -191,6 +191,22 @@ protected:
         int height;
     };
 
+    struct cameraContext_t
+    {
+        int mx;
+        int ox;
+        int my;
+        int oy;
+    };
+
+    struct sprite_t
+    {
+        uint16_t x;
+        uint16_t y;
+        uint8_t tileID;
+        uint8_t aim;
+    };
+
     struct hiscore_t
     {
         int32_t score;
@@ -248,7 +264,7 @@ protected:
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline CFrame *tile2Frame(const uint8_t tileID, bool &inverted, std::unordered_map<uint32_t, uint32_t> *&colorMap);
-    CFrame *specialFrame(const CActor &actor, const uint8_t tileID);
+    CFrame *specialFrame(const int aim, const uint8_t tileID);
     void nextLevel();
     void restartLevel();
     void restartGame();
@@ -272,6 +288,8 @@ protected:
     void moveCamera();
     int cameraSpeed() const;
     void setCameraMode(const int mode);
+    void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);
+
     inline uint32_t fazFilter(int shift) const;
     inline int getWidth() const
     {

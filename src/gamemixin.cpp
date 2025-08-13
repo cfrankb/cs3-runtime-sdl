@@ -56,12 +56,6 @@
 #define printf qDebug
 #endif
 
-struct SpecialCase
-{
-    Pos pos;
-    uint8_t tileID;
-};
-
 // Color Maps
 std::unordered_map<uint32_t, uint32_t> g_annieWhiteColors = {
     {0xff233edf, 0xff96999a},
@@ -511,6 +505,48 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, bool &inverted, std::unorde
     return tile;
 }
 
+void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context)
+{
+    CGame &game = *m_game;
+    CMap *map = &m_game->getMap();
+    const int maxRows = HEIGHT / TILE_SIZE;
+    const int maxCols = WIDTH / TILE_SIZE;
+    const int rows = std::min(maxRows, map->hei());
+    const int cols = std::min(maxCols, map->len());
+    const int mx = context.mx; // m_cx / 2; // this is wrong for static camera
+    const int ox = context.ox; //  m_cx & 1; // TODO: fix this
+    const int my = context.my; // m_cy / 2;
+    const int oy = context.oy; // m_cy & 1;
+    const std::vector<CActor> &monsters = game.getMonsters();
+    for (const auto &monster : monsters)
+    {
+        const uint8_t &tileID = map->at(monster.getX(), monster.getY());
+        if (monster.within(mx, my, mx + cols + ox, my + rows + oy) &&
+            m_animator->isSpecialCase(tileID))
+        {
+            sprites.push_back(
+                {.x = monster.getX(),
+                 .y = monster.getY(),
+                 .tileID = tileID,
+                 .aim = monster.getAim()});
+        }
+    }
+
+    const std::vector<sfx_t> &sfxAll = m_game->getSfx();
+    for (const auto &sfx : sfxAll)
+    {
+        if (sfx.within(mx, my, mx + cols + ox, my + rows + oy))
+        {
+            sprites.push_back({
+                .x = sfx.x,
+                .y = sfx.y,
+                .tileID = sfx.sfx,
+                .aim = AIM_NONE,
+            });
+        }
+    }
+}
+
 void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 {
     CMap *map = &m_game->getMap();
@@ -567,59 +603,39 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 
     /////////////////////////////////////////////////////////////////////////////
     // overlay special case monsters
-    CGame &game = *m_game;
-    const std::vector<CActor> &monsters = game.getMonsters();
 
-    std::vector<SpecialCase> overlays;
-    for (size_t i = 0; i < monsters.size(); ++i)
+    std::vector<sprite_t> sprites;
+    gatherSprites(sprites, {.mx = mx, .ox = ox, .my = my, .oy = oy});
+    for (const auto &sprite : sprites)
     {
-        const CActor &monster = monsters[i];
-        if (monster.within(mx, my, mx + cols + ox, my + rows + oy))
+        // special case animations
+        const int x = sprite.x - mx;
+        const int y = sprite.y - my;
+        CFrame *tile = specialFrame(sprite.aim, sprite.tileID);
+        bool firstY = oy && y == 0;
+        bool lastY = oy && y == rows;
+        bool firstX = ox && x == 0;
+        bool lastX = ox && x == cols;
+        int px = x * TILE_SIZE;
+        int py = y * TILE_SIZE;
+        if (x && ox)
+            px -= halfOffset;
+        if (y && oy)
+            py -= halfOffset;
+
+        if (firstX || firstY || lastX || lastY)
         {
-            const uint8_t tileID = map->at(monster.getX(), monster.getY());
-            overlays.push_back({.pos = monster.pos(), tileID});
+            Rect rect{
+                .x = !firstX ? 0 : halfOffset,
+                .y = !firstY ? 0 : halfOffset,
+                .width = !(firstX || lastX) ? tileSize : halfOffset,
+                .height = !(firstY || lastY) ? tileSize : halfOffset,
+            };
+            drawTile(bitmap, px, py, *tile, rect);
         }
-    }
-
-    for (size_t i = 0; i < monsters.size(); ++i)
-    {
-        const CActor &monster = monsters[i];
-        if (monster.within(mx, my, mx + cols + ox, my + rows + oy))
+        else
         {
-            const uint8_t tileID = map->at(monster.getX(), monster.getY());
-            if (!m_animator->isSpecialCase(tileID))
-            {
-                continue;
-            }
-            // special case animations
-            const int x = monster.getX() - mx;
-            const int y = monster.getY() - my;
-            CFrame *tile = specialFrame(monster, tileID);
-            bool firstY = oy && y == 0;
-            bool lastY = oy && y == rows;
-            bool firstX = ox && x == 0;
-            bool lastX = ox && x == cols;
-            int px = x * TILE_SIZE;
-            int py = y * TILE_SIZE;
-            if (x && ox)
-                px -= halfOffset;
-            if (y && oy)
-                py -= halfOffset;
-
-            if (firstX || firstY || lastX || lastY)
-            {
-                Rect rect{
-                    .x = !firstX ? 0 : halfOffset,
-                    .y = !firstY ? 0 : halfOffset,
-                    .width = !(firstX || lastX) ? tileSize : halfOffset,
-                    .height = !(firstY || lastY) ? tileSize : halfOffset,
-                };
-                drawTile(bitmap, px, py, *tile, rect);
-            }
-            else
-            {
-                drawTile(bitmap, px, py, *tile, false);
-            }
+            drawTile(bitmap, px, py, *tile, true);
         }
     }
 }
@@ -652,23 +668,15 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
         }
     }
 
-    const std::vector<CActor> &monsters = game.getMonsters();
-    for (size_t i = 0; i < monsters.size(); ++i)
+    std::vector<sprite_t> sprites;
+    gatherSprites(sprites, {.mx = mx, .ox = 0, .my = my, .oy = 0});
+    for (const auto &sprite : sprites)
     {
-        const CActor &monster = monsters[i];
-        if (monster.within(mx, my, mx + cols, my + rows))
-        {
-            const uint8_t tileID = map->at(monster.getX(), monster.getY());
-            if (!m_animator->isSpecialCase(tileID))
-            {
-                continue;
-            }
-            // special case animations
-            const int x = monster.getX() - mx;
-            const int y = monster.getY() - my;
-            CFrame *tile = specialFrame(monster, tileID);
-            drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
-        }
+        // special case animations
+        const int x = sprite.x - mx;
+        const int y = sprite.y - my;
+        CFrame *tile = specialFrame(sprite.aim, sprite.tileID);
+        drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, true);
     }
 }
 
@@ -909,6 +917,7 @@ void CGameMixin::manageGamePlay()
 
     manageCurrentEvent();
     manageTimer();
+    game.purgeSfx();
 
     if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
@@ -1660,19 +1669,15 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
     }
 }
 
-CFrame *CGameMixin::specialFrame(const CActor &actor, const uint8_t tileID)
+CFrame *CGameMixin::specialFrame(const int aim, const uint8_t tileID)
 {
     CFrameSet &animz = *m_animz;
     const AnimzInfo info = m_animator->specialInfo(tileID);
-    int aim = 0;
-    if (tileID < TILES_TOTAL_COUNT)
+    int saim = tileID < TILES_TOTAL_COUNT ? aim : 0;
+    const TileDef &def = getTileDef(tileID);
+    if (def.type == TYPE_DRONE)
     {
-        const TileDef &def = getTileDef(tileID);
-        aim = actor.getAim();
-        if (def.type == TYPE_DRONE)
-        {
-            aim &= 1;
-        }
+        saim &= 1;
     }
-    return animz[aim * info.frames + info.base + info.offset];
+    return animz[saim * info.frames + info.base + info.offset];
 }

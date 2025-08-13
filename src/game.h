@@ -21,6 +21,7 @@
 #include <cstdio>
 #include "actor.h"
 #include "map.h"
+#include "gamesfx.h"
 
 class CMapArch;
 class ISound;
@@ -84,6 +85,7 @@ public:
     static uint8_t *keys();
     std::vector<CActor> &getMonsters();
     CActor &getMonster(int i);
+    std::vector<sfx_t> &getSfx();
     void playSound(const int id) const;
     void playTileSound(const int tileID) const;
     void setLives(const int lives);
@@ -94,6 +96,7 @@ public:
     void resetStats();
     void parseHints(const char *data);
     int getEvent();
+    void purgeSfx();
 
 private:
     enum
@@ -135,6 +138,7 @@ private:
     int m_introHint = 0;
     std::vector<int> m_events;
     std::vector<CActor> m_monsters;
+    std::vector<sfx_t> m_sfx;
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
