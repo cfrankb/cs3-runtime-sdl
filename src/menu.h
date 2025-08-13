@@ -38,9 +38,9 @@ public:
     int id() const;
     int height() const;
     void setCurrent(const int i);
-    const int scaleX() const;
-    const int scaleY() const;
-    const int paddingY() const;
+    int scaleX() const;
+    int scaleY() const;
+    int paddingY() const;
 
 private:
     enum

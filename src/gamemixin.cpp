@@ -31,6 +31,7 @@
 #include "states.h"
 #include "statedata.h"
 #include "sounds.h"
+#include "sprtypes.h"
 
 // Check windows
 #ifdef _WIN64
@@ -54,6 +55,12 @@
 #include <QDebug>
 #define printf qDebug
 #endif
+
+struct SpecialCase
+{
+    Pos pos;
+    uint8_t tileID;
+};
 
 // Color Maps
 std::unordered_map<uint32_t, uint32_t> g_annieWhiteColors = {
@@ -217,7 +224,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
     }
     else
     {
-        const uint32_t colorFilter = fazFilter(FAZ_INV_SHIFT);
+        const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
         for (int row = 0; row < rect.height; ++row)
         {
             for (int col = 0; col < rect.width; ++col)
@@ -232,7 +239,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                 if (inverted)
                 {
                     // color ^= 0x00ffffff;
-                    const uint32_t t = ((color >> FAZ_INV_SHIFT) & colorFilter) | ALPHA;
+                    const uint32_t t = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
                     color = t;
                 }
                 dest[col] = color;
@@ -249,7 +256,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
     uint32_t *dest = bitmap.getRGB() + x + y * width;
     if (alpha || inverted || colorMap)
     {
-        const uint32_t colorFilter = fazFilter(FAZ_INV_SHIFT);
+        const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
         for (uint32_t row = 0; row < TILE_SIZE; ++row)
         {
             for (uint32_t col = 0; col < TILE_SIZE; ++col)
@@ -264,7 +271,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                 if (inverted)
                 {
                     // color ^= 0x00ffffff;
-                    const uint32_t t = ((color >> FAZ_INV_SHIFT) & colorFilter) | ALPHA;
+                    const uint32_t t = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
                     color = t;
                 }
                 dest[col] = color;
@@ -558,12 +565,23 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
         py += TILE_SIZE;
     }
 
+    /////////////////////////////////////////////////////////////////////////////
     // overlay special case monsters
     CGame &game = *m_game;
-    CActor *monsters;
-    int count;
-    game.getMonsters(monsters, count);
-    for (int i = 0; i < count; ++i)
+    const std::vector<CActor> &monsters = game.getMonsters();
+
+    std::vector<SpecialCase> overlays;
+    for (size_t i = 0; i < monsters.size(); ++i)
+    {
+        const CActor &monster = monsters[i];
+        if (monster.within(mx, my, mx + cols + ox, my + rows + oy))
+        {
+            const uint8_t tileID = map->at(monster.getX(), monster.getY());
+            overlays.push_back({.pos = monster.pos(), tileID});
+        }
+    }
+
+    for (size_t i = 0; i < monsters.size(); ++i)
     {
         const CActor &monster = monsters[i];
         if (monster.within(mx, my, mx + cols + ox, my + rows + oy))
@@ -574,18 +592,13 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
                 continue;
             }
             // special case animations
-            CFrameSet &animz = *m_animz;
-            const AnimzInfo info = m_animator->specialInfo(tileID);
             const int x = monster.getX() - mx;
             const int y = monster.getY() - my;
-            const int aim = monster.getAim();
-            CFrame *tile = animz[aim * info.frames + info.base + info.offset];
-
+            CFrame *tile = specialFrame(monster, tileID);
             bool firstY = oy && y == 0;
             bool lastY = oy && y == rows;
             bool firstX = ox && x == 0;
             bool lastX = ox && x == cols;
-
             int px = x * TILE_SIZE;
             int py = y * TILE_SIZE;
             if (x && ox)
@@ -625,8 +638,6 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
     const int lmy = std::max(0, game.player().getY() - rows / 2);
     const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
-
-    CFrameSet &animz = *m_animz;
     bitmap.fill(BLACK);
     for (int y = 0; y < rows; ++y)
     {
@@ -641,10 +652,8 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
         }
     }
 
-    CActor *monsters;
-    int count;
-    game.getMonsters(monsters, count);
-    for (int i = 0; i < count; ++i)
+    const std::vector<CActor> &monsters = game.getMonsters();
+    for (size_t i = 0; i < monsters.size(); ++i)
     {
         const CActor &monster = monsters[i];
         if (monster.within(mx, my, mx + cols, my + rows))
@@ -655,11 +664,9 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
                 continue;
             }
             // special case animations
-            const AnimzInfo info = m_animator->specialInfo(tileID);
             const int x = monster.getX() - mx;
             const int y = monster.getY() - my;
-            const int aim = monster.getAim();
-            CFrame *tile = animz[aim * info.frames + info.base + info.offset];
+            CFrame *tile = specialFrame(monster, tileID);
             drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, false);
         }
     }
@@ -1651,4 +1658,21 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
         else
             drawRect(bitmap, rect, WHITE, false);
     }
+}
+
+CFrame *CGameMixin::specialFrame(const CActor &actor, const uint8_t tileID)
+{
+    CFrameSet &animz = *m_animz;
+    const AnimzInfo info = m_animator->specialInfo(tileID);
+    int aim = 0;
+    if (tileID < TILES_TOTAL_COUNT)
+    {
+        const TileDef &def = getTileDef(tileID);
+        aim = actor.getAim();
+        if (def.type == TYPE_DRONE)
+        {
+            aim &= 1;
+        }
+    }
+    return animz[aim * info.frames + info.base + info.offset];
 }

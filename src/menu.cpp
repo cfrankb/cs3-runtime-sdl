@@ -94,17 +94,17 @@ int CMenu::height() const
     return size() ? (m_scaleY * FONT_SIZE + m_padding) * size() - m_padding : 0;
 }
 
-const int CMenu::scaleX() const
+int CMenu::scaleX() const
 {
     return m_scaleX;
 }
 
-const int CMenu::scaleY() const
+int CMenu::scaleY() const
 {
     return m_scaleY;
 }
 
-const int CMenu::paddingY() const
+int CMenu::paddingY() const
 {
     return m_padding;
 }

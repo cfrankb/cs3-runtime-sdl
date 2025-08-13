@@ -1,4 +1,4 @@
-# CS3 Runtime SDL2
+# CREEPSPREAD III (SDL2)
 
 High-speed, pixel-art arcade chaos with a tracker soundtrack.
  Dive into Creepspread III, a fast-paced retro action game that

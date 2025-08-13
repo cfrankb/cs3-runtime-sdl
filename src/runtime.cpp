@@ -228,6 +228,7 @@ void CRuntime::doInput()
         {
         case SDL_KEYDOWN:
             keyState = KEY_PRESSED;
+            [[fallthrough]];
         case SDL_KEYUP:
             keyReflector(event.key.keysym.sym, keyState);
             switch (event.key.keysym.sym)
@@ -317,9 +318,11 @@ void CRuntime::doInput()
                     }
                 }
             }
+            break;
 
         case SDL_CONTROLLERBUTTONDOWN:
             buttonState = BUTTON_PRESSED;
+            [[fallthrough]];
 
         case SDL_CONTROLLERBUTTONUP:
             controller = SDL_GameControllerFromInstanceID(event.cbutton.which);

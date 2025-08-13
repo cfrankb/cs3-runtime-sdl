@@ -135,7 +135,7 @@ std::string trimString(const std::string &s)
         if (!isspace(s[i]))
             break;
     }
-    for (j = s.size() - 1; j >= 0; --j)
+    for (j = s.size() - 1; j > 0; --j)
     {
         if (!isspace(s[j]))
             break;

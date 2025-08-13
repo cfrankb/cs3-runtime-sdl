@@ -51,10 +51,6 @@ static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 CGame::CGame()
 {
     printf("staring up version: 0x%.8x\n", VERSION);
-
-    m_monsterMax = DEFAULT_MAX_MONSTERS;
-    m_monsters = new CActor[m_monsterMax];
-    m_monsterCount = 0;
     m_health = 0;
     m_level = 0;
     m_lives = DEFAULT_LIVES;
@@ -68,11 +64,6 @@ CGame::CGame()
  */
 CGame::~CGame()
 {
-    if (m_monsters)
-    {
-        delete[] m_monsters;
-    }
-
     if (m_sound)
     {
         delete m_sound;
@@ -351,7 +342,7 @@ void CGame::setMapArch(CMapArch *arch)
  */
 bool CGame::findMonsters()
 {
-    m_monsterCount = 0;
+    m_monsters.clear();
     for (int y = 0; y < g_map.hei(); ++y)
     {
         for (int x = 0; x < g_map.len(); ++x)
@@ -366,7 +357,7 @@ bool CGame::findMonsters()
             }
         }
     }
-    printf("%d monsters found.\n", m_monsterCount);
+    printf("%lu monsters found.\n", m_monsters.size());
     return true;
 }
 
@@ -378,16 +369,8 @@ bool CGame::findMonsters()
  */
 int CGame::addMonster(const CActor actor)
 {
-    if (m_monsterCount >= m_monsterMax)
-    {
-        m_monsterMax += GROWBY_MONSTERS;
-        CActor *t = new CActor[m_monsterMax];
-        memcpy(reinterpret_cast<void *>(t), m_monsters, m_monsterCount * sizeof(CActor));
-        delete[] m_monsters;
-        m_monsters = t;
-    }
-    m_monsters[m_monsterCount++] = actor;
-    return m_monsterCount;
+    m_monsters.push_back(actor);
+    return (int)m_monsters.size();
 }
 
 /**
@@ -399,12 +382,12 @@ int CGame::addMonster(const CActor actor)
  */
 int CGame::findMonsterAt(const int x, const int y) const
 {
-    for (int i = 0; i < m_monsterCount; ++i)
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         const CActor &actor = m_monsters[i];
         if (actor.getX() == x && actor.getY() == y)
         {
-            return i;
+            return (int)i;
         }
     }
     return INVALID;
@@ -428,7 +411,7 @@ void CGame::manageMonsters(int ticks)
     const JoyAim dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     std::vector<CActor> newMonsters;
 
-    for (int i = 0; i < m_monsterCount; ++i)
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         CActor &actor = m_monsters[i];
         const uint8_t cs = g_map.at(actor.getX(), actor.getY());
@@ -858,10 +841,9 @@ bool CGame::hasExtraSpeed() const
  * @param monsters list of monsters
  * @param count count of monsters
  */
-void CGame::getMonsters(CActor *&monsters, int &count)
+std::vector<CActor> &CGame::getMonsters()
 {
-    monsters = m_monsters;
-    count = m_monsterCount;
+    return m_monsters;
 }
 
 /**
@@ -932,21 +914,14 @@ bool CGame::read(FILE *sfile)
     }
 
     // monsters
-    decltype(m_monsterCount) count = 0;
-    readfile(&count, sizeof(m_monsterCount));
-    m_monsterCount = count;
-    if (count > m_monsterMax)
+    uint32_t count = 0;
+    readfile(&count, sizeof(uint32_t));
+    m_monsters.clear();
+    for (size_t i = 0; i < count; ++i)
     {
-        if (m_monsters)
-        {
-            delete[] m_monsters;
-        }
-        m_monsterMax = m_monsterCount + GROWBY_MONSTERS;
-        m_monsters = new CActor[m_monsterMax];
-    }
-    for (int i = 0; i < m_monsterCount; ++i)
-    {
-        m_monsters[i].read(sfile);
+        CActor tmp;
+        tmp.read(sfile);
+        m_monsters.push_back(tmp);
     }
     m_events.clear();
     return true;
@@ -994,8 +969,9 @@ bool CGame::write(FILE *tfile)
     map.write(tfile);
 
     // monsters
-    writefile(&m_monsterCount, sizeof(m_monsterCount));
-    for (int i = 0; i < m_monsterCount; ++i)
+    uint32_t count = m_monsters.size();
+    writefile(&count, sizeof(count));
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         m_monsters[i].write(tfile);
     }
