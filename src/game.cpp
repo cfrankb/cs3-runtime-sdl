@@ -927,6 +927,7 @@ bool CGame::read(FILE *sfile)
         m_monsters.push_back(tmp);
     }
     m_events.clear();
+    m_sfx.clear();
     return true;
 }
 

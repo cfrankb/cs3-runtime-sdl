@@ -51,6 +51,10 @@ CFrame::CFrame(int p_nLen, int p_nHei)
 
     // generate blank bitmap
     m_rgb = new uint32_t[m_nLen * m_nHei];
+    if (!m_rgb)
+    {
+        fprintf(stderr, "failed memory allocation\n");
+    }
     memset(m_rgb, 0, m_nLen * m_nHei * 4);
 
     // generate blank map

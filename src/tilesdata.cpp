@@ -114,7 +114,7 @@ const TileDef tileDefs[] = {
     {0x00, TYPE_DOOR, 0, 0, 0, 0, false, "door04.png"},         // 59 TILES_DOOR04
     {0x00, TYPE_KEY, 50, 0, 0, 0, false, "key04.png"},          // 5a TILES_KEY04
     {0x00, TYPE_SWAMP, 0, -1, 0, 0, false, "swamp.obl"},        // 5b TILES_SWAMP
-    {0x00, TYPE_DIAMOND, 10, 6, 0, 0, false, "diamond.obl"},    // 5c TILES_DIAMOND
+    {0x00, TYPE_DIAMOND, 10, 6, 0, 0, false, "jewel-blue.zip"}, // 5c TILES_DIAMOND
     {0x00, TYPE_PICKUP, 99, 20, 0, 0, false, "triforce.obl"},   // 5d TILES_TRIFORCE
     {0x00, TYPE_PICKUP, 67, 10, 0, 0, false, "orb.obl"},        // 5e TILES_ORB
     {0x00, TYPE_PICKUP, 66, 0, 0, 0, false, "tntstick.obl"},    // 5f TILES_TNTSTICK

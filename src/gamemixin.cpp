@@ -1539,6 +1539,7 @@ void CGameMixin::drawEventText(CFrame &bitmap)
 
 std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color &color)
 {
+    (void)baseY;
     if (m_currentEvent == EVENT_SECRET)
     {
         scaleX = 2;
@@ -1680,4 +1681,14 @@ CFrame *CGameMixin::specialFrame(const int aim, const uint8_t tileID)
         saim &= 1;
     }
     return animz[saim * info.frames + info.base + info.offset];
+}
+
+void CGameMixin::setWidth(int w)
+{
+    _WIDTH = w;
+}
+
+void CGameMixin::setHeight(int h)
+{
+    _HEIGHT = h;
 }

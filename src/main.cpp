@@ -154,6 +154,8 @@ int main(int argc, char *args[])
     std::string configFile = CRuntime::addTrailSlash(params.prefix) + CONF_FILE;
     runtime.setPrefix(params.prefix.c_str());
     runtime.setWorkspace(params.workspace.c_str());
+    runtime.setWidth(params.width);
+    runtime.setHeight(params.height);
     if (!runtime.parseConfig(configFile.c_str()))
     {
         printf("failed to parse config file: %s\n", configFile.c_str());

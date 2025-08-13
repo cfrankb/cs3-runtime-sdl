@@ -60,7 +60,6 @@ CRuntime::CRuntime() : CGameMixin()
 #endif
     m_music = nullptr;
     memset(&m_app, 0, sizeof(App));
-    resizeScroller();
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
@@ -71,6 +70,7 @@ CRuntime::~CRuntime()
 {
     if (m_app.window)
     {
+        printf("detroying SDL2 objects\n");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
@@ -156,7 +156,7 @@ void CRuntime::paint()
 
 bool CRuntime::SDLInit()
 {
-    printf("SDL Init()\n");
+    printf("SDL Init() %dx%d\n", WIDTH, HEIGHT);
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -772,6 +772,7 @@ void CRuntime::initSounds()
             file.close();
             printf("loaded %s: %d bytes\n", soundName.c_str(), size);
             m_sound->add(sound, size, i + 1);
+            delete[] sound;
         }
         else
         {
@@ -900,8 +901,8 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
     for (size_t i = 0; i < menu.size(); ++i)
     {
         const CMenuItem &item = menu.at(i);
-        const std::string text = item.str();
-        const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
+        const std::string &text = item.str();
+        const int x = (WIDTH - text.size() * FONT_SIZE * scaleX) / 2;
         Color color = static_cast<int>(i) == menu.index() ? YELLOW : BLUE;
         if (item.isDisabled())
         {
@@ -945,11 +946,13 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 {
     auto &title = *(*m_title)[0];
+    int baseX = (bitmap.len() - title.len()) / 2;
     for (int y = 0; y < title.hei(); ++y)
     {
         for (int x = 0; x < title.len(); ++x)
         {
-            bitmap.at(x, y + offsetY) = title.at(x, y);
+            if (baseX + x < bitmap.len())
+                bitmap.at(baseX + x, y + offsetY) = title.at(x, y);
         }
     }
 }
@@ -963,7 +966,7 @@ void CRuntime::drawScroller(CFrame &bitmap)
             m_scroll[i] = m_scroll[i + 1];
         m_scroll[scrollerBufSize() - 1] = m_credits[m_scrollPtr];
         ++m_scrollPtr;
-        if (m_scrollPtr >= strlen(m_credits) - 1)
+        if (!m_credits[m_scrollPtr]) // m_scrollPtr >= strlen(m_credits) - 1)
         {
             m_scrollPtr = 0;
         }
@@ -1130,8 +1133,9 @@ void CRuntime::resizeScroller()
     if (m_scroll)
         delete[] m_scroll;
     size_t len = scrollerBufSize();
+    printf("scroller len: %d\n", len);
     m_scroll = new char[len + 1];
-    memset(m_scroll, 32, len);
+    memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
 }
 
@@ -1318,4 +1322,10 @@ bool CRuntime::initControllers()
 bool CRuntime::isRunning() const
 {
     return m_isRunning;
+}
+
+void CRuntime::init(CMapArch *maparch, int index)
+{
+    CGameMixin::init(maparch, index);
+    resizeScroller();
 }

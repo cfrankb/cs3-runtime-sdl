@@ -50,6 +50,7 @@ public:
     void setStartLevel(int level);
     bool isRunning() const;
     static std::string &addTrailSlash(std::string &path);
+    void init(CMapArch *maparch, int index) override;
 
     typedef struct
     {
@@ -94,7 +95,7 @@ protected:
     CFrameSet *m_title;
     char *m_credits = nullptr;
     char *m_scroll = nullptr;
-    uint32_t m_scrollPtr;
+    uint32_t m_scrollPtr = 0;
     int m_startLevel;
     int m_skill;
     int m_volume = 10;

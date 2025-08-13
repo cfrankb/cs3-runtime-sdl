@@ -46,11 +46,13 @@ class CGameMixin
 public:
     explicit CGameMixin();
     virtual ~CGameMixin();
-    void init(CMapArch *maparch, int index);
+    virtual void init(CMapArch *maparch, int index);
     inline bool within(int val, int min, int max);
     void enableHiScore();
     void setSkill(uint8_t skill);
     static int tickRate();
+    void setWidth(int w);
+    void setHeight(int h);
 
 #ifdef USE_QFILE
 protected slots:
@@ -73,8 +75,6 @@ protected:
         HISCORE_DELAY = 5 * TICK_RATE,
         EVENT_COUNTDOWN_DELAY = TICK_RATE,
         MSG_COUNTDOWN_DELAY = 3 * TICK_RATE,
-        _WIDTH = 320,
-        _HEIGHT = 240,
         TILE_SIZE = 16,
         COUNTDOWN_INTRO = 1,
         COUNTDOWN_RESTART = 2,
@@ -248,6 +248,8 @@ protected:
     int m_currentEvent;
     int m_eventCountdown;
     int m_timer;
+    int _WIDTH = 320;
+    int _HEIGHT = 240;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -299,6 +301,7 @@ protected:
     {
         return _HEIGHT;
     }
+
     virtual void preloadAssets() = 0;
     virtual void sanityTest() = 0;
     virtual void drawHelpScreen(CFrame &bitmap);
