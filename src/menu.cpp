@@ -108,3 +108,13 @@ int CMenu::paddingY() const
 {
     return m_padding;
 }
+
+void CMenu::setScaleX(const int v)
+{
+    m_scaleX = v;
+}
+
+void CMenu::setScaleY(const int v)
+{
+    m_scaleY = v;
+}

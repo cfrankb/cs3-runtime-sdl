@@ -642,26 +642,29 @@ int CGame::goalCount() const
  */
 int CGame::clearAttr(const uint8_t attr)
 {
+    std::vector<uint16_t> keys;
     int count = 0;
-    for (uint16_t y = 0; y < g_map.hei(); ++y)
+    for (const auto &[key, tileAttr] : g_map.attrs())
     {
-        for (uint16_t x = 0; x < g_map.len(); ++x)
+        if (tileAttr == attr)
+            keys.push_back(key);
+    }
+
+    for (const auto &key : keys)
+    {
+        const Pos pos = CMap::toPos(key);
+        const uint8_t x = pos.x;
+        const uint8_t y = pos.y;
+        ++count;
+        const uint8_t tile = g_map.at(x, y);
+        const TileDef &def = getTileDef(tile);
+        if (def.type == TYPE_DIAMOND)
         {
-            const uint8_t tileAttr = g_map.getAttr(x, y);
-            if (tileAttr == attr)
-            {
-                ++count;
-                const uint8_t tile = g_map.at(x, y);
-                const TileDef &def = getTileDef(tile);
-                if (def.type == TYPE_DIAMOND)
-                {
-                    --m_diamonds;
-                }
-                g_map.set(x, y, TILES_BLANK);
-                g_map.setAttr(x, y, 0);
-                m_sfx.push_back(sfx_t{.x = x, .y = y, .sfx = SFX_SPARKLE, .timeout = SPARKLE_TIMEOUT});
-            }
+            --m_diamonds;
         }
+        g_map.set(x, y, TILES_BLANK);
+        g_map.setAttr(x, y, 0);
+        m_sfx.push_back(sfx_t{.x = x, .y = y, .sfxID = SFX_SPARKLE, .timeout = SFX_SPARKLE_TIMEOUT});
     }
     return count;
 }

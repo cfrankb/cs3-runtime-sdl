@@ -42,11 +42,17 @@ public:
 
     bool canMove(const JoyAim aim);
     void move(const JoyAim aim);
-    uint8_t getX() const;
-    uint8_t getY() const;
+    inline uint8_t getX() const
+    {
+        return m_x;
+    }
+    inline uint8_t getY() const
+    {
+        return m_y;
+    }
     uint8_t getPU() const;
     void setPU(const uint8_t c);
-    void setXY(const Pos &pos);
+    void setPos(const Pos &pos);
     JoyAim getAim() const;
     void setAim(const JoyAim aim);
     JoyAim findNextDir(const bool reverse = false);

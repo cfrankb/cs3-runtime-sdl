@@ -987,6 +987,27 @@ void CRuntime::setupTitleScreen()
     m_skill = m_game->skill();
     CMenu &menu = *m_mainMenu;
     menu.clear();
+
+    if (_WIDTH > 450)
+    {
+        menu.setScaleX(4);
+    }
+    else if (_WIDTH > 300)
+    {
+        menu.setScaleX(3);
+    }
+    if (_HEIGHT >= 450)
+    {
+        menu.setScaleY(6);
+    }
+    if (_HEIGHT >= 350)
+    {
+        menu.setScaleY(5);
+    }
+    else if (_HEIGHT >= 300)
+    {
+        menu.setScaleY(3);
+    }
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
@@ -1133,7 +1154,6 @@ void CRuntime::resizeScroller()
     if (m_scroll)
         delete[] m_scroll;
     size_t len = scrollerBufSize();
-    printf("scroller len: %d\n", len);
     m_scroll = new char[len + 1];
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;

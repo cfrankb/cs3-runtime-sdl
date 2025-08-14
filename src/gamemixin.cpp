@@ -172,6 +172,14 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
     }
 }
 
+/**
+ * @brief draw Rectangle into pixmap buffer
+ *
+ * @param frame target pixmap
+ * @param rect rectangle
+ * @param color color
+ * @param fill fill ?
+ */
 void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const Color color, bool fill)
 {
     uint32_t *rgba = frame.getRGB();
@@ -200,6 +208,18 @@ void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const Color color, bo
         }
     }
 }
+
+/**
+ * @brief draw a tile into pixmap buffer. this a special variant that can draw partial tiles
+ *
+ * @param bitmap
+ * @param x
+ * @param y
+ * @param tile
+ * @param rect
+ * @param inverted
+ * @param colorMap
+ */
 
 void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const bool inverted, std::unordered_map<uint32_t, uint32_t> *colorMap)
 {
@@ -233,8 +253,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                 if (inverted)
                 {
                     // color ^= 0x00ffffff;
-                    const uint32_t t = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
-                    color = t;
+                    color = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
                 }
                 dest[col] = color;
             }
@@ -242,6 +261,18 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
         }
     }
 }
+
+/**
+ * @brief draw a tile into pixmap buffer
+ *
+ * @param bitmap
+ * @param x
+ * @param y
+ * @param tile
+ * @param alpha
+ * @param inverted
+ * @param colorMap
+ */
 
 void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const bool inverted, std::unordered_map<uint32_t, uint32_t> *colorMap)
 {
@@ -265,8 +296,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                 if (inverted)
                 {
                     // color ^= 0x00ffffff;
-                    const uint32_t t = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
-                    color = t;
+                    color = ((color >> FAZ_INV_BITSHIFT) & colorFilter) | ALPHA;
                 }
                 dest[col] = color;
             }
@@ -513,10 +543,10 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
-    const int mx = context.mx; // m_cx / 2; // this is wrong for static camera
-    const int ox = context.ox; //  m_cx & 1; // TODO: fix this
-    const int my = context.my; // m_cy / 2;
-    const int oy = context.oy; // m_cy & 1;
+    const int &mx = context.mx;
+    const int &ox = context.ox;
+    const int &my = context.my;
+    const int &oy = context.oy;
     const std::vector<CActor> &monsters = game.getMonsters();
     for (const auto &monster : monsters)
     {
@@ -540,7 +570,7 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
             sprites.push_back({
                 .x = sfx.x,
                 .y = sfx.y,
-                .tileID = sfx.sfx,
+                .tileID = sfx.sfxID,
                 .aim = AIM_NONE,
             });
         }
@@ -1070,17 +1100,40 @@ int CGameMixin::rankScore()
 
 void CGameMixin::drawScores(CFrame &bitmap)
 {
+    int scaleX = 2;
+    int scaleY = 2;
+    if (_WIDTH > 450)
+    {
+        scaleX = 4;
+    }
+    else if (_WIDTH > 300)
+    {
+        scaleX = 3;
+    }
+    if (_HEIGHT >= 450)
+    {
+        scaleY = 3;
+    }
+    if (_HEIGHT >= 350)
+    {
+        scaleY = 3;
+    }
+    else if (_HEIGHT >= 300)
+    {
+        scaleY = 2;
+    }
+
     bitmap.fill(BLACK);
     char t[50];
     int y = 1;
     strcpy(t, "HALL OF HEROES");
-    int x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
-    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, 2, 2);
-    y += 2;
+    int x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
+    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
+    y += scaleX;
     strcpy(t, std::string(strlen(t), '=').c_str());
-    x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
-    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, 2, 2);
-    y += 3;
+    x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
+    drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
+    y += scaleX;
 
     for (uint32_t i = 0; i < MAX_SCORES; ++i)
     {
@@ -1095,21 +1148,21 @@ void CGameMixin::drawScores(CFrame &bitmap)
                 m_hiscores[i].level,
                 m_hiscores[i].name,
                 showCaret ? CHARS_CARET : '\0');
-        drawFont(bitmap, 1, y * FONT_SIZE, t, color);
-        ++y;
+        drawFont(bitmap, 1, y * FONT_SIZE, t, color, BLACK, scaleX / 2, scaleY / 2);
+        y += scaleX / 2;
     }
 
-    ++y;
+    y += scaleX / 2;
     if (m_scoreRank == INVALID)
     {
         strcpy(t, " SORRY, YOU DIDN'T QUALIFY.");
-        drawFont(bitmap, 0, y * FONT_SIZE, t, YELLOW);
+        drawFont(bitmap, 0, y * FONT_SIZE, t, YELLOW, BLACK, scaleX / 2, scaleY / 2);
     }
     else if (m_recordScore)
     {
         strcpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.");
         x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
-        drawFont(bitmap, x, y++ * FONT_SIZE, t, YELLOW);
+        drawFont(bitmap, x, y++ * FONT_SIZE, t, YELLOW, BLACK, scaleX / 2, scaleY / 2);
     }
 }
 

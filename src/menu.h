@@ -41,6 +41,8 @@ public:
     int scaleX() const;
     int scaleY() const;
     int paddingY() const;
+    void setScaleX(const int v);
+    void setScaleY(const int v);
 
 private:
     enum
