@@ -80,7 +80,7 @@ const TileDef tileDefs[] = {
     {0x00, TYPE_WALLS, 0, 0, 0, 0, false, "tomb.obl"},          // 37 TILES_TOMB
     {0x00, TYPE_WALLS, 0, 0, 0, 0, false, "mushroom.zip"},      // 38 TILES_MUSHROOM
     {0x02, TYPE_PICKUP, 25, 0, 0, 0, false, "small_mush.obl"},  // 39 TILES_SMALL_MUSH0
-    {0x00, TYPE_PICKUP, 20, 0, 0, 0, false, "small_mush.obl"},  // 3a TILES_SMALL_MUSH1
+    {0x08, TYPE_PICKUP, 20, 0, 0, 0, false, "small_mush.obl"},  // 3a TILES_SMALL_MUSH1
     {0x01, TYPE_PICKUP, 15, 0, 0, 0, false, "small_mush.obl"},  // 3b TILES_SMALL_MUSH2
     {0x04, TYPE_PICKUP, 30, 0, 0, 0, false, "small_mush.obl"},  // 3c TILES_SMALL_MUSH3
     {0x00, TYPE_WALLS, 0, 0, 0, 0, false, "pot.obl"},           // 3d TILES_POT

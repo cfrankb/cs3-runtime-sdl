@@ -16,10 +16,34 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#define EVENT_NONE 0
-#define EVENT_SECRET 1
-#define EVENT_EXTRA_LIFE 2
-#define EVENT_SUGAR_RUSH 3
-#define EVENT_GOD_MODE 4
-#define EVENT_SUGAR 5
-#define EVENT_RAGE 6
+
+#include <cstdint>
+#include <cstdio>
+#include <unordered_map>
+
+class IFile;
+
+enum GameStat : uint16_t
+{
+    S_GOD_MODE_TIMER = 1,
+    S_EXTRA_SPEED_TIMER,
+    S_SUGAR,
+    S_SKILL,
+    S_RAGE_TIMER
+};
+
+class CGameStats
+{
+public:
+    CGameStats();
+    ~CGameStats();
+
+    int &get(const GameStat key);
+    void set(const GameStat key, int value);
+
+    bool read(FILE *sfile);
+    bool write(FILE *tfile);
+
+private:
+    std::unordered_map<uint16_t, int32_t> m_stats;
+};

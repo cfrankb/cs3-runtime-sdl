@@ -76,6 +76,16 @@ std::unordered_map<uint32_t, uint32_t> g_annieYellowColors = {
     {0xff0a6afa, 0xff2dd3f6},
 };
 
+// color-patch
+std::unordered_map<uint32_t, uint32_t> g_annieRedColors = {
+    {0xff233edf, 0xff2d1da5},
+    {0xff9cd2f4, 0xff5161f6},
+    {0xffc45c28, 0xff5161f6},
+    {0xff643414, 0xff241be0},
+    {0xff342224, 0xff2d1da5},
+    {0xff0a6afa, 0xff4053bf},
+};
+
 CGameMixin::CGameMixin()
 {
     m_game = new CGame();
@@ -516,6 +526,10 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, bool &inverted, std::unorde
         else if (m_game->isGodMode())
         {
             colorMap = &g_annieWhiteColors;
+        }
+        else if (m_game->isRageMode())
+        {
+            colorMap = &g_annieRedColors;
         }
     }
     else
@@ -1626,7 +1640,7 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
         scaleX = 2;
         color = PURPLE;
         char tmp[16];
-        sprintf(tmp, "YUMMY %d/%d", m_game->sugar(), CGame::SUGAR_RUSH_LEVEL);
+        sprintf(tmp, "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
         return tmp;
     }
     else if (m_currentEvent >= MSG0)
@@ -1635,6 +1649,12 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
         scaleY = 1;
         color = DARKGRAY;
         return m_game->getMap().states().getS(m_currentEvent);
+    }
+    else if (m_currentEvent == EVENT_RAGE)
+    {
+        scaleX = 2;
+        color = RED;
+        return "RAGE MODE !";
     }
     else
     {
@@ -1713,7 +1733,7 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
 {
     CGame &game = *m_game;
     const int sugar = game.sugar();
-    for (int i = 0; i < (int)CGame::SUGAR_RUSH_LEVEL; ++i)
+    for (int i = 0; i < (int)CGame::MAX_SUGAR_RUSH_LEVEL; ++i)
     {
         Rect rect{.x = bx * (int)FONT_SIZE + i * 5, .y = Y_STATUS + 2, .width = 4, .height = 4};
         if (static_cast<int>(i) < sugar)
@@ -1727,11 +1747,16 @@ CFrame *CGameMixin::specialFrame(const int aim, const uint8_t tileID)
 {
     CFrameSet &animz = *m_animz;
     const AnimzInfo info = m_animator->specialInfo(tileID);
-    int saim = tileID < TILES_TOTAL_COUNT ? aim : 0;
-    const TileDef &def = getTileDef(tileID);
-    if (def.type == TYPE_DRONE)
+    int saim = 0;
+    // safeguard
+    if (tileID < TILES_TOTAL_COUNT)
     {
-        saim &= 1;
+        saim = aim;
+        const TileDef &def = getTileDef(tileID);
+        if (def.type == TYPE_DRONE)
+        {
+            saim &= 1;
+        }
     }
     return animz[saim * info.frames + info.base + info.offset];
 }

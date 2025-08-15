@@ -29,6 +29,7 @@
 #define FLAG_GODMODE             0x01
 #define FLAG_EXTRA_LIFE          0x02
 #define FLAG_EXTRA_SPEED         0x04
+#define FLAG_RAGE                0x08
 
 #define SPEED_FAST               0x03
 #define SPEED_NORMAL             0x04

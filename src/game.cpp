@@ -35,6 +35,7 @@
 #include "sounds.h"
 #include "states.h"
 #include "statedata.h"
+#include "gamestats.h"
 
 #ifdef USE_QFILE
 #include <QDebug>
@@ -56,7 +57,8 @@ CGame::CGame()
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
-    m_skill = SKILL_EASY;
+    m_gameStats = new CGameStats;
+    m_gameStats->set(S_SKILL, SKILL_EASY);
 }
 
 /**
@@ -68,6 +70,11 @@ CGame::~CGame()
     if (m_sound)
     {
         delete m_sound;
+    }
+
+    if (m_gameStats)
+    {
+        delete m_gameStats;
     }
 }
 
@@ -158,8 +165,9 @@ void CGame::consume()
 
     if (isFruit(pu))
     {
-        ++m_sugar;
-        if (m_sugar != SUGAR_RUSH_LEVEL)
+        auto &sugar = m_gameStats->get(S_SUGAR);
+        ++sugar;
+        if (sugar != MAX_SUGAR_RUSH_LEVEL)
             m_events.push_back(EVENT_SUGAR);
     }
 
@@ -172,19 +180,27 @@ void CGame::consume()
 
     if (def.flags & FLAG_GODMODE)
     {
-        if (!m_godModeTimer)
+        if (!m_gameStats->get(S_GOD_MODE_TIMER))
             playSound(SOUND_POWERUP3);
-        m_godModeTimer = GODMODE_TIMER;
+        m_gameStats->set(S_GOD_MODE_TIMER, GODMODE_TIMER);
         m_events.push_back(EVENT_GOD_MODE);
     }
 
-    if (def.flags & FLAG_EXTRA_SPEED || m_sugar == SUGAR_RUSH_LEVEL)
+    if (def.flags & FLAG_EXTRA_SPEED || m_gameStats->get(S_SUGAR) == MAX_SUGAR_RUSH_LEVEL)
     {
-        if (!m_extraSpeedTimer)
+        if (!m_gameStats->get(S_EXTRA_SPEED_TIMER))
             playSound(SOUND_POWERUP2);
-        m_extraSpeedTimer = EXTRASPEED_TIMER;
+        m_gameStats->set(S_EXTRA_SPEED_TIMER, EXTRASPEED_TIMER);
         m_events.push_back(EVENT_SUGAR_RUSH);
-        m_sugar = 0;
+        m_gameStats->set(S_SUGAR, 0);
+    }
+
+    if (def.flags & FLAG_RAGE)
+    {
+        if (!m_gameStats->get(S_RAGE_TIMER))
+            playSound(SOUND_POWERUP3);
+        m_gameStats->set(S_RAGE_TIMER, RAGE_TIMER);
+        m_events.push_back(EVENT_RAGE);
     }
 
     // trigger key
@@ -277,9 +293,9 @@ void CGame::nextLevel()
 void CGame::restartLevel()
 {
     m_events.clear();
-    m_godModeTimer = 0;
-    m_extraSpeedTimer = 0;
-    m_sugar = 0;
+    m_gameStats->set(S_GOD_MODE_TIMER, 0);
+    m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
+    m_gameStats->set(S_SUGAR, 0);
     loadLevel(MODE_RESTART);
 }
 
@@ -300,8 +316,8 @@ void CGame::restartGame()
 void CGame::resetStats()
 {
     m_nextLife = calcScoreLife();
-    m_godModeTimer = 0;
-    m_extraSpeedTimer = 0;
+    m_gameStats->set(S_GOD_MODE_TIMER, 0);
+    m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
     m_score = 0;
     m_lives = DEFAULT_LIVES;
 }
@@ -521,8 +537,10 @@ void CGame::manageMonsters(int ticks)
 
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
-    m_godModeTimer = std::max(m_godModeTimer - 1, 0);
-    m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
+    auto &godModeTimer = m_gameStats->get(S_GOD_MODE_TIMER);
+    auto &extraSpeedTimer = m_gameStats->get(S_EXTRA_SPEED_TIMER);
+    godModeTimer = std::max(godModeTimer - 1, 0);
+    extraSpeedTimer = std::max(extraSpeedTimer - 1, 0);
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -676,15 +694,16 @@ int CGame::clearAttr(const uint8_t attr)
  */
 void CGame::addHealth(const int hp)
 {
+    const auto skill = m_gameStats->get(S_SKILL);
     if (hp > 0)
     {
-        const int maxHealth = static_cast<int>(MAX_HEALTH) / (1 + 1 * m_skill);
-        const int hpToken = hp / (1 + 1 * m_skill);
+        const int maxHealth = static_cast<int>(MAX_HEALTH) / (1 + 1 * skill);
+        const int hpToken = hp / (1 + 1 * skill);
         m_health = std::min(m_health + hpToken, maxHealth);
     }
-    else if (hp < 0 && !m_godModeTimer)
+    else if (hp < 0 && !m_gameStats->get(S_GOD_MODE_TIMER))
     {
-        const int hpToken = hp * (1 + 2 * m_skill);
+        const int hpToken = hp * (1 + 2 * skill);
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
     }
@@ -816,7 +835,7 @@ void CGame::addLife()
  */
 bool CGame::isGodMode() const
 {
-    return m_godModeTimer != 0;
+    return m_gameStats->get(S_GOD_MODE_TIMER) != 0;
 }
 
 /**
@@ -827,7 +846,7 @@ bool CGame::isGodMode() const
 
 int CGame::playerSpeed() const
 {
-    return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
+    return m_gameStats->get(S_EXTRA_SPEED_TIMER) ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
 }
 
 /**
@@ -838,7 +857,7 @@ int CGame::playerSpeed() const
  */
 bool CGame::hasExtraSpeed() const
 {
-    return m_extraSpeedTimer != 0;
+    return m_gameStats->get(S_EXTRA_SPEED_TIMER) != 0;
 }
 
 /**
@@ -905,12 +924,10 @@ bool CGame::read(FILE *sfile)
     readfile(&m_level, sizeof(m_level));
     readfile(&m_nextLife, sizeof(m_nextLife));
     readfile(&m_diamonds, sizeof(m_diamonds));
-    readfile(&m_godModeTimer, sizeof(m_godModeTimer));
     readfile(m_keys, sizeof(m_keys));
     readfile(&m_score, sizeof(m_score));
-    readfile(&m_skill, sizeof(m_skill));
-    readfile(&m_sugar, sizeof(m_sugar));
     m_player.read(sfile);
+    m_gameStats->read(sfile);
 
     // reading map
     CMap &map = getMap();
@@ -964,12 +981,10 @@ bool CGame::write(FILE *tfile)
     writefile(&m_level, sizeof(m_level));
     writefile(&m_nextLife, sizeof(m_nextLife));
     writefile(&m_diamonds, sizeof(m_diamonds));
-    writefile(&m_godModeTimer, sizeof(m_godModeTimer));
     writefile(m_keys, sizeof(m_keys));
     writefile(&m_score, sizeof(m_score));
-    writefile(&m_skill, sizeof(m_skill));
-    writefile(&m_sugar, sizeof(m_sugar));
     m_player.write(tfile);
+    m_gameStats->write(tfile);
 
     // saving map
     CMap &map = getMap();
@@ -1044,7 +1059,7 @@ void CGame::attach(ISound *s)
  */
 uint8_t CGame::skill() const
 {
-    return m_skill;
+    return m_gameStats->get(S_SKILL);
 }
 
 /**
@@ -1054,7 +1069,7 @@ uint8_t CGame::skill() const
  */
 void CGame::setSkill(const uint8_t v)
 {
-    m_skill = v;
+    m_gameStats->set(S_SKILL, v);
     m_nextLife = calcScoreLife();
 }
 
@@ -1065,7 +1080,8 @@ void CGame::setSkill(const uint8_t v)
  */
 int CGame::calcScoreLife() const
 {
-    return SCORE_LIFE * (1 + m_skill);
+    const auto skill = m_gameStats->get(S_SKILL);
+    return SCORE_LIFE * (1 + skill);
 }
 
 /**
@@ -1219,7 +1235,7 @@ bool CGame::isBonusItem(const uint8_t tileID) const
  */
 int CGame::sugar() const
 {
-    return m_sugar;
+    return m_gameStats->get(S_SUGAR);
 }
 
 /**
@@ -1273,4 +1289,14 @@ void CGame::purgeSfx()
     m_sfx.erase(std::remove_if(m_sfx.begin(), m_sfx.end(), [](auto &sfx)
                                { --sfx.timeout; return sfx.timeout == 0; }),
                 m_sfx.end());
+}
+
+CGameStats &CGame::stats()
+{
+    return *m_gameStats;
+}
+
+bool CGame::isRageMode() const
+{
+    return m_gameStats->get(S_RAGE_TIMER) != 0;
 }

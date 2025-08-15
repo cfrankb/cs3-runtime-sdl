@@ -23,6 +23,7 @@
 #include "map.h"
 #include "gamesfx.h"
 
+class CGameStats;
 class CMapArch;
 class ISound;
 
@@ -48,7 +49,7 @@ public:
 
     enum : uint32_t
     {
-        SUGAR_RUSH_LEVEL = 5,
+        MAX_SUGAR_RUSH_LEVEL = 5,
         MAX_KEYS = 6,
     };
 
@@ -81,6 +82,7 @@ public:
     void setLevel(const int levelId);
     int level() const;
     bool isGodMode() const;
+    bool isRageMode() const;
     int playerSpeed() const;
     static uint8_t *keys();
     std::vector<CActor> &getMonsters();
@@ -109,10 +111,11 @@ private:
         MAX_LIVES = 99,
         GODMODE_TIMER = 100,
         EXTRASPEED_TIMER = 200,
+        RAGE_TIMER = 150,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0004,
+        VERSION = (0x0200 << 16) + 0x0005,
         SECRET_ATTR_MIN = 0x01,
         SECRET_ATTR_MAX = 0x7f,
     };
@@ -130,9 +133,6 @@ private:
     int m_score = 0;
     int m_nextLife = SCORE_LIFE;
     int m_diamonds = 0;
-    int m_sugar = 0;
-    int32_t m_godModeTimer = 0;
-    int32_t m_extraSpeedTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
     GameMode m_mode;
     int m_introHint = 0;
@@ -142,8 +142,8 @@ private:
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
-    uint8_t m_skill;
     std::vector<std::string> m_hints;
+    CGameStats *m_gameStats;
 
     int clearAttr(const uint8_t attr);
     bool findMonsters();
@@ -159,6 +159,7 @@ private:
     bool isFruit(const uint8_t tileID) const;
     bool isBonusItem(const uint8_t tileID) const;
     void generateMapReport(MapReport &report);
+    CGameStats &stats();
 
     friend class CGameMixin;
 };
