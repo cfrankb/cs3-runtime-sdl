@@ -59,7 +59,7 @@ public:
     bool isPlayerThere(JoyAim aim) const;
     uint8_t tileAt(JoyAim aim) const;
     void setType(const uint8_t type);
-    bool within(const int x1, const int y1, const int x2, const int y2) const;
+    bool isWithin(const int x1, const int y1, const int x2, const int y2) const;
     bool read(FILE *sfile);
     bool write(FILE *tfile);
     void reverveDir();

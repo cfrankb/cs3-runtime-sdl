@@ -228,7 +228,7 @@ void CActor::setType(const uint8_t type)
 }
 
 /**
- * @brief Is Sprite Within this range of Map Coordonates
+ * @brief Check if Sprite Within this range of Map Coordonates
  *
  * @param x1
  * @param y1
@@ -237,7 +237,7 @@ void CActor::setType(const uint8_t type)
  * @return true
  * @return false
  */
-bool CActor::within(const int x1, const int y1, const int x2, const int y2) const
+bool CActor::isWithin(const int x1, const int y1, const int x2, const int y2) const
 {
     return (m_x >= x1) && (m_x < x2) && (m_y >= y1) && (m_y < y2);
 }
@@ -298,27 +298,12 @@ bool CActor::write(FILE *tfile)
  * @brief Reverse Aim
  *
  * @param aim
+ * @param i     bitmask
  * @return JoyAim
  */
-JoyAim operator^=(JoyAim &aim, int)
+JoyAim operator^=(JoyAim &aim, int i)
 {
-    if (aim == AIM_UP)
-    {
-        return AIM_DOWN;
-    }
-    else if (aim == AIM_DOWN)
-    {
-        return AIM_UP;
-    }
-    else if (aim == AIM_LEFT)
-    {
-        return AIM_RIGHT;
-    }
-    else if (aim == AIM_RIGHT)
-    {
-        return AIM_LEFT;
-    }
-    return aim;
+    return static_cast<JoyAim>(static_cast<int>(aim) ^ i);
 }
 
 /**

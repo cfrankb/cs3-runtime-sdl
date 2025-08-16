@@ -565,7 +565,7 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     for (const auto &monster : monsters)
     {
         const uint8_t &tileID = map->at(monster.getX(), monster.getY());
-        if (monster.within(mx, my, mx + cols + ox, my + rows + oy) &&
+        if (monster.isWithin(mx, my, mx + cols + ox, my + rows + oy) &&
             m_animator->isSpecialCase(tileID))
         {
             sprites.push_back(
@@ -579,7 +579,7 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     const std::vector<sfx_t> &sfxAll = m_game->getSfx();
     for (const auto &sfx : sfxAll)
     {
-        if (sfx.within(mx, my, mx + cols + ox, my + rows + oy))
+        if (sfx.isWithin(mx, my, mx + cols + ox, my + rows + oy))
         {
             sprites.push_back({
                 .x = sfx.x,
@@ -873,8 +873,12 @@ void CGameMixin::mainLoop()
     case CGame::MODE_TITLE:
         manageTitleScreen();
         return;
+    case CGame::MODE_OPTIONS:
+        manageOptionScreen();
+        return;
     case CGame::MODE_PLAY:
         manageGamePlay();
+        return;
     }
 }
 
@@ -1079,7 +1083,7 @@ void CGameMixin::setZoom(bool zoom)
     m_zoom = zoom;
 }
 
-bool CGameMixin::within(int val, int min, int max)
+bool CGameMixin::isWithin(int val, int min, int max)
 {
     return val >= min && val <= max;
 }

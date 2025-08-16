@@ -47,7 +47,7 @@ public:
     explicit CGameMixin();
     virtual ~CGameMixin();
     virtual void init(CMapArch *maparch, int index);
-    inline bool within(int val, int min, int max);
+    inline bool isWithin(int val, int min, int max);
     void enableHiScore();
     void setSkill(uint8_t skill);
     static int tickRate();
@@ -319,6 +319,8 @@ protected:
     virtual void manageTitleScreen() = 0;
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
+
+    virtual void manageOptionScreen() = 0;
 
 private:
     void stopRecorder();

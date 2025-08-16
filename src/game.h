@@ -45,6 +45,7 @@ public:
         MODE_HELP,
         MODE_TITLE,
         MODE_TIMEOUT,
+        MODE_OPTIONS,
     };
 
     enum : uint32_t

@@ -25,7 +25,7 @@ struct sfx_t
     uint8_t sfxID;
     uint16_t timeout;
 
-    bool within(const int x1, const int y1, const int x2, const int y2) const
+    bool isWithin(const int x1, const int y1, const int x2, const int y2) const
     {
         return (x >= x1) && (x < x2) && (y >= y1) && (y < y2);
     }

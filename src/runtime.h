@@ -98,15 +98,21 @@ protected:
     uint32_t m_scrollPtr = 0;
     int m_startLevel;
     int m_skill;
+    int m_resolution = 0;
+    int m_fullscreen = 0;
     int m_volume = 10;
+    int m_xAxisSensitivity = 10;
+    int m_yAxisSensitivity = 10;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
+    CMenu *m_optionMenu = nullptr;
     bool m_isRunning = true;
     enum
     {
         FONT_SIZE = 8,
         MENUID_MAINMENU = 0x10,
         MENUID_GAMEMENU = 0x11,
+        MENUID_OPTIONMENU,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -115,8 +121,12 @@ protected:
         MENU_ITEM_HISCORES,
         MENU_ITEM_MUSIC,
         MENU_ITEM_MUSIC_VOLUME,
+        MENU_ITEM_OPTIONS,
         MENU_ITEM_X_AXIS_SENTIVITY,
         MENU_ITEM_Y_AXIS_SENTIVITY,
+        MENU_ITEM_RESOLUTION,
+        MENU_ITEM_FULLSCREEN,
+        MENU_ITEM_RETURN_MAIN,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
@@ -131,11 +141,20 @@ private:
     void cleanUpCredits();
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
-    size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
+    void drawOptions(CFrame &bitmap);
+    size_t scrollerBufSize();
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
-    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
+    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY);
     void manageMenu(CMenu &menu);
     bool fetchFile(const std::string &path, char **dest, const bool terminator);
     void parseHelp(char *text);
+    void manageOptionScreen() override;
+    void initOptionMenu();
+    void findResolution();
+    void resize(int w, int h);
+    void listResolutions(int displayIndex = 0);
+    void createResolutionList();
+    void addGamePlayOptions(CMenu &menu);
+    void resizeGameMenu();
 };
