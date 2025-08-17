@@ -51,6 +51,7 @@
 #define ANIMZ_WHTEWORM_LEN   0x04
 #define ANIMZ_ETURTLE_LEN    0x04
 #define ANIMZ_DRAGO_LEN      0x04
+#define ANIMZ_EXPLOSION1_LEN 0x05
 
 #define ANIMZ_SWAMP          0x00
 #define ANIMZ_SWAMP_2        0x01
@@ -168,4 +169,9 @@
 #define ANIMZ_DRAGO_2        0x71
 #define ANIMZ_DRAGO_3        0x72
 #define ANIMZ_DRAGO_4        0x73
-#define ANIMZ_TOTAL_COUNT    0x74
+#define ANIMZ_EXPLOSION1     0x74
+#define ANIMZ_EXPLOSION1_2   0x75
+#define ANIMZ_EXPLOSION1_3   0x76
+#define ANIMZ_EXPLOSION1_4   0x77
+#define ANIMZ_EXPLOSION1_5   0x78
+#define ANIMZ_TOTAL_COUNT    0x79

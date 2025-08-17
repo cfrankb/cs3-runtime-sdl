@@ -42,23 +42,6 @@ const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
 
-// Vector to hold pointers to opened game controllers
-std::vector<SDL_GameController *> gGameControllers;
-
-struct Rez
-{
-    int w;
-    int h;
-};
-
-std::vector<Rez> g_resolutions = {
-    {640, 480},
-    {800, 600},
-    {1024, 768},
-    {1280, 720}};
-
-CFrame *g_bitmap = nullptr;
-
 CRuntime::CRuntime() : CGameMixin()
 {
 #ifdef __EMSCRIPTEN__
@@ -245,7 +228,10 @@ bool CRuntime::SDLInit()
         file.close();
     }
 
-    findResolution();
+#ifndef __EMSCRIPTEN__
+    createResolutionList();
+#endif
+    m_resolution = findResolutionIndex();
     return true;
 }
 
@@ -337,7 +323,7 @@ void CRuntime::doInput()
                 controller = SDL_GameControllerOpen(joystick_index);
                 if (controller)
                 {
-                    gGameControllers.push_back(controller);
+                    m_gameControllers.push_back(controller);
                     printf("Controller ADDED: %s (Index:%d)\n",
                            SDL_GameControllerName(controller), joystick_index);
                 }
@@ -354,12 +340,12 @@ void CRuntime::doInput()
             {
                 std::string controllerName = SDL_GameControllerName(controller);
                 printf("Controller REMOVED: %s\n", controllerName.c_str());
-                for (auto it = gGameControllers.begin(); it != gGameControllers.end(); ++it)
+                for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
                 {
                     if (*it == controller)
                     {
                         SDL_GameControllerClose(*it);
-                        gGameControllers.erase(it);
+                        m_gameControllers.erase(it);
                         break;
                     }
                 }
@@ -1391,7 +1377,7 @@ void CRuntime::manageMenu(CMenu &menu)
     else if (item.role() == MENU_ITEM_RESOLUTION &&
              oldValue != item.value())
     {
-        Rez &rez = g_resolutions[item.value()];
+        Rez &rez = m_resolutions[item.value()];
         resize(rez.w, rez.h);
     }
     else if (item.role() == MENU_ITEM_FULLSCREEN &&
@@ -1468,7 +1454,7 @@ bool CRuntime::initControllers()
             SDL_GameController *controller = SDL_GameControllerOpen(i);
             if (controller)
             {
-                gGameControllers.push_back(controller);
+                m_gameControllers.push_back(controller);
                 printf("Opened Game Controller: %d: %s\n", i, SDL_GameControllerName(controller));
             }
             else
@@ -1478,7 +1464,7 @@ bool CRuntime::initControllers()
         }
     }
 
-    if (gGameControllers.empty())
+    if (m_gameControllers.empty())
     {
         fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
@@ -1530,7 +1516,7 @@ void CRuntime::addGamePlayOptions(CMenu &menu)
 #ifndef __EMSCRIPTEN__
     char tmp[16];
     std::vector<std::string> resolutions;
-    for (const auto &rez : g_resolutions)
+    for (const auto &rez : m_resolutions)
     {
         sprintf(tmp, "%dx%d", rez.w, rez.h);
         resolutions.push_back(tmp);
@@ -1540,7 +1526,7 @@ void CRuntime::addGamePlayOptions(CMenu &menu)
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
-    if (gGameControllers.size() != 0)
+    if (m_gameControllers.size() != 0)
     {
         menu.addItem(CMenuItem("X-AXIS RANGE: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
@@ -1558,7 +1544,7 @@ void CRuntime::createResolutionList()
         fprintf(stderr, "SDL_GetNumDisplayModes failed: %s\n", SDL_GetError());
         return;
     }
-    g_resolutions.clear();
+    m_resolutions.clear();
     int pw = -1;
     int ph = -1;
     for (int i = 0; i < numModes; ++i)
@@ -1570,36 +1556,32 @@ void CRuntime::createResolutionList()
             continue;
         }
         // ignore anything larger than 720p
-        if (mode.w > 1280 || mode.h > 720)
+        if (mode.w > 1280 || mode.h > 800)
             continue;
         if (mode.w != pw || mode.h != ph)
-            g_resolutions.push_back({mode.w, mode.h});
+            m_resolutions.push_back({mode.w, mode.h});
         pw = mode.w;
         ph = mode.h;
     }
 }
 
-void CRuntime::findResolution()
+int CRuntime::findResolutionIndex()
 {
-#ifndef __EMSCRIPTEN__
-    createResolutionList();
-#endif
     const int w = _WIDTH * 2;
     const int h = _HEIGHT * 2;
     int i = 0;
-    for (const auto &rez : g_resolutions)
+    for (const auto &rez : m_resolutions)
     {
         if (rez.h == h && rez.w == w)
         {
-            m_resolution = i;
             printf("found resolution %dx%d: %d\n", w, h, i);
-            return;
+            return i;
         }
         ++i;
     }
-    m_resolution = i;
     printf("new resolution %dx%d: %d\n", w, h, i);
-    g_resolutions.push_back({w, h});
+    m_resolutions.push_back({w, h});
+    return i;
 }
 
 void CRuntime::resize(int w, int h)

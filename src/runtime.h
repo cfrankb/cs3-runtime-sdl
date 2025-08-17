@@ -53,6 +53,7 @@ public:
     void init(CMapArch *maparch, int index) override;
     void setVerbose(bool enable);
 
+private:
     typedef struct
     {
         SDL_Renderer *renderer;
@@ -65,7 +66,6 @@ public:
         int windowedHeigth;
     } App;
 
-protected:
     static void cleanup();
     void preloadAssets() override;
     bool initControllers();
@@ -109,6 +109,22 @@ protected:
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
     bool m_isRunning = true;
+    CFrame *g_bitmap = nullptr;
+
+    // Vector to hold pointers to opened game controllers
+    std::vector<SDL_GameController *> m_gameControllers;
+    struct Rez
+    {
+        int w;
+        int h;
+    };
+
+    std::vector<Rez> m_resolutions = {
+        {640, 480},
+        {800, 600},
+        {1024, 768},
+        {1280, 720}};
+
     enum
     {
         FONT_SIZE = 8,
@@ -137,7 +153,6 @@ protected:
         SCALE2X = 2,
     };
 
-private:
     void drawTitleScreen(CFrame &bitmap);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
@@ -154,7 +169,7 @@ private:
     void parseHelp(char *text);
     void manageOptionScreen() override;
     void initOptionMenu();
-    void findResolution();
+    int findResolutionIndex();
     void resize(int w, int h);
     void listResolutions(int displayIndex = 0);
     void createResolutionList();

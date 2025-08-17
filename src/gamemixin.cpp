@@ -489,7 +489,7 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
     if (timeout)
     {
         char tmp[16];
-        sprintf(tmp, "%.d", timeout - 1);
+        sprintf(tmp, "%.2d", timeout - 1);
         const bool lowTime = timeout <= 15;
         const int scaleX = !lowTime ? 3 : 5;
         const int scaleY = !lowTime ? 4 : 5;

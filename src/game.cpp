@@ -705,7 +705,7 @@ void CGame::addHealth(const int hp)
     }
     else if (hp < 0 && !m_gameStats->get(S_GOD_MODE_TIMER))
     {
-        const int hpToken = hp * (1 + 2 * skill);
+        const int hpToken = hp * (1 + 1 * skill);
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
     }
