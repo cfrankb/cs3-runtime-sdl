@@ -152,6 +152,7 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     std::string configFile = CRuntime::addTrailSlash(params.prefix) + CONF_FILE;
+    runtime.setVerbose(params.verbose);
     runtime.setPrefix(params.prefix.c_str());
     runtime.setWorkspace(params.workspace.c_str());
     runtime.setWidth(params.width);

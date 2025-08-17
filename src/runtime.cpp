@@ -19,7 +19,6 @@
 #include <chrono>
 #include <cstring>
 #include <unistd.h>
-#include <iostream>
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
@@ -32,6 +31,7 @@
 #include "skills.h"
 #include "menu.h"
 #include "strhelper.h"
+#include "sounds.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -230,7 +230,21 @@ bool CRuntime::SDLInit()
             }
         }
     }
-    listResolutions();
+
+    const std::string iconFile = m_prefix + m_config["icon"];
+    CFrameSet frames;
+    CFileWrap file;
+    if (file.open(iconFile.c_str(), "rb") && frames.extract(file))
+    {
+        CFrame &frame = *frames[0];
+        SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(
+            frame.getRGB(), frame.len(), frame.hei(), 32, frame.len() * 4,
+            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        SDL_SetWindowIcon(m_app.window, surface);
+        SDL_FreeSurface(surface);
+        file.close();
+    }
+
     findResolution();
     return true;
 }
@@ -791,7 +805,7 @@ void CRuntime::load()
 
 void CRuntime::initSounds()
 {
-    auto m_sound = new CSndSDL();
+    m_sound = new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
@@ -802,7 +816,8 @@ void CRuntime::initSounds()
             auto sound = new uint8_t[size];
             file.read(sound, size);
             file.close();
-            printf("loaded %s: %d bytes\n", soundName.c_str(), size);
+            if (m_verbose)
+                printf("loaded %s: %d bytes\n", soundName.c_str(), size);
             m_sound->add(sound, size, i + 1);
             delete[] sound;
         }
@@ -823,6 +838,13 @@ void CRuntime::openMusicForLevel(int i)
     }
 }
 
+/**
+ * @brief Extract configuration from filename
+ *
+ * @param filename
+ * @return true
+ * @return false
+ */
 bool CRuntime::parseConfig(const char *filename)
 {
     CFileWrap file;
@@ -893,17 +915,33 @@ bool CRuntime::parseConfig(const char *filename)
     return true;
 }
 
+/**
+ * @brief Ser configuration option
+ *
+ * @param key
+ * @param val
+ */
 void CRuntime::setConfig(const char *key, const char *val)
 {
     m_config[key] = val;
 }
 
+/**
+ * @brief Set path to game data files
+ *
+ * @param prefix
+ */
 void CRuntime::setPrefix(const char *prefix)
 {
     m_prefix = prefix;
     addTrailSlash(m_prefix);
 }
 
+/**
+ * @brief Set working directory
+ *
+ * @param workspace
+ */
 void CRuntime::setWorkspace(const char *workspace)
 {
     m_workspace = workspace;
@@ -924,6 +962,14 @@ std::string &CRuntime::addTrailSlash(std::string &path)
     return path;
 }
 
+/**
+ * @brief Draw Menu at coordinates baseX, baseY
+ *
+ * @param bitmap
+ * @param menu
+ * @param baseX
+ * @param baseY
+ */
 void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY)
 {
     const int scaleX = menu.scaleX();
@@ -951,6 +997,11 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
     }
 }
 
+/**
+ * @brief Draw titlescreen
+ *
+ * @param bitmap
+ */
 void CRuntime::drawTitleScreen(CFrame &bitmap)
 {
     bitmap.clear();
@@ -975,6 +1026,12 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     drawScroller(bitmap);
 }
 
+/**
+ * @brief Draw Titlescreen Pixmap
+ *
+ * @param bitmap
+ * @param offsetY
+ */
 void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 {
     auto &title = *(*m_title)[0];
@@ -989,6 +1046,11 @@ void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
     }
 }
 
+/**
+ * @brief Draw scrolling text on Intro Screen
+ *
+ * @param bitmap
+ */
 void CRuntime::drawScroller(CFrame &bitmap)
 {
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
@@ -1021,7 +1083,6 @@ void CRuntime::setupTitleScreen()
     m_skill = m_game->skill();
     CMenu &menu = *m_mainMenu;
     menu.clear();
-
     if (_WIDTH > 450)
     {
         menu.setScaleX(4);
@@ -1053,8 +1114,11 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
-    //    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+#ifdef __EMSCRIPTEN__
+    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+#else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
+#endif
     m_game->setMode(CGame::MODE_TITLE);
 }
 
@@ -1066,7 +1130,7 @@ void CRuntime::takeScreenshot()
     auto rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
     {
-        if (rgba[i] == 0)
+        if (rgba[i] == CLEAR)
             rgba[i] = BLACK;
     }
     bitmap.enlarge();
@@ -1229,28 +1293,33 @@ void CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_joyState[AIM_UP])
     {
-        menu.up();
+        if (menu.up())
+            m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_DOWN])
     {
-        menu.down();
+        if (menu.down())
+            m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_LEFT])
     {
-        item.left();
+        if (item.left())
+            m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_RIGHT])
     {
-        item.right();
+        if (item.right())
+            m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_keyStates[Key_Space] ||
              m_keyStates[Key_Enter] ||
              m_buttonState[BUTTON_A])
     {
+        m_sound->play(SOUND_POUF);
         if (item.role() == MENU_ITEM_NEW_GAME ||
             item.role() == MENU_ITEM_SKILL ||
             item.role() == MENU_ITEM_LEVEL)
@@ -1354,7 +1423,7 @@ const std::string CRuntime::getSavePath() const
 void CRuntime::resizeGameMenu()
 {
     CMenu &menu = *m_gameMenu;
-    if (WIDTH > 320)
+    if (WIDTH > 400)
     {
         menu.setScaleX(2);
     }
@@ -1373,13 +1442,6 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     addGamePlayOptions(menu);
-    /*
-    menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-    menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
-        .setRole(MENU_ITEM_MUSIC);
-    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
-        */
 }
 
 bool CRuntime::initControllers()
@@ -1458,6 +1520,14 @@ void CRuntime::initOptionMenu()
 
 void CRuntime::addGamePlayOptions(CMenu &menu)
 {
+    // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
+    //     .setRole(MENU_ITEM_MUSIC);
+    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+        .setRole(MENU_ITEM_MUSIC_VOLUME);
+    menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
+        .setRole(MENU_ITEM_CAMERA);
+
+#ifndef __EMSCRIPTEN__
     char tmp[16];
     std::vector<std::string> resolutions;
     for (const auto &rez : g_resolutions)
@@ -1465,15 +1535,11 @@ void CRuntime::addGamePlayOptions(CMenu &menu)
         sprintf(tmp, "%dx%d", rez.w, rez.h);
         resolutions.push_back(tmp);
     }
-
-    menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
-        .setRole(MENU_ITEM_MUSIC);
-    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
     menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
         .setRole(MENU_ITEM_RESOLUTION);
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
+#endif
     if (gGameControllers.size() != 0)
     {
         menu.addItem(CMenuItem("X-AXIS RANGE: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
@@ -1489,24 +1555,23 @@ void CRuntime::createResolutionList()
     int numModes = SDL_GetNumDisplayModes(displayIndex);
     if (numModes < 1)
     {
-        std::cerr << "SDL_GetNumDisplayModes failed: " << SDL_GetError() << "\n";
+        fprintf(stderr, "SDL_GetNumDisplayModes failed: %s\n", SDL_GetError());
         return;
     }
     g_resolutions.clear();
     int pw = -1;
     int ph = -1;
-    std::cout << "Available display modes:\n";
     for (int i = 0; i < numModes; ++i)
     {
         SDL_DisplayMode mode;
         if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
         {
-            std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << "\n";
+            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
             continue;
         }
+        // ignore anything larger than 720p
         if (mode.w > 1280 || mode.h > 720)
             continue;
-
         if (mode.w != pw || mode.h != ph)
             g_resolutions.push_back({mode.w, mode.h});
         pw = mode.w;
@@ -1516,7 +1581,9 @@ void CRuntime::createResolutionList()
 
 void CRuntime::findResolution()
 {
+#ifndef __EMSCRIPTEN__
     createResolutionList();
+#endif
     const int w = _WIDTH * 2;
     const int h = _HEIGHT * 2;
     int i = 0;
@@ -1540,7 +1607,6 @@ void CRuntime::resize(int w, int h)
     printf("switch to: %dx%d\n", w, h);
     setWidth(w / 2);
     setHeight(h / 2);
-    printf("canvas: %dx%d\n", _WIDTH, _HEIGHT);
     SDL_SetWindowSize(m_app.window, w, h);
     auto oldTexture = m_app.texture;
     m_app.texture = SDL_CreateTexture(
@@ -1567,21 +1633,24 @@ void CRuntime::listResolutions(int displayIndex)
     int numModes = SDL_GetNumDisplayModes(displayIndex);
     if (numModes < 1)
     {
-        std::cerr << "SDL_GetNumDisplayModes failed: " << SDL_GetError() << "\n";
+        fprintf(stderr, "SDL_GetNumDisplayModes failed:%s\n", SDL_GetError());
         return;
     }
 
-    std::cout << "Available display modes:\n";
+    printf("Available display modes:\n");
     for (int i = 0; i < numModes; ++i)
     {
         SDL_DisplayMode mode;
         if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
         {
-            std::cerr << "SDL_GetDisplayMode failed: " << SDL_GetError() << "\n";
+            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
             continue;
         }
-        std::cout << "Mode " << i << ": "
-                  << mode.w << "x" << mode.h << " @ "
-                  << mode.refresh_rate << "Hz\n";
+        printf("Mode %d: %dx%d @ %dHz\n", i, mode.w, mode.h, mode.refresh_rate);
     }
+}
+
+void CRuntime::setVerbose(bool enable)
+{
+    m_verbose = enable;
 }

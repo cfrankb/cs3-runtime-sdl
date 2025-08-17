@@ -58,8 +58,6 @@ CMusicSDL::~CMusicSDL()
 
 bool CMusicSDL::open(const char *file)
 {
-    printf("opening music: %s\n", file);
-
     if (m_type != TYPE_NONE)
     {
         close();
@@ -85,7 +83,6 @@ bool CMusicSDL::play(int loop)
     m_playing = true;
     if (m_type == TYPE_OGG)
     {
-        printf("playing music\n");
         Mix_PlayMusic(m_data.mixData, loop);
         return true;
     }

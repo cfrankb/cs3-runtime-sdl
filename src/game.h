@@ -30,9 +30,6 @@ class ISound;
 class CGame
 {
 public:
-    CGame();
-    ~CGame();
-
     enum GameMode : uint8_t
     {
         MODE_LEVEL_INTRO,
@@ -100,6 +97,7 @@ public:
     void parseHints(const char *data);
     int getEvent();
     void purgeSfx();
+    static CGame *getGame();
 
 private:
     enum
@@ -146,6 +144,8 @@ private:
     std::vector<std::string> m_hints;
     CGameStats *m_gameStats;
 
+    CGame();
+    ~CGame();
     int clearAttr(const uint8_t attr);
     bool findMonsters();
     int addMonster(const CActor actor);

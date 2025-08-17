@@ -76,7 +76,7 @@ uint8_t CAnimator::at(uint8_t tileID)
     return m_tileReplacement[tileID];
 }
 
-uint8_t CAnimator::offset()
+uint16_t CAnimator::offset()
 {
     return m_offset;
 }

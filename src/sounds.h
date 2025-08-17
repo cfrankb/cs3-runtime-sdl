@@ -31,4 +31,6 @@ enum SoundFx
     SOUND_POWERUP3,
     SOUND_BONUS,
     SOUND_BEEP,
+    SOUND_GOLD3,
+    SOUND_SPRING05
 };

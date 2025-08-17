@@ -51,6 +51,7 @@ public:
     bool isRunning() const;
     static std::string &addTrailSlash(std::string &path);
     void init(CMapArch *maparch, int index) override;
+    void setVerbose(bool enable);
 
     typedef struct
     {
@@ -103,6 +104,7 @@ protected:
     int m_volume = 10;
     int m_xAxisSensitivity = 10;
     int m_yAxisSensitivity = 10;
+    bool m_verbose;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
@@ -127,6 +129,7 @@ protected:
         MENU_ITEM_RESOLUTION,
         MENU_ITEM_FULLSCREEN,
         MENU_ITEM_RETURN_MAIN,
+        MENU_ITEM_CAMERA,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),

@@ -237,7 +237,8 @@ protected:
     bool m_scoresLoaded = false;
     bool m_hiscoreEnabled = false;
     bool m_paused = false;
-    bool m_musicMuted = false;
+    // Note: this has to be an int
+    int m_musicMuted = false;
     Prompt m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
     bool m_gameMenuActive = false;

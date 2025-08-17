@@ -48,42 +48,56 @@ CMenuItem::~CMenuItem()
 {
 }
 
-void CMenuItem::left()
+bool CMenuItem::left()
 {
     if (!m_value)
     {
-        return;
+        return false;
     }
     int &value = *m_value;
     if (m_type == ITEM_RANGE)
     {
         if (value > m_rangeMin)
+        {
             --value;
+            return true;
+        }
     }
     else if (m_type == ITEM_OPTIONS)
     {
         if (value > 0)
+        {
             --value;
+            return true;
+        }
     }
+    return false;
 }
 
-void CMenuItem::right()
+bool CMenuItem::right()
 {
     if (!m_value)
     {
-        return;
+        return false;
     }
     int &value = *m_value;
     if (m_type == ITEM_RANGE)
     {
         if (value < m_rangeMax)
+        {
             ++value;
+            return true;
+        }
     }
     else if (m_type == ITEM_OPTIONS)
     {
         if (value < static_cast<int>(m_options.size() - 1))
+        {
             ++value;
+            return true;
+        }
     }
+    return false;
 }
 
 std::string CMenuItem::str() const

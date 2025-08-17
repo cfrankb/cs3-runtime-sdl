@@ -88,7 +88,7 @@ std::unordered_map<uint32_t, uint32_t> g_annieRedColors = {
 
 CGameMixin::CGameMixin()
 {
-    m_game = new CGame();
+    m_game = CGame::getGame();
     m_animator = new CAnimator();
     m_prompt = PROMPT_NONE;
     clearJoyStates();
@@ -489,7 +489,7 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
     if (timeout)
     {
         char tmp[16];
-        sprintf(tmp, "%.d", timeout);
+        sprintf(tmp, "%.d", timeout - 1);
         const bool lowTime = timeout <= 15;
         const int scaleX = !lowTime ? 3 : 5;
         const int scaleY = !lowTime ? 4 : 5;
@@ -1124,7 +1124,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     {
         scaleX = 4;
     }
-    else if (_WIDTH > 300)
+    else if (_WIDTH > 350)
     {
         scaleX = 3;
     }
@@ -1739,7 +1739,11 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
     const int sugar = game.sugar();
     for (int i = 0; i < (int)CGame::MAX_SUGAR_RUSH_LEVEL; ++i)
     {
-        Rect rect{.x = bx * (int)FONT_SIZE + i * 5, .y = Y_STATUS + 2, .width = 4, .height = 4};
+        const Rect rect{
+            .x = bx * (int)FONT_SIZE + i * 5,
+            .y = Y_STATUS + 2,
+            .width = 4,
+            .height = 4};
         if (static_cast<int>(i) < sugar)
             drawRect(bitmap, rect, RED, true);
         else

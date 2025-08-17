@@ -29,8 +29,8 @@ public:
     CMenuItem &addItem(const CMenuItem &menuItem);
     size_t size() const;
     CMenuItem &at(int i);
-    void up();
-    void down();
+    bool up();
+    bool down();
     int index() const;
     void clear();
     CMenuItem &current();

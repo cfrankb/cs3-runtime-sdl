@@ -45,6 +45,7 @@
 CMap g_map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+CGame *g_game = nullptr;
 
 /**
  * @brief Construct a new CGame::CGame object
@@ -295,6 +296,7 @@ void CGame::restartLevel()
     m_events.clear();
     m_gameStats->set(S_GOD_MODE_TIMER, 0);
     m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
+    m_gameStats->set(S_RAGE_TIMER, 0);
     m_gameStats->set(S_SUGAR, 0);
     loadLevel(MODE_RESTART);
 }
@@ -1039,6 +1041,10 @@ void CGame::playTileSound(int tileID) const
     {
         snd = SOUND_GRUUP;
     }
+    else if (tileID == TILES_DIAMOND)
+    {
+        snd = SOUND_GOLD3;
+    }
     playSound(snd);
 }
 
@@ -1299,4 +1305,11 @@ CGameStats &CGame::stats()
 bool CGame::isRageMode() const
 {
     return m_gameStats->get(S_RAGE_TIMER) != 0;
+}
+
+CGame *CGame::getGame()
+{
+    if (!g_game)
+        g_game = new CGame;
+    return g_game;
 }

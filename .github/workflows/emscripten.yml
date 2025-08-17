@@ -31,7 +31,7 @@ jobs:
 
     - name: Build your app
       run: |
-        python3 bin/gen.py emsdl2
+        python3 bin/gen.py emsdl2 -s
         mkdir -p build/cs3
         make
         cp build/cs3v2.* build/cs3

@@ -56,16 +56,24 @@ CMenuItem &CMenu::last()
     return m_items[m_items.size() - 1];
 }
 
-void CMenu::up()
+bool CMenu::up()
 {
     if (m_currentItem)
+    {
         --m_currentItem;
+        return true;
+    }
+    return false;
 }
 
-void CMenu::down()
+bool CMenu::down()
 {
     if (m_currentItem < static_cast<int>(m_items.size() - 1))
+    {
         ++m_currentItem;
+        return true;
+    }
+    return false;
 }
 
 int CMenu::index() const
