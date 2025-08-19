@@ -52,6 +52,7 @@
 #define ANIMZ_ETURTLE_LEN    0x04
 #define ANIMZ_DRAGO_LEN      0x04
 #define ANIMZ_EXPLOSION1_LEN 0x05
+#define ANIMZ_DOORS_LEAF_LEN 0x02
 
 #define ANIMZ_SWAMP          0x00
 #define ANIMZ_SWAMP_2        0x01
@@ -174,4 +175,6 @@
 #define ANIMZ_EXPLOSION1_3   0x76
 #define ANIMZ_EXPLOSION1_4   0x77
 #define ANIMZ_EXPLOSION1_5   0x78
-#define ANIMZ_TOTAL_COUNT    0x79
+#define ANIMZ_DOORS_LEAF     0x79
+#define ANIMZ_DOORS_LEAF_2   0x7a
+#define ANIMZ_TOTAL_COUNT    0x7b

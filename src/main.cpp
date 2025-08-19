@@ -174,7 +174,7 @@ int main(int argc, char *args[])
         // override options
         runtime.enableMusic(false);
     }
-    if (!runtime.SDLInit())
+    if (!runtime.initSDL())
     {
         return EXIT_FAILURE;
     }

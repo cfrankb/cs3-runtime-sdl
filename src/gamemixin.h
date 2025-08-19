@@ -96,6 +96,7 @@ protected:
         CAMERA_MODE_STATIC = 0,
         CAMERA_MODE_DYNAMIC = 1,
         FAZ_INV_BITSHIFT = 1,
+        INDEX_ANNIE_DEAD = 4,
     };
 
     enum Color : uint32_t

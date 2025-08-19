@@ -156,6 +156,7 @@ void CGame::consume()
         addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         --m_diamonds;
+        checkClosure();
         addHealth(def.health);
         playTileSound(pu);
     }
@@ -267,6 +268,7 @@ bool CGame::loadLevel(const GameMode mode)
     m_health = DEFAULT_HEALTH;
     findMonsters();
     m_sfx.clear();
+    resetStats();
     return true;
 }
 
@@ -277,6 +279,7 @@ bool CGame::loadLevel(const GameMode mode)
 void CGame::nextLevel()
 {
     addPoints(LEVEL_BONUS + m_health);
+    addPoints(g_map.states().getU(TIMEOUT) * 2);
     if (m_level != m_mapArch->size() - 1)
     {
         ++m_level;
@@ -294,10 +297,7 @@ void CGame::nextLevel()
 void CGame::restartLevel()
 {
     m_events.clear();
-    m_gameStats->set(S_GOD_MODE_TIMER, 0);
-    m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
-    m_gameStats->set(S_RAGE_TIMER, 0);
-    m_gameStats->set(S_SUGAR, 0);
+    resetStats();
     loadLevel(MODE_RESTART);
 }
 
@@ -309,6 +309,20 @@ void CGame::restartGame()
 {
     resetStats();
     m_level = 0;
+    m_nextLife = calcScoreLife();
+    m_score = 0;
+    m_lives = DEFAULT_LIVES;
+}
+
+/**
+ * @brief Decrenent Powerup timers
+ *
+ */
+void CGame::decTimers()
+{
+    m_gameStats->dec(S_GOD_MODE_TIMER);
+    m_gameStats->dec(S_EXTRA_SPEED_TIMER);
+    m_gameStats->dec(S_RAGE_TIMER);
 }
 
 /**
@@ -317,11 +331,13 @@ void CGame::restartGame()
  */
 void CGame::resetStats()
 {
-    m_nextLife = calcScoreLife();
     m_gameStats->set(S_GOD_MODE_TIMER, 0);
     m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
-    m_score = 0;
-    m_lives = DEFAULT_LIVES;
+    m_gameStats->set(S_RAGE_TIMER, 0);
+    m_gameStats->set(S_SUGAR, 0);
+    m_gameStats->set(S_CLOSURE, 0);
+    m_gameStats->set(S_CLOSURE_TIMER, 0);
+    m_gameStats->set(S_REVEAL_EXIT, 0);
 }
 
 /**
@@ -539,10 +555,7 @@ void CGame::manageMonsters(int ticks)
 
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
-    auto &godModeTimer = m_gameStats->get(S_GOD_MODE_TIMER);
-    auto &extraSpeedTimer = m_gameStats->get(S_EXTRA_SPEED_TIMER);
-    godModeTimer = std::max(godModeTimer - 1, 0);
-    extraSpeedTimer = std::max(extraSpeedTimer - 1, 0);
+    decTimers();
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -551,7 +564,7 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
         addHealth(def.health);
     }
     const JoyAim aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
-    for (uint8_t i = 0; i < 4; ++i)
+    for (uint8_t i = 0; i < TOTAL_AIMS; ++i)
     {
         const JoyAim aim = aims[i];
         if (joystate[aim] && move(aim))
@@ -681,6 +694,7 @@ int CGame::clearAttr(const uint8_t attr)
         if (def.type == TYPE_DIAMOND)
         {
             --m_diamonds;
+            checkClosure();
         }
         g_map.set(x, y, TILES_BLANK);
         g_map.setAttr(x, y, 0);
@@ -696,6 +710,9 @@ int CGame::clearAttr(const uint8_t attr)
  */
 void CGame::addHealth(const int hp)
 {
+    if (isClosure())
+        return;
+
     const auto skill = m_gameStats->get(S_SKILL);
     if (hp > 0)
     {
@@ -708,6 +725,45 @@ void CGame::addHealth(const int hp)
         const int hpToken = hp * (1 + 1 * skill);
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
+    }
+    checkClosure();
+}
+
+void CGame::checkClosure()
+{
+    bool doClosure = false;
+    if (!isClosure() && !m_health)
+    {
+        doClosure = true;
+    }
+    else if (!isClosure() && !m_diamonds)
+    {
+        const uint16_t exitKey = g_map.states().getU(POS_EXIT);
+        if (exitKey != 0)
+        {
+            const bool revealExit = m_gameStats->get(S_REVEAL_EXIT) != 0;
+            const Pos exitPos = CMap::toPos(exitKey);
+            if (!revealExit)
+            {
+                g_map.set(exitPos.x, exitPos.y, TILES_DOORS_LEAF);
+                m_gameStats->set(S_REVEAL_EXIT, 1);
+            }
+            doClosure = m_player.pos() == exitPos;
+        }
+        else
+        {
+            doClosure = true;
+        }
+    }
+
+    if (doClosure)
+    {
+        if (m_health)
+            playSound(SOUND_EXIT);
+        else
+            playSound(SOUND_DEATH);
+        m_gameStats->set(S_CLOSURE, 1);
+        m_gameStats->set(S_CLOSURE_TIMER, CLOSURE_TIMER);
     }
 }
 
@@ -1312,4 +1368,19 @@ CGame *CGame::getGame()
     if (!g_game)
         g_game = new CGame;
     return g_game;
+}
+
+bool CGame::isClosure() const
+{
+    return m_gameStats->get(S_CLOSURE) != 0;
+}
+
+int CGame::closusureTimer() const
+{
+    return m_gameStats->get(S_CLOSURE_TIMER);
+}
+
+void CGame::decClosure()
+{
+    m_gameStats->dec(S_CLOSURE_TIMER);
 }

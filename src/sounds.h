@@ -34,4 +34,6 @@ enum SoundFx
     SOUND_GOLD3,
     SOUND_SPRING05,
     SOUND_EXPLOSION1,
+    SOUND_EXIT,
+    SOUND_DEATH,
 };

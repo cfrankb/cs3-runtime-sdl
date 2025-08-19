@@ -25,16 +25,48 @@ CGameStats::~CGameStats()
 {
 }
 
+/**
+ * @brief Return value associated with given key
+ *
+ * @param key
+ * @return int&
+ */
 int &CGameStats::get(const GameStat key)
 {
     return m_stats[key];
 }
 
+/**
+ * @brief Set value associated with given key
+ *
+ * @param key
+ * @param value
+ */
 void CGameStats::set(const GameStat key, int value)
 {
     m_stats[key] = value;
 }
 
+/**
+ * @brief Decrement value associated with given key. Doesn't decrement values below zero
+ *
+ * @param key
+ */
+void CGameStats::dec(const GameStat key)
+{
+    if (m_stats[key] > 0)
+    {
+        --m_stats[key];
+    }
+}
+
+/**
+ * @brief Deserialize key/value pairs from disk
+ *
+ * @param sfile
+ * @return true
+ * @return false
+ */
 bool CGameStats::read(FILE *sfile)
 {
     auto readfile = [sfile](auto ptr, auto size)
@@ -55,18 +87,33 @@ bool CGameStats::read(FILE *sfile)
     return true;
 }
 
+/**
+ * @brief Serialize key/value pairs to disk
+ *
+ * @param sfile
+ * @return true
+ * @return false
+ */
 bool CGameStats::write(FILE *tfile)
 {
     auto writefile = [tfile](auto ptr, auto size)
     {
         return fwrite(ptr, size, 1, tfile) == 1;
     };
-    const uint16_t count = m_stats.size();
+    uint16_t count = 0;
+    for (const auto &[key, value] : m_stats)
+    {
+        if (value)
+            ++count;
+    }
     writefile(&count, sizeof(count));
     for (const auto &[key, value] : m_stats)
     {
-        writefile(&key, sizeof(key));
-        writefile(&value, sizeof(value));
+        if (value)
+        {
+            writefile(&key, sizeof(key));
+            writefile(&value, sizeof(value));
+        }
     }
     return true;
 }

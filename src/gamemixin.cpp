@@ -32,6 +32,7 @@
 #include "statedata.h"
 #include "sounds.h"
 #include "sprtypes.h"
+#include "gamestats.h"
 
 // Check windows
 #ifdef _WIN64
@@ -517,8 +518,20 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, bool &inverted, std::unorde
     {
         CFrameSet &annie = *m_annie;
         const int aim = game.playerConst().getAim();
-        tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset];
-        inverted = (m_playerFrameOffset & PLAYER_HIT_FRAME) == PLAYER_HIT_FRAME;
+        if (!game.health())
+        {
+            tile = annie[INDEX_ANNIE_DEAD * PLAYER_FRAMES + m_playerFrameOffset];
+        }
+        else if (!game.goalCount() && game.isClosure())
+        {
+            tile = annie[AIM_DOWN * PLAYER_FRAMES + m_playerFrameOffset];
+        }
+        else
+        {
+            tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset];
+            inverted = (m_playerFrameOffset & PLAYER_HIT_FRAME) == PLAYER_HIT_FRAME;
+        }
+
         if (m_game->hasExtraSpeed())
         {
             colorMap = &g_annieYellowColors;
@@ -967,7 +980,11 @@ void CGameMixin::manageGamePlay()
     manageTimer();
     game.purgeSfx();
 
-    if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
+    if (m_ticks % game.playerSpeed() == 0 && game.closusureTimer())
+    {
+        game.decClosure();
+    }
+    else if (m_ticks % game.playerSpeed() == 0 && !game.isPlayerDead())
     {
         game.managePlayer(joyState);
     }
@@ -977,7 +994,7 @@ void CGameMixin::manageGamePlay()
         moveCamera();
     }
 
-    if (m_ticks % 3 == 0)
+    if (m_ticks % 3 == 0 && !game.isClosure())
     {
         if (game.health() < m_healthRef && m_playerFrameOffset != PLAYER_HIT_FRAME)
         {
@@ -994,32 +1011,46 @@ void CGameMixin::manageGamePlay()
         m_healthRef = game.health();
         m_animator->animate();
     }
-
-    game.manageMonsters(m_ticks);
-
-    if (game.isPlayerDead())
+    else if (m_ticks % 3 == 0)
     {
-        stopRecorder();
-        game.killPlayer();
-
-        if (!game.isGameOver())
-        {
-            restartLevel();
-        }
-        else
-        {
-            startCountdown(COUNTDOWN_INTRO);
-            game.setMode(CGame::MODE_GAMEOVER);
-        }
+        m_playerFrameOffset = (m_playerFrameOffset + 1) % PLAYER_STD_FRAMES;
     }
 
-    if (!game.isGameOver() && game.goalCount() == 0)
+    game.manageMonsters(m_ticks);
+    const uint16_t exitKey = m_game->getMap().states().getU(POS_EXIT);
+    if (game.isClosure())
     {
-        const uint16_t exitKey = m_game->getMap().states().getU(POS_EXIT);
-        if (exitKey == 0 || m_game->player().pos() == CMap::toPos(exitKey))
+        stopRecorder();
+        if (game.closusureTimer() != 0)
         {
-            nextLevel();
+            return;
         }
+
+        if (game.isPlayerDead())
+        {
+            game.killPlayer();
+            if (!game.isGameOver())
+            {
+                restartLevel();
+            }
+            else
+            {
+                startCountdown(COUNTDOWN_INTRO);
+                game.setMode(CGame::MODE_GAMEOVER);
+            }
+        }
+
+        if (!game.isGameOver() && game.goalCount() == 0)
+        {
+            if (exitKey == 0 || m_game->player().pos() == CMap::toPos(exitKey))
+            {
+                nextLevel();
+            }
+        }
+    }
+    else if (game.goalCount() == 0 && exitKey != 0)
+    {
+        game.checkClosure();
     }
 }
 

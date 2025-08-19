@@ -165,7 +165,7 @@ void CRuntime::paint()
     SDL_RenderPresent(m_app.renderer);
 }
 
-bool CRuntime::SDLInit()
+bool CRuntime::initSDL()
 {
     printf("SDL Init() %dx%d\n", WIDTH, HEIGHT);
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -1073,10 +1073,15 @@ void CRuntime::setupTitleScreen()
     {
         menu.setScaleX(4);
     }
-    else if (_WIDTH > 300)
+    else if (_WIDTH > 350)
     {
         menu.setScaleX(3);
     }
+    else
+    {
+        menu.setScaleX(2);
+    }
+
     if (_HEIGHT >= 450)
     {
         menu.setScaleY(6);
@@ -1316,7 +1321,6 @@ void CRuntime::manageMenu(CMenu &menu)
                 return;
             }
 
-            game.resetStats();
             if (game.level() != m_startLevel)
             {
                 game.setLevel(m_startLevel);
@@ -1326,6 +1330,7 @@ void CRuntime::manageMenu(CMenu &menu)
             game.loadLevel(CGame::MODE_LEVEL_INTRO);
             centerCamera();
             game.setSkill(m_skill);
+            game.resetStats();
             startCountdown(COUNTDOWN_INTRO);
         }
         else if (item.role() == MENU_ITEM_HISCORES)
@@ -1463,7 +1468,6 @@ bool CRuntime::initControllers()
             }
         }
     }
-
     if (m_gameControllers.empty())
     {
         fprintf(stderr, "No game controllers found. Connect one now!\n");
@@ -1586,7 +1590,8 @@ int CRuntime::findResolutionIndex()
 
 void CRuntime::resize(int w, int h)
 {
-    printf("switch to: %dx%d\n", w, h);
+    if (m_verbose)
+        printf("switch to: %dx%d\n", w, h);
     setWidth(w / 2);
     setHeight(h / 2);
     SDL_SetWindowSize(m_app.window, w, h);

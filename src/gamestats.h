@@ -29,7 +29,10 @@ enum GameStat : uint16_t
     S_EXTRA_SPEED_TIMER,
     S_SUGAR,
     S_SKILL,
-    S_RAGE_TIMER
+    S_RAGE_TIMER,
+    S_CLOSURE,
+    S_CLOSURE_TIMER,
+    S_REVEAL_EXIT,
 };
 
 class CGameStats
@@ -40,6 +43,7 @@ public:
 
     int &get(const GameStat key);
     void set(const GameStat key, int value);
+    void dec(const GameStat key);
 
     bool read(FILE *sfile);
     bool write(FILE *tfile);

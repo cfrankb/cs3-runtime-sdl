@@ -94,10 +94,15 @@ public:
     uint8_t skill() const;
     int size() const;
     void resetStats();
+    void decTimers();
     void parseHints(const char *data);
     int getEvent();
     void purgeSfx();
     static CGame *getGame();
+    bool isClosure() const;
+    int closusureTimer() const;
+    void checkClosure();
+    void decClosure();
 
 private:
     enum
@@ -110,6 +115,7 @@ private:
         MAX_LIVES = 99,
         GODMODE_TIMER = 100,
         EXTRASPEED_TIMER = 200,
+        CLOSURE_TIMER = 7,
         RAGE_TIMER = 150,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
