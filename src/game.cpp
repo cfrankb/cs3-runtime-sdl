@@ -299,6 +299,7 @@ void CGame::restartLevel()
     m_events.clear();
     resetStats();
     loadLevel(MODE_RESTART);
+    m_gameStats->set(S_SUGAR, 0);
 }
 
 /**
@@ -312,6 +313,7 @@ void CGame::restartGame()
     m_nextLife = calcScoreLife();
     m_score = 0;
     m_lives = DEFAULT_LIVES;
+    m_gameStats->set(S_SUGAR, 0);
 }
 
 /**
@@ -334,7 +336,6 @@ void CGame::resetStats()
     m_gameStats->set(S_GOD_MODE_TIMER, 0);
     m_gameStats->set(S_EXTRA_SPEED_TIMER, 0);
     m_gameStats->set(S_RAGE_TIMER, 0);
-    m_gameStats->set(S_SUGAR, 0);
     m_gameStats->set(S_CLOSURE, 0);
     m_gameStats->set(S_CLOSURE_TIMER, 0);
     m_gameStats->set(S_REVEAL_EXIT, 0);
@@ -503,15 +504,19 @@ void CGame::manageMonsters(int ticks)
             {
                 // apply health damages
                 addHealth(def.health);
+                if (def.ai & AI_STICKY)
+                {
+                    continue;
+                }
             }
             if (actor.canMove(aim))
             {
                 actor.move(aim);
             }
+            else if (aim == AIM_LEFT)
+                aim = AIM_RIGHT;
             else
-            {
-                aim ^= 1;
-            }
+                aim = AIM_LEFT;
             actor.setAim(aim);
         }
         else if (def.type == TYPE_VAMPLANT)

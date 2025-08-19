@@ -109,7 +109,7 @@ private:
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
     bool m_isRunning = true;
-    CFrame *g_bitmap = nullptr;
+    CFrame *m_bitmap = nullptr;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_GameController *> m_gameControllers;

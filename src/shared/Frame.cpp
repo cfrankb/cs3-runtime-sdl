@@ -1272,6 +1272,13 @@ void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
     }
 }
 
+uint32_t *CFrame::swapBuffer(uint32_t *newBuffer)
+{
+    uint32_t *tmp = m_rgb;
+    m_rgb = newBuffer;
+    return tmp;
+}
+
 /////////////////////////////////////////////////////////////////////
 // CSS3Map
 

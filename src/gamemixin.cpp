@@ -517,17 +517,17 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, bool &inverted, std::unorde
     else if (tileID == TILES_ANNIE2)
     {
         CFrameSet &annie = *m_annie;
-        const int aim = game.playerConst().getAim();
         if (!game.health())
         {
             tile = annie[INDEX_ANNIE_DEAD * PLAYER_FRAMES + m_playerFrameOffset];
         }
         else if (!game.goalCount() && game.isClosure())
         {
-            tile = annie[AIM_DOWN * PLAYER_FRAMES + m_playerFrameOffset];
+            tile = annie[static_cast<uint8_t>(AIM_DOWN) * PLAYER_FRAMES + m_playerFrameOffset];
         }
         else
         {
+            const int aim = game.playerConst().getAim();
             tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset];
             inverted = (m_playerFrameOffset & PLAYER_HIT_FRAME) == PLAYER_HIT_FRAME;
         }
@@ -1088,7 +1088,7 @@ void CGameMixin::startCountdown(int f)
     m_countdown = f * INTRO_DELAY;
 }
 
-void CGameMixin::init(CMapArch *maparch, int index)
+void CGameMixin::init(CMapArch *maparch, const int index)
 {
     if (!m_assetPreloaded)
     {
