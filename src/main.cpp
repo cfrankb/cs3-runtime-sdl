@@ -24,6 +24,7 @@
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
+#include "game.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -191,5 +192,6 @@ int main(int argc, char *args[])
         loop_handler(&runtime);
     }
 #endif
+    CGame::destroy();
     return EXIT_SUCCESS;
 }
