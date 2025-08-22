@@ -505,7 +505,8 @@ void CGame::manageMonsters(int ticks)
                 }
             }
 
-            JoyAim aim = actor.findNextDir();
+            bool reverse = def.ai & AI_REVERSE;
+            JoyAim aim = actor.findNextDir(reverse);
             if (aim != AIM_NONE)
             {
                 actor.move(aim);
