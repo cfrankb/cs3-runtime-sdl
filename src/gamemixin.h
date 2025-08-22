@@ -98,6 +98,8 @@ protected:
         CAMERA_MODE_DYNAMIC = 1,
         FAZ_INV_BITSHIFT = 1,
         INDEX_ANNIE_DEAD = 4,
+        HEALTHBAR_CLASSIC = 0,
+        HEALTHBAR_HEARTHS = 1,
     };
 
     enum : int32_t
@@ -257,8 +259,7 @@ protected:
     bool m_scoresLoaded = false;
     bool m_hiscoreEnabled = false;
     bool m_paused = false;
-    // Note: this has to be an int
-    int m_musicMuted = false;
+    int m_musicMuted = false; // Note: this has to be an int
     Prompt m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
     bool m_gameMenuActive = false;
@@ -266,6 +267,7 @@ protected:
     int m_cx;
     int m_cy;
     int m_cameraMode = CAMERA_MODE_STATIC;
+    int m_healthBar = HEALTHBAR_CLASSIC;
     int m_currentEvent;
     int m_eventCountdown;
     int m_timer;
@@ -287,7 +289,9 @@ protected:
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline CFrame *tile2Frame(const uint8_t tileID, bool &inverted, std::unordered_map<uint32_t, uint32_t> *&colorMap);
-    CFrame *specialFrame(const sprite_t &sprite); //  const int aim, const uint8_t tileID);
+    void drawHealthBar(CFrame &bitmap);
+    void drawGameStatus(CFrame &bitmap);
+    CFrame *specialFrame(const sprite_t &sprite);
     void nextLevel();
     void restartLevel();
     void restartGame();
@@ -340,7 +344,6 @@ protected:
     virtual void manageTitleScreen() = 0;
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
-
     virtual void manageOptionScreen() = 0;
 
 private:

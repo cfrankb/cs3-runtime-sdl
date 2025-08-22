@@ -130,7 +130,8 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                         fprintf(stderr, "invalid height: %d for --window\n", params.height);
                         result = false;
                     }
-                    printf("w: %d h: %d\n", params.width, params.height);
+                    if (params.verbose)
+                        printf("w: %d h: %d\n", params.width, params.height);
                 }
                 else
                 {

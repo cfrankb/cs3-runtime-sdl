@@ -109,6 +109,7 @@ public:
     void checkClosure();
     void decClosure();
     bool isFrozen() const;
+    int maxHealth() const;
     static void destroy();
 
 private:

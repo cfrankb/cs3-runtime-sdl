@@ -186,7 +186,7 @@ void CRuntime::paint()
 
 bool CRuntime::initSDL()
 {
-    printf("SDL Init() %dx%d\n", WIDTH, HEIGHT);
+    printf("SDL Init() texture: %dx%d\n", WIDTH, HEIGHT);
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -1218,6 +1218,15 @@ void CRuntime::initOptions()
     else
     {
         printf("using viewport default\n");
+    }
+
+    if (m_config["healthbar"] == "hearts")
+    {
+        m_healthBar = HEALTHBAR_HEARTHS;
+    }
+    else
+    {
+        m_healthBar = HEALTHBAR_CLASSIC;
     }
 }
 

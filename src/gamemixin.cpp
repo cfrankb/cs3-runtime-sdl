@@ -409,7 +409,6 @@ void CGameMixin::drawKeys(CFrame &bitmap)
 void CGameMixin::drawScreen(CFrame &bitmap)
 {
     // draw viewport
-    CGame &game = *m_game;
     if (m_cameraMode == CAMERA_MODE_DYNAMIC)
         drawViewPortDynamic(bitmap);
     else if (m_cameraMode == CAMERA_MODE_STATIC)
@@ -424,61 +423,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     }
 
     // draw game status
-    char tmp[32];
-    if (m_paused)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "PRESS [F4] TO RESUME PLAYING...", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_ERASE_SCORES)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "ERASE HIGH SCORES, CONFIRM (Y/N)?", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_RESTART_GAME)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "RESTART GAME, CONFIRM (Y/N)?", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_LOAD)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "LOAD PREVIOUS SAVEGAME, CONFIRM (Y/N)?", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_SAVE)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "SAVE GAME, CONFIRM (Y/N)?", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_HARDCORE)
-    {
-        drawFont(bitmap, 0, Y_STATUS, "HARDCORE MODE, CONFIRM (Y/N)?", LIGHTGRAY);
-    }
-    else if (m_prompt == PROMPT_TOGGLE_MUSIC)
-    {
-        drawFont(bitmap, 0, Y_STATUS,
-                 m_musicMuted ? "PLAY MUSIC, CONFIRM (Y/N)?"
-                              : "MUTE MUSIC, CONFIRM (Y/N)?",
-                 LIGHTGRAY);
-    }
-    else
-    {
-        int tx;
-        int bx = 0;
-        tx = sprintf(tmp, "%.8d ", game.score());
-        drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
-        bx += tx;
-        tx = sprintf(tmp, "DIAMONDS %.2d ", game.goalCount());
-        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, YELLOW);
-        bx += tx;
-        tx = sprintf(tmp, "LIVES %.2d ", game.lives());
-        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
-        bx += tx;
-        if (m_recorder->isRecording())
-        {
-            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "REC!", WHITE, RED);
-        }
-        else if (m_recorder->isReading())
-        {
-            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
-        }
-        drawSugarMeter(bitmap, bx);
-    }
+    drawGameStatus(bitmap);
 
     // draw bottom rect
     const Color rectBG = m_currentEvent >= MSG0 ? WHITE : DARKGRAY;
@@ -490,12 +435,8 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     if (m_currentEvent < MSG0)
     {
-        // draw health bar
-        const int hpWidth = std::min(game.health() / 2, bitmap.len() - 4);
-        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
-                 game.isGodMode() ? WHITE : LIME, true);
-        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
-                 WHITE, false);
+        // draw Healthbar
+        drawHealthBar(bitmap);
 
         // draw keys
         drawKeys(bitmap);
@@ -1242,7 +1183,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     int x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
-    strcpy(t, std::string(strlen(t), '=').c_str());
+    strncpy(t, std::string(strlen(t), '=').c_str(), sizeof(t) - 1);
     x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
@@ -1481,7 +1422,7 @@ bool CGameMixin::handleInputString(char *inputDest, const size_t limit)
         }
         m_keyRepeters[k] = KEY_REPETE_DELAY;
         char s[2] = {c, 0};
-        strcat(inputDest, s);
+        strlcat(inputDest, s, limit);
     }
     return false;
 }
@@ -1893,4 +1834,106 @@ void CGameMixin::setWidth(int w)
 void CGameMixin::setHeight(int h)
 {
     _HEIGHT = h;
+}
+
+void CGameMixin::drawHealthBar(CFrame &bitmap)
+{
+    auto drawHearth = [&bitmap](auto bx, auto by, auto health)
+    {
+        const uint8_t *hearth = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
+        for (uint y = 0; y < FONT_SIZE; ++y)
+        {
+            for (uint x = 0; x < FONT_SIZE; ++x)
+            {
+                const uint8_t bit = hearth[y] & (1 << x);
+                if (bit)
+                    bitmap.at(bx + x, by + y) = x < (uint)health ? RED : BLACK;
+            }
+        }
+    };
+
+    // draw health bar
+    CGame &game = *m_game;
+    if (m_healthBar == HEALTHBAR_HEARTHS)
+    {
+        int step = FONT_SIZE;
+        const int maxHealth = game.maxHealth() / 2 / FONT_SIZE;
+        int health = game.health() / 2;
+        int bx = 2;
+        int by = bitmap.hei() - 12;
+        for (int i = 0; i < maxHealth; ++i)
+        {
+            drawHearth(bx, by, health > 0 ? health : 0);
+            bx += FONT_SIZE;
+            health -= step;
+        }
+    }
+    else
+    {
+        const int hpWidth = std::min(game.health() / 2, bitmap.len() - 4);
+        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+                 game.isGodMode() ? WHITE : LIME, true);
+        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+                 WHITE, false);
+    }
+}
+
+void CGameMixin::drawGameStatus(CFrame &bitmap)
+{
+    CGame &game = *m_game;
+    char tmp[32];
+    if (m_paused)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "PRESS [F4] TO RESUME PLAYING...", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_ERASE_SCORES)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "ERASE HIGH SCORES, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_RESTART_GAME)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "RESTART GAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_LOAD)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "LOAD PREVIOUS SAVEGAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_SAVE)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "SAVE GAME, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_HARDCORE)
+    {
+        drawFont(bitmap, 0, Y_STATUS, "HARDCORE MODE, CONFIRM (Y/N)?", LIGHTGRAY);
+    }
+    else if (m_prompt == PROMPT_TOGGLE_MUSIC)
+    {
+        drawFont(bitmap, 0, Y_STATUS,
+                 m_musicMuted ? "PLAY MUSIC, CONFIRM (Y/N)?"
+                              : "MUTE MUSIC, CONFIRM (Y/N)?",
+                 LIGHTGRAY);
+    }
+    else
+    {
+        int tx;
+        int bx = 0;
+        tx = sprintf(tmp, "%.8d ", game.score());
+        drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
+        bx += tx;
+        tx = sprintf(tmp, "DIAMONDS %.2d ", game.goalCount());
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, YELLOW);
+        bx += tx;
+        tx = sprintf(tmp, "LIVES %.2d ", game.lives());
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
+        bx += tx;
+        if (m_recorder->isRecording())
+        {
+            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "REC!", WHITE, RED);
+        }
+        else if (m_recorder->isReading())
+        {
+            drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
+        }
+        drawSugarMeter(bitmap, bx);
+    }
 }
