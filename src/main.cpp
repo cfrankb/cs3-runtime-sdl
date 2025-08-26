@@ -71,6 +71,18 @@ extern "C"
         return 0;
     }
 }
+
+EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEvent *e, void *userData)
+{
+    if (!e->isFullscreen)
+    {
+        printf("Exited fullscreen—likely via ESC\n");
+        // Trigger your custom logic here
+        g_runtime->notifyExitFullScreen();
+    }
+    return EM_TRUE;
+}
+
 #endif
 
 void loop_handler(void *arg)
@@ -185,6 +197,7 @@ int main(int argc, char *args[])
 
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
     while (runtime.isRunning())

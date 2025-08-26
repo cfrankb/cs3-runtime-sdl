@@ -52,6 +52,7 @@ public:
     static std::string &addTrailSlash(std::string &path);
     void init(CMapArch *maparch, int index) override;
     void setVerbose(bool enable);
+    void notifyExitFullScreen();
 
 private:
     typedef struct
@@ -146,6 +147,7 @@ private:
         MENU_ITEM_FULLSCREEN,
         MENU_ITEM_RETURN_MAIN,
         MENU_ITEM_CAMERA,
+        MENU_ITEM_RETURN_TO_GAME,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),

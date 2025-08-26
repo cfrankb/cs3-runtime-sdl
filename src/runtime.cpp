@@ -35,8 +35,10 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
+
 #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
@@ -306,7 +308,7 @@ void CRuntime::doInput()
         case SDL_WINDOWEVENT:
             if (event.window.event == SDL_WINDOWEVENT_RESIZED && !m_app.isFullscreen)
             {
-                printf("resuzed\n");
+                printf("resized\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
@@ -1234,9 +1236,41 @@ void CRuntime::initOptions()
     }
 }
 
-// Function to toggle fullscreen mode
+/**
+ * @brief  Function to toggle fullscreen mode
+ *
+ */
+
 void CRuntime::toggleFullscreen()
 {
+#ifdef __EMSCRIPTEN__
+    if (m_config["webfullscreen"] == "true")
+    {
+        if (SDL_SetWindowFullscreen(
+                m_app.window,
+                !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
+        {
+            fprintf(stderr, "Fullscreen toggle error: %s\n", SDL_GetError());
+        }
+    }
+    else
+    {
+        if (m_app.isFullscreen)
+        {
+            EmscriptenFullscreenStrategy strategy = {
+                .scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_DEFAULT,
+                .canvasResolutionScaleMode = EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_NONE,
+                .filteringMode = EMSCRIPTEN_FULLSCREEN_FILTERING_DEFAULT,
+                .canvasResizedCallback = NULL,
+                .canvasResizedCallbackUserData = NULL};
+            emscripten_enter_soft_fullscreen("#canvas", &strategy);
+        }
+        else
+        {
+            emscripten_exit_soft_fullscreen();
+        }
+    }
+#else
     if (m_app.isFullscreen)
     {
         // Currently in fullscreen, switch to windowed
@@ -1264,10 +1298,12 @@ void CRuntime::toggleFullscreen()
         SDL_SetWindowSize(m_app.window, dm.w, dm.h);
         SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
+#endif
     int x, y, w, h;
     SDL_GetWindowPosition(m_app.window, &x, &y);
     SDL_GetWindowSize(m_app.window, &w, &h);
     printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+
     m_app.isFullscreen = !m_app.isFullscreen;
     m_fullscreen = (int)m_app.isFullscreen;
 }
@@ -1397,6 +1433,10 @@ void CRuntime::manageMenu(CMenu &menu)
             m_game->setMode(CGame::MODE_TITLE);
             m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
         }
+        else if (item.role() == MENU_ITEM_RETURN_TO_GAME)
+        {
+            m_gameMenuActive = false;
+        }
     }
 
     if (item.role() == MENU_ITEM_MUSIC &&
@@ -1467,11 +1507,13 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-    // addGamePlayOptions(menu);
-    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
-    // menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
-    //     .setRole(MENU_ITEM_CAMERA);
+    // menu.addItem(CMenuItem("%s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
+    //     .setRole(MENU_ITEM_FULLSCREEN);
+    menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
+    //  menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+    //      .setRole(MENU_ITEM_MUSIC_VOLUME);
+    //  menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
+    //      .setRole(MENU_ITEM_CAMERA);
 }
 
 bool CRuntime::initControllers()
@@ -1569,6 +1611,7 @@ void CRuntime::addGamePlayOptions(CMenu &menu)
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
+
     if (m_gameControllers.size() != 0)
     {
         menu.addItem(CMenuItem("X-AXIS RANGE: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
@@ -1679,4 +1722,14 @@ void CRuntime::listResolutions(int displayIndex)
 void CRuntime::setVerbose(bool enable)
 {
     m_verbose = enable;
+}
+
+/**
+ * @brief Notify the runtime that ESC was pressed. this is only relevant for the web version
+ *
+ */
+void CRuntime::notifyExitFullScreen()
+{
+    m_app.isFullscreen = false;
+    m_fullscreen = m_app.isFullscreen;
 }
