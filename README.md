@@ -1,27 +1,31 @@
-# CS3 Runtime SDL2
+# CREEPSPREAD III (SDL2)
 
-High-speed, pixel-art arcade chaos with a tracker soundtrack.
- Dive into Creepspread III, a fast-paced retro action game that
- combines a unique tracker-music soundtrack with fluid, high-speed
- pixel graphics. Master its challenging levels and experience a
- dynamic audio system that adapts to the on-screen action.
+Diamond Hunter vs. Deadly Monsters! Brace yourself for high-speed, pixel-art arcade chaos powered by a dynamic tracker soundtrack.
 
-This project aims to port to the CS3 Runtime to a wide variety of platforms. 
+CreepSpread III is a retro-inspired action game that blends fast-paced gameplay with fluid pixel graphics and a reactive audio system that evolves with the on-screen intensity. Master its challenging levels and uncover secrets as you battle through waves of monstrous foes.
 
-Using the SDL2 libraries as a base, the game can now run as a desktop app or in the browser.
+Creepspread III is powered by SDL2, this project brings CreepSpread III to a wide range of platforms—play it as a native desktop app or directly in your browser.
 
 
 
 ![alt text](images/3552as3552as3552.png)
 
 
-![alt text](images/screenshot20250630-104230.png)
+![alt text](images/screenshot20250807-225257.png)
 
-![alt text](images/screenshot20250630-104318.png)
+![alt text](images/screenshot20250807-225306.png)
 
-![alt text](images/screenshot20250630-104356.png)
+![alt text](images/screenshot20250807-225315.png)
 
-![alt text](images/screenshot20250615-002035.png)
+![alt text](images/screenshot20250807-225339.png)
+
+
+## First look at the game
+
+
+![Watch the video](https://img.youtube.com/vi/K8tYE7sSkcQ/hqdefault.jpg)
+
+Check out the gameplay demo on [YouTube](https://www.youtube.com/watch?v=K8tYE7sSkcQ).
 
 
 
@@ -56,7 +60,7 @@ $ emrun build/cs3v2.html
 <b>Building the docker image</b>
 
 ```
-$ sudo docker build -t sdl2-mingw32-static . -f docker/dockerfile-mingw32-static
+$ sudo docker build -t sdl2-mingw32-static . -f packages/docker/dockerfile-mingw32-static
 ```
 
 <b>Deleting an existing image</b>
@@ -78,13 +82,25 @@ $ make
 
 
 
+
+## Join the chaos
+
+Stay updated on the latest updates.
+
+https://discord.gg/c7AmpFu4
+
+
 ## Other resources
+
 
 ### Map Editor
 
 https://github.com/cfrankb/cs3-map-edit
 
-### Play online
+
+### Play Online
 
 https://cfrankb.itch.io/creepspread-iii
+
+
 

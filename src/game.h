@@ -17,36 +17,60 @@
 */
 #pragma once
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include <cstdio>
 #include "actor.h"
 #include "map.h"
+#include "gamesfx.h"
 
+class CGameStats;
 class CMapArch;
 class ISound;
+
+#define ATTR_WAIT 0xe0        // 0xe0 monster wait
+#define ATTR_FREEZE_TRAP 0xe1 // 0xe1 freeze trap
+#define ATTR_TRAP 0xe2        // 0xe2 trap
+#define ATTR_MSG0 0xf0        // 0xf0
 
 class CGame
 {
 public:
-    CGame();
-    ~CGame();
+    enum GameMode : uint8_t
+    {
+        MODE_LEVEL_INTRO,
+        MODE_PLAY,
+        MODE_RESTART,
+        MODE_GAMEOVER,
+        MODE_CLICKSTART,
+        MODE_HISCORES,
+        MODE_IDLE,
+        MODE_HELP,
+        MODE_TITLE,
+        MODE_TIMEOUT,
+        MODE_OPTIONS,
+    };
 
-    bool init();
-    bool loadLevel(const bool restart);
-    bool move(const int dir);
+    enum : uint32_t
+    {
+        MAX_SUGAR_RUSH_LEVEL = 5,
+        MAX_KEYS = 6,
+    };
+
+    bool loadLevel(const GameMode mode);
+    bool move(const JoyAim dir);
     void manageMonsters(const int ticks);
     uint8_t managePlayer(const uint8_t *joystate);
     static Pos translate(const Pos &p, const int aim);
     void consume();
     static bool hasKey(const uint8_t c);
     void addKey(const uint8_t c);
-    bool goalCount() const;
+    int goalCount() const;
     static CMap &getMap();
     void nextLevel();
     void restartLevel();
     void restartGame();
-    void setMode(int mode);
-    int mode() const;
+    void setMode(const GameMode mode);
+    GameMode mode() const;
     bool isPlayerDead();
     void killPlayer();
     bool isGameOver() const;
@@ -54,16 +78,19 @@ public:
     const CActor &playerConst() const;
     int score() const;
     int lives() const;
-    int diamonds() const;
     int health() const;
+    int sugar() const;
+    bool hasExtraSpeed() const;
     void setMapArch(CMapArch *arch);
     void setLevel(const int levelId);
     int level() const;
-    int godModeTimer() const;
+    bool isGodMode() const;
+    bool isRageMode() const;
     int playerSpeed() const;
     static uint8_t *keys();
-    void getMonsters(CActor *&monsters, int &count);
+    std::vector<CActor> &getMonsters();
     CActor &getMonster(int i);
+    std::vector<sfx_t> &getSfx();
     void playSound(const int id) const;
     void playTileSound(const int tileID) const;
     void setLives(const int lives);
@@ -72,27 +99,23 @@ public:
     uint8_t skill() const;
     int size() const;
     void resetStats();
+    void decTimers();
     void parseHints(const char *data);
-
-    enum GameMode
-    {
-        MODE_LEVEL_INTRO,
-        MODE_LEVEL,
-        MODE_RESTART,
-        MODE_GAMEOVER,
-        MODE_CLICKSTART,
-        MODE_HISCORES,
-        MODE_IDLE,
-        MODE_HELP,
-        MODE_TITLE
-    };
+    int getEvent();
+    void purgeSfx();
+    static CGame *getGame();
+    bool isClosure() const;
+    int closusureTimer() const;
+    void checkClosure();
+    void decClosure();
+    bool isFrozen() const;
+    int maxHealth() const;
+    static void destroy();
 
 private:
     enum
     {
-        DEFAULT_MAX_MONSTERS = 128,
-        GROWBY_MONSTERS = 64,
-        MAX_HEALTH = 255,
+        MAX_HEALTH = 200,
         DEFAULT_HEALTH = 64,
         DEFAULT_LIVES = 5,
         LEVEL_BONUS = 500,
@@ -100,21 +123,24 @@ private:
         MAX_LIVES = 99,
         GODMODE_TIMER = 100,
         EXTRASPEED_TIMER = 200,
-        SECRET_TIMER = 12,
+        CLOSURE_TIMER = 7,
+        RAGE_TIMER = 150,
+        FREEZE_TIMER = 80,
+        TRAP_DAMAGE = -16,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0003,
-        MAX_KEYS = 6,
-        SOUND_NONE = 0x00,
-        SOUND_GRUUP,
-        SOUND_KEY,
-        SOUND_0009,
-        SOUND_COIN1,
-        SOUND_OUCHFAST,
-        SOUND_POUF,
-        SOUND_POW,
-        SOUND_POWERUP,
+        VERSION = (0x0200 << 16) + 0x0005,
+        SECRET_ATTR_MIN = 0x01, // 0x01
+        SECRET_ATTR_MAX = 0x7f, // 0x7f
+        WAIT_DISTANCE = 5,
+    };
+
+    struct MapReport
+    {
+        int fruits;
+        int bonuses;
+        int secrets;
     };
 
     int m_lives = 0;
@@ -123,23 +149,20 @@ private:
     int m_score = 0;
     int m_nextLife = SCORE_LIFE;
     int m_diamonds = 0;
-    int32_t m_godModeTimer = 0;
-    int32_t m_extraSpeedTimer = 0;
-    int32_t m_secretTimer = 0;
     static uint8_t m_keys[MAX_KEYS];
-    int m_mode;
+    GameMode m_mode;
     int m_introHint = 0;
-
-    // monsters
-    CActor *m_monsters;
-    int m_monsterCount;
-    int m_monsterMax;
+    std::vector<int> m_events;
+    std::vector<CActor> m_monsters;
+    std::vector<sfx_t> m_sfx;
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     ISound *m_sound = nullptr;
-    uint8_t m_skill;
     std::vector<std::string> m_hints;
+    CGameStats *m_gameStats;
 
+    CGame();
+    ~CGame();
     int clearAttr(const uint8_t attr);
     bool findMonsters();
     int addMonster(const CActor actor);
@@ -150,8 +173,12 @@ private:
     bool read(FILE *sfile);
     bool write(FILE *tfile);
     int calcScoreLife() const;
-    int secretTimer() const;
-    const char *nextHint();
+    const char *getHintText();
+    bool isFruit(const uint8_t tileID) const;
+    bool isBonusItem(const uint8_t tileID) const;
+    void generateMapReport(MapReport &report);
+    CGameStats &stats();
+    static CMap m_map;
 
     friend class CGameMixin;
 };

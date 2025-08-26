@@ -514,6 +514,7 @@ CMap &CMap::operator=(const CMap &map)
     memcpy(m_map, map.m_map, m_size);
     m_attrs = map.m_attrs;
     m_title = map.m_title;
+    *m_states = *map.m_states;
     return *this;
 }
 
@@ -591,6 +592,12 @@ void CMap::shift(int aim)
 uint16_t CMap::toKey(const uint8_t x, const uint8_t y)
 {
     return x + (y << 8);
+}
+
+Pos CMap::toPos(const uint16_t key)
+{
+    return Pos{.x = static_cast<uint8_t>(key & 0xff),
+               .y = static_cast<uint8_t>(key >> 8)};
 }
 
 void CMap::debug()

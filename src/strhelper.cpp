@@ -119,3 +119,26 @@ uint16_t parseStringToUShort(const std::string &s, bool &isValid)
     }
     return v;
 }
+
+/**
+ * @brief remove preceding and trailing spaces
+ *
+ * @param s
+ * @return std::string
+ */
+std::string trimString(const std::string &s)
+{
+    size_t i;
+    size_t j;
+    for (i = 0; i < s.size(); ++i)
+    {
+        if (!isspace(s[i]))
+            break;
+    }
+    for (j = s.size() - 1; j > 0; --j)
+    {
+        if (!isspace(s[j]))
+            break;
+    }
+    return s.substr(i, j + 1 - i);
+}

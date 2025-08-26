@@ -1,12 +1,14 @@
 Blue Mushroom gives Extra Life
-Learn Monster Patterns to Beat Them.
+Learn Monster Patterns to Beat Them
 Higher Scores = Extra Lives
 Exploit Monster Blind Spots.
 VamPlants can absorb other Monsters
 Pickup Items to Reveal Passages
 Beware Dark Purple Monsters.
 Run Pass Slow Monsters.
-Pink Insects Can Lash Onto You.
+Pink Insects Can Lash Onto You
 Gray Octopuses Are Deadly !
 VamPlants Drain You Health
 Water Do Moderate Damages
+Eat Fruits => Sugar Rush
+Monsters Paths Are Predictable

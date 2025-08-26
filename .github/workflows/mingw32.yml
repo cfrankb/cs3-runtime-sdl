@@ -50,7 +50,7 @@ jobs:
 
       - name: Build your app
         run: |
-          python3 bin/gen.py mingw32-sdl2 $GITHUB_WORKSPACE/deps
+          python3 bin/gen.py mingw32-sdl2 $GITHUB_WORKSPACE/deps -s
           mkdir -p build
           make
           mkdir -p setup/data

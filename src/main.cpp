@@ -24,8 +24,9 @@
 #include "runtime.h"
 #include "maparch.h"
 #include "parseargs.h"
+#include "game.h"
 
-const uint32_t FPS = 24;
+const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
 uint32_t lastTick = 0;
 bool skip = false;
@@ -70,6 +71,18 @@ extern "C"
         return 0;
     }
 }
+
+EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEvent *e, void *userData)
+{
+    if (!e->isFullscreen)
+    {
+        printf("Exited fullscreen—likely via ESC\n");
+        // Trigger your custom logic here
+        g_runtime->notifyExitFullScreen();
+    }
+    return EM_TRUE;
+}
+
 #endif
 
 void loop_handler(void *arg)
@@ -152,8 +165,11 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     std::string configFile = CRuntime::addTrailSlash(params.prefix) + CONF_FILE;
+    runtime.setVerbose(params.verbose);
     runtime.setPrefix(params.prefix.c_str());
     runtime.setWorkspace(params.workspace.c_str());
+    runtime.setWidth(params.width);
+    runtime.setHeight(params.height);
     if (!runtime.parseConfig(configFile.c_str()))
     {
         printf("failed to parse config file: %s\n", configFile.c_str());
@@ -171,7 +187,7 @@ int main(int argc, char *args[])
         // override options
         runtime.enableMusic(false);
     }
-    if (!runtime.SDLInit())
+    if (!runtime.initSDL())
     {
         return EXIT_FAILURE;
     }
@@ -181,6 +197,7 @@ int main(int argc, char *args[])
 
 #ifdef __EMSCRIPTEN__
     g_runtime = &runtime;
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
     while (runtime.isRunning())
@@ -188,5 +205,6 @@ int main(int argc, char *args[])
         loop_handler(&runtime);
     }
 #endif
+    CGame::destroy();
     return EXIT_SUCCESS;
 }

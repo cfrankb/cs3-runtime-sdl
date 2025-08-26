@@ -73,7 +73,8 @@ makefile generator
 possible values are:
     {', '.join(options)}
 
-use -t to build the unit tests
+    -t     build the unit tests
+    -s     strip debug symbols
 
 examples:
 
@@ -86,11 +87,14 @@ python bin/gen.py mingw32-sdl2
 class Params:
     def __init__(self, argv):
         self.tests = False
+        self.strip = False
         self.action = ''
         self.prefix = ''
         for i in range(1, len(argv)):
             if argv[i] == '-t':
                 self.tests = True
+            if argv[i] == '-s':
+                self.strip = True
             elif self.action == '':
                 self.action = argv[i]
             elif self.prefix == '':
@@ -106,10 +110,13 @@ def main():
     paths = ['src/*.cpp', "src/**/*.cpp", "src/**/**/*.cpp"]
     excluded = []
     bname = 'cs3-runtime'
+    strip = ''
     if params.tests:
         excluded += ['main.cpp']
         paths += ['tests/*.cpp']
         bname = 'tests'
+    if params.strip:
+        strip = '-s '
 
     if params.action not in options:
         print(help_text)
@@ -120,8 +127,8 @@ def main():
             'INC=',
             'LDFLAGS=',
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
-            'CXXFLAGS=-O3 -Wall',
-            'PARGS=',
+            'CXXFLAGS=-O3 -Wall -Wextra',
+            f'PARGS={strip}',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
@@ -134,7 +141,7 @@ def main():
             f'LDFLAGS=-L{prefix}/lib',
             'LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
-            'PARGS=',
+            f'PARGS={strip}',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
@@ -150,7 +157,7 @@ def main():
             f'LDFLAGS=-L{prefix}/lib -Wl,-t',
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread -std=c++17',
-            'PARGS=',
+            f'PARGS={strip}',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
         ]
         print("type `make` to generare binary.")
@@ -164,7 +171,7 @@ def main():
             'LIBS=-lopenal -lidbfs.js',
             'LDFLAGS=',
             '''CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -sSDL2_MIXER_FORMATS='["ogg","mod"]' -O3''',
-            'PARGS=--preload-file data --emrun -O3 -sWASM=1 -sALLOW_MEMORY_GROWTH -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main',
+            f'PARGS={strip} --preload-file data --emrun -O3 -sWASM=1 -sALLOW_MEMORY_GROWTH  -sINITIAL_MEMORY=64MB -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE=--shell-file src/template/body.html'
         ]
         print("type `emmake make` to generare binary.")

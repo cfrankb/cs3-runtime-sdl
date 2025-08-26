@@ -23,6 +23,7 @@
 #include "t_states.h"
 #include "t_stateparser.h"
 #include "t_maparch.h"
+#include "t_strhelper.h"
 
 #define FCT(x) {x, #x}
 using Function = std::function<bool(void)>;
@@ -42,6 +43,7 @@ int main(int argc, char *args[])
         FCT(test_states),
         FCT(test_stateparser),
         FCT(test_maparch),
+        FCT(test_strhelper),
     };
 
     int failed = 0;

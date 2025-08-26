@@ -99,6 +99,7 @@ public:
     }
 
     inline uint32_t *getRGB() const { return m_rgb; }
+    uint32_t *swapBuffer(uint32_t *newBuffer);
     void setRGB(uint32_t *rgb) { m_rgb = rgb; }
     inline char map(int x, int y) { return m_map.at(x, y); }
     bool hasTransparency() const;

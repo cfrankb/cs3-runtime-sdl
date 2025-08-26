@@ -23,3 +23,4 @@
 void splitString2(const std::string &str, std::vector<std::string> &list);
 char *processLine(char *&p);
 uint16_t parseStringToUShort(const std::string &s, bool &isValid);
+std::string trimString(const std::string &s);

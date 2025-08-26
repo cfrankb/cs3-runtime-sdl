@@ -20,7 +20,15 @@
 #include <cstdio>
 #include <cstdint>
 #include <string>
+#include <vector>
 #include <unordered_map>
+
+struct StateValuePair
+{
+    uint16_t key;
+    std::string value;
+    std::string tip;
+};
 
 class IFile;
 
@@ -35,6 +43,8 @@ public:
     void setS(const uint16_t k, const std::string &v);
     uint16_t getU(const uint16_t k);
     const char *getS(const uint16_t k);
+    bool hasU(const uint16_t k);
+    bool hasS(const uint16_t k);
 
     bool read(IFile &sfile);
     bool write(IFile &tfile);
@@ -43,6 +53,9 @@ public:
 
     void debug();
     void clear();
+
+    void getValues(std::vector<StateValuePair> &pairs);
+    void operator=(const CStates &s);
 
 private:
     std::unordered_map<uint16_t, std::string> m_stateS;

@@ -30,7 +30,7 @@
 #include "CRC.h"
 #include "IFile.h"
 #include "helper.h"
-#include <stdint.h>
+#include <cstdint>
 
 /////////////////////////////////////////////////////////////////////////////
 // CFrame
@@ -51,6 +51,10 @@ CFrame::CFrame(int p_nLen, int p_nHei)
 
     // generate blank bitmap
     m_rgb = new uint32_t[m_nLen * m_nHei];
+    if (!m_rgb)
+    {
+        fprintf(stderr, "failed memory allocation\n");
+    }
     memset(m_rgb, 0, m_nLen * m_nHei * 4);
 
     // generate blank map
@@ -1266,6 +1270,13 @@ void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
                 at(bx + x, by + y) = frame.at(x, y);
         }
     }
+}
+
+uint32_t *CFrame::swapBuffer(uint32_t *newBuffer)
+{
+    uint32_t *tmp = m_rgb;
+    m_rgb = newBuffer;
+    return tmp;
 }
 
 /////////////////////////////////////////////////////////////////////

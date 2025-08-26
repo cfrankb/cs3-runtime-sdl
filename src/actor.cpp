@@ -21,13 +21,33 @@
 #include "sprtypes.h"
 #include <cstdio>
 
-uint8_t AIMS[] = {
+const JoyAim g_aims[] = {
     AIM_DOWN, AIM_RIGHT, AIM_UP, AIM_LEFT,
     AIM_UP, AIM_LEFT, AIM_DOWN, AIM_RIGHT,
     AIM_RIGHT, AIM_UP, AIM_LEFT, AIM_DOWN,
     AIM_LEFT, AIM_DOWN, AIM_RIGHT, AIM_UP};
 
-CActor::CActor(uint8_t x, uint8_t y, uint8_t type, uint8_t aim)
+/**
+ * @brief Reverse a given direction
+ *
+ * @param aim
+ * @return JoyAim
+ */
+JoyAim reverseDir(const JoyAim aim)
+{
+    if (aim == AIM_UP)
+        return AIM_DOWN;
+    else if (aim == AIM_DOWN)
+        return AIM_UP;
+    else if (aim == AIM_RIGHT)
+        return AIM_LEFT;
+    else if (aim == AIM_LEFT)
+        return AIM_RIGHT;
+    else
+        return aim;
+}
+
+CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAim aim)
 {
     m_x = x;
     m_y = y;
@@ -36,7 +56,7 @@ CActor::CActor(uint8_t x, uint8_t y, uint8_t type, uint8_t aim)
     m_pu = TILES_BLANK;
 }
 
-CActor::CActor(const Pos &pos, uint8_t type, uint8_t aim)
+CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim)
 {
     m_x = pos.x;
     m_y = pos.y;
@@ -49,7 +69,15 @@ CActor::~CActor()
 {
 }
 
-bool CActor::canMove(int aim)
+/**
+ * @brief Can Sprite Move in given direction
+ *
+ * @param aim
+ * @return true
+ * @return false
+ */
+
+bool CActor::canMove(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
     const Pos &pos = Pos{m_x, m_y};
@@ -83,7 +111,13 @@ bool CActor::canMove(int aim)
     return false;
 }
 
-void CActor::move(const int aim)
+/**
+ * @brief Move Sprite in given Direction
+ *
+ * @param aim
+ */
+
+void CActor::move(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
     uint8_t c = map.at(m_x, m_y);
@@ -99,39 +133,58 @@ void CActor::move(const int aim)
     m_aim = aim;
 }
 
-uint8_t CActor::getX() const
-{
-    return m_x;
-}
-
-uint8_t CActor::getY() const
-{
-    return m_y;
-}
+/**
+ * @brief Get TileID under sprite position
+ *
+ * @return uint8_t
+ */
 
 uint8_t CActor::getPU() const
 {
     return m_pu;
 }
 
+/**
+ * @brief Set TileID under sprite position
+ *
+ * @param c
+ */
+
 void CActor::setPU(const uint8_t c)
 {
     m_pu = c;
 }
 
-void CActor::setXY(const Pos &pos)
+/**
+ * @brief Set Sprite Position
+ *
+ * @param pos
+ */
+
+void CActor::setPos(const Pos &pos)
 {
     m_x = pos.x;
     m_y = pos.y;
 }
 
-int CActor::findNextDir(const bool reverse)
+/**
+ * @brief Find Next Director (monsters)
+ *
+ * @param reverse, flip search order
+ * @return JoyAim
+ */
+JoyAim CActor::findNextDir(const bool reverse)
 {
-    const int aim = m_aim ^ (1 & reverse);
+    const int aim = m_aim;
     int i = TOTAL_AIMS - 1;
     while (i >= 0)
     {
-        int newAim = AIMS[aim * TOTAL_AIMS + i];
+        const bool isRevered = (i & 1) && reverse;
+        JoyAim newAim = g_aims[aim * TOTAL_AIMS + i];
+        if (isRevered)
+        {
+            newAim = ::reverseDir(newAim);
+        }
         if (canMove(newAim))
         {
             return newAim;
@@ -141,44 +194,95 @@ int CActor::findNextDir(const bool reverse)
     return AIM_NONE;
 }
 
-uint8_t CActor::getAim() const
+/**
+ * @brief Get Sprite Current Direction
+ *
+ * @return JoyAim
+ */
+JoyAim CActor::getAim() const
 {
     return m_aim;
 }
 
-void CActor::setAim(const uint8_t aim)
+/**
+ * @brief Set Sprite Current Direction
+ *
+ * @param aim
+ */
+void CActor::setAim(const JoyAim aim)
 {
     m_aim = aim;
 }
 
-bool CActor::isPlayerThere(uint8_t aim) const
+/**
+ * @brief Is Player present at given relative postion
+ *
+ * @param aim
+ * @return true
+ * @return false
+ */
+
+bool CActor::isPlayerThere(JoyAim aim) const
 {
     const uint8_t c = tileAt(aim);
     const TileDef &def = getTileDef(c);
     return def.type == TYPE_PLAYER;
 }
 
-uint8_t CActor::tileAt(uint8_t aim) const
+/**
+ * @brief Get tileID at give relative position
+ *
+ * @param aim
+ * @return uint8_t
+ */
+uint8_t CActor::tileAt(JoyAim aim) const
 {
     CMap &map = CGame::getMap();
     const Pos &p = CGame::translate(Pos{m_x, m_y}, aim);
     return map.at(p.x, p.y);
 }
 
+/**
+ * @brief Change Sprite Type
+ *
+ * @param type
+ */
 void CActor::setType(const uint8_t type)
 {
     m_type = type;
 }
 
-bool CActor::within(const int x1, const int y1, const int x2, const int y2) const
+/**
+ * @brief Check if Sprite Within this range of Map Coordonates
+ *
+ * @param x1
+ * @param y1
+ * @param x2
+ * @param y2
+ * @return true
+ * @return false
+ */
+bool CActor::isWithin(const int x1, const int y1, const int x2, const int y2) const
 {
     return (m_x >= x1) && (m_x < x2) && (m_y >= y1) && (m_y < y2);
 }
 
+/**
+ * @brief Reverse Sprite Direction
+ *
+ */
 void CActor::reverveDir()
 {
     m_aim ^= 1;
 }
+
+/**
+ * @brief Deserialize Sprite from disk
+ *
+ * @param sfile
+ * @return true
+ * @return false
+ */
 
 bool CActor::read(FILE *sfile)
 {
@@ -194,6 +298,13 @@ bool CActor::read(FILE *sfile)
     return true;
 }
 
+/**
+ * @brief Serialize Sprite to disk
+ *
+ * @param tfile
+ * @return true
+ * @return false
+ */
 bool CActor::write(FILE *tfile)
 {
     auto writefile = [tfile](auto ptr, auto size)
@@ -206,4 +317,39 @@ bool CActor::write(FILE *tfile)
     writefile(&m_aim, sizeof(m_aim));
     writefile(&m_pu, sizeof(m_pu));
     return true;
+}
+
+/**
+ * @brief Reverse Aim
+ *
+ * @param aim
+ * @param i     bitmask
+ * @return JoyAim
+ */
+JoyAim operator^=(JoyAim &aim, int i)
+{
+    return static_cast<JoyAim>(static_cast<int>(aim) ^ i);
+}
+
+/**
+ * @brief  Return Sprite Positon
+ *
+ * @return const Pos
+ */
+const Pos CActor::pos() const
+{
+    return Pos{.x = m_x, .y = m_y};
+}
+
+/**
+ * @brief Calculate the distance between two actors
+ *
+ * @param actor
+ * @return int
+ */
+int CActor::distance(const CActor &actor)
+{
+    int dx = std::abs(actor.m_x - m_x);
+    int dy = std::abs(actor.m_y - m_y);
+    return std::max(dx, dy);
 }

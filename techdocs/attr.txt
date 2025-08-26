@@ -1,0 +1,9 @@
+Attributes
+
+00          do nothing
+00-7f       trigger keys
+
+e0          wait for contact
+e1          freeze trap
+e2          trap
+f0-ff       messages

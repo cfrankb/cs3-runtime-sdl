@@ -15,10 +15,13 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <unordered_map>
 #include <cstring>
 #include <stdarg.h>
 #include <string>
 #include <vector>
+#include <set>
+#include <algorithm>
 #include "game.h"
 #include "map.h"
 #include "actor.h"
@@ -28,54 +31,94 @@
 #include "shared/IFile.h"
 #include "shared/interfaces/ISound.h"
 #include "skills.h"
+#include "events.h"
+#include "sounds.h"
+#include "states.h"
+#include "statedata.h"
+#include "gamestats.h"
 
-CMap map(30, 30);
+#ifdef USE_QFILE
+#include <QDebug>
+#define printf qDebug
+#endif
+
+#define RANGE(_x, _min, _max) (_x >= _min && _x <= _max)
+
+CMap CGame::m_map(30, 30);
 uint8_t CGame::m_keys[MAX_KEYS];
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+CGame *g_game = nullptr;
 
+/**
+ * @brief Construct a new CGame::CGame object
+ *
+ */
 CGame::CGame()
 {
     printf("staring up version: 0x%.8x\n", VERSION);
-
-    m_monsterMax = DEFAULT_MAX_MONSTERS;
-    m_monsters = new CActor[m_monsterMax];
-    m_monsterCount = 0;
     m_health = 0;
     m_level = 0;
     m_lives = DEFAULT_LIVES;
     m_score = 0;
-    m_skill = SKILL_EASY;
+    m_gameStats = new CGameStats;
+    m_gameStats->set(S_SKILL, SKILL_EASY);
 }
 
+/**
+ * @brief Destroy the CGame::CGame object
+ *
+ */
 CGame::~CGame()
 {
-    if (m_monsters)
-    {
-        delete[] m_monsters;
-    }
-
     if (m_sound)
     {
         delete m_sound;
     }
+
+    if (m_gameStats)
+    {
+        delete m_gameStats;
+    }
 }
 
+/**
+ * @brief returns the current map
+ *
+ * @return CMap&
+ */
 CMap &CGame::getMap()
 {
-    return map;
+    return m_map;
 }
 
+/**
+ * @brief return a player instance
+ *
+ * @return const CActor&
+ */
 CActor &CGame::player()
 {
     return m_player;
 }
 
+/**
+ * @brief return a player instance that cannot be modified
+ *
+ * @return const CActor&
+ */
 const CActor &CGame::playerConst() const
 {
     return m_player;
 }
 
-bool CGame::move(int aim)
+/**
+ * @brief move player in a give direction
+ *
+ * @param aim
+ * @return true
+ * @return false
+ */
+bool CGame::move(const JoyAim aim)
 {
     if (m_player.canMove(aim))
     {
@@ -83,10 +126,13 @@ bool CGame::move(int aim)
         consume();
         return true;
     }
-
     return false;
 }
 
+/**
+ * @brief player consumes tile at current position
+ *
+ */
 void CGame::consume()
 {
     const uint8_t pu = m_player.getPU();
@@ -112,6 +158,7 @@ void CGame::consume()
         addPoints(def.score);
         m_player.setPU(TILES_BLANK);
         --m_diamonds;
+        checkClosure();
         addHealth(def.health);
         playTileSound(pu);
     }
@@ -120,71 +167,130 @@ void CGame::consume()
         addHealth(def.health);
     }
 
+    if (isFruit(pu))
+    {
+        auto &sugar = m_gameStats->get(S_SUGAR);
+        ++sugar;
+        if (sugar != MAX_SUGAR_RUSH_LEVEL)
+            m_events.push_back(EVENT_SUGAR);
+    }
+
     // apply flags
     if (def.flags & FLAG_EXTRA_LIFE)
     {
+        m_events.push_back(EVENT_EXTRA_LIFE);
         addLife();
     }
 
     if (def.flags & FLAG_GODMODE)
     {
-        m_godModeTimer = GODMODE_TIMER;
+        if (!m_gameStats->get(S_GOD_MODE_TIMER))
+            playSound(SOUND_POWERUP3);
+        m_gameStats->set(S_GOD_MODE_TIMER, GODMODE_TIMER);
+        m_events.push_back(EVENT_GOD_MODE);
     }
-
-    if (def.flags & FLAG_EXTRA_SPEED)
+    else if (def.flags & FLAG_EXTRA_SPEED || m_gameStats->get(S_SUGAR) == MAX_SUGAR_RUSH_LEVEL)
     {
-        m_extraSpeedTimer = EXTRASPEED_TIMER;
+        if (!m_gameStats->get(S_EXTRA_SPEED_TIMER))
+            playSound(SOUND_POWERUP2);
+        m_gameStats->set(S_EXTRA_SPEED_TIMER, EXTRASPEED_TIMER);
+        m_events.push_back(EVENT_SUGAR_RUSH);
+        m_gameStats->set(S_SUGAR, 0);
+    }
+    else if (def.flags & FLAG_RAGE)
+    {
+        if (!m_gameStats->get(S_RAGE_TIMER))
+            playSound(SOUND_POWERUP3);
+        m_gameStats->set(S_RAGE_TIMER, RAGE_TIMER);
+        m_events.push_back(EVENT_RAGE);
     }
 
     // trigger key
     int x = m_player.getX();
     int y = m_player.getY();
-    uint8_t attr = map.getAttr(x, y);
-    if (attr != 0)
+    uint8_t attr = m_map.getAttr(x, y);
+
+    m_map.setAttr(x, y, 0);
+    if (attr == ATTR_FREEZE_TRAP)
     {
-        map.setAttr(x, y, 0);
+        m_gameStats->set(S_FREEZE_TIMER, FREEZE_TIMER);
+        m_events.push_back(EVENT_FREEZE);
+    }
+    else if (attr == ATTR_TRAP)
+    {
+        m_events.push_back(EVENT_TRAP);
+        addHealth(TRAP_DAMAGE);
+    }
+    else if (RANGE(attr, SECRET_ATTR_MIN, SECRET_ATTR_MAX))
+    {
         if (clearAttr(attr))
         {
             playSound(SOUND_0009);
-            m_secretTimer = SECRET_TIMER;
+            m_events.push_back(EVENT_SECRET);
         }
+    }
+    else if (attr >= MSG0 && m_map.states().hasS(attr))
+    {
+        // Messsage Event (scrolls, books etc)
+        m_events.push_back(attr);
     }
 }
 
-bool CGame::init()
-{
-    // m_engine->init();
-    // uint8_t *ptr = &levels_mapz;
-    //  load levelArch index from memory
-    // m_arch.fromMemory(ptr);
-    return true;
-}
-
-bool CGame::loadLevel(bool restart)
+/**
+ * @brief Load Level from disk and set the game mode
+ *
+ * @param mode - MODE_INTRO_LEVEL, MODE_RESTART, MODE_TIMEOUT
+ * @return true - upon success
+ * @return false
+ */
+bool CGame::loadLevel(const GameMode mode)
 {
     printf("loading level: %d ...\n", m_level + 1);
-    setMode(restart ? MODE_RESTART : MODE_LEVEL_INTRO);
+    setMode(mode);
 
     // extract level from MapArch
-    map = *(m_mapArch->at(m_level));
+    m_map = *(m_mapArch->at(m_level));
 
     printf("level loaded\n");
-    m_introHint = rand() % m_hints.size();
-    m_secretTimer = 0;
+    if (m_hints.size() == 0)
+    {
+        printf("hints not loaded\n");
+    }
+    m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
+    m_events.clear();
 
-    Pos pos = map.findFirst(TILES_ANNIE2);
+    // Use origin pos if available
+    CStates &states = m_map.states();
+    const uint16_t origin = states.getU(POS_ORIGIN);
+    Pos pos;
+    if (origin != 0)
+    {
+        pos = CMap::toPos(origin);
+        m_map.set(pos.x, pos.y, TILES_ANNIE2);
+    }
+    else
+    {
+        pos = m_map.findFirst(TILES_ANNIE2);
+    }
     printf("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
-    m_diamonds = map.count(TILES_DIAMOND);
+    m_diamonds = states.hasU(MAP_GOAL) ? states.getU(MAP_GOAL) : m_map.count(TILES_DIAMOND);
     memset(m_keys, 0, sizeof(m_keys));
     m_health = DEFAULT_HEALTH;
     findMonsters();
+    m_sfx.clear();
+    resetStats();
     return true;
 }
 
+/**
+ * @brief Increase Level by 1. Wraps back to 0.
+ *
+ */
 void CGame::nextLevel()
 {
     addPoints(LEVEL_BONUS + m_health);
+    addPoints(m_map.states().getU(TIMEOUT) * 2);
     if (m_level != m_mapArch->size() - 1)
     {
         ++m_level;
@@ -195,51 +301,116 @@ void CGame::nextLevel()
     }
 }
 
+/**
+ * @brief restarts level and clears player that are reset upon death
+ *
+ */
 void CGame::restartLevel()
 {
-    m_godModeTimer = 0;
-    m_extraSpeedTimer = 0;
-    m_secretTimer = 0;
+    m_events.clear();
+    resetStats();
+    loadLevel(MODE_RESTART);
+    m_gameStats->set(S_SUGAR, 0);
 }
 
+/**
+ * @brief restart game and reset player state
+ *
+ */
 void CGame::restartGame()
 {
     resetStats();
     m_level = 0;
-}
-
-void CGame::resetStats()
-{
     m_nextLife = calcScoreLife();
-    m_godModeTimer = 0;
-    m_extraSpeedTimer = 0;
     m_score = 0;
     m_lives = DEFAULT_LIVES;
+    m_gameStats->set(S_SUGAR, 0);
 }
 
+/**
+ * @brief Decrenent Powerup timers
+ *
+ */
+void CGame::decTimers()
+{
+    std::vector<GameStat> stats = {
+        S_GOD_MODE_TIMER,
+        S_EXTRA_SPEED_TIMER,
+        S_RAGE_TIMER,
+        S_FREEZE_TIMER,
+    };
+    for (const auto &stat : stats)
+    {
+        m_gameStats->dec(stat);
+    }
+}
+
+/**
+ * @brief reset player state
+ *
+ */
+void CGame::resetStats()
+{
+    std::vector<GameStat> stats = {
+        S_GOD_MODE_TIMER,
+        S_EXTRA_SPEED_TIMER,
+        S_RAGE_TIMER,
+        S_CLOSURE,
+        S_CLOSURE_TIMER,
+        S_REVEAL_EXIT,
+        S_IDLE_TIME,
+        S_FREEZE_TIMER,
+    };
+    for (const auto &stat : stats)
+    {
+        m_gameStats->set(stat, 0);
+    }
+}
+
+/**
+ * @brief set current level
+ *
+ * @param levelId
+ */
 void CGame::setLevel(int levelId)
 {
     m_level = levelId;
 }
 
+/**
+ * @brief  Returns current level
+ *
+ * @return int
+ */
 int CGame::level() const
 {
     return m_level;
 }
 
+/**
+ * @brief Set Map Arch
+ *
+ * @param arch - the wrapper for the mapz file
+ */
 void CGame::setMapArch(CMapArch *arch)
 {
     m_mapArch = arch;
 }
 
+/**
+ * @brief Create a list of monster contained on the level
+ *
+ * @return true
+ * @return false
+ */
 bool CGame::findMonsters()
 {
-    m_monsterCount = 0;
-    for (int y = 0; y < map.hei(); ++y)
+    m_monsters.clear();
+    for (int y = 0; y < m_map.hei(); ++y)
     {
-        for (int x = 0; x < map.len(); ++x)
+        for (int x = 0; x < m_map.len(); ++x)
         {
-            uint8_t c = map.at(x, y);
+            uint8_t c = m_map.at(x, y);
             const TileDef &def = getTileDef(c);
             if (def.type == TYPE_MONSTER ||
                 def.type == TYPE_VAMPLANT ||
@@ -249,36 +420,47 @@ bool CGame::findMonsters()
             }
         }
     }
-    printf("%d monsters found.\n", m_monsterCount);
+    printf("%lu monsters found.\n", m_monsters.size());
     return true;
 }
 
+/**
+ * @brief Add a monster to managed list
+ *
+ * @param actor
+ * @return current monster count
+ */
 int CGame::addMonster(const CActor actor)
 {
-    if (m_monsterCount >= m_monsterMax)
-    {
-        m_monsterMax += GROWBY_MONSTERS;
-        CActor *t = new CActor[m_monsterMax];
-        memcpy(reinterpret_cast<void *>(t), m_monsters, m_monsterCount * sizeof(CActor));
-        delete[] m_monsters;
-        m_monsters = t;
-    }
-    m_monsters[m_monsterCount++] = actor;
-    return m_monsterCount;
+    m_monsters.push_back(actor);
+    return (int)m_monsters.size();
 }
 
+/**
+ * @brief Find MonsterId at given pos(x,y)
+ *
+ * @param x position X
+ * @param y position Y
+ * @return int actorID, INVALID if not found
+ */
 int CGame::findMonsterAt(const int x, const int y) const
 {
-    for (int i = 0; i < m_monsterCount; ++i)
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         const CActor &actor = m_monsters[i];
         if (actor.getX() == x && actor.getY() == y)
         {
-            return i;
+            return (int)i;
         }
     }
     return INVALID;
 }
+
+/**
+ * @brief Handle all the monsters on the current map
+ *
+ * @param ticks clock ticks since start
+ */
 
 void CGame::manageMonsters(int ticks)
 {
@@ -289,13 +471,23 @@ void CGame::manageMonsters(int ticks)
         speeds[i] = i ? (ticks % i) == 0 : true;
     }
 
-    const uint8_t dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    const JoyAim dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     std::vector<CActor> newMonsters;
 
-    for (int i = 0; i < m_monsterCount; ++i)
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         CActor &actor = m_monsters[i];
-        const uint8_t cs = map.at(actor.getX(), actor.getY());
+        const Pos pos = actor.pos();
+        const uint8_t cs = m_map.at(pos.x, pos.y);
+        uint8_t attr = m_map.getAttr(pos.x, pos.y);
+        if (attr == ATTR_WAIT)
+        {
+            if (actor.distance(m_player) < WAIT_DISTANCE)
+                m_map.setAttr(pos.x, pos.y, 0);
+            else
+                continue;
+        }
+
         const TileDef &def = getTileDef(cs);
         if (!speeds[def.speed])
         {
@@ -313,7 +505,8 @@ void CGame::manageMonsters(int ticks)
                 }
             }
 
-            int aim = actor.findNextDir();
+            bool reverse = def.ai & AI_REVERSE;
+            JoyAim aim = actor.findNextDir(reverse);
             if (aim != AIM_NONE)
             {
                 actor.move(aim);
@@ -339,7 +532,7 @@ void CGame::manageMonsters(int ticks)
         }
         else if (def.type == TYPE_DRONE)
         {
-            int aim = actor.getAim();
+            JoyAim aim = actor.getAim();
             if (aim < AIM_LEFT)
             {
                 aim = AIM_LEFT;
@@ -348,15 +541,19 @@ void CGame::manageMonsters(int ticks)
             {
                 // apply health damages
                 addHealth(def.health);
+                if (def.ai & AI_STICKY)
+                {
+                    continue;
+                }
             }
             if (actor.canMove(aim))
             {
                 actor.move(aim);
             }
+            else if (aim == AIM_LEFT)
+                aim = AIM_RIGHT;
             else
-            {
-                aim ^= 1;
-            }
+                aim = AIM_LEFT;
             actor.setAim(aim);
         }
         else if (def.type == TYPE_VAMPLANT)
@@ -364,7 +561,7 @@ void CGame::manageMonsters(int ticks)
             for (uint8_t i = 0; i < sizeof(dirs); ++i)
             {
                 const Pos p = CGame::translate(Pos{actor.getX(), actor.getY()}, dirs[i]);
-                const uint8_t ct = map.at(p.x, p.y);
+                const uint8_t ct = m_map.at(p.x, p.y);
                 const TileDef &defT = getTileDef(ct);
                 if (defT.type == TYPE_PLAYER)
                 {
@@ -373,7 +570,7 @@ void CGame::manageMonsters(int ticks)
                 }
                 else if (defT.type == TYPE_SWAMP)
                 {
-                    map.set(p.x, p.y, TILES_VAMPLANT);
+                    m_map.set(p.x, p.y, TILES_VAMPLANT);
                     newMonsters.push_back(CActor(p.x, p.y, TYPE_VAMPLANT));
                     break;
                 }
@@ -384,7 +581,7 @@ void CGame::manageMonsters(int ticks)
                         continue;
                     CActor &m = m_monsters[j];
                     m.setType(TYPE_VAMPLANT);
-                    map.set(p.x, p.y, TILES_VAMPLANT);
+                    m_map.set(p.x, p.y, TILES_VAMPLANT);
                     break;
                 }
             }
@@ -400,9 +597,6 @@ void CGame::manageMonsters(int ticks)
 
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
-    m_godModeTimer = std::max(m_godModeTimer - 1, 0);
-    m_extraSpeedTimer = std::max(m_extraSpeedTimer - 1, 0);
-    m_secretTimer = std::max(m_secretTimer - 1, 0);
     auto const pu = m_player.getPU();
     if (pu == TILES_SWAMP)
     {
@@ -410,10 +604,10 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
         const TileDef &def = getTileDef(pu);
         addHealth(def.health);
     }
-    const uint8_t aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
-    for (uint8_t i = 0; i < 4; ++i)
+    const JoyAim aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    for (uint8_t i = 0; i < TOTAL_AIMS; ++i)
     {
-        const uint8_t aim = aims[i];
+        const JoyAim aim = aims[i];
         if (joystate[aim] && move(aim))
         {
             return aim;
@@ -422,6 +616,13 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
     return AIM_NONE;
 }
 
+/**
+ * @brief Alter the position to reflect a move in a given direct
+ *
+ * @param p original positon
+ * @param aim direct UP,DOWN,LEFT or RIGHT
+ * @return Pos new position
+ */
 Pos CGame::translate(const Pos &p, const int aim)
 {
     Pos t = p;
@@ -435,7 +636,7 @@ Pos CGame::translate(const Pos &p, const int aim)
         }
         break;
     case AIM_DOWN:
-        if (t.y < map.hei() - 1)
+        if (t.y < m_map.hei() - 1)
         {
             ++t.y;
         }
@@ -447,7 +648,7 @@ Pos CGame::translate(const Pos &p, const int aim)
         }
         break;
     case AIM_RIGHT:
-        if (t.x < map.len() - 1)
+        if (t.x < m_map.len() - 1)
         {
             ++t.x;
         }
@@ -456,6 +657,13 @@ Pos CGame::translate(const Pos &p, const int aim)
     return t;
 }
 
+/**
+ * @brief checks if the player has a given key
+ *
+ * @param c tileID
+ * @return true
+ * @return false
+ */
 bool CGame::hasKey(const uint8_t c)
 {
     for (uint32_t i = 0; i < sizeof(m_keys); ++i)
@@ -468,6 +676,11 @@ bool CGame::hasKey(const uint8_t c)
     return false;
 }
 
+/**
+ * @brief add key to player inventory
+ *
+ * @param c tileID
+ */
 void CGame::addKey(const uint8_t c)
 {
     for (uint32_t i = 0; i < sizeof(m_keys); ++i)
@@ -484,102 +697,213 @@ void CGame::addKey(const uint8_t c)
     }
 }
 
-bool CGame::goalCount() const
+/**
+ * @brief Current diamond count on map
+ *
+ * @return int
+ */
+int CGame::goalCount() const
 {
     return m_diamonds;
 }
 
+/**
+ * @brief clear all instance of a given attribute on the map
+ *        allows for secret passages
+ *
+ * @param attr
+ * @return int
+ */
 int CGame::clearAttr(const uint8_t attr)
 {
+    std::vector<uint16_t> keys;
     int count = 0;
-    for (int y = 0; y < map.hei(); ++y)
+    for (const auto &[key, tileAttr] : m_map.attrs())
     {
-        for (int x = 0; x < map.len(); ++x)
+        if (tileAttr == attr)
+            keys.push_back(key);
+    }
+
+    for (const auto &key : keys)
+    {
+        const Pos pos = CMap::toPos(key);
+        const uint8_t x = pos.x;
+        const uint8_t y = pos.y;
+        ++count;
+        const uint8_t tile = m_map.at(x, y);
+        const TileDef &def = getTileDef(tile);
+        if (def.type == TYPE_DIAMOND)
         {
-            const uint8_t tileAttr = map.getAttr(x, y);
-            if (tileAttr == attr)
-            {
-                ++count;
-                const uint8_t tile = map.at(x, y);
-                const TileDef &def = getTileDef(tile);
-                if (def.type == TYPE_DIAMOND)
-                {
-                    --m_diamonds;
-                }
-                map.set(x, y, TILES_BLANK);
-                map.setAttr(x, y, 0);
-            }
+            --m_diamonds;
+            checkClosure();
         }
+        m_map.set(x, y, TILES_BLANK);
+        m_map.setAttr(x, y, 0);
+        m_sfx.push_back(sfx_t{.x = x, .y = y, .sfxID = SFX_SPARKLE, .timeout = SFX_SPARKLE_TIMEOUT});
     }
     return count;
 }
 
+/**
+ * @brief Add health to player
+ *
+ * @param hp negative value will be deducted. total hp will be constrained.
+ */
 void CGame::addHealth(const int hp)
 {
+    if (isClosure())
+        return;
+    const auto skill = m_gameStats->get(S_SKILL);
     if (hp > 0)
     {
-        const int maxHealth = static_cast<int>(MAX_HEALTH) / (1 + 1 * m_skill);
-        const int hpToken = hp / (1 + 1 * m_skill);
-        m_health = std::min(m_health + hpToken, maxHealth);
+        const int hpToken = hp / (1 + 1 * skill);
+        m_health = std::min(m_health + hpToken, maxHealth());
     }
-    else if (hp < 0 && !m_godModeTimer)
+    else if (hp < 0 && !m_gameStats->get(S_GOD_MODE_TIMER))
     {
-        const int hpToken = hp * (1 + 2 * m_skill);
+        const int hpToken = hp * (1 + 1 * skill);
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
     }
+    checkClosure();
 }
 
-void CGame::setMode(int mode)
+void CGame::checkClosure()
+{
+    bool doClosure = false;
+    if (!isClosure() && !m_health)
+    {
+        doClosure = true;
+    }
+    else if (!isClosure() && !m_diamonds)
+    {
+        const uint16_t exitKey = m_map.states().getU(POS_EXIT);
+        if (exitKey != 0)
+        {
+            const bool revealExit = m_gameStats->get(S_REVEAL_EXIT) != 0;
+            const Pos exitPos = CMap::toPos(exitKey);
+            if (!revealExit)
+            {
+                m_map.set(exitPos.x, exitPos.y, TILES_DOORS_LEAF);
+                m_gameStats->set(S_REVEAL_EXIT, 1);
+            }
+            doClosure = m_player.pos() == exitPos;
+        }
+        else
+        {
+            doClosure = true;
+        }
+    }
+
+    if (doClosure)
+    {
+        if (m_health)
+            playSound(SOUND_EXIT);
+        else
+            playSound(SOUND_DEATH);
+        m_gameStats->set(S_CLOSURE, 1);
+        m_gameStats->set(S_CLOSURE_TIMER, CLOSURE_TIMER);
+    }
+}
+
+/**
+ * @brief Set Game mode
+ *
+ * @param mode
+ *        possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
+ */
+void CGame::setMode(const GameMode mode)
 {
     m_mode = mode;
 }
 
-int CGame::mode() const
+/**
+ * @brief return game mode
+ *
+ * @return int
+ *         possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
+ */
+CGame::GameMode CGame::mode() const
 {
     return m_mode;
 }
 
+/**
+ * @brief check if the player hp is 0
+ *
+ * @return true
+ * @return false
+ */
 bool CGame::isPlayerDead()
 {
     return m_health == 0;
 }
 
+/**
+ * @brief Reduce Player Life Count by 1
+ *
+ */
 void CGame::killPlayer()
 {
     m_lives = m_lives ? m_lives - 1 : 0;
 }
 
+/**
+ * @brief Return true if lives is set to 0
+ *
+ * @return true
+ * @return false
+ */
 bool CGame::isGameOver() const
 {
     return m_lives == 0;
 }
 
+/**
+ * @brief returns the score
+ *
+ * @return int
+ */
 int CGame::score() const
 {
     return m_score;
 }
 
+/**
+ * @brief Returns player live count
+ *
+ * @return int
+ */
 int CGame::lives() const
 {
     return m_lives;
 }
 
-int CGame::diamonds() const
-{
-    return m_diamonds;
-}
-
+/**
+ * @brief return player hp count
+ *
+ * @return int
+ */
 int CGame::health() const
 {
     return m_health;
 }
 
+/**
+ * @brief return player list of keys
+ *
+ * @return uint8_t* tileID for each key
+ */
 uint8_t *CGame::keys()
 {
     return m_keys;
 }
 
+/**
+ * @brief add points to score. automatically add bonus lives
+ *
+ * @param points
+ */
 void CGame::addPoints(const int points)
 {
     m_score += points;
@@ -590,33 +914,78 @@ void CGame::addPoints(const int points)
     }
 }
 
+/**
+ * @brief add a new life to the player
+ *
+ */
 void CGame::addLife()
 {
     m_lives = std::min(m_lives + 1, static_cast<int>(MAX_LIVES));
     playSound(SOUND_POWERUP);
 }
 
-int CGame::godModeTimer() const
+/**
+ * @brief Is player in God Mode
+ *
+ * @return true
+ * @return false
+ */
+bool CGame::isGodMode() const
 {
-    return m_godModeTimer;
+    return m_gameStats->get(S_GOD_MODE_TIMER) != 0;
 }
+
+/**
+ * @brief Current player speed
+ *
+ * @return time slice
+ */
 
 int CGame::playerSpeed() const
 {
-    return m_extraSpeedTimer ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
+    return m_gameStats->get(S_EXTRA_SPEED_TIMER) ? FAST_PLAYER_SPEED : DEFAULT_PLAYER_SPEED;
 }
 
-void CGame::getMonsters(CActor *&monsters, int &count)
+/**
+ * @brief Player has ExtraSpeed?
+ *
+ * @return true
+ * @return false
+ */
+bool CGame::hasExtraSpeed() const
 {
-    monsters = m_monsters;
-    count = m_monsterCount;
+    return m_gameStats->get(S_EXTRA_SPEED_TIMER) != 0;
 }
 
+/**
+ * @brief  get monster list
+ *
+ * @param monsters list of monsters
+ * @param count count of monsters
+ */
+std::vector<CActor> &CGame::getMonsters()
+{
+    return m_monsters;
+}
+
+/**
+ * @brief get a specific Monster
+ *
+ * @param i index
+ * @return CActor&
+ */
 CActor &CGame::getMonster(int i)
 {
     return m_monsters[i];
 }
 
+/**
+ * @brief Deserializes the game state from disk
+ *
+ * @param sfile file handle
+ * @return true
+ * @return false
+ */
 bool CGame::read(FILE *sfile)
 {
     auto readfile = [sfile](auto ptr, auto size)
@@ -652,11 +1021,10 @@ bool CGame::read(FILE *sfile)
     readfile(&m_level, sizeof(m_level));
     readfile(&m_nextLife, sizeof(m_nextLife));
     readfile(&m_diamonds, sizeof(m_diamonds));
-    readfile(&m_godModeTimer, sizeof(m_godModeTimer));
     readfile(m_keys, sizeof(m_keys));
     readfile(&m_score, sizeof(m_score));
-    readfile(&m_skill, sizeof(m_skill));
     m_player.read(sfile);
+    m_gameStats->read(sfile);
 
     // reading map
     CMap &map = getMap();
@@ -666,25 +1034,27 @@ bool CGame::read(FILE *sfile)
     }
 
     // monsters
-    decltype(m_monsterCount) count = 0;
-    readfile(&count, sizeof(m_monsterCount));
-    m_monsterCount = count;
-    if (count > m_monsterMax)
+    uint32_t count = 0;
+    readfile(&count, sizeof(uint32_t));
+    m_monsters.clear();
+    for (size_t i = 0; i < count; ++i)
     {
-        if (m_monsters)
-        {
-            delete[] m_monsters;
-        }
-        m_monsterMax = m_monsterCount + GROWBY_MONSTERS;
-        m_monsters = new CActor[m_monsterMax];
+        CActor tmp;
+        tmp.read(sfile);
+        m_monsters.push_back(tmp);
     }
-    for (int i = 0; i < m_monsterCount; ++i)
-    {
-        m_monsters[i].read(sfile);
-    }
-    m_secretTimer = 0;
+    m_events.clear();
+    m_sfx.clear();
     return true;
 }
+
+/**
+ * @brief Serializes the game state from disk
+ *
+ * @param sfile file handle
+ * @return true
+ * @return false
+ */
 
 bool CGame::write(FILE *tfile)
 {
@@ -708,30 +1078,40 @@ bool CGame::write(FILE *tfile)
     writefile(&m_level, sizeof(m_level));
     writefile(&m_nextLife, sizeof(m_nextLife));
     writefile(&m_diamonds, sizeof(m_diamonds));
-    writefile(&m_godModeTimer, sizeof(m_godModeTimer));
     writefile(m_keys, sizeof(m_keys));
     writefile(&m_score, sizeof(m_score));
-    writefile(&m_skill, sizeof(m_skill));
     m_player.write(tfile);
+    m_gameStats->write(tfile);
 
     // saving map
     CMap &map = getMap();
     map.write(tfile);
 
     // monsters
-    writefile(&m_monsterCount, sizeof(m_monsterCount));
-    for (int i = 0; i < m_monsterCount; ++i)
+    uint32_t count = m_monsters.size();
+    writefile(&count, sizeof(count));
+    for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         m_monsters[i].write(tfile);
     }
     return true;
 }
 
+/**
+ * @brief set lives count for the player
+ *
+ * @param lives
+ */
 void CGame::setLives(int lives)
 {
     m_lives = lives;
 }
 
+/**
+ * @brief play a given sounds
+ *
+ * @param id must be SOUND_XXXX value
+ */
 void CGame::playSound(const int id) const
 {
     if (id != SOUND_NONE && m_sound != nullptr)
@@ -740,66 +1120,101 @@ void CGame::playSound(const int id) const
     }
 }
 
+/**
+ * @brief Play the sound for a given tileID
+ *
+ * @param tileID
+ */
 void CGame::playTileSound(int tileID) const
 {
     int snd = SOUND_NONE;
-    switch (tileID)
+    if (tileID == TILES_CHEST || tileID == TILES_AMULET1)
     {
-    case TILES_FLOWERS_2:
-    case TILES_CHEST:
-    case TILES_NECKLESS:
         snd = SOUND_COIN1;
-        break;
-    case TILES_FRUIT1:
-    case TILES_APPLE:
+    }
+    else if (isFruit(tileID))
+    {
         snd = SOUND_GRUUP;
-        break;
+    }
+    else if (tileID == TILES_DIAMOND)
+    {
+        snd = SOUND_GOLD3;
     }
     playSound(snd);
 }
 
+/**
+ * @brief attach a ISound Interface for the pupose of playing sounds
+ *
+ * @param s
+ */
 void CGame::attach(ISound *s)
 {
     m_sound = s;
 }
 
+/**
+ * @brief  return current skill Level
+ *
+ * @return uint8_t SKILL_EASY, SKILL_NORMAL or SKILL_HARD
+ */
 uint8_t CGame::skill() const
 {
-    return m_skill;
+    return m_gameStats->get(S_SKILL);
 }
 
+/**
+ * @brief set skill level
+ *
+ * @param v SKILL_EASY, SKILL_NORMAL or SKILL_HARD
+ */
 void CGame::setSkill(const uint8_t v)
 {
-    m_skill = v;
+    m_gameStats->set(S_SKILL, v);
     m_nextLife = calcScoreLife();
 }
 
+/**
+ * @brief calculate the next score threshold for a bonus life
+ *
+ * @return int
+ */
 int CGame::calcScoreLife() const
 {
-    return SCORE_LIFE * (1 + m_skill);
+    const auto skill = m_gameStats->get(S_SKILL);
+    return SCORE_LIFE * (1 + skill);
 }
 
+/**
+ * @brief return map count
+ *
+ * @return int
+ */
 int CGame::size() const
 {
     return m_mapArch->size();
 }
 
-const char *CGame::nextHint()
+/**
+ * @brief get text for the selected hint
+ *
+ * @return const char*
+ */
+const char *CGame::getHintText()
 {
     return m_hints.size() ? m_hints[m_introHint].c_str() : "";
 }
 
-int CGame::secretTimer() const
-{
-    return m_secretTimer;
-}
-
+/**
+ * @brief parse text lines into hint strings
+ *
+ * @param data
+ */
 void CGame::parseHints(const char *data)
 {
     m_hints.clear();
     char *t = new char[strlen(data) + 1];
     strcpy(t, data);
-    int line = 1;
     char *p = t;
     while (p && *p)
     {
@@ -834,7 +1249,234 @@ void CGame::parseHints(const char *data)
             m_hints.push_back(p);
         }
         p = e ? e + 1 : nullptr;
-        ++line;
     }
     delete[] t;
+}
+
+/**
+ * @brief  get first eventID
+ *
+ * @return int
+ */
+int CGame::getEvent()
+{
+    int event = EVENT_NONE;
+    if (m_events.size() > 0)
+    {
+        event = m_events.at(0);
+        m_events.erase(m_events.begin());
+    }
+    return event;
+}
+
+/**
+ * @brief is this tile a fruit?
+ *
+ * @param tileID
+ * @return true
+ * @return false
+ */
+bool CGame::isFruit(const uint8_t tileID) const
+{
+    const uint8_t fruits[] = {
+        TILES_APPLE,
+        TILES_FRUIT1,
+        TILES_WATERMELON,
+        TILES_PEAR,
+        TILES_CHERRY,
+        TILES_STRAWBERRY,
+        TILES_KIWI,
+        TILES_JELLYJAR,
+    };
+    for (const auto &fruit : fruits)
+    {
+        if (tileID == fruit)
+            return true;
+    }
+    return false;
+}
+
+bool CGame::isBonusItem(const uint8_t tileID) const
+{
+    const uint8_t tresures[] = {
+        TILES_AMULET1,
+        TILES_CHEST,
+        TILES_GIFTBOX,
+        TILES_LIGHTBUL,
+        TILES_SCROLL1,
+        TILES_SHIELD,
+        TILES_CLOVER,
+        TILES_1ST_AID,
+        TILES_POTION1,
+        TILES_POTION2,
+        TILES_POTION3,
+        TILES_FLOWERS,
+        TILES_FLOWERS_2,
+        TILES_TRIFORCE,
+        TILES_ORB,
+        TILES_TNTSTICK,
+        TILES_SMALL_MUSH0,
+        TILES_SMALL_MUSH1,
+        TILES_SMALL_MUSH2,
+        TILES_SMALL_MUSH3,
+        TILES_REDBOOK,
+    };
+    for (const auto &tresure : tresures)
+    {
+        if (tileID == tresure)
+            return true;
+    }
+    return false;
+}
+
+/**
+ * @brief current sugar count
+ *
+ * @return int
+ */
+int CGame::sugar() const
+{
+    return m_gameStats->get(S_SUGAR);
+}
+
+/**
+ * @brief Generate a statistical report for the map
+ *
+ * @param report
+ */
+
+void CGame::generateMapReport(MapReport &report)
+{
+    std::unordered_map<uint8_t, int> tiles;
+    for (int y = 0; y < m_map.hei(); ++y)
+    {
+        for (int x = 0; x < m_map.len(); ++x)
+        {
+            const auto &tile = m_map.at(x, y);
+            tiles[tile] += 1;
+        }
+    }
+
+    std::unordered_map<uint8_t, int> secrets;
+    const AttrMap &attrs = m_map.attrs();
+    for (const auto &[k, v] : attrs)
+    {
+        if (v >= SECRET_ATTR_MIN &&
+            v <= SECRET_ATTR_MAX)
+            ++secrets[v];
+    }
+    report.bonuses = 0;
+    report.fruits = 0;
+    report.secrets = secrets.size();
+    for (const auto [tile, count] : tiles)
+    {
+        const TileDef &def = getTileDef(tile);
+        if (def.type != TYPE_PICKUP)
+            continue;
+        if (isFruit(tile))
+            report.fruits += count;
+        if (isBonusItem(tile))
+            report.bonuses += count;
+    }
+}
+
+/**
+ * @brief Get Soecual effect locations
+ *
+ * @return std::vector<sfx_t>&
+ */
+std::vector<sfx_t> &CGame::getSfx()
+{
+    return m_sfx;
+}
+
+/**
+ * @brief Purge Expired Special effects
+ *
+ */
+void CGame::purgeSfx()
+{
+    m_sfx.erase(std::remove_if(m_sfx.begin(), m_sfx.end(), [](auto &sfx)
+                               { --sfx.timeout; return sfx.timeout == 0; }),
+                m_sfx.end());
+}
+
+CGameStats &CGame::stats()
+{
+    return *m_gameStats;
+}
+
+bool CGame::isRageMode() const
+{
+    return m_gameStats->get(S_RAGE_TIMER) != 0;
+}
+
+CGame *CGame::getGame()
+{
+    if (!g_game)
+        g_game = new CGame;
+    return g_game;
+}
+
+/**
+ * @brief Determines if the level closure is initiated
+ *
+ * @return true
+ * @return false
+ */
+bool CGame::isClosure() const
+{
+    return m_gameStats->get(S_CLOSURE) != 0;
+}
+
+/**
+ * @brief Raw Closure Timer for the current level
+ *
+ * @return int
+ */
+int CGame::closusureTimer() const
+{
+    return m_gameStats->get(S_CLOSURE_TIMER);
+}
+
+/**
+ * @brief Decrement Closure Timer
+ *
+ */
+void CGame::decClosure()
+{
+    m_gameStats->dec(S_CLOSURE_TIMER);
+}
+
+/**
+ * @brief Determines if the player is frozen
+ *
+ * @return true
+ * @return false
+ */
+bool CGame::isFrozen() const
+{
+    return m_gameStats->get(S_FREEZE_TIMER) != 0;
+}
+
+/**
+ * @brief Destroy Game Singleton
+ *
+ */
+void CGame::destroy()
+{
+    if (g_game)
+        delete g_game;
+    g_game = nullptr;
+}
+
+/**
+ * @brief Calculate MaxHealth for the current Skill Context
+ *
+ * @return int
+ */
+int CGame::maxHealth() const
+{
+    const auto skill = m_gameStats->get(S_SKILL);
+    return static_cast<int>(MAX_HEALTH) / (1 + 1 * skill);
 }

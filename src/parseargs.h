@@ -30,6 +30,8 @@ typedef struct
     uint8_t skill;
     std::string mapArch;
     std::string workspace;
+    int width;
+    int height;
 } params_t;
 
 bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit);

@@ -29,8 +29,8 @@ public:
     CMenuItem &addItem(const CMenuItem &menuItem);
     size_t size() const;
     CMenuItem &at(int i);
-    void up();
-    void down();
+    bool up();
+    bool down();
     int index() const;
     void clear();
     CMenuItem &current();
@@ -38,9 +38,11 @@ public:
     int id() const;
     int height() const;
     void setCurrent(const int i);
-    const int scaleX() const;
-    const int scaleY() const;
-    const int paddingY() const;
+    int scaleX() const;
+    int scaleY() const;
+    int paddingY() const;
+    void setScaleX(const int v);
+    void setScaleY(const int v);
 
 private:
     enum

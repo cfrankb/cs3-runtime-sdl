@@ -56,16 +56,24 @@ CMenuItem &CMenu::last()
     return m_items[m_items.size() - 1];
 }
 
-void CMenu::up()
+bool CMenu::up()
 {
     if (m_currentItem)
+    {
         --m_currentItem;
+        return true;
+    }
+    return false;
 }
 
-void CMenu::down()
+bool CMenu::down()
 {
     if (m_currentItem < static_cast<int>(m_items.size() - 1))
+    {
         ++m_currentItem;
+        return true;
+    }
+    return false;
 }
 
 int CMenu::index() const
@@ -94,17 +102,27 @@ int CMenu::height() const
     return size() ? (m_scaleY * FONT_SIZE + m_padding) * size() - m_padding : 0;
 }
 
-const int CMenu::scaleX() const
+int CMenu::scaleX() const
 {
     return m_scaleX;
 }
 
-const int CMenu::scaleY() const
+int CMenu::scaleY() const
 {
     return m_scaleY;
 }
 
-const int CMenu::paddingY() const
+int CMenu::paddingY() const
 {
     return m_padding;
+}
+
+void CMenu::setScaleX(const int v)
+{
+    m_scaleX = v;
+}
+
+void CMenu::setScaleY(const int v)
+{
+    m_scaleY = v;
 }

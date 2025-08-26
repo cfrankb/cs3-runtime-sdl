@@ -34,7 +34,7 @@ public:
 
     void paint();
     void run();
-    bool SDLInit();
+    bool initSDL();
     void doInput();
     void preRun();
     void enableMusic(bool state);
@@ -50,7 +50,11 @@ public:
     void setStartLevel(int level);
     bool isRunning() const;
     static std::string &addTrailSlash(std::string &path);
+    void init(CMapArch *maparch, int index) override;
+    void setVerbose(bool enable);
+    void notifyExitFullScreen();
 
+private:
     typedef struct
     {
         SDL_Renderer *renderer;
@@ -63,7 +67,6 @@ public:
         int windowedHeigth;
     } App;
 
-protected:
     static void cleanup();
     void preloadAssets() override;
     bool initControllers();
@@ -94,18 +97,41 @@ protected:
     CFrameSet *m_title;
     char *m_credits = nullptr;
     char *m_scroll = nullptr;
-    uint32_t m_scrollPtr;
+    uint32_t m_scrollPtr = 0;
     int m_startLevel;
     int m_skill;
+    int m_resolution = 0;
+    int m_fullscreen = 0;
     int m_volume = 10;
+    int m_xAxisSensitivity = 10;
+    int m_yAxisSensitivity = 10;
+    bool m_verbose;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
+    CMenu *m_optionMenu = nullptr;
     bool m_isRunning = true;
+    CFrame *m_bitmap = nullptr;
+
+    // Vector to hold pointers to opened game controllers
+    std::vector<SDL_GameController *> m_gameControllers;
+    struct Rez
+    {
+        int w;
+        int h;
+    };
+
+    std::vector<Rez> m_resolutions = {
+        {640, 480},
+        {800, 600},
+        {1024, 768},
+        {1280, 720}};
+
     enum
     {
         FONT_SIZE = 8,
         MENUID_MAINMENU = 0x10,
         MENUID_GAMEMENU = 0x11,
+        MENUID_OPTIONMENU,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -114,8 +140,14 @@ protected:
         MENU_ITEM_HISCORES,
         MENU_ITEM_MUSIC,
         MENU_ITEM_MUSIC_VOLUME,
+        MENU_ITEM_OPTIONS,
         MENU_ITEM_X_AXIS_SENTIVITY,
         MENU_ITEM_Y_AXIS_SENTIVITY,
+        MENU_ITEM_RESOLUTION,
+        MENU_ITEM_FULLSCREEN,
+        MENU_ITEM_RETURN_MAIN,
+        MENU_ITEM_CAMERA,
+        MENU_ITEM_RETURN_TO_GAME,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
@@ -123,18 +155,26 @@ protected:
         SCALE2X = 2,
     };
 
-private:
     void drawTitleScreen(CFrame &bitmap);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
     void cleanUpCredits();
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
-    size_t scrollerBufSize() { return WIDTH / FONT_SIZE; };
+    void drawOptions(CFrame &bitmap);
+    size_t scrollerBufSize();
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
-    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseY);
+    void drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY);
     void manageMenu(CMenu &menu);
     bool fetchFile(const std::string &path, char **dest, const bool terminator);
     void parseHelp(char *text);
+    void manageOptionScreen() override;
+    void initOptionMenu();
+    int findResolutionIndex();
+    void resize(int w, int h);
+    void listResolutions(int displayIndex = 0);
+    void createResolutionList();
+    void addGamePlayOptions(CMenu &menu);
+    void resizeGameMenu();
 };

@@ -20,6 +20,7 @@
 #include <filesystem>
 #include "parseargs.h"
 #include "skills.h"
+#include "runtime.h"
 
 void showHelp()
 {
@@ -29,7 +30,7 @@ void showHelp()
          "-p <prefix>               set data path prefix\n"
          "-m <maparch>              set maparch override (full path)\n"
          "-w <workspace>            set user workspace\n"
-         //"-s 999x999                set window size\n"
+         "--window 999x999          set window size\n"
          "\n"
          "flags:\n"
          "--hard                    switch to hard mode\n"
@@ -44,9 +45,11 @@ void initArgs(params_t &params)
     params.fullscreen = false;
     params.level = 0;
     params.muteMusic = false;
-    params.skill = SKILL_EASY;
+    params.skill = SKILL_NORMAL;
     params.hardcore = false;
     params.verbose = false;
+    params.width = CRuntime::DEFAULT_WIDTH;
+    params.height = CRuntime::DEFAULT_HEIGHT;
 }
 
 void verbose(const char *path)
@@ -94,7 +97,6 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                 break;
             }
         }
-
         // handle options
         if (j != defcount)
         {
@@ -108,6 +110,47 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                 fprintf(stderr, "missing %s value on cmdline\n", paramdefs[j].name);
                 result = false;
             }
+        }
+        else if (strcmp(args[i], "--window") == 0)
+        {
+            if (i + 1 < argc && args[i + 1][0] != '-')
+            {
+                char *w = args[++i];
+                char *h = strstr(w, "x");
+                if (w && h)
+                {
+                    params.width = strtol(w, nullptr, 10) / 2;
+                    if (params.width < 240)
+                    {
+                        fprintf(stderr, "invalid width: %d for --window\n", params.width);
+                        result = false;
+                    }
+                    params.height = strtol(++h, nullptr, 10) / 2;
+                    if (params.height < 240)
+                    {
+                        fprintf(stderr, "invalid height: %d for --window\n", params.height);
+                        result = false;
+                    }
+                    if (params.verbose)
+                        printf("w: %d h: %d\n", params.width, params.height);
+                }
+                else
+                {
+                    fprintf(stderr, "invalid size for --window\n");
+                    result = false;
+                }
+            }
+            else
+            {
+                fprintf(stderr, "missing size for --window\n");
+                result = false;
+            }
+        }
+        else if (strcmp(args[i], "--short") == 0)
+        {
+            printf("switching to short resolution\n");
+            params.width = 480 / 2;
+            params.height = 640 / 2;
         }
         else if (strcmp(args[i], "--hard") == 0)
         {

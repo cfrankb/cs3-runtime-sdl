@@ -92,8 +92,23 @@
       box-sizing: border-box;
     }
     </style>
+
+    <style>
+      #fs-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 8px 12px;
+        font-size: 14px;
+        z-index: 1000;
+      }
+    </style>
+
   </head>
   <body>
+    <div class="emscripten">
+      <button id="fs-btn">Go Fullscreen</button>
+    </div>
     <!--<hr />-->
     <figure style="overflow: visible" id="spinner">
       <div class="spinner"></div>
@@ -112,6 +127,8 @@
       ></canvas>
     </div>
     <!--<hr />-->
+
+
     <div class="emscripten" id="resizebox">
       <input type="checkbox" id="resize" />Resize canvas
       <input type="checkbox" id="pointerLock" checked />Lock/hide mouse pointer
@@ -163,6 +180,23 @@
           // my_add = Module.cwrap('my_add', 'number', ['number', 'number'])
           // alert('1 + 2 = ' + my_add(1, 2));
           console.log("GOT HERE");
+          document.getElementById('fs-btn').addEventListener('click', () => {
+            console.log("fdfdfdf");
+            const canvas = document.getElementById('canvas');
+            if (canvas.requestFullscreen) {
+              canvas.requestFullscreen().catch(err => {
+                console.error("Fullscreen request denied:", err);
+              });
+            }
+          });
+          document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+              console.log("Exited fullscreen—showing button again");
+              document.getElementById('fs-btn').style.display = 'block';
+            } else {
+              document.getElementById('fs-btn').style.display = 'none';
+            }
+          });
         },
         print: (function () {
           var element = document.getElementById("output");

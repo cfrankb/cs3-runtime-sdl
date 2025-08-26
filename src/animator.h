@@ -19,6 +19,13 @@
 
 #include <inttypes.h>
 
+struct AnimzInfo
+{
+    uint8_t frames;
+    uint8_t base;
+    uint8_t offset;
+};
+
 class CAnimator
 {
 public:
@@ -26,8 +33,9 @@ public:
     ~CAnimator();
     void animate();
     uint8_t at(uint8_t tileID);
-    int offset();
+    uint16_t offset();
     bool isSpecialCase(uint8_t tileID);
+    AnimzInfo specialInfo(const int tileID);
 
 private:
     using animzSeq_t = struct
@@ -35,16 +43,18 @@ private:
         uint8_t srcTile;
         uint8_t startSeq;
         uint8_t count;
+        uint8_t specialID;
     };
 
     enum : uint32_t
     {
         NO_ANIMZ = 255,
-        MAX_TILES = 256
+        MAX_TILES = 256,
+        NA = 0,
     };
 
     static animzSeq_t m_animzSeq[];
     uint8_t m_tileReplacement[MAX_TILES];
     int32_t *m_seqIndex = nullptr;
-    int m_offset = 0;
+    uint16_t m_offset = 0;
 };

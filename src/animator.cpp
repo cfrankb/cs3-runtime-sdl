@@ -18,24 +18,32 @@
 #include "animator.h"
 #include "tilesdata.h"
 #include "animzdata.h"
+#include "gamesfx.h"
 #include <cstring>
+#include <vector>
 
 CAnimator::animzSeq_t CAnimator::m_animzSeq[] = {
-    {TILES_DIAMOND, ANIMZ_DIAMOND, 13},
-    {TILES_INSECT1, ANIMZ_INSECT1_DN, 8},
-    {TILES_SWAMP, ANIMZ_SWAMP, 2},
-    {TILES_ALPHA, ANIMZ_ALPHA, 2},
-    {TILES_FORCEF94, ANIMZ_FORCEF94, 8},
-    {TILES_VAMPLANT, ANIMZ_VAMPLANT, 2},
-    {TILES_ORB, ANIMZ_ORB, 4},
-    {TILES_TEDDY93, ANIMZ_TEDDY93, 2},
-    {TILES_LUTIN, ANIMZ_LUTIN, 2},
-    {TILES_OCTOPUS, ANIMZ_OCTOPUS, 2},
-    {TILES_TRIFORCE, ANIMZ_TRIFORCE, 4},
-    {TILES_YAHOO, ANIMZ_YAHOO, 2},
-    {TILES_YIGA, ANIMZ_YIGA, 2},
-    {TILES_YELKILLER, ANIMZ_YELKILLER, 2},
-    {TILES_MANKA, ANIMZ_MANKA, 2},
+    {TILES_DIAMOND, ANIMZ_DIAMOND, ANIMZ_DIAMOND_LEN, NA},
+    {TILES_INSECT1, ANIMZ_INSECT1_DN, ANIMZ_INSECT1_LEN, ANIMZ_INSECT1},
+    {TILES_SWAMP, ANIMZ_SWAMP, ANIMZ_SWAMP_LEN, NA},
+    {TILES_ALPHA, ANIMZ_ALPHA, ANIMZ_ALPHA_LEN, NA},
+    {TILES_FORCEF94, ANIMZ_FORCEF94, ANIMZ_FORCEF94_LEN, NA},
+    {TILES_VAMPLANT, ANIMZ_VAMPLANT, ANIMZ_VAMPLANT_LEN, NA},
+    {TILES_ORB, ANIMZ_ORB, ANIMZ_ORB_LEN, NA},
+    {TILES_TEDDY93, ANIMZ_TEDDY93, ANIMZ_TEDDY93_LEN, NA},
+    {TILES_LUTIN, ANIMZ_LUTIN, ANIMZ_LUTIN_LEN, NA},
+    {TILES_OCTOPUS, ANIMZ_OCTOPUS, ANIMZ_OCTOPUS_LEN, NA},
+    {TILES_TRIFORCE, ANIMZ_TRIFORCE, ANIMZ_TRIFORCE_LEN, NA},
+    {TILES_YAHOO, ANIMZ_YAHOO, ANIMZ_YAHOO_LEN, NA},
+    {TILES_YIGA, ANIMZ_YIGA, ANIMZ_YIGA_LEN, NA},
+    {TILES_YELKILLER, ANIMZ_YELKILLER, ANIMZ_YELKILLER_LEN, NA},
+    {TILES_MANKA, ANIMZ_MANKA, ANIMZ_MANKA_LEN, NA},
+    {TILES_MUSH_IDLE, ANIMZ_MUSH_DOWN, ANIMZ_MUSHROOM_LEN, ANIMZ_MUSHROOM},
+    {TILES_WHTEWORM, ANIMZ_WHTEWORM, ANIMZ_WHTEWORM_LEN / 2, ANIMZ_WHTEWORM},
+    {TILES_ETURTLE, ANIMZ_ETURTLE, ANIMZ_ETURTLE_LEN / 2, ANIMZ_ETURTLE},
+    {TILES_DRAGO, ANIMZ_DRAGO, ANIMZ_DRAGO_LEN / 2, ANIMZ_DRAGO},
+    {TILES_DOORS_LEAF, ANIMZ_DOORS_LEAF, ANIMZ_DOORS_LEAF_LEN, NA},
+    {SFX_SPARKLE, ANIMZ_SPARKLE, ANIMZ_SPARKLE_LEN, ANIMZ_SPARKLE},
 };
 
 CAnimator::CAnimator()
@@ -69,12 +77,42 @@ uint8_t CAnimator::at(uint8_t tileID)
     return m_tileReplacement[tileID];
 }
 
-int CAnimator::offset()
+uint16_t CAnimator::offset()
 {
     return m_offset;
 }
 
 bool CAnimator::isSpecialCase(uint8_t tileID)
 {
-    return tileID == TILES_INSECT1;
+    std::vector<uint8_t> specialCases = {
+        TILES_INSECT1,
+        TILES_MUSH_IDLE,
+        TILES_DRAGO,
+        TILES_ETURTLE,
+        TILES_WHTEWORM,
+    };
+    for (const auto &ref : specialCases)
+    {
+        if (tileID == ref)
+            return true;
+    }
+    return false;
+}
+
+AnimzInfo CAnimator::specialInfo(const int tileID)
+{
+    const size_t seqCount = sizeof(m_animzSeq) / sizeof(animzSeq_t);
+    for (size_t i = 0; i < seqCount; ++i)
+    {
+        const animzSeq_t &seq = m_animzSeq[i];
+        if (seq.srcTile == tileID)
+        {
+            return AnimzInfo{
+                .frames = seq.count,
+                .base = seq.specialID,
+                .offset = static_cast<uint8_t>(m_offset % seq.count),
+            };
+        }
+    }
+    return AnimzInfo{};
 }

@@ -20,7 +20,7 @@
 //
 #include <cstring>
 #include <cstdio>
-#include <stdint.h>
+#include <cstdint>
 #include "FrameSet.h"
 #include "Frame.h"
 #include <zlib.h>
@@ -65,7 +65,9 @@ CFrameSet::CFrameSet(CFrameSet *s)
 
 void CFrameSet::assignNewUUID()
 {
-    m_tags["UUID"] = getUUID();
+    char *t = getUUID();
+    m_tags["UUID"] = t;
+    delete[] t;
 }
 
 CFrameSet::~CFrameSet()
@@ -127,7 +129,7 @@ void CFrameSet::write0x501(IFile &file)
 
     // TAG COUNT
     int count = 0;
-    for (auto const & kv : m_tags)
+    for (auto const &kv : m_tags)
     {
         const std::string val = kv.second;
         if (!val.empty())
@@ -137,7 +139,7 @@ void CFrameSet::write0x501(IFile &file)
     }
 
     file.write(&count, sizeof(uint32_t));
-    for (auto const & kv : m_tags)
+    for (auto const &kv : m_tags)
     {
         const std::string key = kv.first;
         const std::string val = kv.second;
@@ -330,7 +332,7 @@ CFrame *CFrameSet::operator[](int n) const
 void CFrameSet::copyTags(CFrameSet &src)
 {
     m_tags.clear();
-    for (auto & kv : src.m_tags)
+    for (auto &kv : src.m_tags)
     {
         m_tags[kv.first] = kv.second;
     }
@@ -757,7 +759,7 @@ bool CFrameSet::extract(IFile &file, char *out_format)
         size = mcxHead.NbrImages;
         for (int i = 0; i < mcxHead.NbrImages; ++i)
         {
-            CFrame *frame = new CFrame(32,32);
+            CFrame *frame = new CFrame(32, 32);
             char *bitmap = new char[32 * 32];
             USER_MCX mcx;
             file.read(&mcx, sizeof(USER_MCX));
@@ -935,8 +937,8 @@ void CFrameSet::toPng(unsigned char *&data, int &size)
         frame->toPng(data, size, buf, t_size);
         delete frame;
         delete[] buf;
-        delete []xx;
-        delete []yy;
+        delete[] xx;
+        delete[] yy;
     }
     else
     {

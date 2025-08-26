@@ -39,8 +39,8 @@ public:
 
     CMenuItem &disable(const bool value = true);
     bool isDisabled() const;
-    void left();
-    void right();
+    bool left();
+    bool right();
     int value() const;
     int role() const;
     CMenu *menu() const;

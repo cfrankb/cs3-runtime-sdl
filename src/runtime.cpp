@@ -31,18 +31,18 @@
 #include "skills.h"
 #include "menu.h"
 #include "strhelper.h"
+#include "sounds.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include <emscripten/html5.h>
 const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
+
 #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
-
-// Vector to hold pointers to opened game controllers
-std::vector<SDL_GameController *> gGameControllers;
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -60,10 +60,10 @@ CRuntime::CRuntime() : CGameMixin()
 #endif
     m_music = nullptr;
     memset(&m_app, 0, sizeof(App));
-    resizeScroller();
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
+    m_optionMenu = new CMenu(MENUID_OPTIONMENU);
     m_title = nullptr;
 }
 
@@ -71,6 +71,7 @@ CRuntime::~CRuntime()
 {
     if (m_app.window)
     {
+        printf("detroying SDL2 objects\n");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
@@ -106,25 +107,51 @@ CRuntime::~CRuntime()
     {
         delete m_gameMenu;
     }
+
+    if (m_optionMenu)
+    {
+        delete m_optionMenu;
+    }
 }
 
 void CRuntime::paint()
 {
-    CFrame bitmap(WIDTH, HEIGHT);
+    if (!m_bitmap)
+    {
+        m_bitmap = new CFrame(WIDTH, HEIGHT);
+    }
+
+    // CFrame mapped to write directly to texture buffer
+    uint32_t *oldBuffer;
+    void *pixels;
+    int pitch;
+    CFrame &bitmap = *m_bitmap;
+    if (SDL_LockTexture(m_app.texture, nullptr, &pixels, &pitch) == 0)
+    {
+        oldBuffer = bitmap.swapBuffer(static_cast<uint32_t *>(pixels));
+    }
+    else
+    {
+        fprintf(stderr, "Failed to lock texture: %s\n", SDL_GetError());
+        return;
+    }
+
     bitmap.fill(BLACK);
     switch (m_game->mode())
     {
     case CGame::MODE_LEVEL_INTRO:
     case CGame::MODE_RESTART:
     case CGame::MODE_GAMEOVER:
+    case CGame::MODE_TIMEOUT:
         drawLevelIntro(bitmap);
         break;
-    case CGame::MODE_LEVEL:
+    case CGame::MODE_PLAY:
         drawScreen(bitmap);
         if (m_gameMenuActive)
         {
             fazeScreen(bitmap, 2);
-            drawMenu(bitmap, *m_gameMenu, (_HEIGHT - m_gameMenu->height()) / 2);
+            resizeGameMenu();
+            drawMenu(bitmap, *m_gameMenu, -1, (_HEIGHT - m_gameMenu->height()) / 2);
         }
         break;
     case CGame::MODE_HISCORES:
@@ -138,21 +165,30 @@ void CRuntime::paint()
         break;
     case CGame::MODE_TITLE:
         drawTitleScreen(bitmap);
-    }
+        break;
+    case CGame::MODE_OPTIONS:
+        drawOptions(bitmap);
+    case CGame::MODE_IDLE:
+        break;
+    };
 
-    SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
-    SDL_RenderClear(m_app.renderer);
+    //    SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
+    SDL_UnlockTexture(m_app.texture);
+
     int width;
     int height;
     SDL_GetWindowSize(m_app.window, &width, &height);
     SDL_Rect rectDest{0, 0, width, height};
     SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, &rectDest);
     SDL_RenderPresent(m_app.renderer);
+
+    // restore bitmap original CFrame buffer
+    bitmap.swapBuffer(oldBuffer);
 }
 
-bool CRuntime::SDLInit()
+bool CRuntime::initSDL()
 {
-    printf("SDL Init()\n");
+    printf("SDL Init() texture: %dx%d\n", WIDTH, HEIGHT);
     int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
     if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -198,6 +234,25 @@ bool CRuntime::SDLInit()
             }
         }
     }
+
+    const std::string iconFile = m_prefix + m_config["icon"];
+    CFrameSet frames;
+    CFileWrap file;
+    if (file.open(iconFile.c_str(), "rb") && frames.extract(file))
+    {
+        CFrame &frame = *frames[0];
+        SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(
+            frame.getRGB(), frame.len(), frame.hei(), 32, frame.len() * 4,
+            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        SDL_SetWindowIcon(m_app.window, surface);
+        SDL_FreeSurface(surface);
+        file.close();
+    }
+
+#ifndef __EMSCRIPTEN__
+    createResolutionList();
+#endif
+    m_resolution = findResolutionIndex();
     return true;
 }
 
@@ -213,6 +268,8 @@ void CRuntime::run()
 
 void CRuntime::doInput()
 {
+    int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
+    int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
     SDL_GameController *controller;
     SDL_Event event;
     int joystick_index;
@@ -224,19 +281,24 @@ void CRuntime::doInput()
         {
         case SDL_KEYDOWN:
             keyState = KEY_PRESSED;
+            [[fallthrough]];
         case SDL_KEYUP:
             keyReflector(event.key.keysym.sym, keyState);
             switch (event.key.keysym.sym)
             {
+            case SDLK_w:
             case SDLK_UP:
                 m_joyState[AIM_UP] = keyState;
                 continue;
+            case SDLK_s:
             case SDLK_DOWN:
                 m_joyState[AIM_DOWN] = keyState;
                 continue;
+            case SDLK_a:
             case SDLK_LEFT:
                 m_joyState[AIM_LEFT] = keyState;
                 continue;
+            case SDLK_d:
             case SDLK_RIGHT:
                 m_joyState[AIM_RIGHT] = keyState;
                 continue;
@@ -246,7 +308,7 @@ void CRuntime::doInput()
         case SDL_WINDOWEVENT:
             if (event.window.event == SDL_WINDOWEVENT_RESIZED && !m_app.isFullscreen)
             {
-                printf("resuzed\n");
+                printf("resized\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
@@ -286,7 +348,7 @@ void CRuntime::doInput()
                 controller = SDL_GameControllerOpen(joystick_index);
                 if (controller)
                 {
-                    gGameControllers.push_back(controller);
+                    m_gameControllers.push_back(controller);
                     printf("Controller ADDED: %s (Index:%d)\n",
                            SDL_GameControllerName(controller), joystick_index);
                 }
@@ -303,19 +365,21 @@ void CRuntime::doInput()
             {
                 std::string controllerName = SDL_GameControllerName(controller);
                 printf("Controller REMOVED: %s\n", controllerName.c_str());
-                for (auto it = gGameControllers.begin(); it != gGameControllers.end(); ++it)
+                for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
                 {
                     if (*it == controller)
                     {
                         SDL_GameControllerClose(*it);
-                        gGameControllers.erase(it);
+                        m_gameControllers.erase(it);
                         break;
                     }
                 }
             }
+            break;
 
         case SDL_CONTROLLERBUTTONDOWN:
             buttonState = BUTTON_PRESSED;
+            [[fallthrough]];
 
         case SDL_CONTROLLERBUTTONUP:
             controller = SDL_GameControllerFromInstanceID(event.cbutton.which);
@@ -364,11 +428,11 @@ void CRuntime::doInput()
             if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
                 event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX)
             {
-                if (event.caxis.value < -8000)
+                if (event.caxis.value < -xAxisSensitivity)
                 {
                     m_joyState[AIM_LEFT] = KEY_PRESSED;
                 }
-                else if (event.caxis.value > 8000)
+                else if (event.caxis.value > xAxisSensitivity)
                 {
                     m_joyState[AIM_RIGHT] = KEY_PRESSED;
                 }
@@ -381,11 +445,11 @@ void CRuntime::doInput()
             else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY ||
                      event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY)
             {
-                if (event.caxis.value < -8000)
+                if (event.caxis.value < -yAxisSensitivity)
                 {
                     m_joyState[AIM_UP] = KEY_PRESSED;
                 }
-                else if (event.caxis.value > 8000)
+                else if (event.caxis.value > yAxisSensitivity)
                 {
                     m_joyState[AIM_DOWN] = KEY_PRESSED;
                 }
@@ -696,7 +760,7 @@ void CRuntime::save()
     std::string path = m_workspace + SAVEGAME_FILE;
 #endif
 
-    if (m_game->mode() != CGame::MODE_LEVEL)
+    if (m_game->mode() != CGame::MODE_PLAY)
     {
         fprintf(stderr, "cannot save while not playing\n");
         return;
@@ -745,14 +809,14 @@ void CRuntime::load()
     {
         fprintf(stderr, "can't read:%s\n", path.c_str());
     }
-    m_game->setMode(CGame::MODE_LEVEL);
+    m_game->setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
     centerCamera();
 }
 
 void CRuntime::initSounds()
 {
-    auto m_sound = new CSndSDL();
+    m_sound = new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
@@ -763,8 +827,10 @@ void CRuntime::initSounds()
             auto sound = new uint8_t[size];
             file.read(sound, size);
             file.close();
-            printf("loaded %s: %d bytes\n", soundName.c_str(), size);
+            if (m_verbose)
+                printf("loaded %s: %d bytes\n", soundName.c_str(), size);
             m_sound->add(sound, size, i + 1);
+            delete[] sound;
         }
         else
         {
@@ -783,6 +849,13 @@ void CRuntime::openMusicForLevel(int i)
     }
 }
 
+/**
+ * @brief Extract configuration from filename
+ *
+ * @param filename
+ * @return true
+ * @return false
+ */
 bool CRuntime::parseConfig(const char *filename)
 {
     CFileWrap file;
@@ -853,17 +926,33 @@ bool CRuntime::parseConfig(const char *filename)
     return true;
 }
 
+/**
+ * @brief Ser configuration option
+ *
+ * @param key
+ * @param val
+ */
 void CRuntime::setConfig(const char *key, const char *val)
 {
     m_config[key] = val;
 }
 
+/**
+ * @brief Set path to game data files
+ *
+ * @param prefix
+ */
 void CRuntime::setPrefix(const char *prefix)
 {
     m_prefix = prefix;
     addTrailSlash(m_prefix);
 }
 
+/**
+ * @brief Set working directory
+ *
+ * @param workspace
+ */
 void CRuntime::setWorkspace(const char *workspace)
 {
     m_workspace = workspace;
@@ -884,7 +973,15 @@ std::string &CRuntime::addTrailSlash(std::string &path)
     return path;
 }
 
-void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
+/**
+ * @brief Draw Menu at coordinates baseX, baseY
+ *
+ * @param bitmap
+ * @param menu
+ * @param baseX
+ * @param baseY
+ */
+void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY)
 {
     const int scaleX = menu.scaleX();
     const int scaleY = menu.scaleY();
@@ -893,10 +990,9 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
     for (size_t i = 0; i < menu.size(); ++i)
     {
         const CMenuItem &item = menu.at(i);
-        const std::string text = item.str();
-        const int x = (WIDTH - strlen(text.c_str()) * FONT_SIZE * scaleX) / 2;
-        uint32_t color = static_cast<int>(i) == menu.index() ? static_cast<uint32_t>(YELLOW)
-                                                             : static_cast<uint32_t>(BLUE);
+        const std::string &text = item.str();
+        const int x = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
+        Color color = static_cast<int>(i) == menu.index() ? YELLOW : BLUE;
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
@@ -912,6 +1008,11 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseY)
     }
 }
 
+/**
+ * @brief Draw titlescreen
+ *
+ * @param bitmap
+ */
 void CRuntime::drawTitleScreen(CFrame &bitmap)
 {
     bitmap.clear();
@@ -932,22 +1033,35 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 
     CMenu &menu = *m_mainMenu;
     const int menuBaseY = 100 - 8;
-    drawMenu(bitmap, menu, menuBaseY);
+    drawMenu(bitmap, menu, -1, menuBaseY);
     drawScroller(bitmap);
 }
 
+/**
+ * @brief Draw Titlescreen Pixmap
+ *
+ * @param bitmap
+ * @param offsetY
+ */
 void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 {
     auto &title = *(*m_title)[0];
+    int baseX = (bitmap.len() - title.len()) / 2;
     for (int y = 0; y < title.hei(); ++y)
     {
         for (int x = 0; x < title.len(); ++x)
         {
-            bitmap.at(x, y + offsetY) = title.at(x, y);
+            if (baseX + x < bitmap.len())
+                bitmap.at(baseX + x, y + offsetY) = title.at(x, y);
         }
     }
 }
 
+/**
+ * @brief Draw scrolling text on Intro Screen
+ *
+ * @param bitmap
+ */
 void CRuntime::drawScroller(CFrame &bitmap)
 {
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
@@ -955,18 +1069,20 @@ void CRuntime::drawScroller(CFrame &bitmap)
     {
         for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
             m_scroll[i] = m_scroll[i + 1];
-        m_scroll[scrollerBufSize() - 1] = m_credits[m_scrollPtr];
-        ++m_scrollPtr;
-        if (m_scrollPtr >= strlen(m_credits) - 1)
+        if (!m_credits[m_scrollPtr])
         {
             m_scrollPtr = 0;
+        }
+        else
+        {
+            m_scroll[scrollerBufSize() - 1] = m_credits[m_scrollPtr];
+            ++m_scrollPtr;
         }
     }
 }
 
 void CRuntime::setupTitleScreen()
 {
-    m_game->setMode(CGame::MODE_TITLE);
     size_t len = scrollerBufSize();
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
@@ -978,6 +1094,35 @@ void CRuntime::setupTitleScreen()
     m_skill = m_game->skill();
     CMenu &menu = *m_mainMenu;
     menu.clear();
+    if (_WIDTH > 450)
+    {
+        menu.setScaleX(4);
+    }
+    else if (_WIDTH > 350)
+    {
+        menu.setScaleX(3);
+    }
+    else
+    {
+        menu.setScaleX(2);
+    }
+
+    if (_HEIGHT >= 450)
+    {
+        menu.setScaleY(6);
+    }
+    else if (_HEIGHT >= 350)
+    {
+        menu.setScaleY(5);
+    }
+    else if (_HEIGHT >= 300)
+    {
+        menu.setScaleY(3);
+    }
+    else
+    {
+        menu.setScaleY(2);
+    }
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
@@ -985,7 +1130,12 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
+#ifdef __EMSCRIPTEN__
     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+#else
+    menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
+#endif
+    m_game->setMode(CGame::MODE_TITLE);
 }
 
 void CRuntime::takeScreenshot()
@@ -996,7 +1146,7 @@ void CRuntime::takeScreenshot()
     auto rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
     {
-        if (rgba[i] == 0)
+        if (rgba[i] == CLEAR)
             rgba[i] = BLACK;
     }
     bitmap.enlarge();
@@ -1075,14 +1225,54 @@ void CRuntime::initOptions()
     {
         printf("using viewport default\n");
     }
+
+    if (m_config["healthbar"] == "hearts")
+    {
+        m_healthBar = HEALTHBAR_HEARTHS;
+    }
+    else
+    {
+        m_healthBar = HEALTHBAR_CLASSIC;
+    }
 }
 
-// Function to toggle fullscreen mode
+/**
+ * @brief  Function to toggle fullscreen mode
+ *
+ */
+
 void CRuntime::toggleFullscreen()
 {
+#ifdef __EMSCRIPTEN__
+    if (m_config["webfullscreen"] == "true")
+    {
+        if (SDL_SetWindowFullscreen(
+                m_app.window,
+                !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
+        {
+            fprintf(stderr, "Fullscreen toggle error: %s\n", SDL_GetError());
+        }
+    }
+    else
+    {
+        if (m_app.isFullscreen)
+        {
+            EmscriptenFullscreenStrategy strategy = {
+                .scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_DEFAULT,
+                .canvasResolutionScaleMode = EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_NONE,
+                .filteringMode = EMSCRIPTEN_FULLSCREEN_FILTERING_DEFAULT,
+                .canvasResizedCallback = NULL,
+                .canvasResizedCallbackUserData = NULL};
+            emscripten_enter_soft_fullscreen("#canvas", &strategy);
+        }
+        else
+        {
+            emscripten_exit_soft_fullscreen();
+        }
+    }
+#else
     if (m_app.isFullscreen)
     {
-        m_app.isFullscreen = false;
         // Currently in fullscreen, switch to windowed
         printf("Switching to windowed mode.\n");
         SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
@@ -1093,7 +1283,6 @@ void CRuntime::toggleFullscreen()
     }
     else
     {
-        m_app.isFullscreen = true;
         // Currently in windowed, switch to fullscreen
         printf("Switching to fullscreen desktop mode.\n");
 
@@ -1109,10 +1298,14 @@ void CRuntime::toggleFullscreen()
         SDL_SetWindowSize(m_app.window, dm.w, dm.h);
         SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
+#endif
     int x, y, w, h;
     SDL_GetWindowPosition(m_app.window, &x, &y);
     SDL_GetWindowSize(m_app.window, &w, &h);
     printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+
+    m_app.isFullscreen = !m_app.isFullscreen;
+    m_fullscreen = (int)m_app.isFullscreen;
 }
 
 void CRuntime::sanityTest()
@@ -1125,10 +1318,14 @@ void CRuntime::resizeScroller()
         delete[] m_scroll;
     size_t len = scrollerBufSize();
     m_scroll = new char[len + 1];
-    memset(m_scroll, 32, len);
+    memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
 }
 
+/**
+ * @brief handle events for the title screen
+ *
+ */
 void CRuntime::manageTitleScreen()
 {
     manageMenu(*m_mainMenu);
@@ -1137,6 +1334,11 @@ void CRuntime::manageTitleScreen()
 void CRuntime::manageGameMenu()
 {
     manageMenu(*m_gameMenu);
+}
+
+void CRuntime::manageOptionScreen()
+{
+    manageMenu(*m_optionMenu);
 }
 
 void CRuntime::manageMenu(CMenu &menu)
@@ -1150,28 +1352,33 @@ void CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_joyState[AIM_UP])
     {
-        menu.up();
+        if (menu.up())
+            m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_DOWN])
     {
-        menu.down();
+        if (menu.down())
+            m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_LEFT])
     {
-        item.left();
+        if (item.left())
+            m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_RIGHT])
     {
-        item.right();
+        if (item.right())
+            m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_keyStates[Key_Space] ||
              m_keyStates[Key_Enter] ||
              m_buttonState[BUTTON_A])
     {
+        m_sound->play(SOUND_POUF);
         if (item.role() == MENU_ITEM_NEW_GAME ||
             item.role() == MENU_ITEM_SKILL ||
             item.role() == MENU_ITEM_LEVEL)
@@ -1182,16 +1389,16 @@ void CRuntime::manageMenu(CMenu &menu)
                 return;
             }
 
-            game.resetStats();
             if (game.level() != m_startLevel)
             {
                 game.setLevel(m_startLevel);
                 openMusicForLevel(m_startLevel);
             }
             m_gameMenuActive = false;
-            game.loadLevel(false);
+            game.loadLevel(CGame::MODE_LEVEL_INTRO);
             centerCamera();
             game.setSkill(m_skill);
+            game.resetStats();
             startCountdown(COUNTDOWN_INTRO);
         }
         else if (item.role() == MENU_ITEM_HISCORES)
@@ -1214,6 +1421,22 @@ void CRuntime::manageMenu(CMenu &menu)
             save();
             m_gameMenuActive = false;
         }
+        else if (item.role() == MENU_ITEM_OPTIONS)
+        {
+            initOptionMenu();
+            m_game->setMode(CGame::MODE_OPTIONS);
+            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        }
+        else if (item.role() == MENU_ITEM_RETURN_MAIN)
+        {
+            setupTitleScreen();
+            m_game->setMode(CGame::MODE_TITLE);
+            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        }
+        else if (item.role() == MENU_ITEM_RETURN_TO_GAME)
+        {
+            m_gameMenuActive = false;
+        }
     }
 
     if (item.role() == MENU_ITEM_MUSIC &&
@@ -1227,6 +1450,17 @@ void CRuntime::manageMenu(CMenu &menu)
         int volume = std::min(item.value() * MUSIC_VOLUME_STEPS,
                               static_cast<int>(MUSIC_VOLUME_MAX));
         m_music->setVolume(volume);
+    }
+    else if (item.role() == MENU_ITEM_RESOLUTION &&
+             oldValue != item.value())
+    {
+        Rez &rez = m_resolutions[item.value()];
+        resize(rez.w, rez.h);
+    }
+    else if (item.role() == MENU_ITEM_FULLSCREEN &&
+             oldValue != item.value())
+    {
+        toggleFullscreen();
     }
 }
 
@@ -1249,19 +1483,37 @@ const std::string CRuntime::getSavePath() const
 #endif
 }
 
+void CRuntime::resizeGameMenu()
+{
+    CMenu &menu = *m_gameMenu;
+    if (WIDTH > MIN_WIDTH_FULL)
+    {
+        menu.setScaleX(2);
+    }
+    else
+    {
+        menu.setScaleX(1);
+    }
+}
+
 void CRuntime::toggleGameMenu()
 {
     m_gameMenuActive = !m_gameMenuActive;
     CMenu &menu = *m_gameMenu;
     menu.clear();
+    menu.setScaleX(2);
+    menu.setScaleY(2);
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-    menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, reinterpret_cast<int *>(&m_musicMuted)))
-        .setRole(MENU_ITEM_MUSIC);
-    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
+    // menu.addItem(CMenuItem("%s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
+    //     .setRole(MENU_ITEM_FULLSCREEN);
+    menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
+    //  menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+    //      .setRole(MENU_ITEM_MUSIC_VOLUME);
+    //  menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
+    //      .setRole(MENU_ITEM_CAMERA);
 }
 
 bool CRuntime::initControllers()
@@ -1288,7 +1540,7 @@ bool CRuntime::initControllers()
             SDL_GameController *controller = SDL_GameControllerOpen(i);
             if (controller)
             {
-                gGameControllers.push_back(controller);
+                m_gameControllers.push_back(controller);
                 printf("Opened Game Controller: %d: %s\n", i, SDL_GameControllerName(controller));
             }
             else
@@ -1297,8 +1549,7 @@ bool CRuntime::initControllers()
             }
         }
     }
-
-    if (gGameControllers.empty())
+    if (m_gameControllers.empty())
     {
         fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
@@ -1308,4 +1559,177 @@ bool CRuntime::initControllers()
 bool CRuntime::isRunning() const
 {
     return m_isRunning;
+}
+
+void CRuntime::init(CMapArch *maparch, int index)
+{
+    CGameMixin::init(maparch, index);
+    resizeScroller();
+}
+
+size_t CRuntime::scrollerBufSize()
+{
+    return WIDTH / FONT_SIZE;
+}
+
+void CRuntime::drawOptions(CFrame &bitmap)
+{
+    CMenu &menu = *m_optionMenu;
+    const int menuBaseY = 32;
+    drawMenu(bitmap, menu, 48, menuBaseY);
+}
+
+void CRuntime::initOptionMenu()
+{
+    CMenu &menu = *m_optionMenu;
+    menu.setScaleY(2);
+    menu.setScaleX(1);
+    menu.clear();
+    addGamePlayOptions(menu);
+    menu.addItem(CMenuItem("RETURN TO MAIN MENU", MENU_ITEM_RETURN_MAIN));
+}
+
+void CRuntime::addGamePlayOptions(CMenu &menu)
+{
+    // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
+    //     .setRole(MENU_ITEM_MUSIC);
+    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+        .setRole(MENU_ITEM_MUSIC_VOLUME);
+    menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
+        .setRole(MENU_ITEM_CAMERA);
+
+#ifndef __EMSCRIPTEN__
+    char tmp[16];
+    std::vector<std::string> resolutions;
+    for (const auto &rez : m_resolutions)
+    {
+        sprintf(tmp, "%dx%d", rez.w, rez.h);
+        resolutions.push_back(tmp);
+    }
+    menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
+        .setRole(MENU_ITEM_RESOLUTION);
+    menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
+        .setRole(MENU_ITEM_FULLSCREEN);
+#endif
+
+    if (m_gameControllers.size() != 0)
+    {
+        menu.addItem(CMenuItem("X-AXIS RANGE: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
+            .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
+        menu.addItem(CMenuItem("Y-AXIS RANGE: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
+            .setRole(MENU_ITEM_Y_AXIS_SENTIVITY);
+    }
+}
+
+void CRuntime::createResolutionList()
+{
+    const int displayIndex = 0;
+    int numModes = SDL_GetNumDisplayModes(displayIndex);
+    if (numModes < 1)
+    {
+        fprintf(stderr, "SDL_GetNumDisplayModes failed: %s\n", SDL_GetError());
+        return;
+    }
+    m_resolutions.clear();
+    int pw = -1;
+    int ph = -1;
+    for (int i = 0; i < numModes; ++i)
+    {
+        SDL_DisplayMode mode;
+        if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
+        {
+            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
+            continue;
+        }
+        // ignore anything larger than 720p
+        if (mode.w > 1280 || mode.h > 800)
+            continue;
+        if (mode.w != pw || mode.h != ph)
+            m_resolutions.push_back({mode.w, mode.h});
+        pw = mode.w;
+        ph = mode.h;
+    }
+}
+
+int CRuntime::findResolutionIndex()
+{
+    const int w = _WIDTH * 2;
+    const int h = _HEIGHT * 2;
+    int i = 0;
+    for (const auto &rez : m_resolutions)
+    {
+        if (rez.h == h && rez.w == w)
+        {
+            printf("found resolution %dx%d: %d\n", w, h, i);
+            return i;
+        }
+        ++i;
+    }
+    printf("new resolution %dx%d: %d\n", w, h, i);
+    m_resolutions.push_back({w, h});
+    return i;
+}
+
+void CRuntime::resize(int w, int h)
+{
+    if (m_verbose)
+        printf("switch to: %dx%d\n", w, h);
+    setWidth(w / 2);
+    setHeight(h / 2);
+    SDL_SetWindowSize(m_app.window, w, h);
+    auto oldTexture = m_app.texture;
+    m_app.texture = SDL_CreateTexture(
+        m_app.renderer,
+        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+    if (m_app.texture == nullptr)
+    {
+        fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
+        return;
+    }
+    SDL_DestroyTexture(oldTexture);
+    if (m_bitmap)
+    {
+        delete m_bitmap;
+    }
+    m_bitmap = new CFrame(WIDTH, HEIGHT);
+    resizeScroller();
+    m_app.windowedWidth = w;
+    m_app.windowedHeigth = h;
+}
+
+void CRuntime::listResolutions(int displayIndex)
+{
+    int numModes = SDL_GetNumDisplayModes(displayIndex);
+    if (numModes < 1)
+    {
+        fprintf(stderr, "SDL_GetNumDisplayModes failed:%s\n", SDL_GetError());
+        return;
+    }
+
+    printf("Available display modes:\n");
+    for (int i = 0; i < numModes; ++i)
+    {
+        SDL_DisplayMode mode;
+        if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
+        {
+            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
+            continue;
+        }
+        printf("Mode %d: %dx%d @ %dHz\n", i, mode.w, mode.h, mode.refresh_rate);
+    }
+}
+
+void CRuntime::setVerbose(bool enable)
+{
+    m_verbose = enable;
+}
+
+/**
+ * @brief Notify the runtime that ESC was pressed. this is only relevant for the web version
+ *
+ */
+void CRuntime::notifyExitFullScreen()
+{
+    m_app.isFullscreen = false;
+    m_fullscreen = m_app.isFullscreen;
 }
