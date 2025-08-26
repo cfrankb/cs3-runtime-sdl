@@ -1841,13 +1841,13 @@ void CGameMixin::drawHealthBar(CFrame &bitmap)
     auto drawHearth = [&bitmap](auto bx, auto by, auto health)
     {
         const uint8_t *hearth = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
-        for (uint y = 0; y < FONT_SIZE; ++y)
+        for (uint32_t y = 0; y < FONT_SIZE; ++y)
         {
-            for (uint x = 0; x < FONT_SIZE; ++x)
+            for (uint32_t x = 0; x < FONT_SIZE; ++x)
             {
                 const uint8_t bit = hearth[y] & (1 << x);
                 if (bit)
-                    bitmap.at(bx + x, by + y) = x < (uint)health ? RED : BLACK;
+                    bitmap.at(bx + x, by + y) = x < (uint32_t)health ? RED : BLACK;
             }
         }
     };
