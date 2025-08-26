@@ -1,5 +1,7 @@
 # CREEPSPREAD III (SDL2)
 
+ Diamond Hunter vs Deadly Monsters!
+
 High-speed, pixel-art arcade chaos with a tracker soundtrack.
  Dive into Creepspread III, a fast-paced retro action game that
  combines a unique tracker-music soundtrack with fluid, high-speed
@@ -22,6 +24,14 @@ Using the SDL2 libraries as a base, the game can now run as a desktop app or in 
 ![alt text](images/screenshot20250807-225315.png)
 
 ![alt text](images/screenshot20250807-225339.png)
+
+
+## First look at the game
+
+
+![Watch the video](https://img.youtube.com/vi/K8tYE7sSkcQ/hqdefault.jpg)
+
+Check out the gameplay demo on [YouTube](https://www.youtube.com/watch?v=K8tYE7sSkcQ).
 
 
 
@@ -78,13 +88,26 @@ $ make
 
 
 
+
+## Join the community
+
+Stay updated on the latest updates.
+
+https://discord.gg/c7AmpFu4
+
+
 ## Other resources
+
+
 
 ### Map Editor
 
 https://github.com/cfrankb/cs3-map-edit
 
-### Play online
+
+### Play Online
 
 https://cfrankb.itch.io/creepspread-iii
+
+
 
