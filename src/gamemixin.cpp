@@ -244,7 +244,7 @@ void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const Color color, bo
 }
 
 /**
- * @brief draw a tile into pixmap buffer. this a special variant that can draw partial tiles
+ * @brief draw a tile into a pixmap buffer. this a special variant that can draw partial tiles and perform dynamic recoloring
  *
  * @param bitmap
  * @param x
@@ -297,7 +297,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
 }
 
 /**
- * @brief draw a tile into pixmap buffer
+ * @brief draw a tile into pixmap buffer. this version is optimized for speed and can only draw complete tiles
  *
  * @param bitmap
  * @param x
@@ -779,7 +779,7 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         drawFont(bitmap, x, y + 3 * FONT_SIZE, t, WHITE);
     }
 
-    if (mode != CGame::MODE_GAMEOVER)
+    if (mode != CGame::MODE_GAMEOVER && _WIDTH >= MIN_WIDTH_FULL)
     {
         const char *hint = m_game->getHintText();
         const int x = (WIDTH - strlen(hint) * FONT_SIZE) / 2;
@@ -1682,7 +1682,7 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
         sprintf(tmp, "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
         return tmp;
     }
-    else if (m_currentEvent >= MSG0)
+    else if (m_currentEvent >= MSG0 && _WIDTH >= MIN_WIDTH_FULL)
     {
         scaleX = 1;
         scaleY = 1;
@@ -1810,10 +1810,10 @@ CFrame *CGameMixin::specialFrame(const sprite_t &sprite)
         CFrameSet &tiles = *m_tiles;
         return tiles[sprite.tileID];
     }
-    // safeguard
     int saim = 0;
     if (sprite.tileID < TILES_TOTAL_COUNT)
     {
+        // safeguard
         saim = sprite.aim;
         const TileDef &def = getTileDef(sprite.tileID);
         if (def.type == TYPE_DRONE)
@@ -1934,6 +1934,7 @@ void CGameMixin::drawGameStatus(CFrame &bitmap)
         {
             drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
         }
-        drawSugarMeter(bitmap, bx);
+        if (_WIDTH >= MIN_WIDTH_FULL)
+            drawSugarMeter(bitmap, bx);
     }
 }

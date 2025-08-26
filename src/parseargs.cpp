@@ -20,6 +20,7 @@
 #include <filesystem>
 #include "parseargs.h"
 #include "skills.h"
+#include "runtime.h"
 
 void showHelp()
 {
@@ -47,8 +48,8 @@ void initArgs(params_t &params)
     params.skill = SKILL_NORMAL;
     params.hardcore = false;
     params.verbose = false;
-    params.width = 320;
-    params.height = 240;
+    params.width = CRuntime::DEFAULT_WIDTH;
+    params.height = CRuntime::DEFAULT_HEIGHT;
 }
 
 void verbose(const char *path)
@@ -144,6 +145,12 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                 fprintf(stderr, "missing size for --window\n");
                 result = false;
             }
+        }
+        else if (strcmp(args[i], "--short") == 0)
+        {
+            printf("switching to short resolution\n");
+            params.width = 480 / 2;
+            params.height = 640 / 2;
         }
         else if (strcmp(args[i], "--hard") == 0)
         {

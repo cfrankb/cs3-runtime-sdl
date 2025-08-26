@@ -53,6 +53,11 @@ public:
     static int tickRate();
     void setWidth(int w);
     void setHeight(int h);
+    enum : int32_t
+    {
+        DEFAULT_WIDTH = 320,
+        DEFAULT_HEIGHT = 240,
+    };
 
 #ifdef USE_QFILE
 protected slots:
@@ -106,6 +111,7 @@ protected:
     {
         MAX_IDLE_CYCLES = 0x100,
         IDLE_ACTIVATION = 0x40,
+        MIN_WIDTH_FULL = 320,
     };
 
     enum Color : uint32_t
@@ -271,8 +277,8 @@ protected:
     int m_currentEvent;
     int m_eventCountdown;
     int m_timer;
-    int _WIDTH = 320;
-    int _HEIGHT = 240;
+    int _WIDTH = DEFAULT_WIDTH;
+    int _HEIGHT = DEFAULT_HEIGHT;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);

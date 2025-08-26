@@ -284,15 +284,19 @@ void CRuntime::doInput()
             keyReflector(event.key.keysym.sym, keyState);
             switch (event.key.keysym.sym)
             {
+            case SDLK_w:
             case SDLK_UP:
                 m_joyState[AIM_UP] = keyState;
                 continue;
+            case SDLK_s:
             case SDLK_DOWN:
                 m_joyState[AIM_DOWN] = keyState;
                 continue;
+            case SDLK_a:
             case SDLK_LEFT:
                 m_joyState[AIM_LEFT] = keyState;
                 continue;
+            case SDLK_d:
             case SDLK_RIGHT:
                 m_joyState[AIM_RIGHT] = keyState;
                 continue;
@@ -1442,7 +1446,7 @@ const std::string CRuntime::getSavePath() const
 void CRuntime::resizeGameMenu()
 {
     CMenu &menu = *m_gameMenu;
-    if (WIDTH > 400)
+    if (WIDTH > MIN_WIDTH_FULL)
     {
         menu.setScaleX(2);
     }
@@ -1466,8 +1470,8 @@ void CRuntime::toggleGameMenu()
     // addGamePlayOptions(menu);
     menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
         .setRole(MENU_ITEM_MUSIC_VOLUME);
-    menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
-        .setRole(MENU_ITEM_CAMERA);
+    // menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
+    //     .setRole(MENU_ITEM_CAMERA);
 }
 
 bool CRuntime::initControllers()
