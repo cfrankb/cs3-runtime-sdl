@@ -1422,7 +1422,7 @@ bool CGameMixin::handleInputString(char *inputDest, const size_t limit)
         }
         m_keyRepeters[k] = KEY_REPETE_DELAY;
         char s[2] = {c, 0};
-        strlcat(inputDest, s, limit);
+        strncat(inputDest, s, limit);
     }
     return false;
 }
