@@ -102,7 +102,8 @@ private:
     int m_skill;
     int m_resolution = 0;
     int m_fullscreen = 0;
-    int m_volume = 10;
+    int m_musicVolume = 10;
+    int m_sndVolume = 10;
     int m_xAxisSensitivity = 10;
     int m_yAxisSensitivity = 10;
     bool m_verbose;
@@ -140,6 +141,7 @@ private:
         MENU_ITEM_HISCORES,
         MENU_ITEM_MUSIC,
         MENU_ITEM_MUSIC_VOLUME,
+        MENU_ITEM_SND_VOLUME,
         MENU_ITEM_OPTIONS,
         MENU_ITEM_X_AXIS_SENTIVITY,
         MENU_ITEM_Y_AXIS_SENTIVITY,

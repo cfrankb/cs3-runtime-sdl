@@ -24,7 +24,6 @@
 #include "shared/Frame.h"
 #include "shared/FrameSet.h"
 #include "shared/FileWrap.h"
-#include "shared/interfaces/ISound.h"
 #include "shared/implementers/mu_sdl.h"
 #include "shared/implementers/sn_sdl.h"
 #include "chars.h"
@@ -1462,6 +1461,13 @@ void CRuntime::manageMenu(CMenu &menu)
                               static_cast<int>(MUSIC_VOLUME_MAX));
         m_music->setVolume(volume);
     }
+    else if (item.role() == MENU_ITEM_SND_VOLUME &&
+             oldValue != item.value())
+    {
+        int volume = std::min(item.value() * MUSIC_VOLUME_STEPS,
+                              static_cast<int>(MUSIC_VOLUME_MAX));
+        m_sound->setVolume(volume);
+    }
     else if (item.role() == MENU_ITEM_RESOLUTION &&
              oldValue != item.value())
     {
@@ -1518,7 +1524,12 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+    menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
+        .setRole(MENU_ITEM_MUSIC_VOLUME);
+    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
+        .setRole(MENU_ITEM_SND_VOLUME);
+#else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
 #endif
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
@@ -1595,8 +1606,10 @@ CMenu &CRuntime::initOptionMenu()
     menu.clear();
     // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
     //     .setRole(MENU_ITEM_MUSIC);
-    menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
+    menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
         .setRole(MENU_ITEM_MUSIC_VOLUME);
+    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
+        .setRole(MENU_ITEM_SND_VOLUME);
     menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
         .setRole(MENU_ITEM_CAMERA);
 #ifndef __EMSCRIPTEN__

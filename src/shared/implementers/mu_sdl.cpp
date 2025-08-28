@@ -21,6 +21,9 @@
 #include "mu_sdl.h"
 #include "SDL2/SDL.h"
 #include "../FileWrap.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 uint8_t CMusicSDL::m_type = static_cast<uint8_t>(CMusicSDL::TYPE_NONE);
 bool CMusicSDL::m_playing = false;
@@ -37,7 +40,7 @@ CMusicSDL::CMusicSDL()
         fprintf(stderr, "SDL_init failed: %s\n", SDL_GetError());
     }
 
-    if (Mix_OpenAudio(22050, AUDIO_S16SYS, 2, 8192) < 0)
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 4096) < 0)
     {
         fprintf(stderr, "Mix_OpenAudio failed: %s\n", SDL_GetError());
         m_valid = false;
@@ -78,6 +81,10 @@ bool CMusicSDL::open(const char *file)
 
     return valid;
 }
+
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
 bool CMusicSDL::play(int loop)
 {
     m_playing = true;

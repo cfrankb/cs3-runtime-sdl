@@ -85,7 +85,11 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
     else
     {
         snd->chunk = Mix_LoadWAV_RW(rw, 1);
-        if (!snd->chunk)
+        if (snd->chunk)
+        {
+            Mix_VolumeChunk(snd->chunk, m_volume);
+        }
+        else
         {
             fail = true;
             printf("Mix_LoadWAV_RW Failed: %s\n", Mix_GetError());
@@ -176,4 +180,29 @@ bool CSndSDL::has_sound(unsigned int uid)
 const char *CSndSDL::signature() const
 {
     return "lgck-sdl-sound";
+}
+
+/**
+ * @brief Set volume level (0-128)
+ *
+ * @param v
+ */
+void CSndSDL::setVolume(int v)
+{
+    m_volume = v;
+    for (auto &[key, val] : m_sounds)
+    {
+        if (val && val->chunk)
+            Mix_VolumeChunk(val->chunk, m_volume);
+    }
+}
+
+/**
+ * @brief Get volume level (0-128)
+ *
+ * @return int
+ */
+int CSndSDL::volume() const
+{
+    return m_volume;
 }

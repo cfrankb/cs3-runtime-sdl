@@ -40,6 +40,8 @@ public:
     bool isValid() override;
     bool has_sound(unsigned int uid) override;
     const char *signature() const override;
+    void setVolume(int v) override;
+    int volume() const override;
 
     enum
     {
@@ -53,4 +55,5 @@ public:
 
 protected:
     bool m_valid;
+    int m_volume = MIX_MAX_VOLUME;
 };

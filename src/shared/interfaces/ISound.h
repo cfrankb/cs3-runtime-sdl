@@ -31,6 +31,8 @@ public:
     virtual bool isValid() = 0;
     virtual bool has_sound(unsigned int uid) = 0;
     virtual const char *signature() const = 0;
+    virtual void setVolume(int v) = 0;
+    virtual int volume() const = 0;
 };
 
 inline ISound::~ISound() {}
