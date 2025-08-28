@@ -97,6 +97,7 @@ protected:
         PLAYER_FRAMES = 8,
         PLAYER_HIT_FRAME = 7,
         PLAYER_STD_FRAMES = 7,
+        PLAYER_DOWN_INDEX = 8,
         ANIMZ_INSECT1_FRAMES = 8,
         INSECT1_MAX_OFFSET = 7,
         CAMERA_MODE_STATIC = 0,
@@ -112,6 +113,14 @@ protected:
         MAX_IDLE_CYCLES = 0x100,
         IDLE_ACTIVATION = 0x40,
         MIN_WIDTH_FULL = 320,
+    };
+
+    enum ColorMask : uint8_t
+    {
+        COLOR_NOCHANGE,
+        COLOR_FADE,
+        COLOR_INVERTED,
+        COLOR_GRAYSCALE
     };
 
     enum Color : uint32_t
@@ -292,9 +301,9 @@ protected:
     inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
     inline void drawSugarMeter(CFrame &bitmap, const int bx);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const bool inverted = false, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
-    inline CFrame *tile2Frame(const uint8_t tileID, bool &inverted, std::unordered_map<uint32_t, uint32_t> *&colorMap);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    inline CFrame *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void drawHealthBar(CFrame &bitmap);
     void drawGameStatus(CFrame &bitmap);
     CFrame *specialFrame(const sprite_t &sprite);

@@ -170,11 +170,10 @@ private:
     bool fetchFile(const std::string &path, char **dest, const bool terminator);
     void parseHelp(char *text);
     void manageOptionScreen() override;
-    void initOptionMenu();
+    CMenu &initOptionMenu();
     int findResolutionIndex();
     void resize(int w, int h);
     void listResolutions(int displayIndex = 0);
     void createResolutionList();
-    void addGamePlayOptions(CMenu &menu);
     void resizeGameMenu();
 };

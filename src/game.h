@@ -30,7 +30,7 @@ class ISound;
 #define ATTR_WAIT 0xe0        // 0xe0 monster wait
 #define ATTR_FREEZE_TRAP 0xe1 // 0xe1 freeze trap
 #define ATTR_TRAP 0xe2        // 0xe2 trap
-#define ATTR_MSG0 0xf0        // 0xf0
+#define ATTR_MSG0 0xf0        // 0xf0 .. 0xff message string
 
 class CGame
 {

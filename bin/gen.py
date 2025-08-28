@@ -34,7 +34,7 @@ def prepare_deps(deps, fname):
     return '\n'.join(lines)
 
 
-def get_deps_blocks(paths, excluded):
+def get_deps_blocks(paths, excluded, run_cmd):
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
@@ -48,7 +48,7 @@ def get_deps_blocks(paths, excluded):
     lines.append(f'$(TARGET): $(DEPS)')
     lines.append(
         f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)' \
-        f'&& echo "to run app: $(TARGET)"'
+        f'&& echo "to run app: {run_cmd}"'
     )
     deps_blocks.append('\n'.join(lines))
     lines = []
@@ -111,6 +111,7 @@ def main():
     excluded = []
     bname = 'cs3-runtime'
     strip = ''
+    run_cmd = '$(TARGET)'
     if params.tests:
         excluded += ['main.cpp']
         paths += ['tests/*.cpp']
@@ -163,6 +164,7 @@ def main():
         print("type `make` to generare binary.")
         ext = '.o'
     elif params.action == 'emsdl2':
+        run_cmd = 'emrun --hostname 0.0.0.0 $(TARGET)'
         if params.tests:
             print("tests unsupported for this config")
         vars = [
@@ -178,8 +180,7 @@ def main():
         ext = '.o'
     print("type `make clean` to delete the content of the build folder.")
 
-
-    deps_blocks, objs = get_deps_blocks(paths, excluded)
+    deps_blocks, objs = get_deps_blocks(paths, excluded, run_cmd)
     vars.append(f'DEPS={objs}')
     vars.append(f'EXT={ext}')
     with open('Makefile', 'w') as tfile:

@@ -121,21 +121,7 @@ void CRuntime::paint()
         m_bitmap = new CFrame(WIDTH, HEIGHT);
     }
 
-    // CFrame mapped to write directly to texture buffer
-    uint32_t *oldBuffer;
-    void *pixels;
-    int pitch;
     CFrame &bitmap = *m_bitmap;
-    if (SDL_LockTexture(m_app.texture, nullptr, &pixels, &pitch) == 0)
-    {
-        oldBuffer = bitmap.swapBuffer(static_cast<uint32_t *>(pixels));
-    }
-    else
-    {
-        fprintf(stderr, "Failed to lock texture: %s\n", SDL_GetError());
-        return;
-    }
-
     bitmap.fill(BLACK);
     switch (m_game->mode())
     {
@@ -172,18 +158,13 @@ void CRuntime::paint()
         break;
     };
 
-    //    SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
-    SDL_UnlockTexture(m_app.texture);
-
+    SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
     int width;
     int height;
     SDL_GetWindowSize(m_app.window, &width, &height);
     SDL_Rect rectDest{0, 0, width, height};
     SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, &rectDest);
     SDL_RenderPresent(m_app.renderer);
-
-    // restore bitmap original CFrame buffer
-    bitmap.swapBuffer(oldBuffer);
 }
 
 bool CRuntime::initSDL()
@@ -1051,7 +1032,8 @@ void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
     {
         for (int x = 0; x < title.len(); ++x)
         {
-            if (baseX + x < bitmap.len())
+            const int xx = baseX + x;
+            if (xx < bitmap.len() && xx >= 0)
                 bitmap.at(baseX + x, y + offsetY) = title.at(x, y);
         }
     }
@@ -1138,6 +1120,10 @@ void CRuntime::setupTitleScreen()
     m_game->setMode(CGame::MODE_TITLE);
 }
 
+/**
+ * @brief Take a screenshot of the game canvas and save it to a file
+ *
+ */
 void CRuntime::takeScreenshot()
 {
     CFrame bitmap(WIDTH, HEIGHT);
@@ -1179,6 +1165,13 @@ void CRuntime::takeScreenshot()
     delete[] png;
 }
 
+/**
+ * @brief Evaluate a string to determine if it contains a True value
+ *
+ * @param value
+ * @return true
+ * @return false
+ */
 bool CRuntime::isTrue(const std::string &value) const
 {
     auto iequals = [](const std::string &a,
@@ -1196,6 +1189,10 @@ bool CRuntime::isTrue(const std::string &value) const
            (value == "1");
 }
 
+/**
+ * @brief Initialize options from config
+ *
+ */
 void CRuntime::initOptions()
 {
     if (isTrue(m_config["hiscore_enabled"]))
@@ -1331,10 +1328,20 @@ void CRuntime::manageTitleScreen()
     manageMenu(*m_mainMenu);
 }
 
+/**
+ * @brief handles the game menu
+ *
+ */
+
 void CRuntime::manageGameMenu()
 {
     manageMenu(*m_gameMenu);
 }
+
+/**
+ * @brief handles the option screen
+ *
+ */
 
 void CRuntime::manageOptionScreen()
 {
@@ -1423,7 +1430,10 @@ void CRuntime::manageMenu(CMenu &menu)
         }
         else if (item.role() == MENU_ITEM_OPTIONS)
         {
-            initOptionMenu();
+            if (menu.id() == MENUID_MAINMENU)
+                initOptionMenu().addItem(CMenuItem("RETURN TO MAIN MENU", MENU_ITEM_RETURN_MAIN));
+            else if (menu.id() == MENUID_GAMEMENU)
+                initOptionMenu().addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
             m_game->setMode(CGame::MODE_OPTIONS);
             m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
         }
@@ -1436,6 +1446,7 @@ void CRuntime::manageMenu(CMenu &menu)
         else if (item.role() == MENU_ITEM_RETURN_TO_GAME)
         {
             m_gameMenuActive = false;
+            m_game->setMode(CGame::MODE_PLAY);
         }
     }
 
@@ -1507,13 +1518,10 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-    // menu.addItem(CMenuItem("%s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
-    //     .setRole(MENU_ITEM_FULLSCREEN);
+#ifndef __EMSCRIPTEN__
+    menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
+#endif
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
-    //  menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
-    //      .setRole(MENU_ITEM_MUSIC_VOLUME);
-    //  menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
-    //      .setRole(MENU_ITEM_CAMERA);
 }
 
 bool CRuntime::initControllers()
@@ -1579,25 +1587,18 @@ void CRuntime::drawOptions(CFrame &bitmap)
     drawMenu(bitmap, menu, 48, menuBaseY);
 }
 
-void CRuntime::initOptionMenu()
+CMenu &CRuntime::initOptionMenu()
 {
     CMenu &menu = *m_optionMenu;
     menu.setScaleY(2);
     menu.setScaleX(1);
     menu.clear();
-    addGamePlayOptions(menu);
-    menu.addItem(CMenuItem("RETURN TO MAIN MENU", MENU_ITEM_RETURN_MAIN));
-}
-
-void CRuntime::addGamePlayOptions(CMenu &menu)
-{
     // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
     //     .setRole(MENU_ITEM_MUSIC);
     menu.addItem(CMenuItem("VOLUME: %d%%", 0, 10, &m_volume, 0, 10))
         .setRole(MENU_ITEM_MUSIC_VOLUME);
     menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
         .setRole(MENU_ITEM_CAMERA);
-
 #ifndef __EMSCRIPTEN__
     char tmp[16];
     std::vector<std::string> resolutions;
@@ -1611,16 +1612,20 @@ void CRuntime::addGamePlayOptions(CMenu &menu)
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
-
     if (m_gameControllers.size() != 0)
     {
-        menu.addItem(CMenuItem("X-AXIS RANGE: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
+        menu.addItem(CMenuItem("X-AXIS SENSITIVITY: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
-        menu.addItem(CMenuItem("Y-AXIS RANGE: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
+        menu.addItem(CMenuItem("Y-AXIS SENSITIVITY: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_Y_AXIS_SENTIVITY);
     }
+    return menu;
 }
 
+/**
+ * @brief Create a list of available resolutions
+ *
+ */
 void CRuntime::createResolutionList()
 {
     const int displayIndex = 0;
@@ -1651,6 +1656,11 @@ void CRuntime::createResolutionList()
     }
 }
 
+/**
+ * @brief Find resolution index in list of available resolutions
+ *
+ * @return int
+ */
 int CRuntime::findResolutionIndex()
 {
     const int w = _WIDTH * 2;
@@ -1670,6 +1680,12 @@ int CRuntime::findResolutionIndex()
     return i;
 }
 
+/**
+ * @brief resize canvas. the provided values will be divided by 2
+ *
+ * @param w window width
+ * @param h window height
+ */
 void CRuntime::resize(int w, int h)
 {
     if (m_verbose)
@@ -1697,6 +1713,11 @@ void CRuntime::resize(int w, int h)
     m_app.windowedHeigth = h;
 }
 
+/**
+ * @brief list all available resolution
+ *
+ * @param displayIndex
+ */
 void CRuntime::listResolutions(int displayIndex)
 {
     int numModes = SDL_GetNumDisplayModes(displayIndex);
@@ -1719,6 +1740,11 @@ void CRuntime::listResolutions(int displayIndex)
     }
 }
 
+/**
+ * @brief Enable or disable verbose
+ *
+ * @param enable
+ */
 void CRuntime::setVerbose(bool enable)
 {
     m_verbose = enable;
