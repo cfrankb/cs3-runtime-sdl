@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include <cstdio>
 #include <unistd.h>
 #include "mu_sdl.h"
@@ -23,10 +24,22 @@
 #include "../FileWrap.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+EMSCRIPTEN_KEEPALIVE
+void triggerStream()
+{
+    emscripten_run_script("startAudio()");
+}
+
 #endif
 
 uint8_t CMusicSDL::m_type = static_cast<uint8_t>(CMusicSDL::TYPE_NONE);
 bool CMusicSDL::m_playing = false;
+
+static bool endswith(const char *str, const char *end)
+{
+    const char *t = strstr(str, end);
+    return t && strcmp(t, end) == 0;
+}
 
 CMusicSDL::CMusicSDL()
 {
@@ -59,6 +72,9 @@ CMusicSDL::~CMusicSDL()
     close();
 }
 
+#ifdef __EMSCRIPTEN__
+EMSCRIPTEN_KEEPALIVE
+#endif
 bool CMusicSDL::open(const char *file)
 {
     if (m_type != TYPE_NONE)
@@ -67,6 +83,14 @@ bool CMusicSDL::open(const char *file)
     }
     bool valid = false;
 
+#ifdef __EMSCRIPTEN__
+    if (!endswith(file, ".xm"))
+    {
+        m_filepath = file;
+        m_type = TYPE_STREAM;
+        return true;
+    }
+#endif
     m_data.mixData = Mix_LoadMUS(file);
     if (m_data.mixData)
     {
@@ -78,7 +102,6 @@ bool CMusicSDL::open(const char *file)
         m_type = TYPE_NONE;
         fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
     }
-
     return valid;
 }
 
@@ -88,11 +111,21 @@ EMSCRIPTEN_KEEPALIVE
 bool CMusicSDL::play(int loop)
 {
     m_playing = true;
+
     if (m_type == TYPE_OGG)
     {
         Mix_PlayMusic(m_data.mixData, loop);
         return true;
     }
+#ifdef __EMSCRIPTEN__
+    else if (m_type == TYPE_STREAM)
+    {
+        char tmp[128];
+        sprintf(tmp, "startAudio('%s')", m_filepath.c_str());
+        emscripten_run_script(tmp);
+        return true;
+    }
+#endif
     return false;
 }
 
@@ -102,6 +135,12 @@ void CMusicSDL::stop()
     {
         Mix_HaltMusic();
     }
+#ifdef __EMSCRIPTEN__
+    else if (m_type == TYPE_STREAM)
+    {
+        emscripten_run_script("stopAudio()");
+    }
+#endif
     m_playing = false;
 }
 
@@ -113,6 +152,10 @@ void CMusicSDL::close()
     {
         Mix_FreeMusic(m_data.mixData);
         m_data.mixData = nullptr;
+    }
+    else if (m_type == TYPE_STREAM)
+    {
+        m_filepath = "";
     }
     m_type = TYPE_NONE;
 }

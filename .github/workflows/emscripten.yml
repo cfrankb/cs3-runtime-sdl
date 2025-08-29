@@ -31,8 +31,10 @@ jobs:
 
     - name: Build your app
       run: |
-        python3 bin/gen.py emsdl2 -s
         mkdir -p build/cs3
+        cp data/musics/*.ogg build/cs3
+        python3 bin/gen.py emsdl2 -s
+        rm data/musics/*.ogg
         make
         cp build/cs3v2.* build/cs3
         cp LICENSE build/cs3

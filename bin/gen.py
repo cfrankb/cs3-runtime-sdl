@@ -59,7 +59,7 @@ def get_deps_blocks(paths, excluded, run_cmd):
     lines.append("\trm -rf $(TARGET)")
     lines.append("")
     lines.append('run:')
-    lines.append("\t$(TARGET)")
+    lines.append(f"\t{run_cmd}")
     lines.append("")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
@@ -173,7 +173,7 @@ def main():
             'LIBS=-lopenal -lidbfs.js',
             'LDFLAGS=',
             '''CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -sSDL2_MIXER_FORMATS='["ogg","mod"]' -O3''',
-            f'PARGS={strip} --preload-file data --emrun -O3 -sWASM=1 -sALLOW_MEMORY_GROWTH  -sINITIAL_MEMORY=64MB -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main',
+            f'''PARGS={strip} --preload-file data --emrun -O3 -s ASSERTIONS=1 -s MODULARIZE=1 -s EXPORT_NAME="MyApp" -sWASM=1 -sALLOW_MEMORY_GROWTH  -sINITIAL_MEMORY=64MB -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main,_malloc,_free''',
             'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE=--shell-file src/template/body.html'
         ]
         print("type `emmake make` to generare binary.")

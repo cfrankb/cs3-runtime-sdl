@@ -37,7 +37,6 @@
 #include <emscripten/html5.h>
 const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
-
 #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
@@ -299,8 +298,8 @@ void CRuntime::doInput()
             {
                 setupTitleScreen();
 #ifdef __EMSCRIPTEN__
-                EM_ASM(
-                    enableButtons(););
+                // EM_ASM(
+                //       enableButtons(););
 #endif
                 initMusic();
                 initSounds();
@@ -604,6 +603,9 @@ void CRuntime::initMusic()
     m_music = new CMusicSDL();
     openMusicForLevel(m_game->level());
     printf("volume: %d\n", m_music->getVolume());
+#ifdef __EMSCRIPTEN__
+    // triggerStream();
+#endif
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -822,7 +824,13 @@ void CRuntime::initSounds()
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const std::string music = m_prefix + std::string("musics/") + m_musicFiles[i % m_musicFiles.size()];
+    const std::string filename = m_musicFiles[i % m_musicFiles.size()];
+#ifdef __EMSCRIPTEN__
+    const std::string music = endswith(filename.c_str(), ".xm") ? m_prefix + std::string("musics/") + filename : filename;
+#else
+    const std::string music = m_prefix + std::string("musics/") + filename;
+#endif
+
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
