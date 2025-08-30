@@ -46,6 +46,8 @@ public:
     CMenu *menu() const;
     CMenuItem &setRole(const int action = ROLE_NONE);
     std::string str() const;
+    CMenuItem &setUserData(const int userData);
+    int userData() const;
 
 private:
     std::vector<std::string> m_options;
@@ -58,5 +60,6 @@ private:
     int m_role = ROLE_NONE;
     int m_start = 1;
     int m_factor = 1;
+    int m_userdata = 0;
     CMenu *m_menu = nullptr;
 };

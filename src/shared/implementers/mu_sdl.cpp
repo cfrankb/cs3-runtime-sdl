@@ -24,12 +24,6 @@
 #include "../FileWrap.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-EMSCRIPTEN_KEEPALIVE
-void triggerStream()
-{
-    emscripten_run_script("startAudio()");
-}
-
 #endif
 
 uint8_t CMusicSDL::m_type = static_cast<uint8_t>(CMusicSDL::TYPE_NONE);
@@ -111,7 +105,6 @@ EMSCRIPTEN_KEEPALIVE
 bool CMusicSDL::play(int loop)
 {
     m_playing = true;
-
     if (m_type == TYPE_OGG)
     {
         Mix_PlayMusic(m_data.mixData, loop);
@@ -120,9 +113,9 @@ bool CMusicSDL::play(int loop)
 #ifdef __EMSCRIPTEN__
     else if (m_type == TYPE_STREAM)
     {
-        char tmp[128];
-        sprintf(tmp, "startAudio('%s')", m_filepath.c_str());
-        emscripten_run_script(tmp);
+        EM_ASM({
+            const music = UTF8ToString($0);
+            startAudio(music); }, m_filepath.c_str());
         return true;
     }
 #endif
@@ -138,7 +131,9 @@ void CMusicSDL::stop()
 #ifdef __EMSCRIPTEN__
     else if (m_type == TYPE_STREAM)
     {
-        emscripten_run_script("stopAudio()");
+        EM_ASM({
+            stopAudio();
+        });
     }
 #endif
     m_playing = false;
@@ -175,8 +170,11 @@ int CMusicSDL::getVolume()
     return Mix_VolumeMusic(-1);
 }
 
-void CMusicSDL::setVolume(int v)
+void CMusicSDL::setVolume(int value)
 {
     // MIX_MAX_VOLUME 128
-    Mix_VolumeMusic(v);
+    Mix_VolumeMusic(value);
+#ifdef __EMSCRIPTEN__
+    EM_ASM({ setVolume($0); }, value);
+#endif
 }

@@ -62,6 +62,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
     m_optionMenu = new CMenu(MENUID_OPTIONMENU);
+    m_userMenu = new CMenu(MENUID_USERS);
     m_title = nullptr;
 }
 
@@ -110,6 +111,11 @@ CRuntime::~CRuntime()
     {
         delete m_optionMenu;
     }
+
+    if (m_userMenu)
+    {
+        delete m_userMenu;
+    }
 }
 
 void CRuntime::paint()
@@ -153,6 +159,9 @@ void CRuntime::paint()
     case CGame::MODE_OPTIONS:
         drawOptions(bitmap);
     case CGame::MODE_IDLE:
+        break;
+    case CGame::MODE_USERSELECT:
+        drawUserMenu(bitmap);
         break;
     };
 
@@ -296,14 +305,10 @@ void CRuntime::doInput()
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                setupTitleScreen();
-#ifdef __EMSCRIPTEN__
-                // EM_ASM(
-                //       enableButtons(););
-#endif
                 initMusic();
                 initSounds();
                 initControllers();
+                setupTitleScreen();
             }
             break;
 
@@ -484,7 +489,7 @@ void CRuntime::preloadAssets()
     CFrameSet **frameSets[] = {
         &m_tiles,
         &m_animz,
-        &m_annie,
+        &m_users,
         &m_title,
     };
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
@@ -591,21 +596,18 @@ void CRuntime::preRun()
     }
     else
     {
-        setupTitleScreen();
         initMusic();
         initSounds();
         initControllers();
+        setupTitleScreen();
     }
 }
 
 void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
-    openMusicForLevel(m_game->level());
+    m_music->setVolume(MIX_MAX_VOLUME);
     printf("volume: %d\n", m_music->getVolume());
-#ifdef __EMSCRIPTEN__
-    // triggerStream();
-#endif
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -825,12 +827,16 @@ void CRuntime::initSounds()
 void CRuntime::openMusicForLevel(int i)
 {
     const std::string filename = m_musicFiles[i % m_musicFiles.size()];
+    openMusic(filename);
+}
+
+void CRuntime::openMusic(const std::string &filename)
+{
 #ifdef __EMSCRIPTEN__
     const std::string music = endswith(filename.c_str(), ".xm") ? m_prefix + std::string("musics/") + filename : filename;
 #else
     const std::string music = m_prefix + std::string("musics/") + filename;
 #endif
-
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
@@ -888,6 +894,10 @@ bool CRuntime::parseConfig(const char *filename)
             else if (section == "assets")
             {
                 m_assetFiles.push_back(p);
+            }
+            else if (section == "users")
+            {
+                m_userNames.push_back(p);
             }
             else if (section == "config")
             {
@@ -979,19 +989,30 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
     {
         const CMenuItem &item = menu.at(i);
         const std::string &text = item.str();
-        const int x = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
-        Color color = static_cast<int>(i) == menu.index() ? YELLOW : BLUE;
+        const int bx = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
+        const bool selected = static_cast<int>(i) == menu.index();
+        Color color = selected ? YELLOW : BLUE;
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
         }
-        drawFont(bitmap, x, baseY + i * spacingY, text.c_str(), color, CLEAR, scaleX, scaleY);
+        int x = bx;
+        const int y = baseY + i * spacingY;
+        if (item.role() == MENU_ITEM_SELECT_USER)
+        {
+            const uint16_t animeOffset = selected ? (m_ticks / 3) & 0x1f : 0;
+            const CFrameSet &users = *m_users;
+            CFrame &frame = *users[PLAYER_TOTAL_FRAMES * item.userData() + PLAYER_DOWN_INDEX + animeOffset];
+            drawTile(bitmap, x, y, frame, false);
+            x += 32;
+        }
+        drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
         if (static_cast<int>(i) == menu.index())
         {
             char tmp[2];
             tmp[0] = CHARS_TRIGHT;
             tmp[1] = '\0';
-            drawFont(bitmap, 32, baseY + i * spacingY, tmp, RED, CLEAR, scaleX, scaleY);
+            drawFont(bitmap, 32, y, tmp, RED, CLEAR, scaleX, scaleY);
         }
     }
 }
@@ -1125,6 +1146,9 @@ void CRuntime::setupTitleScreen()
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
 #endif
     m_game->setMode(CGame::MODE_TITLE);
+
+    if (m_config["theme"] != "")
+        openMusic(m_config["theme"]);
 }
 
 /**
@@ -1355,6 +1379,11 @@ void CRuntime::manageOptionScreen()
     manageMenu(*m_optionMenu);
 }
 
+void CRuntime::manageUserMenu()
+{
+    manageMenu(*m_userMenu);
+}
+
 void CRuntime::manageMenu(CMenu &menu)
 {
     CGame &game = *m_game;
@@ -1403,17 +1432,18 @@ void CRuntime::manageMenu(CMenu &menu)
                 return;
             }
 
-            if (game.level() != m_startLevel)
-            {
-                game.setLevel(m_startLevel);
-                openMusicForLevel(m_startLevel);
-            }
+            game.setLevel(m_startLevel);
+            // openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
-            game.loadLevel(CGame::MODE_LEVEL_INTRO);
-            centerCamera();
+            // game.loadLevel(CGame::MODE_LEVEL_INTRO);
+            // centerCamera();
             game.setSkill(m_skill);
             game.resetStats();
-            startCountdown(COUNTDOWN_INTRO);
+            // startCountdown(COUNTDOWN_INTRO);
+            initUserMenu();
+            game.setMode(CGame::MODE_USERSELECT);
+            clearKeyStates();
+            m_optionCooldown = 8;
         }
         else if (item.role() == MENU_ITEM_HISCORES)
         {
@@ -1454,6 +1484,15 @@ void CRuntime::manageMenu(CMenu &menu)
         {
             m_gameMenuActive = false;
             m_game->setMode(CGame::MODE_PLAY);
+        }
+        else if (item.role() == MENU_ITEM_SELECT_USER)
+        {
+            game.setUserID(item.userData());
+            openMusicForLevel(m_startLevel);
+            m_gameMenuActive = false;
+            game.loadLevel(CGame::MODE_LEVEL_INTRO);
+            centerCamera();
+            startCountdown(COUNTDOWN_INTRO);
         }
     }
 
@@ -1532,14 +1571,7 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-#ifdef __EMSCRIPTEN__
-    menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
-    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
-        .setRole(MENU_ITEM_SND_VOLUME);
-#else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
-#endif
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
 }
 
@@ -1612,11 +1644,9 @@ CMenu &CRuntime::initOptionMenu()
     menu.setScaleY(2);
     menu.setScaleX(1);
     menu.clear();
-    // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
-    //     .setRole(MENU_ITEM_MUSIC);
     menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
         .setRole(MENU_ITEM_MUSIC_VOLUME);
-    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
+    menu.addItem(CMenuItem("SOUND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
         .setRole(MENU_ITEM_SND_VOLUME);
     menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
         .setRole(MENU_ITEM_CAMERA);
@@ -1639,6 +1669,21 @@ CMenu &CRuntime::initOptionMenu()
             .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
         menu.addItem(CMenuItem("Y-AXIS SENSITIVITY: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_Y_AXIS_SENTIVITY);
+    }
+    return menu;
+}
+
+CMenu &CRuntime::initUserMenu()
+{
+    CMenu &menu = *m_userMenu;
+    menu.clear();
+    menu.setCurrent(0);
+    menu.setScaleY(2);
+    menu.setScaleX(1);
+
+    for (size_t i = 0; i < m_userNames.size(); ++i)
+    {
+        menu.addItem(CMenuItem(m_userNames[i].c_str(), MENU_ITEM_SELECT_USER)).setUserData(static_cast<int>(i));
     }
     return menu;
 }
@@ -1779,4 +1824,11 @@ void CRuntime::notifyExitFullScreen()
 {
     m_app.isFullscreen = false;
     m_fullscreen = m_app.isFullscreen;
+}
+
+void CRuntime::drawUserMenu(CFrame &bitmap)
+{
+    int baseY = (_HEIGHT - m_userMenu->height()) / 2;
+    drawFont(bitmap, 32, baseY - 32, "SELECT CHARACTER", GRAY, BLACK, 1, 2);
+    drawMenu(bitmap, *m_userMenu, 48, baseY);
 }

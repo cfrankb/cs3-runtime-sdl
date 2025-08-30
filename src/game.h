@@ -48,6 +48,7 @@ public:
         MODE_TITLE,
         MODE_TIMEOUT,
         MODE_OPTIONS,
+        MODE_USERSELECT,
     };
 
     enum : uint32_t
@@ -111,6 +112,8 @@ public:
     bool isFrozen() const;
     int maxHealth() const;
     static void destroy();
+    int getUserID() const;
+    void setUserID(const int userID) const;
 
 private:
     enum
@@ -179,6 +182,5 @@ private:
     void generateMapReport(MapReport &report);
     CGameStats &stats();
     static CMap m_map;
-
     friend class CGameMixin;
 };

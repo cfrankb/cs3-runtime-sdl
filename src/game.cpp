@@ -1480,3 +1480,13 @@ int CGame::maxHealth() const
     const auto skill = m_gameStats->get(S_SKILL);
     return static_cast<int>(MAX_HEALTH) / (1 + 1 * skill);
 }
+
+int CGame::getUserID() const
+{
+    return m_gameStats->get(S_USER);
+}
+
+void CGame::setUserID(const int userID) const
+{
+    m_gameStats->set(S_USER, userID);
+}

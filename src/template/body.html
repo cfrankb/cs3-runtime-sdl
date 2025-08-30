@@ -182,7 +182,6 @@
         })(),
         canvas: (() => {
           var canvas = document.getElementById("canvas");
-
           // As a default initial behavior, pop up an alert when webgl context is lost. To make your
           // application robust, you may want to override this behavior before shipping!
           // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
@@ -194,7 +193,6 @@
             },
             false
           );
-
           return canvas;
         })(),
         setStatus: (text) => {
@@ -222,10 +220,10 @@
           statusElement.innerHTML = text;
         },
         totalDependencies: 0,
-        monitorRunDependencies: (left) => {
+        /*monitorRunDependencies: (left) => {
           this.totalDependencies = Math.max(this.totalDependencies, left);
-          /*
-          Module.setStatus(
+          if (this.setStatus)
+          this.setStatus(
             left
               ? "Preparing... (" +
                   (this.totalDependencies - left) +
@@ -234,9 +232,7 @@
                   ")"
               : "All downloads complete."
           );
-          */
-        },
-
+        },*/
     }).then(Module => {
       // You can store Module globally if needed
       window.myAppModule = Module;
@@ -251,12 +247,19 @@
     });
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const gainNode = audioCtx.createGain(); // Volume controller
+    gainNode.connect(audioCtx.destination);
     let source;
     document.addEventListener('touchstart', () => {
     if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume();
     }
     }, { once: true });
+
+
+    function setVolume(value) {
+       gainNode.gain.value = value / 128; // Value between 0.0 and 1.0
+    }
 
     function stopAudio() {
        if (source) {
@@ -274,7 +277,7 @@
         .then(buffer => {
           source = audioCtx.createBufferSource();
           source.buffer = buffer;
-          source.connect(audioCtx.destination);
+          source.connect(gainNode); // Route through gain node
           source.loop = true;
           source.start(0);
         });

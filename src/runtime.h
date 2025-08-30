@@ -83,6 +83,7 @@ private:
     void manageTitleScreen() override;
     void toggleGameMenu() override;
     void manageGameMenu() override;
+    void manageUserMenu() override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -92,6 +93,7 @@ private:
     std::vector<std::string> m_musicFiles;
     std::vector<std::string> m_soundFiles;
     std::vector<std::string> m_assetFiles;
+    std::vector<std::string> m_userNames;
     std::string m_prefix = "data/";
     std::string m_workspace = "";
     CFrameSet *m_title;
@@ -110,6 +112,7 @@ private:
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
+    CMenu *m_userMenu = nullptr;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
 
@@ -133,6 +136,7 @@ private:
         MENUID_MAINMENU = 0x10,
         MENUID_GAMEMENU = 0x11,
         MENUID_OPTIONMENU,
+        MENUID_USERS,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -150,6 +154,7 @@ private:
         MENU_ITEM_RETURN_MAIN,
         MENU_ITEM_CAMERA,
         MENU_ITEM_RETURN_TO_GAME,
+        MENU_ITEM_SELECT_USER,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
@@ -173,9 +178,12 @@ private:
     void parseHelp(char *text);
     void manageOptionScreen() override;
     CMenu &initOptionMenu();
+    CMenu &initUserMenu();
     int findResolutionIndex();
     void resize(int w, int h);
     void listResolutions(int displayIndex = 0);
     void createResolutionList();
     void resizeGameMenu();
+    void openMusic(const std::string &filename);
+    void drawUserMenu(CFrame &bitmap);
 };

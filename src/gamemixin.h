@@ -98,14 +98,24 @@ protected:
         PLAYER_HIT_FRAME = 7,
         PLAYER_STD_FRAMES = 7,
         PLAYER_DOWN_INDEX = 8,
+        PLAYER_TOTAL_FRAMES = 44,
+        PLAYER_IDLE_BASE = 0x28,
         ANIMZ_INSECT1_FRAMES = 8,
         INSECT1_MAX_OFFSET = 7,
         CAMERA_MODE_STATIC = 0,
         CAMERA_MODE_DYNAMIC = 1,
         FAZ_INV_BITSHIFT = 1,
-        INDEX_ANNIE_DEAD = 4,
+        INDEX_PLAYER_DEAD = 4,
         HEALTHBAR_CLASSIC = 0,
         HEALTHBAR_HEARTHS = 1,
+    };
+
+    enum
+    {
+        Annie,
+        Lisa,
+        Alana,
+        Paul
     };
 
     enum : int32_t
@@ -258,7 +268,7 @@ protected:
     CAnimator *m_animator;
     CFrameSet *m_tiles = nullptr;
     CFrameSet *m_animz = nullptr;
-    CFrameSet *m_annie = nullptr;
+    CFrameSet *m_users = nullptr;
     uint8_t *m_fontData = nullptr;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
@@ -360,6 +370,8 @@ protected:
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
+
+    virtual void manageUserMenu() = 0;
 
 private:
     void stopRecorder();

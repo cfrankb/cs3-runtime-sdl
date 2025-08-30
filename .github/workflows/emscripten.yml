@@ -39,7 +39,14 @@ jobs:
         cp build/cs3v2.* build/cs3
         cp LICENSE build/cs3
         mv build/cs3/cs3v2.html build/cs3/index.html
-        bin/prepare.sh
+        echo "Preparing local version"
+        mkdir -p ./build/local
+        cp ./build/cs3v2.* ./build/local
+        gzip  ./build/local/*.data ./build/local/*.wasm
+        mv ./build/local/cs3v2.data.gz ./build/local/cs3v2.data
+        mv ./build/local/cs3v2.wasm.gz ./build/local/cs3v2.wasm
+        cp build/cs3/*.ogg ./build/local
+
 
     - name: Upload WebAssembly Build Artifacts (itchio)
       uses: actions/upload-artifact@v4

@@ -33,7 +33,6 @@
 #include "sounds.h"
 #include "sprtypes.h"
 #include "gamestats.h"
-#include "anniedata.h"
 
 // Check windows
 #ifdef _WIN64
@@ -119,9 +118,9 @@ CGameMixin::~CGameMixin()
         delete m_animz;
     }
 
-    if (m_annie)
+    if (m_users)
     {
-        delete m_annie;
+        delete m_users;
     }
 
     if (m_fontData)
@@ -472,26 +471,28 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
     }
     else if (tileID == TILES_ANNIE2)
     {
+        const uint8_t userID = game.getUserID();
+        const uint32_t userBaseFrame = PLAYER_TOTAL_FRAMES * userID;
         const int aim = game.playerConst().getAim();
-        CFrameSet &annie = *m_annie;
+        CFrameSet &annie = *m_users;
         if (!game.health())
         {
-            tile = annie[INDEX_ANNIE_DEAD * PLAYER_FRAMES + m_playerFrameOffset];
+            tile = annie[INDEX_PLAYER_DEAD * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
         }
         else if (!game.goalCount() && game.isClosure())
         {
-            tile = annie[static_cast<uint8_t>(AIM_DOWN) * PLAYER_FRAMES + m_playerFrameOffset];
+            tile = annie[static_cast<uint8_t>(AIM_DOWN) * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
         }
         else if (aim == AIM_DOWN && game.m_gameStats->get(S_IDLE_TIME) > IDLE_ACTIVATION)
         {
             const int idleTime = game.m_gameStats->get(S_IDLE_TIME);
-            const int idleFrame = ANNIE_ANNIE_IDLE + ((idleTime >> 4) & 3);
+            const int idleFrame = PLAYER_IDLE_BASE + ((idleTime >> 4) & 3);
             const int frame = idleTime & 0x08 ? idleFrame : static_cast<int>(PLAYER_DOWN_INDEX);
-            tile = annie[frame];
+            tile = annie[frame + userBaseFrame];
         }
         else
         {
-            tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset];
+            tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
             colorMask = (m_playerFrameOffset & PLAYER_HIT_FRAME) == PLAYER_HIT_FRAME ? COLOR_FADE : COLOR_NOCHANGE;
         }
 
@@ -868,6 +869,9 @@ void CGameMixin::mainLoop()
         return;
     case CGame::MODE_OPTIONS:
         manageOptionScreen();
+        return;
+    case CGame::MODE_USERSELECT:
+        manageUserMenu();
         return;
     case CGame::MODE_PLAY:
         manageGamePlay();
@@ -1830,7 +1834,8 @@ void CGameMixin::setHeight(int h)
 
 void CGameMixin::drawHealthBar(CFrame &bitmap)
 {
-    auto drawHearth = [&bitmap](auto bx, auto by, auto health)
+    const uint32_t color = m_game->isGodMode() ? WHITE : RED;
+    auto drawHearth = [&bitmap, color](auto bx, auto by, auto health)
     {
         const uint8_t *hearth = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
         for (uint32_t y = 0; y < FONT_SIZE; ++y)
@@ -1839,7 +1844,7 @@ void CGameMixin::drawHealthBar(CFrame &bitmap)
             {
                 const uint8_t bit = hearth[y] & (1 << x);
                 if (bit)
-                    bitmap.at(bx + x, by + y) = x < (uint32_t)health ? RED : BLACK;
+                    bitmap.at(bx + x, by + y) = x < (uint32_t)health ? color : BLACK;
             }
         }
     };
