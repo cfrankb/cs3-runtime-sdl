@@ -254,6 +254,10 @@ void CRuntime::run()
     mainLoop();
 }
 
+/**
+ * @brief Read input devices for user inputs
+ *
+ */
 void CRuntime::doInput()
 {
     int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
@@ -458,6 +462,15 @@ void CRuntime::doInput()
     }
 }
 
+/**
+ * @brief Read data into memory
+ *
+ * @param path filepath
+ * @param dest memory buffer holding data
+ * @param terminator add a null char terminator
+ * @return true
+ * @return false
+ */
 bool CRuntime::fetchFile(const std::string &path, char **dest, const bool terminator)
 {
     CFileWrap file;
@@ -832,11 +845,7 @@ void CRuntime::openMusicForLevel(int i)
 
 void CRuntime::openMusic(const std::string &filename)
 {
-#ifdef __EMSCRIPTEN__
-    const std::string music = endswith(filename.c_str(), ".xm") ? m_prefix + std::string("musics/") + filename : filename;
-#else
-    const std::string music = m_prefix + std::string("musics/") + filename;
-#endif
+    const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
@@ -1431,15 +1440,10 @@ void CRuntime::manageMenu(CMenu &menu)
                 setupTitleScreen();
                 return;
             }
-
             game.setLevel(m_startLevel);
-            // openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
-            // game.loadLevel(CGame::MODE_LEVEL_INTRO);
-            // centerCamera();
             game.setSkill(m_skill);
             game.resetStats();
-            // startCountdown(COUNTDOWN_INTRO);
             initUserMenu();
             game.setMode(CGame::MODE_USERSELECT);
             clearKeyStates();
@@ -1560,6 +1564,10 @@ void CRuntime::resizeGameMenu()
     }
 }
 
+/**
+ * @brief Toggle Game Menu On/Off (show/hide)
+ *
+ */
 void CRuntime::toggleGameMenu()
 {
     m_gameMenuActive = !m_gameMenuActive;
@@ -1575,6 +1583,12 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
 }
 
+/**
+ * @brief Initialize controller devices
+ *
+ * @return true
+ * @return false
+ */
 bool CRuntime::initControllers()
 {
     // Initialize SDL's video and game controller subsystems
@@ -1631,6 +1645,11 @@ size_t CRuntime::scrollerBufSize()
     return WIDTH / FONT_SIZE;
 }
 
+/**
+ * @brief Draw Ootion Menu
+ *
+ * @param bitmap
+ */
 void CRuntime::drawOptions(CFrame &bitmap)
 {
     CMenu &menu = *m_optionMenu;
@@ -1638,6 +1657,11 @@ void CRuntime::drawOptions(CFrame &bitmap)
     drawMenu(bitmap, menu, 48, menuBaseY);
 }
 
+/**
+ * @brief Initialize Option Menu
+ *
+ * @return CMenu&
+ */
 CMenu &CRuntime::initOptionMenu()
 {
     CMenu &menu = *m_optionMenu;
@@ -1672,6 +1696,12 @@ CMenu &CRuntime::initOptionMenu()
     }
     return menu;
 }
+
+/**
+ * @brief Initialize the User Selection Menu Options
+ *
+ * @return CMenu&
+ */
 
 CMenu &CRuntime::initUserMenu()
 {
@@ -1826,9 +1856,45 @@ void CRuntime::notifyExitFullScreen()
     m_fullscreen = m_app.isFullscreen;
 }
 
+/**
+ * @brief Draw User Selection Screen
+ *
+ * @param bitmap
+ */
 void CRuntime::drawUserMenu(CFrame &bitmap)
 {
     int baseY = (_HEIGHT - m_userMenu->height()) / 2;
     drawFont(bitmap, 32, baseY - 32, "SELECT CHARACTER", GRAY, BLACK, 1, 2);
     drawMenu(bitmap, *m_userMenu, 48, baseY);
+}
+
+/**
+ * @brief check if all the music files are present, this only applies to desktop version
+ *        because remote files cannot reliably be tested.
+ *
+ * @return true
+ * @return false
+ */
+bool CRuntime::checkMusicFiles()
+{
+    bool result = true;
+    for (const auto &file : m_musicFiles)
+    {
+        if (!fileExists(file))
+        {
+            fprintf(stderr, "*** File not found: %s\n", file.c_str());
+            result = false;
+        }
+    }
+    return result;
+}
+
+std::string CRuntime::getMusicPath(const std::string &filename)
+{
+#ifdef __EMSCRIPTEN__
+    const std::string music = endswith(filename.c_str(), ".xm") ? m_prefix + std::string("musics/") + filename : filename;
+#else
+    const std::string music = m_prefix + std::string("musics/") + filename;
+#endif
+    return music;
 }

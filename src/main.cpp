@@ -200,6 +200,7 @@ int main(int argc, char *args[])
     emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
+    runtime.checkMusicFiles();
     while (runtime.isRunning())
     {
         loop_handler(&runtime);

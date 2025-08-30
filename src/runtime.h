@@ -53,6 +53,7 @@ public:
     void init(CMapArch *maparch, int index) override;
     void setVerbose(bool enable);
     void notifyExitFullScreen();
+    bool checkMusicFiles();
 
 private:
     typedef struct
@@ -186,4 +187,5 @@ private:
     void resizeGameMenu();
     void openMusic(const std::string &filename);
     void drawUserMenu(CFrame &bitmap);
+    std::string getMusicPath(const std::string &filename);
 };
