@@ -507,7 +507,7 @@ void CRuntime::preloadAssets()
     };
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
-        const std::string filename = m_prefix + m_assetFiles[i];
+        const std::string filename = m_prefix + "assets/" + m_assetFiles[i];
         *frameSets[i] = new CFrameSet();
         if (file.open(filename.c_str(), "rb"))
         {
@@ -790,7 +790,8 @@ void CRuntime::load()
 #else
     std::string path = m_workspace + SAVEGAME_FILE;
 #endif
-    m_game->setMode(CGame::MODE_IDLE);
+    CGame &game = *m_game;
+    game.setMode(CGame::MODE_IDLE);
     std::string name;
     printf("reading: %s\n", path.c_str());
     FILE *sfile = fopen(path.c_str(), "rb");
@@ -806,9 +807,11 @@ void CRuntime::load()
     {
         fprintf(stderr, "can't read:%s\n", path.c_str());
     }
-    m_game->setMode(CGame::MODE_PLAY);
+    game.setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
     centerCamera();
+    int userID = game.getUserID();
+    loadColorMaps(userID);
 }
 
 void CRuntime::initSounds()
@@ -1491,12 +1494,14 @@ void CRuntime::manageMenu(CMenu &menu)
         }
         else if (item.role() == MENU_ITEM_SELECT_USER)
         {
-            game.setUserID(item.userData());
+            int userID = item.userData();
+            game.setUserID(userID);
             openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
             game.loadLevel(CGame::MODE_LEVEL_INTRO);
             centerCamera();
             startCountdown(COUNTDOWN_INTRO);
+            loadColorMaps(userID);
         }
     }
 
@@ -1897,4 +1902,19 @@ std::string CRuntime::getMusicPath(const std::string &filename)
     const std::string music = m_prefix + std::string("musics/") + filename;
 #endif
     return music;
+}
+
+void CRuntime::loadColorMaps(const int userID)
+{
+    std::string name = m_userNames[userID];
+    std::string path = m_prefix + "colormaps/" + name + ".ini";
+    CFileWrap file;
+    if (file.open(path.c_str(), "rb"))
+    {
+        parseColorMaps(file, m_colormaps);
+    }
+    else
+    {
+        fprintf(stderr, "can't read %s\n", path.c_str());
+    }
 }

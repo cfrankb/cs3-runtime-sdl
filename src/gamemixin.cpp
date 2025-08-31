@@ -57,36 +57,6 @@
 #define printf qDebug
 #endif
 
-// Color Maps
-std::unordered_map<uint32_t, uint32_t> g_annieWhiteColors = {
-    {0xff233edf, 0xff96999a},
-    {0xff2a20b4, 0xff7b7677},
-    {0xffc45c28, 0xffac4191},
-    {0xff643414, 0xff833561},
-    {0xff2d1773, 0xff645c5e},
-    {0xff0a6afa, 0xffbcbfc0},
-};
-
-std::unordered_map<uint32_t, uint32_t> g_annieYellowColors = {
-    {0xff233edf, 0xff0aa5e5},
-    {0xff2a20b4, 0xff48a3ff},
-    {0xffc45c28, 0xff89e357},
-    {0xff643414, 0xff7ec22e},
-    {0xff342224, 0xff69a226},
-    {0xff2d1773, 0xff645c5e},
-    {0xff0a6afa, 0xff2dd3f6},
-};
-
-// color-patch
-std::unordered_map<uint32_t, uint32_t> g_annieRedColors = {
-    {0xff233edf, 0xff2d1da5},
-    {0xff9cd2f4, 0xff5161f6},
-    {0xffc45c28, 0xff5161f6},
-    {0xff643414, 0xff241be0},
-    {0xff342224, 0xff2d1da5},
-    {0xff0a6afa, 0xff4053bf},
-};
-
 CGameMixin::CGameMixin()
 {
     m_game = CGame::getGame();
@@ -502,15 +472,15 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
         }
         else if (m_game->hasExtraSpeed())
         {
-            colorMap = &g_annieYellowColors;
+            colorMap = &m_colormaps.sugarRush;
         }
         else if (m_game->isGodMode())
         {
-            colorMap = &g_annieWhiteColors;
+            colorMap = &m_colormaps.godMode;
         }
         else if (m_game->isRageMode())
         {
-            colorMap = &g_annieRedColors;
+            colorMap = &m_colormaps.rage;
         }
     }
     else

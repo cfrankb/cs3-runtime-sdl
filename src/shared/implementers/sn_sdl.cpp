@@ -33,11 +33,6 @@ CSndSDL::CSndSDL()
         printf("SDL_init failed: %s\n", SDL_GetError());
         m_valid = false;
     }
-    if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
-    {
-        printf("SDL_init failed: %s\n", SDL_GetError());
-        return;
-    }
     m_valid = true;
 }
 

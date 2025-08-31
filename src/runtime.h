@@ -54,6 +54,7 @@ public:
     void setVerbose(bool enable);
     void notifyExitFullScreen();
     bool checkMusicFiles();
+    void loadColorMaps(const int userID);
 
 private:
     typedef struct

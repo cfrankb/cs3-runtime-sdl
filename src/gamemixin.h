@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "colormap.h"
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
@@ -298,6 +299,7 @@ protected:
     int m_timer;
     int _WIDTH = DEFAULT_WIDTH;
     int _HEIGHT = DEFAULT_HEIGHT;
+    ColorMaps m_colormaps;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
