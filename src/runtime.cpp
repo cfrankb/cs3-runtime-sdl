@@ -1912,6 +1912,7 @@ void CRuntime::loadColorMaps(const int userID)
     if (file.open(path.c_str(), "rb"))
     {
         parseColorMaps(file, m_colormaps);
+        file.close();
     }
     else
     {
