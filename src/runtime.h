@@ -80,7 +80,7 @@ private:
     void openMusicForLevel(int i) override;
     void setupTitleScreen() override;
     void takeScreenshot() override;
-    void sanityTest() override;
+    void sanityTest() override {};
     void toggleFullscreen() override;
     void manageTitleScreen() override;
     void toggleGameMenu() override;
@@ -189,4 +189,5 @@ private:
     void openMusic(const std::string &filename);
     void drawUserMenu(CFrame &bitmap);
     std::string getMusicPath(const std::string &filename);
+    void leaveClickStart();
 };

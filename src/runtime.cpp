@@ -254,6 +254,27 @@ void CRuntime::run()
     mainLoop();
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(int, pollGamepadButtons, (), {
+    const gp = navigator.getGamepads()[0];
+    if (!gp)
+        return;
+    let i = 0;
+    let buttonMask = 0;
+    for (const button of gp.buttons)
+    {
+        if (button.pressed)
+        {
+            buttonMask |= (1 << i);
+        }
+        ++i;
+        if (i == 31)
+            break;
+    }
+    return buttonMask;
+});
+#endif
+
 /**
  * @brief Read input devices for user inputs
  *
@@ -309,10 +330,7 @@ void CRuntime::doInput()
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                initMusic();
-                initSounds();
-                initControllers();
-                setupTitleScreen();
+                leaveClickStart();
             }
             break;
 
@@ -365,10 +383,10 @@ void CRuntime::doInput()
             }
             break;
 
+#ifndef __EMSCRIPTEN__
         case SDL_CONTROLLERBUTTONDOWN:
             buttonState = BUTTON_PRESSED;
             [[fallthrough]];
-
         case SDL_CONTROLLERBUTTONUP:
             controller = SDL_GameControllerFromInstanceID(event.cbutton.which);
             switch (event.cbutton.button)
@@ -410,7 +428,7 @@ void CRuntime::doInput()
                        SDL_GameControllerGetStringForButton((SDL_GameControllerButton)event.cbutton.button));
             }
             break;
-
+#endif
         case SDL_CONTROLLERAXISMOTION:
             controller = SDL_GameControllerFromInstanceID(event.caxis.which);
             if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
@@ -460,6 +478,29 @@ void CRuntime::doInput()
             break;
         }
     }
+
+#ifdef __EMSCRIPTEN__
+    int buttonMask = pollGamepadButtons();
+    if (buttonMask && (m_game->mode() == CGame::MODE_CLICKSTART))
+    {
+        leaveClickStart();
+    }
+    else if (buttonMask)
+    {
+        // printf("buttons: %.4x\n", buttonMask);
+    }
+    for (int i = 0; i < Button_Count; ++i)
+    {
+        if (buttonMask & (1 << i))
+        {
+            m_buttonState[i] = BUTTON_PRESSED;
+        }
+        else
+        {
+            m_buttonState[i] = BUTTON_RELEASED;
+        }
+    }
+#endif
 }
 
 /**
@@ -1348,10 +1389,6 @@ void CRuntime::toggleFullscreen()
     m_fullscreen = (int)m_app.isFullscreen;
 }
 
-void CRuntime::sanityTest()
-{
-}
-
 void CRuntime::resizeScroller()
 {
     if (m_scroll)
@@ -1904,6 +1941,11 @@ std::string CRuntime::getMusicPath(const std::string &filename)
     return music;
 }
 
+/**
+ * @brief Load the corresponding ColorMap for a player sprite
+ *
+ * @param userID
+ */
 void CRuntime::loadColorMaps(const int userID)
 {
     std::string name = m_userNames[userID];
@@ -1918,4 +1960,16 @@ void CRuntime::loadColorMaps(const int userID)
     {
         fprintf(stderr, "can't read %s\n", path.c_str());
     }
+}
+
+/**
+ * @brief Leave ClickStart screen
+ *
+ */
+void CRuntime::leaveClickStart()
+{
+    initMusic();
+    initSounds();
+    initControllers();
+    setupTitleScreen();
 }

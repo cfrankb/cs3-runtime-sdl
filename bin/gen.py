@@ -47,7 +47,7 @@ def get_deps_blocks(paths, excluded, run_cmd):
     lines = []
     lines.append(f'$(TARGET): $(DEPS)')
     lines.append(
-        f'\t$(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) $(PARGS) -o $@ $(TEMPLATE)' \
+        f'\t$(PREBUILD) && $(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) -o $@' \
         f'&& echo "to run app: {run_cmd}"'
     )
     deps_blocks.append('\n'.join(lines))
@@ -126,11 +126,11 @@ def main():
         vars = [
             'CXX=g++',
             'INC=',
-            'LDFLAGS=',
+            f'LDFLAGS={strip}',
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3 -Wall -Wextra',
-            f'PARGS={strip}',
-            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
+            'PREBUILD='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
@@ -139,11 +139,11 @@ def main():
         vars = [
             'CXX=g++',
             f'INC=-I{prefix}/include',
-            f'LDFLAGS=-L{prefix}/lib',
+            f'LDFLAGS=-L{prefix}/lib {strip}',
             'LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
-            f'PARGS={strip}',
-            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
+            'PREBUILD='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
@@ -155,11 +155,11 @@ def main():
             f'WINDRES={arch}-mingw32-windres',
             f'CXX={arch}-mingw32-g++',
             f'INC=-I{prefix}/include',
-            f'LDFLAGS=-L{prefix}/lib -Wl,-t',
+            f'LDFLAGS=-L{prefix}/lib -Wl,-t {strip}',
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread -std=c++17',
-            f'PARGS={strip}',
-            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE='
+            'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
+            'PREBUILD='
         ]
         print("type `make` to generare binary.")
         ext = '.o'
@@ -171,10 +171,37 @@ def main():
             'CXX=em++',
             'INC=',
             'LIBS=-lopenal -lidbfs.js',
-            'LDFLAGS=',
-            '''CXXFLAGS=-sUSE_SDL=2 -sUSE_SDL_MIXER=2 -sUSE_OGG=1 -sUSE_VORBIS=1 -sUSE_ZLIB=1 -sSDL2_MIXER_FORMATS='["ogg","mod"]' -O3''',
-            f'''PARGS={strip} --preload-file data --emrun -O3 -s ASSERTIONS=1 -s MODULARIZE=1 -s EXPORT_NAME="MyApp" -sWASM=1 -sALLOW_MEMORY_GROWTH  -sINITIAL_MEMORY=64MB -sASYNCIFY -sEXPORTED_RUNTIME_METHODS=ccall,cwrap -sEXPORTED_FUNCTIONS=_mute,_savegame,_main,_malloc,_free''',
-            'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)', 'TEMPLATE=--shell-file src/template/body.html'
+            '''define CXXFLAGS
+                -sUSE_SDL=2 \\
+                -sUSE_SDL_MIXER=2 \\
+                -sUSE_OGG=1 \\
+                -sUSE_VORBIS=1 \\
+                -sUSE_ZLIB=1 \\
+                -sSDL2_MIXER_FORMATS='["ogg","mod"]' \\
+                -O3
+            endef'''.replace(" " * 12, ""),
+            f'''define LDFLAGS
+                --preload-file build/data@data \\
+                --shell-file src/template/body.html \\
+                --emrun -O3 {strip} \\
+                -s ASSERTIONS=1 \\
+                -s MODULARIZE=1 \\
+                -s EXPORT_NAME="MyApp" \\
+                -sWASM=1 \\
+                -sALLOW_MEMORY_GROWTH  \\
+                -sINITIAL_MEMORY=64MB \\
+                -sASYNCIFY \\
+                -sEXPORTED_RUNTIME_METHODS=ccall,cwrap \\
+                -sEXPORTED_FUNCTIONS=_mute,_savegame,_main,_malloc,_free
+            endef'''.replace(" " * 12, ""),
+            'BPATH=build', 'BNAME=cs3v2.html', 'TARGET=$(BPATH)/$(BNAME)',
+            '''define PREBUILD
+                cp data/musics/*.ogg build && \\
+                rm -rf build/data && \\
+                mkdir -p build/data && \\
+                cp -R data/* build/data && \\
+                rm build/data/musics/*.ogg
+            endef'''.replace(" " * 12, "")
         ]
         print("type `emmake make` to generare binary.")
         ext = '.o'
