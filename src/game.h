@@ -40,6 +40,19 @@ class ISound;
 #define SECRET_ATTR_MIN 0x40  // 0x40
 #define SECRET_ATTR_MAX 0x4f  // 0x4f
 
+struct MapReport
+{
+    int fruits;
+    int bonuses;
+    int secrets;
+    void debug()
+    {
+        printf("fruits: %d\n", fruits);
+        printf("bonuses: %d\n", bonuses);
+        printf("secrets: %d\n", secrets);
+    }
+};
+
 class CGame
 {
 public:
@@ -57,6 +70,7 @@ public:
         MODE_TIMEOUT,
         MODE_OPTIONS,
         MODE_USERSELECT,
+        MODE_LEVEL_SUMMARY,
     };
 
     enum : uint32_t
@@ -122,6 +136,7 @@ public:
     static void destroy();
     int getUserID() const;
     void setUserID(const int userID) const;
+    void generateMapReport(MapReport &report);
 
 private:
     enum
@@ -146,13 +161,6 @@ private:
         WAIT_DISTANCE = 5,
     };
 
-    struct MapReport
-    {
-        int fruits;
-        int bonuses;
-        int secrets;
-    };
-
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;
@@ -170,6 +178,7 @@ private:
     ISound *m_sound = nullptr;
     std::vector<std::string> m_hints;
     CGameStats *m_gameStats;
+    MapReport m_report;
 
     CGame();
     ~CGame();
@@ -186,8 +195,8 @@ private:
     const char *getHintText();
     bool isFruit(const uint8_t tileID) const;
     bool isBonusItem(const uint8_t tileID) const;
-    void generateMapReport(MapReport &report);
     CGameStats &stats();
+    const MapReport &mapReport();
     static CMap m_map;
     friend class CGameMixin;
 };

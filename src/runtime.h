@@ -86,6 +86,7 @@ private:
     void toggleGameMenu() override;
     void manageGameMenu() override;
     void manageUserMenu() override;
+    void manageLevelSummary() override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -190,4 +191,6 @@ private:
     void drawUserMenu(CFrame &bitmap);
     std::string getMusicPath(const std::string &filename);
     void leaveClickStart();
+    void drawLevelSummary(CFrame &bitmap);
+    void initLevelSummary();
 };

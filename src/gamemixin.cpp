@@ -848,6 +848,8 @@ void CGameMixin::mainLoop()
     case CGame::MODE_PLAY:
         manageGamePlay();
         return;
+    case CGame::MODE_LEVEL_SUMMARY:
+        manageLevelSummary();
     }
 }
 
@@ -1034,8 +1036,8 @@ void CGameMixin::nextLevel()
     sanityTest();
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(CGame::MODE_LEVEL_INTRO);
-    openMusicForLevel(m_game->level());
     centerCamera();
+    openMusicForLevel(m_game->level());
 }
 
 void CGameMixin::restartLevel()
@@ -1048,9 +1050,9 @@ void CGameMixin::restartLevel()
 void CGameMixin::restartGame()
 {
     m_paused = false;
-    startCountdown(COUNTDOWN_RESTART);
     m_game->restartGame();
     sanityTest();
+    startCountdown(COUNTDOWN_RESTART);
     m_game->loadLevel(CGame::MODE_LEVEL_INTRO);
     setupTitleScreen();
 }

@@ -283,6 +283,7 @@ bool CGame::loadLevel(const GameMode mode)
     findMonsters();
     m_sfx.clear();
     resetStats();
+    generateMapReport(m_report);
     return true;
 }
 
@@ -598,6 +599,12 @@ void CGame::manageMonsters(int ticks)
     }
 }
 
+/**
+ * @brief Manage player
+ *
+ * @param joystate
+ * @return uint8_t
+ */
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
     auto const pu = m_player.getPU();
@@ -771,6 +778,10 @@ void CGame::addHealth(const int hp)
     checkClosure();
 }
 
+/**
+ * @brief Check if level closure conditions are meet
+ *
+ */
 void CGame::checkClosure()
 {
     bool doClosure = false;
@@ -813,7 +824,7 @@ void CGame::checkClosure()
  * @brief Set Game mode
  *
  * @param mode
- *        possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
+ *        possible values: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
  */
 void CGame::setMode(const GameMode mode)
 {
@@ -824,7 +835,7 @@ void CGame::setMode(const GameMode mode)
  * @brief return game mode
  *
  * @return int
- *         possible value: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
+ *         possible values: MODE_LEVEL_INTRO, MODE_PLAY, MODE_GAME_OVER etc.
  */
 CGame::GameMode CGame::mode() const
 {
@@ -1383,7 +1394,7 @@ void CGame::generateMapReport(MapReport &report)
 }
 
 /**
- * @brief Get Soecual effect locations
+ * @brief Get Special effects List
  *
  * @return std::vector<sfx_t>&
  */
@@ -1502,4 +1513,9 @@ int CGame::getUserID() const
 void CGame::setUserID(const int userID) const
 {
     m_gameStats->set(S_USER, userID);
+}
+
+const MapReport &CGame::mapReport()
+{
+    return m_report;
 }

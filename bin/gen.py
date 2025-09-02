@@ -130,7 +130,7 @@ def main():
             'LIBS=-lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3 -Wall -Wextra',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
-            'PREBUILD='
+            'PREBUILD=echo "building game"'
         ]
         print("type `make` to generare binary.")
         ext = '.o'
@@ -143,7 +143,7 @@ def main():
             'LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp',
             'CXXFLAGS=-O3',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
-            'PREBUILD='
+            'PREBUILD=echo "building game"'
         ]
         print("type `make` to generare binary.")
         ext = '.o'
@@ -159,7 +159,7 @@ def main():
             'LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer -lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 -lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid',
             'CXXFLAGS=-O3 -pthread -std=c++17',
             'BPATH=build', f'BNAME={bname}', 'TARGET=$(BPATH)/$(BNAME)',
-            'PREBUILD='
+            'PREBUILD=echo "building game"'
         ]
         print("type `make` to generare binary.")
         ext = '.o'

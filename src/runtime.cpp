@@ -163,6 +163,9 @@ void CRuntime::paint()
     case CGame::MODE_USERSELECT:
         drawUserMenu(bitmap);
         break;
+    case CGame::MODE_LEVEL_SUMMARY:
+        drawLevelSummary(bitmap);
+        break;
     };
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -1315,6 +1318,10 @@ void CRuntime::initOptions()
     {
         m_healthBar = HEALTHBAR_CLASSIC;
     }
+    if (isTrue(m_config["summary"]))
+    {
+        m_summaryEnabled = true;
+    }
 }
 
 /**
@@ -1535,9 +1542,9 @@ void CRuntime::manageMenu(CMenu &menu)
             game.setUserID(userID);
             openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
+            startCountdown(COUNTDOWN_INTRO);
             game.loadLevel(CGame::MODE_LEVEL_INTRO);
             centerCamera();
-            startCountdown(COUNTDOWN_INTRO);
             loadColorMaps(userID);
         }
     }
@@ -1906,7 +1913,7 @@ void CRuntime::notifyExitFullScreen()
 void CRuntime::drawUserMenu(CFrame &bitmap)
 {
     int baseY = (_HEIGHT - m_userMenu->height()) / 2;
-    drawFont(bitmap, 32, baseY - 32, "SELECT CHARACTER", GRAY, BLACK, 1, 2);
+    drawFont(bitmap, 32, baseY - 32, "SELECT DIAMOND HUNTER", GRAY, BLACK, 1, 2);
     drawMenu(bitmap, *m_userMenu, 48, baseY);
 }
 
@@ -1922,15 +1929,22 @@ bool CRuntime::checkMusicFiles()
     bool result = true;
     for (const auto &file : m_musicFiles)
     {
-        if (!fileExists(file))
+        std::string music = getMusicPath(file);
+        if (!fileExists(music))
         {
-            fprintf(stderr, "*** File not found: %s\n", file.c_str());
+            fprintf(stderr, "*** File not found: %s\n", music.c_str());
             result = false;
         }
     }
     return result;
 }
 
+/**
+ * @brief Full path to the music file
+ *
+ * @param filename
+ * @return std::string
+ */
 std::string CRuntime::getMusicPath(const std::string &filename)
 {
 #ifdef __EMSCRIPTEN__
@@ -1972,4 +1986,16 @@ void CRuntime::leaveClickStart()
     initSounds();
     initControllers();
     setupTitleScreen();
+}
+
+void CRuntime::drawLevelSummary(CFrame &bitmap)
+{
+}
+
+void CRuntime::manageLevelSummary()
+{
+}
+
+void CRuntime::initLevelSummary()
+{
 }

@@ -282,6 +282,15 @@
           source.start(0);
         });
     }
+
+    window.addEventListener("gamepadconnected", (e) => {
+        console.log(`Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}`);
+      });
+
+    window.addEventListener("gamepaddisconnected", (e) => {
+      console.log(`Gamepad disconnected from index ${e.gamepad.index}: ${e.gamepad.id}`);
+    });
+
   </script>
     {{{ SCRIPT }}}
 </body>
