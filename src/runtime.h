@@ -69,6 +69,14 @@ private:
         int windowedHeigth;
     } App;
 
+    struct Summary
+    {
+        int ppFruits;
+        int ppBonuses;
+        int ppSecrets;
+        int timeTaken;
+    };
+
     static void cleanup();
     void preloadAssets() override;
     bool initControllers();
@@ -87,6 +95,8 @@ private:
     void manageGameMenu() override;
     void manageUserMenu() override;
     void manageLevelSummary() override;
+    void initLevelSummary() override;
+    void changeMoodMusic(CGame::GameMode mode) override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -118,6 +128,7 @@ private:
     CMenu *m_userMenu = nullptr;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
+    Summary m_summary;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_GameController *> m_gameControllers;
@@ -192,5 +203,4 @@ private:
     std::string getMusicPath(const std::string &filename);
     void leaveClickStart();
     void drawLevelSummary(CFrame &bitmap);
-    void initLevelSummary();
 };

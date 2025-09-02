@@ -118,6 +118,10 @@ CRuntime::~CRuntime()
     }
 }
 
+/**
+ * @brief Composite the screen and send it to the renderer
+ *
+ */
 void CRuntime::paint()
 {
     if (!m_bitmap)
@@ -177,6 +181,12 @@ void CRuntime::paint()
     SDL_RenderPresent(m_app.renderer);
 }
 
+/**
+ * @brief Initialize the SDL2 library. Create window, texture and surface.
+ *
+ * @return true
+ * @return false
+ */
 bool CRuntime::initSDL()
 {
     printf("SDL Init() texture: %dx%d\n", WIDTH, HEIGHT);
@@ -1147,6 +1157,10 @@ void CRuntime::drawScroller(CFrame &bitmap)
     }
 }
 
+/**
+ * @brief Setup the title screen. Create Menu. Clear key/button states. etc
+ *
+ */
 void CRuntime::setupTitleScreen()
 {
     size_t len = scrollerBufSize();
@@ -1214,8 +1228,10 @@ void CRuntime::setupTitleScreen()
 void CRuntime::takeScreenshot()
 {
     CFrame bitmap(WIDTH, HEIGHT);
-    bitmap.fill(BLACK);
-    drawScreen(bitmap);
+    if (m_bitmap)
+        bitmap = *m_bitmap;
+    else
+        bitmap.fill(BLACK);
     auto rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
     {
@@ -1247,7 +1263,7 @@ void CRuntime::takeScreenshot()
     }
     else
     {
-        fprintf(stderr, "can't write %s\n", path.c_str());
+        fprintf(stderr, "can't write png: %s\n", path.c_str());
     }
     delete[] png;
 }
@@ -1325,10 +1341,9 @@ void CRuntime::initOptions()
 }
 
 /**
- * @brief  Function to toggle fullscreen mode
+ * @brief  Function to toggle fullscreen mode on/off
  *
  */
-
 void CRuntime::toggleFullscreen()
 {
 #ifdef __EMSCRIPTEN__
@@ -1396,6 +1411,10 @@ void CRuntime::toggleFullscreen()
     m_fullscreen = (int)m_app.isFullscreen;
 }
 
+/**
+ * @brief resize the scroller for the intro screen
+ *
+ */
 void CRuntime::resizeScroller()
 {
     if (m_scroll)
@@ -1419,7 +1438,6 @@ void CRuntime::manageTitleScreen()
  * @brief handles the game menu
  *
  */
-
 void CRuntime::manageGameMenu()
 {
     manageMenu(*m_gameMenu);
@@ -1429,17 +1447,25 @@ void CRuntime::manageGameMenu()
  * @brief handles the option screen
  *
  */
-
 void CRuntime::manageOptionScreen()
 {
     manageMenu(*m_optionMenu);
 }
 
+/**
+ * @brief handles the user menu (character selection screen
+ *
+ */
 void CRuntime::manageUserMenu()
 {
     manageMenu(*m_userMenu);
 }
 
+/**
+ * @brief Handle interractions with the menu
+ *
+ * @param menu
+ */
 void CRuntime::manageMenu(CMenu &menu)
 {
     CGame &game = *m_game;
@@ -1542,9 +1568,7 @@ void CRuntime::manageMenu(CMenu &menu)
             game.setUserID(userID);
             openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
-            startCountdown(COUNTDOWN_INTRO);
-            game.loadLevel(CGame::MODE_LEVEL_INTRO);
-            centerCamera();
+            beginLevelIntro(CGame::MODE_LEVEL_INTRO);
             loadColorMaps(userID);
         }
     }
@@ -1988,14 +2012,111 @@ void CRuntime::leaveClickStart()
     setupTitleScreen();
 }
 
+/**
+ * @brief Draw Post Level Summary
+ *
+ * @param bitmap
+ */
 void CRuntime::drawLevelSummary(CFrame &bitmap)
 {
+    struct Text
+    {
+        std::string text;
+        Color color;
+        int scaleX;
+        int scaleY;
+    };
+    std::vector<Text> listStr;
+    char tmp[128];
+    sprintf(tmp, "LEVEL %.2d COMPLETED", m_game->level() + 1);
+    if (_WIDTH < MIN_WIDTH_FULL)
+        listStr.push_back({tmp, YELLOW, 1, 2});
+    else
+        listStr.push_back({tmp, YELLOW, 2, 2});
+    sprintf(tmp, "Fruits Collected: %d %%", m_summary.ppFruits);
+    listStr.push_back({tmp, PINK, 1, 2});
+    sprintf(tmp, "Tresures Collected: %d %%", m_summary.ppBonuses);
+    listStr.push_back({tmp, ORANGE, 1, 2});
+    sprintf(tmp, "Secrets: %d %%", m_summary.ppSecrets);
+    listStr.push_back({tmp, GREEN, 1, 2});
+    sprintf(tmp, "Time Taken: %.2d:%.2d", m_summary.timeTaken / 60, m_summary.timeTaken % 60);
+    listStr.push_back({tmp, CYAN, 1, 2});
+
+    if (m_countdown == 0 && ((m_ticks >> 3) & 1))
+    {
+        listStr.push_back({"", BLACK, 1, 2});
+        listStr.push_back({"PRESS SPACE TO CONTINUE", LIGHTGRAY, 1, 2});
+    }
+    else
+    {
+        listStr.push_back({"", BLACK, 1, 2});
+        listStr.push_back({"", BLACK, 1, 2});
+    }
+
+    int height = 0;
+    for (const auto &item : listStr)
+    {
+        height += FONT_SIZE * item.scaleY + FONT_SIZE;
+    }
+
+    int y = (_HEIGHT - height) / 2;
+    for (const auto &item : listStr)
+    {
+        const auto &str = item.text;
+        const int x = (_WIDTH - str.length() * FONT_SIZE * item.scaleX) / 2;
+        drawFont(bitmap, x, y, str.c_str(), item.color, BLACK, item.scaleX, item.scaleY);
+        y += FONT_SIZE * item.scaleY + FONT_SIZE;
+    }
 }
 
+/**
+ * @brief Manage Post Level Summary Screen
+ *
+ */
 void CRuntime::manageLevelSummary()
 {
+    // resume to next level
+    if (m_countdown == 0 &&
+        (m_keyStates[Key_Space] ||
+         m_keyStates[Key_Enter] ||
+         m_buttonState[BUTTON_A]))
+    {
+        nextLevel();
+    }
 }
 
+/**
+ * @brief Initialize Post Level Summary Screen Data
+ *
+ */
 void CRuntime::initLevelSummary()
 {
+    CGame &game = *m_game;
+    const MapReport &report0 = game.originalMapReport();
+    const MapReport report1 = game.generateMapReport();
+    m_summary.ppFruits = report0.fruits ? 100 * (report0.fruits - report1.fruits) / report0.fruits : 100;
+    m_summary.ppBonuses = report0.bonuses ? 100 * (report0.bonuses - report1.bonuses) / report0.bonuses : 100;
+    m_summary.ppSecrets = report0.secrets ? 100 * (report0.secrets - report1.secrets) / report0.secrets : 100;
+    m_summary.timeTaken = game.timeTaken();
+}
+
+/**
+ * @brief Change game music for specific situation
+ *
+ * @param mode
+ */
+void CRuntime::changeMoodMusic(CGame::GameMode mode)
+{
+    if (mode == CGame::MODE_GAMEOVER)
+    {
+        openMusic("game over.ogg");
+    }
+    else if (mode == CGame::MODE_RESTART)
+    {
+        // openMusic("death.ogg");
+    }
+    else if (mode == CGame::MODE_PLAY)
+    {
+        openMusicForLevel(m_game->level());
+    }
 }

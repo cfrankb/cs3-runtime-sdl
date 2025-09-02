@@ -24,16 +24,15 @@
 #include "../FileWrap.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-#endif
-
-uint8_t CMusicSDL::m_type = static_cast<uint8_t>(CMusicSDL::TYPE_NONE);
-bool CMusicSDL::m_playing = false;
-
 static bool endswith(const char *str, const char *end)
 {
     const char *t = strstr(str, end);
     return t && strcmp(t, end) == 0;
 }
+#endif
+
+uint8_t CMusicSDL::m_type = static_cast<uint8_t>(CMusicSDL::TYPE_NONE);
+bool CMusicSDL::m_playing = false;
 
 CMusicSDL::CMusicSDL()
 {
@@ -94,7 +93,7 @@ bool CMusicSDL::open(const char *file)
     else
     {
         m_type = TYPE_NONE;
-        fprintf(stderr, "Failed to load music: %s\n", Mix_GetError());
+        fprintf(stderr, "Failed to load music `%s` : %s\n", file, Mix_GetError());
     }
     return valid;
 }

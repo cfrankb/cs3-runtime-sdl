@@ -283,7 +283,7 @@ bool CGame::loadLevel(const GameMode mode)
     findMonsters();
     m_sfx.clear();
     resetStats();
-    generateMapReport(m_report);
+    m_report = generateMapReport();
     return true;
 }
 
@@ -313,7 +313,6 @@ void CGame::restartLevel()
 {
     m_events.clear();
     resetStats();
-    loadLevel(MODE_RESTART);
     m_gameStats->set(S_SUGAR, 0);
 }
 
@@ -364,6 +363,7 @@ void CGame::resetStats()
         S_REVEAL_EXIT,
         S_IDLE_TIME,
         S_FREEZE_TIMER,
+        S_TIME_TAKEN,
     };
     for (const auto &stat : stats)
     {
@@ -1359,8 +1359,9 @@ int CGame::sugar() const
  * @param report
  */
 
-void CGame::generateMapReport(MapReport &report)
+MapReport CGame::generateMapReport()
 {
+    MapReport report;
     std::unordered_map<uint8_t, int> tiles;
     for (int y = 0; y < m_map.hei(); ++y)
     {
@@ -1391,6 +1392,7 @@ void CGame::generateMapReport(MapReport &report)
         if (isBonusItem(tile))
             report.bonuses += count;
     }
+    return report;
 }
 
 /**
@@ -1515,7 +1517,17 @@ void CGame::setUserID(const int userID) const
     m_gameStats->set(S_USER, userID);
 }
 
-const MapReport &CGame::mapReport()
+const MapReport &CGame::originalMapReport()
 {
     return m_report;
+}
+
+int CGame::timeTaken()
+{
+    return m_gameStats->get(S_TIME_TAKEN);
+}
+
+void CGame::incTimeTaken()
+{
+    m_gameStats->inc(S_TIME_TAKEN);
 }

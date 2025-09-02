@@ -136,7 +136,10 @@ public:
     static void destroy();
     int getUserID() const;
     void setUserID(const int userID) const;
-    void generateMapReport(MapReport &report);
+    MapReport generateMapReport();
+    const MapReport &originalMapReport();
+    int timeTaken();
+    void incTimeTaken();
 
 private:
     enum
@@ -196,7 +199,6 @@ private:
     bool isFruit(const uint8_t tileID) const;
     bool isBonusItem(const uint8_t tileID) const;
     CGameStats &stats();
-    const MapReport &mapReport();
     static CMap m_map;
     friend class CGameMixin;
 };

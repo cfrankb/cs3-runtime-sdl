@@ -27,13 +27,13 @@
 #include <vector>
 #include <unordered_map>
 #include "colormap.h"
+#include "game.h"
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
 
 class CActor;
 class CFrameSet;
-class CGame;
 class CFrame;
 class CMapArch;
 class CAnimator;
@@ -347,12 +347,15 @@ protected:
     void clearButtonStates();
     void manageGamePlay();
     void handleFunctionKeys();
+    void handleFunctionKeys_Game(int k);
+    void handleFunctionKeys_General(int k);
     bool handlePrompts();
     void centerCamera();
     void moveCamera();
     int cameraSpeed() const;
     void setCameraMode(const int mode);
     void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);
+    void beginLevelIntro(CGame::GameMode mode);
 
     inline uint32_t fazFilter(int shift) const;
     inline int getWidth() const
@@ -383,7 +386,10 @@ protected:
     virtual void manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
     virtual void manageUserMenu() = 0;
+
     virtual void manageLevelSummary() = 0;
+    virtual void initLevelSummary() = 0;
+    virtual void changeMoodMusic(CGame::GameMode mode) = 0;
 
 private:
     void stopRecorder();
