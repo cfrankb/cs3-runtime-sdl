@@ -1163,6 +1163,7 @@ void CRuntime::drawScroller(CFrame &bitmap)
  */
 void CRuntime::setupTitleScreen()
 {
+    m_game->resetSugar();
     size_t len = scrollerBufSize();
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
@@ -1259,7 +1260,7 @@ void CRuntime::takeScreenshot()
     {
         file.write(png, size);
         file.close();
-        printf("screenshot save: %s\n", path.c_str());
+        printf("screenshot saved: %s\n", path.c_str());
     }
     else
     {
@@ -2035,7 +2036,7 @@ void CRuntime::drawLevelSummary(CFrame &bitmap)
         listStr.push_back({tmp, YELLOW, 2, 2});
     sprintf(tmp, "Fruits Collected: %d %%", m_summary.ppFruits);
     listStr.push_back({tmp, PINK, 1, 2});
-    sprintf(tmp, "Tresures Collected: %d %%", m_summary.ppBonuses);
+    sprintf(tmp, "Treasures Collected: %d %%", m_summary.ppBonuses);
     listStr.push_back({tmp, ORANGE, 1, 2});
     sprintf(tmp, "Secrets: %d %%", m_summary.ppSecrets);
     listStr.push_back({tmp, GREEN, 1, 2});
@@ -2093,7 +2094,7 @@ void CRuntime::initLevelSummary()
 {
     CGame &game = *m_game;
     const MapReport &report0 = game.originalMapReport();
-    const MapReport report1 = game.generateMapReport();
+    const MapReport report1 = game.currentMapReport();
     m_summary.ppFruits = report0.fruits ? 100 * (report0.fruits - report1.fruits) / report0.fruits : 100;
     m_summary.ppBonuses = report0.bonuses ? 100 * (report0.bonuses - report1.bonuses) / report0.bonuses : 100;
     m_summary.ppSecrets = report0.secrets ? 100 * (report0.secrets - report1.secrets) / report0.secrets : 100;

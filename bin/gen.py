@@ -61,6 +61,9 @@ def get_deps_blocks(paths, excluded, run_cmd):
     lines.append('run:')
     lines.append(f"\t{run_cmd}")
     lines.append("")
+    lines.append('count:')
+    lines.append("\tfind src  -type f -print0 | xargs -0 wc -l")
+    lines.append("")
     deps_blocks.append('\n'.join(lines))
     return deps_blocks, objs
 
