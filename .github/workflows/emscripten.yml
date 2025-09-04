@@ -29,6 +29,20 @@ jobs:
           emcc --version
           em++ --version
 
+      - name: Build mapzutil
+        run: |
+          echo "Preparing mapzutil"
+          cd tools/mapzutil
+          mkdir -p build
+          python3 bin/gen.py
+          make
+          cp  build/mapzutil ../../bin
+
+      - name: Strip private maps
+        run: |
+          echo "Strip private maps"
+          bin/mapzutil -s data/levels.mapz
+
       - name: Build your app
         run: |
           echo "Preparing itch.io version"
