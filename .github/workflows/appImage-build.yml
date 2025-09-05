@@ -6,14 +6,14 @@ on:
       - master
       #- develop
     paths:
-      - '**.cpp'
-      - '**.h'
-      - 'Makefile'
-      - 'packages/Makefile'
-      - '.github/workflows/appImage-build.yml'
-      - 'packages/data/**'
+      - "**.cpp"
+      - "**.h"
+      - "Makefile"
+      - "packages/Makefile"
+      - ".github/workflows/appImage-build.yml"
+      - "packages/data/**"
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - master
@@ -23,57 +23,70 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Install Build Dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y build-essential cmake
-        sudo apt install -y libsdl2-dev libsdl2-mixer-dev zlib1g-dev
-        sudo apt install -y python3
-        sudo apt install -y libxmp-dev
-        sudo apt install -y libmpg123-dev libogg-dev libvorbis-dev libflac-dev libopusfile-dev
-        sudo apt install -y wget zip
+      - name: Install Build Dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential cmake
+          sudo apt install -y libsdl2-dev libsdl2-mixer-dev zlib1g-dev
+          sudo apt install -y python3
+          sudo apt install -y libxmp-dev
+          sudo apt install -y libmpg123-dev libogg-dev libvorbis-dev libflac-dev libopusfile-dev
+          sudo apt install -y wget zip
 
-    - name: Compile C++ Application
-      run: |
-        python3 bin/gen.py sdl2 -s
-        mkdir -p build
-        make
-      # env: # Optional: set environment variables if your Makefile needs them
-      #   BUILD_TYPE: Release
+      - name: Build mapzutil
+        run: |
+          echo "Preparing mapzutil"
+          cd tools/mapzutil
+          mkdir -p build
+          python3 bin/gen.py
+          make
+          cp  build/mapzutil ../../bin
 
-    - name: Verify Executable Exists (Optional)
-      run: |
-        ls -l build/cs3-runtime
-        file build/cs3-runtime
-        ldd build/cs3-runtime
+      - name: Strip private maps
+        run: |
+          echo "Strip private maps"
+          bin/mapzutil -s data/levels.mapz
 
-    - name: Download linuxdeploy and plugins
-      run: |
-        wget -q -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O packages/bin/linuxdeploy-x86_64.AppImage
-        chmod +x packages/bin/linuxdeploy-x86_64.AppImage
+      - name: Compile C++ Application
+        run: |
+          python3 bin/gen.py sdl2 -s
+          mkdir -p build
+          make
+        # env: # Optional: set environment variables if your Makefile needs them
+        #   BUILD_TYPE: Release
 
+      - name: Verify Executable Exists (Optional)
+        run: |
+          ls -l build/cs3-runtime
+          file build/cs3-runtime
+          ldd build/cs3-runtime
 
-    - name: Create AppDir and Collect Dependencies
-      # This step uses linuxdeploy to create the AppDir, which is the core of the AppImage
-      # and bundles the executable and its runtime dependencies.
-      run: |
-        make -C packages
+      - name: Download linuxdeploy and plugins
+        run: |
+          wget -q -N https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage -O packages/bin/linuxdeploy-x86_64.AppImage
+          chmod +x packages/bin/linuxdeploy-x86_64.AppImage
 
-    - name: Release
-      uses: softprops/action-gh-release@v1
-      if: startsWith(github.ref, 'refs/tags/')
-      with:
-        files: |
-          packages/*.AppImage
-          LICENSE
+      - name: Create AppDir and Collect Dependencies
+        # This step uses linuxdeploy to create the AppDir, which is the core of the AppImage
+        # and bundles the executable and its runtime dependencies.
+        run: |
+          make -C packages
 
-    - name: Upload AppImage Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ github.event.repository.name }}-AppImage
-        path: |
-          packages/Creepspread_III-x86_64.AppImage
-        retention-days: 7
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            packages/*.AppImage
+            LICENSE
+
+      - name: Upload AppImage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-AppImage
+          path: |
+            packages/Creepspread_III-x86_64.AppImage
+          retention-days: 7

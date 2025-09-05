@@ -72,6 +72,44 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
     return EXIT_SUCCESS;
 }
 
+bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &params)
+{
+    if (params.strip)
+    {
+        int mapRemoved = 0;
+        for (int i = static_cast<int>(arch.size()) - 1; i >= 0; --i)
+        {
+            CMap *map = arch.at(i);
+            CStates &states = map->states();
+            if (states.getU(PRIVATE) != 0)
+            {
+                ++mapRemoved;
+                printf("stripping out: level %d - %s\n", i + 1, map->title());
+                arch.removeAt(i);
+                delete map;
+            }
+        }
+        if (mapRemoved)
+        {
+            printf("removed %d map%s\n", mapRemoved, mapRemoved > 1 ? "s" : "");
+            if (arch.write(filepath.c_str()))
+            {
+                printf("replaced done: %s\n", filepath.c_str());
+            }
+            else
+            {
+                fprintf(stderr, "failed to replace: %s\n", filepath.c_str());
+                return false;
+            }
+        }
+        else
+        {
+            printf("no map removed\n");
+        }
+    }
+    return true;
+}
+
 bool processFile(const std::string &filepath, const AppParams &params)
 {
     CFileWrap file;
@@ -81,37 +119,7 @@ bool processFile(const std::string &filepath, const AppParams &params)
         if (arch.read(file))
         {
             file.close();
-            if (params.strip)
-            {
-                int mapRemoved = 0;
-                for (int i = static_cast<int>(arch.size()) - 1; i >= 0; --i)
-                {
-                    CMap *map = arch.at(i);
-                    CStates &states = map->states();
-                    if (states.getU(PRIVATE) != 0)
-                    {
-                        ++mapRemoved;
-                        printf("stripping out: level %d - %s\n", i + 1, map->title());
-                        arch.removeAt(i);
-                        delete map;
-                    }
-                }
-                if (!mapRemoved)
-                {
-                    printf("no map removed\n");
-                    return true;
-                }
-                printf("removed %d map\n", mapRemoved);
-                if (arch.write(filepath.c_str()))
-                {
-                    printf("replaced done: %s\n", filepath.c_str());
-                }
-                else
-                {
-                    fprintf(stderr, "failed to replace %s\n", filepath.c_str());
-                    return false;
-                }
-            }
+            return doActions(arch, filepath, params);
         }
         else
         {

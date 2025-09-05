@@ -6,7 +6,7 @@ on:
       - master
       #- develop
     tags:
-      - 'v*'
+      - "v*"
 
   pull_request:
     branches:
@@ -34,6 +34,20 @@ jobs:
             libxmp-dev \
             pkg-config \
             licensecheck
+
+      - name: Build mapzutil
+        run: |
+          echo "Preparing mapzutil"
+          cd tools/mapzutil
+          mkdir -p build
+          python3 bin/gen.py
+          make
+          cp  build/mapzutil ../../bin
+
+      - name: Strip private maps
+        run: |
+          echo "Strip private maps"
+          bin/mapzutil -s data/levels.mapz
 
       - name: Create .deb package with CPack
         run: |

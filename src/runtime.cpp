@@ -1069,7 +1069,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
             const uint16_t animeOffset = selected ? (m_ticks / 3) & 0x1f : 0;
             const CFrameSet &users = *m_users;
             CFrame &frame = *users[PLAYER_TOTAL_FRAMES * item.userData() + PLAYER_DOWN_INDEX + animeOffset];
-            drawTile(bitmap, x, y, frame, false);
+            drawTileFaz(bitmap, x, y, frame, 0, selected ? COLOR_NOCHANGE : COLOR_GRAYSCALE);
             x += 32;
         }
         drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
@@ -1211,11 +1211,11 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
-#ifdef __EMSCRIPTEN__
-    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
-#else
+    // #ifdef __EMSCRIPTEN__
+    //     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+    // #else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
-#endif
+    // #endif
     m_game->setMode(CGame::MODE_TITLE);
 
     if (m_config["theme"] != "")
@@ -1335,7 +1335,7 @@ void CRuntime::initOptions()
     {
         m_healthBar = HEALTHBAR_CLASSIC;
     }
-    if (isTrue(m_config["summary"]))
+    if (isTrue(m_config["level_summary"]))
     {
         m_summaryEnabled = true;
     }
@@ -2110,7 +2110,7 @@ void CRuntime::changeMoodMusic(CGame::GameMode mode)
 {
     if (mode == CGame::MODE_GAMEOVER)
     {
-        openMusic("game over.ogg");
+        openMusic(m_config["gameover_theme"]);
     }
     else if (mode == CGame::MODE_RESTART)
     {
@@ -2119,5 +2119,8 @@ void CRuntime::changeMoodMusic(CGame::GameMode mode)
     else if (mode == CGame::MODE_PLAY)
     {
         openMusicForLevel(m_game->level());
+    }
+    else if (mode == CGame::MODE_LEVEL_INTRO)
+    {
     }
 }

@@ -264,6 +264,12 @@ protected:
         uint8_t attr;
     };
 
+    struct visualCues_t
+    {
+        bool diamondShimmer;
+        bool livesShimmer;
+    };
+
     struct hiscore_t
     {
         int32_t score;
@@ -323,11 +329,12 @@ protected:
     inline void drawTimeout(CFrame &bitmap);
     inline void drawKeys(CFrame &bitmap);
     inline void drawSugarMeter(CFrame &bitmap, const int bx);
-    void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    void drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &tile, int fazBitShift = 0, const ColorMask colorMask = COLOR_NOCHANGE);
     inline CFrame *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void drawHealthBar(CFrame &bitmap, const bool isPlayerHurt);
-    void drawGameStatus(CFrame &bitmap);
+    void drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues);
     CFrame *specialFrame(const sprite_t &sprite);
     void nextLevel();
     void restartLevel();

@@ -350,6 +350,38 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
     }
 }
 
+void CGameMixin::drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &tile, int fazBitShift, const ColorMask colorMask)
+{
+    const int width = bitmap.len();
+    const uint32_t *tileData = tile.getRGB();
+    uint32_t *dest = bitmap.getRGB() + x + y * width;
+    const uint32_t colorFilter = fazFilter(fazBitShift);
+    for (uint32_t row = 0; row < TILE_SIZE; ++row)
+    {
+        for (uint32_t col = 0; col < TILE_SIZE; ++col)
+        {
+            uint32_t color = tileData[col];
+            if (!color)
+                continue;
+            if (fazBitShift)
+                color = ((color >> fazBitShift) & colorFilter) | ALPHA;
+            if (colorMask == COLOR_INVERTED)
+            {
+                color ^= 0x00ffffff;
+            }
+            else if (colorMask == COLOR_GRAYSCALE)
+            {
+                uint8_t *c = reinterpret_cast<uint8_t *>(&color);
+                const uint16_t avg = (c[0] + c[1] + c[2]) / 3;
+                c[0] = c[1] = c[2] = avg;
+            }
+            dest[col] = color;
+        }
+        dest += width;
+        tileData += TILE_SIZE;
+    }
+}
+
 void CGameMixin::drawKeys(CFrame &bitmap)
 {
     CGame &game = *m_game;
@@ -370,6 +402,8 @@ void CGameMixin::drawKeys(CFrame &bitmap)
 
 void CGameMixin::drawScreen(CFrame &bitmap)
 {
+    const CGame &game = *m_game;
+
     // draw viewport
     if (m_cameraMode == CAMERA_MODE_DYNAMIC)
         drawViewPortDynamic(bitmap);
@@ -385,13 +419,25 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         bitmap.shiftLEFT(false);
     }
 
+    // visual cues
+    static int rGoalCount = 0;
+    static int rLives = 0;
+    const visualCues_t visualcues{
+        .diamondShimmer = game.goalCount() < rGoalCount,
+        .livesShimmer = game.lives() > rLives,
+    };
+    rGoalCount = game.goalCount();
+    rLives = game.lives();
+
     // draw game status
-    drawGameStatus(bitmap);
+    drawGameStatus(bitmap, visualcues);
 
     // draw bottom rect
     const bool isFullWidth = _WIDTH >= MIN_WIDTH_FULL;
     const Color rectBG = isFullWidth && m_currentEvent >= MSG0 ? WHITE : DARKGRAY;
-    const Color rectBorder = isPlayerHurt ? PINK : LIGHTGRAY;
+    const Color rectBorder = isPlayerHurt              ? PINK
+                             : visualcues.livesShimmer ? GREEN
+                                                       : LIGHTGRAY;
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, rectBG, true);
     drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
 
@@ -1893,13 +1939,9 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
     }
 }
 
-void CGameMixin::drawGameStatus(CFrame &bitmap)
+void CGameMixin::drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues)
 {
     CGame &game = *m_game;
-    static int rGoalCount = 0;
-    bool diamondShimer = game.goalCount() < rGoalCount;
-    rGoalCount = game.goalCount();
-
     char tmp[32];
     if (m_paused)
     {
@@ -1940,10 +1982,10 @@ void CGameMixin::drawGameStatus(CFrame &bitmap)
         drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
         bx += tx;
         tx = sprintf(tmp, "DIAMONDS %.2d ", game.goalCount());
-        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, diamondShimer ? DEEPSKYBLUE : YELLOW);
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.diamondShimmer ? DEEPSKYBLUE : YELLOW);
         bx += tx;
         tx = sprintf(tmp, "LIVES %.2d ", game.lives());
-        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, PURPLE);
+        drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.livesShimmer ? GREEN : PURPLE);
         bx += tx;
         if (m_recorder->isRecording())
         {

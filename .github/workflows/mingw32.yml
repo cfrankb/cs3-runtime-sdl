@@ -1,27 +1,24 @@
 name: Build Windows App
 
-
 on:
   push:
     branches:
-      - 'master'
+      - "master"
       #- 'develop'
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
-    branches: [ github-ci ]
+    branches: [github-ci]
 
 jobs:
   build-windows:
     runs-on: ubuntu-22.04
 
     steps:
-
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
 
       - name: Install build dependencies
         run: |
@@ -39,6 +36,20 @@ jobs:
             python3 \
             git
 
+      - name: Build mapzutil
+        run: |
+          echo "Preparing mapzutil"
+          cd tools/mapzutil
+          mkdir -p build
+          python3 bin/gen.py
+          make
+          cp  build/mapzutil ../../bin
+
+      - name: Strip private maps
+        run: |
+          echo "Strip private maps"
+          bin/mapzutil -s data/levels.mapz
+
       - name: Download SDL2 mingw
         run: |
           mkdir -p $GITHUB_WORKSPACE/deps
@@ -46,7 +57,6 @@ jobs:
           wget https://cfrankb.com/files/libs/sdl2-mingw.zip
           unzip sdl2-mingw.zip
           rm sdl2-mingw.zip
-
 
       - name: Build your app
         run: |
