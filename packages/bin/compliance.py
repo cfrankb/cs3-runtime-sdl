@@ -65,7 +65,7 @@ for file in glob.glob("data/musics/*"):
     )
 
 
-tfile = open("OPEN_SOURCE_COMPLIANCE.md", "w")
+tfile = open("techdocs/OPEN_SOURCE_COMPLIANCE.md", "w")
 tfile.write(COMPLIANCE_HEAD.strip() + "\n")
 tfile.write("## 📦 Third-Party Components\n\n")
 columns = [
@@ -82,11 +82,11 @@ tfile.write("|".join(columns) + "\n")
 separators = ["-" if x else "" for x in columns]
 tfile.write("|".join(separators) + "\n")
 
-tfile_tp = open("THIRD_PARTY.md", "w")
+tfile_tp = open("techdocs/THIRD_PARTY.md", "w")
 tfile_tp.write("# Third-Party Libraries\n\n")
-tfile_ml = open("MUSIC_LICENSES.md", "w")
+tfile_ml = open("techdocs/MUSIC_LICENSES.md", "w")
 tfile_ml.write("# # Music Licensing\n\n")
-tfile_al = open("ASSET_LICENSES.md", "w")
+tfile_al = open("techdocs/ASSET_LICENSES.md", "w")
 tfile_al.write("# Asset Licensing\n\n")
 
 with open("packages/data/components.json", "r") as file:

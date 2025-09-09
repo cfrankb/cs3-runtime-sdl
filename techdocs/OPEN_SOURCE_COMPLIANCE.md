@@ -16,16 +16,16 @@ This document outlines all third-party components used in this project, along wi
 
 |Component Name|Version|License|SPDX ID|Source URL|Attribution Required|
 |-|-|-|-|-|-|
-|SDL2||zlib|Zlib|[libsdl.org](https://libsdl.org)|No|
-|SDL2_mixer||zlib|Zlib|[SDL_mixer GitHub](https://github.com/libsdl-org/SDL_mixer)|No|
+|SDL3||zlib|Zlib|[libsdl.org](https://libsdl.org)|No|
+|SDL3_mixer||zlib|Zlib|[SDL_mixer GitHub](https://github.com/libsdl-org/SDL_mixer)|No|
 |zlib||zlib|Zlib|[zlib GitHub](https://github.com/madler/zlib)|No|
 |libXMP||||[libXMP GitHub](https://github.com/libxmp/libxmp)|No|
 |01 - First Secret.xm||||[BigToeMan]()||
 |02 - Fast Pace.xm||||[BigToeMan]()||
-|04 - Grab the Diamonds Dont get killed.xm||||[BigToeMan]()||
+|04 - Grab the Diamonds.xm||||[BigToeMan]()||
 |06 - DeathTrap.xm||||[BigToeMan]()||
+|bitshift.xm||CC0||[]()||
 |cabin_fever.xm||CC0||[]()||
-|cs3idea32.ogg||||[AkshayAlive]()||
 |game over.ogg||||[Philip Bradbury]()||
 |kc-basslinetech.xm||CC0||[]()||
 |knuckles_sucks!.xm||CC0||[]()||

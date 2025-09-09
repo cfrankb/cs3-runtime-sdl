@@ -184,7 +184,7 @@ void CRuntime::paint()
 }
 
 /**
- * @brief Initialize the SDL2 library. Create window, texture and surface.
+ * @brief Initialize the SDL3 library. Create window, texture and surface.
  *
  * @return true
  * @return false
@@ -192,7 +192,8 @@ void CRuntime::paint()
 bool CRuntime::initSDL()
 {
     const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
-    printf("SDL Init() texture: %dx%d\n", WIDTH, HEIGHT);
+    printf("SDL Init()\n");
+    printf("texture: %dx%d\n", WIDTH, HEIGHT);
     SDL_WindowFlags windowFlags = 0;
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
@@ -209,7 +210,6 @@ bool CRuntime::initSDL()
     else
     {
         atexit(cleanup);
-        //     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
         {
@@ -231,11 +231,13 @@ bool CRuntime::initSDL()
             fprintf(stderr, "SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
         }
 
+        /*
         if (!SDL_SetRenderVSync(m_app.renderer, 1))
         {
             fprintf(stderr, "SDL_RenderSetVSync Failed: %s\n", SDL_GetError());
             return false;
         }
+        */
     }
 
     const std::string iconFile = m_prefix + m_config["icon"];
@@ -658,7 +660,6 @@ void CRuntime::cleanUpCredits()
 
 void CRuntime::preRun()
 {
-    printf("prerun()");
     if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);

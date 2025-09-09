@@ -10,25 +10,25 @@
 - Source: [BigToeMan]()
 - Attribution: “02 - Fast Pace.xm” by BigToeMan, licensed under
 
-## 04 - Grab the Diamonds Dont get killed.xm by BigToeMan
+## 04 - Grab the Diamonds.xm by BigToeMan
 - License: 
 - Source: [BigToeMan]()
-- Attribution: “04 - Grab the Diamonds Dont get killed.xm” by BigToeMan, licensed under
+- Attribution: “04 - Grab the Diamonds.xm” by BigToeMan, licensed under
 
 ## 06 - DeathTrap.xm by BigToeMan
 - License: 
 - Source: [BigToeMan]()
 - Attribution: “06 - DeathTrap.xm” by BigToeMan, licensed under
 
+## bitshift.xm by 
+- License: CC0
+- Source: []()
+- Attribution: “bitshift.xm” by , licensed under CC0
+
 ## cabin_fever.xm by 
 - License: CC0
 - Source: []()
 - Attribution: “cabin_fever.xm” by , licensed under CC0
-
-## cs3idea32.ogg by AkshayAlive
-- License: 
-- Source: [AkshayAlive]()
-- Attribution: “cs3idea32.ogg” by AkshayAlive, licensed under
 
 ## game over.ogg by Philip Bradbury
 - License: 

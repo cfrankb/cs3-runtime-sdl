@@ -1,6 +1,6 @@
 [
     {
-        "name": "SDL2",
+        "name": "SDL3",
         "version": "",
         "license": "zlib",
         "SPDX_ID": "Zlib",
@@ -11,7 +11,7 @@
         "attribution": "No"
     },
     {
-        "name": "SDL2_mixer",
+        "name": "SDL3_mixer",
         "version": "",
         "license": "zlib",
         "SPDX_ID": "Zlib",
