@@ -1,0 +1,10 @@
+[submodule "external/SDL3"]
+	path = external/SDL3
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "external/SDL3_mixer"]
+	path = external/SDL3_mixer
+	url = https://github.com/libsdl-org/SDL_mixer.git
+	branch = sdl2-api-on-sdl3
+[submodule "external/libxmp"]
+	path = external/libxmp
+	url = https://github.com/libxmp/libxmp.git

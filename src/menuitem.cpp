@@ -154,3 +154,14 @@ CMenu *CMenuItem::menu() const
 {
     return m_menu;
 }
+
+CMenuItem &CMenuItem::setUserData(const int userData)
+{
+    m_userdata = userData;
+    return *this;
+}
+
+int CMenuItem::userData() const
+{
+    return m_userdata;
+}

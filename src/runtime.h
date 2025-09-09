@@ -16,10 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "gamemixin.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
+#include <SDL3/SDL.h>
+#include "SDL3/SDL_gamepad.h"
 #include <vector>
 #include <unordered_map>
+#include "shared/interfaces/ISound.h"
 
 class ISound;
 class CFrameSet;
@@ -53,6 +54,8 @@ public:
     void init(CMapArch *maparch, int index) override;
     void setVerbose(bool enable);
     void notifyExitFullScreen();
+    bool checkMusicFiles();
+    void loadColorMaps(const int userID);
 
 private:
     typedef struct
@@ -67,6 +70,14 @@ private:
         int windowedHeigth;
     } App;
 
+    struct Summary
+    {
+        int ppFruits;
+        int ppBonuses;
+        int ppSecrets;
+        int timeTaken;
+    };
+
     static void cleanup();
     void preloadAssets() override;
     bool initControllers();
@@ -78,11 +89,15 @@ private:
     void openMusicForLevel(int i) override;
     void setupTitleScreen() override;
     void takeScreenshot() override;
-    void sanityTest() override;
+    void sanityTest() override {};
     void toggleFullscreen() override;
     void manageTitleScreen() override;
     void toggleGameMenu() override;
     void manageGameMenu() override;
+    void manageUserMenu() override;
+    void manageLevelSummary() override;
+    void initLevelSummary() override;
+    void changeMoodMusic(CGame::GameMode mode) override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -92,6 +107,7 @@ private:
     std::vector<std::string> m_musicFiles;
     std::vector<std::string> m_soundFiles;
     std::vector<std::string> m_assetFiles;
+    std::vector<std::string> m_userNames;
     std::string m_prefix = "data/";
     std::string m_workspace = "";
     CFrameSet *m_title;
@@ -110,11 +126,13 @@ private:
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
+    CMenu *m_userMenu = nullptr;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
+    Summary m_summary;
 
     // Vector to hold pointers to opened game controllers
-    std::vector<SDL_GameController *> m_gameControllers;
+    std::vector<SDL_Gamepad *> m_gameControllers;
     struct Rez
     {
         int w;
@@ -133,6 +151,7 @@ private:
         MENUID_MAINMENU = 0x10,
         MENUID_GAMEMENU = 0x11,
         MENUID_OPTIONMENU,
+        MENUID_USERS,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -150,10 +169,11 @@ private:
         MENU_ITEM_RETURN_MAIN,
         MENU_ITEM_CAMERA,
         MENU_ITEM_RETURN_TO_GAME,
+        MENU_ITEM_SELECT_USER,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
-        MUSIC_VOLUME_STEPS = 1 + (MIX_MAX_VOLUME / 10),
-        MUSIC_VOLUME_MAX = MIX_MAX_VOLUME,
+        MUSIC_VOLUME_STEPS = 1 + (ISound::MAX_VOLUME / 10),
+        MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,
     };
 
@@ -173,9 +193,15 @@ private:
     void parseHelp(char *text);
     void manageOptionScreen() override;
     CMenu &initOptionMenu();
+    CMenu &initUserMenu();
     int findResolutionIndex();
     void resize(int w, int h);
     void listResolutions(int displayIndex = 0);
     void createResolutionList();
     void resizeGameMenu();
+    void openMusic(const std::string &filename);
+    void drawUserMenu(CFrame &bitmap);
+    std::string getMusicPath(const std::string &filename);
+    void leaveClickStart();
+    void drawLevelSummary(CFrame &bitmap);
 };

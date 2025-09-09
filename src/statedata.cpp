@@ -24,6 +24,9 @@ const std::vector<KeyOption> g_keyOptions = {
     DEF(POS_ORIGIN),
     DEF(POS_EXIT),
     DEF(MAP_GOAL),
+    DEF(PAR_TIME),
+    DEF(AUTHOR),
+    DEF(YEAR),
     DEF(MSG0),
     DEF(MSG1),
     DEF(MSG2),
@@ -44,6 +47,7 @@ const std::vector<KeyOption> g_keyOptions = {
     DEF(USERDEF2),
     DEF(USERDEF3),
     DEF(USERDEF4),
+    DEF(PRIVATE),
 };
 
 const std::vector<KeyOption> &getKeyOptions()

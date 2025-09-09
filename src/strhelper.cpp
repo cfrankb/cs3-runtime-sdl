@@ -142,3 +142,9 @@ std::string trimString(const std::string &s)
     }
     return s.substr(i, j + 1 - i);
 }
+
+bool endswith(const char *str, const char *end)
+{
+    const char *t = strstr(str, end);
+    return t && strcmp(t, end) == 0;
+}

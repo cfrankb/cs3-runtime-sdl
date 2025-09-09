@@ -37,11 +37,12 @@
 #include <emscripten/html5.h>
 const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
-
 #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
+
+#include "SDL3/SDL_gamepad.h"
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -63,6 +64,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
     m_optionMenu = new CMenu(MENUID_OPTIONMENU);
+    m_userMenu = new CMenu(MENUID_USERS);
     m_title = nullptr;
 }
 
@@ -70,11 +72,11 @@ CRuntime::~CRuntime()
 {
     if (m_app.window)
     {
-        printf("detroying SDL2 objects\n");
+        printf("detroying SDL3 objects\n");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
-        SDL_Quit();
+        //  SDL_Quit();
     }
 
     if (m_music)
@@ -111,8 +113,17 @@ CRuntime::~CRuntime()
     {
         delete m_optionMenu;
     }
+
+    if (m_userMenu)
+    {
+        delete m_userMenu;
+    }
 }
 
+/**
+ * @brief Composite the screen and send it to the renderer
+ *
+ */
 void CRuntime::paint()
 {
     if (!m_bitmap)
@@ -155,63 +166,75 @@ void CRuntime::paint()
         drawOptions(bitmap);
     case CGame::MODE_IDLE:
         break;
+    case CGame::MODE_USERSELECT:
+        drawUserMenu(bitmap);
+        break;
+    case CGame::MODE_LEVEL_SUMMARY:
+        drawLevelSummary(bitmap);
+        break;
     };
 
     SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
     int width;
     int height;
     SDL_GetWindowSize(m_app.window, &width, &height);
-    SDL_Rect rectDest{0, 0, width, height};
-    SDL_RenderCopy(m_app.renderer, m_app.texture, NULL, &rectDest);
+    SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
+    SDL_RenderTexture(m_app.renderer, m_app.texture, NULL, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }
 
+/**
+ * @brief Initialize the SDL2 library. Create window, texture and surface.
+ *
+ * @return true
+ * @return false
+ */
 bool CRuntime::initSDL()
 {
+    const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
     printf("SDL Init() texture: %dx%d\n", WIDTH, HEIGHT);
-    int rendererFlags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
-    int windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    SDL_WindowFlags windowFlags = 0;
+    if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
+        return false;
+    }
+    m_app.window = SDL_CreateWindow(
+        title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
+    if (m_app.window == NULL)
+    {
+        fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     else
     {
-        const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
-        m_app.window = SDL_CreateWindow(
-            title.c_str(),
-            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 2 * WIDTH, 2 * HEIGHT, windowFlags);
-        if (m_app.window == NULL)
+        atexit(cleanup);
+        //     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
+        m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
+        if (m_app.renderer == nullptr)
         {
-            fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
+            fprintf(stderr, "Failed to create renderer: %s\n", SDL_GetError());
             return false;
         }
-        else
+
+        m_app.texture = SDL_CreateTexture(
+            m_app.renderer,
+            SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+        if (m_app.texture == nullptr)
         {
-            atexit(cleanup);
-            //     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "best");
-            m_app.renderer = SDL_CreateRenderer(m_app.window, -1, rendererFlags);
-            if (m_app.renderer == nullptr)
-            {
-                fprintf(stderr, "Failed to create renderer: %s\n", SDL_GetError());
-                return false;
-            }
+            fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
+            return false;
+        }
 
-            m_app.texture = SDL_CreateTexture(
-                m_app.renderer,
-                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-            if (m_app.texture == nullptr)
-            {
-                fprintf(stderr, "Failed to create texture: %s\n", SDL_GetError());
-                return false;
-            }
+        if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
+        {
+            fprintf(stderr, "SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
+        }
 
-            if (SDL_RenderSetVSync(m_app.renderer, 1) != 0)
-            {
-                fprintf(stderr, "SDL_RenderSetVSync Failed: %s\n", SDL_GetError());
-                return false;
-            }
+        if (!SDL_SetRenderVSync(m_app.renderer, 1))
+        {
+            fprintf(stderr, "SDL_RenderSetVSync Failed: %s\n", SDL_GetError());
+            return false;
         }
     }
 
@@ -221,11 +244,10 @@ bool CRuntime::initSDL()
     if (file.open(iconFile.c_str(), "rb") && frames.extract(file))
     {
         CFrame &frame = *frames[0];
-        SDL_Surface *surface = SDL_CreateRGBSurfaceFrom(
-            frame.getRGB(), frame.len(), frame.hei(), 32, frame.len() * 4,
-            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        SDL_Surface *surface = SDL_CreateSurfaceFrom(
+            frame.len(), frame.hei(), SDL_PIXELFORMAT_RGBA32, frame.getRGB(), frame.len() * sizeof(uint32_t));
         SDL_SetWindowIcon(m_app.window, surface);
-        SDL_FreeSurface(surface);
+        SDL_DestroySurface(surface);
         file.close();
     }
 
@@ -246,11 +268,36 @@ void CRuntime::run()
     mainLoop();
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(int, pollGamepadButtons, (), {
+    const gp = navigator.getGamepads()[0];
+    if (!gp)
+        return;
+    let i = 0;
+    let buttonMask = 0;
+    for (const button of gp.buttons)
+    {
+        if (button.pressed)
+        {
+            buttonMask |= (1 << i);
+        }
+        ++i;
+        if (i == 31)
+            break;
+    }
+    return buttonMask;
+});
+#endif
+
+/**
+ * @brief Read input devices for user inputs
+ *
+ */
 void CRuntime::doInput()
 {
     int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
     int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
-    SDL_GameController *controller;
+    SDL_Gamepad *controller;
     SDL_Event event;
     int joystick_index;
     while (SDL_PollEvent(&event))
@@ -259,56 +306,49 @@ void CRuntime::doInput()
         uint8_t buttonState = BUTTON_RELEASED;
         switch (event.type)
         {
-        case SDL_KEYDOWN:
+        case SDL_EVENT_KEY_DOWN:
             keyState = KEY_PRESSED;
             [[fallthrough]];
-        case SDL_KEYUP:
-            keyReflector(event.key.keysym.sym, keyState);
-            switch (event.key.keysym.sym)
+        case SDL_EVENT_KEY_UP:
+            keyReflector(event.key.key, keyState);
+            switch (event.key.key)
             {
-            case SDLK_w:
+            case SDLK_W:
             case SDLK_UP:
                 m_joyState[AIM_UP] = keyState;
                 continue;
-            case SDLK_s:
+            case SDLK_S:
             case SDLK_DOWN:
                 m_joyState[AIM_DOWN] = keyState;
                 continue;
-            case SDLK_a:
+            case SDLK_A:
             case SDLK_LEFT:
                 m_joyState[AIM_LEFT] = keyState;
                 continue;
-            case SDLK_d:
+            case SDLK_D:
             case SDLK_RIGHT:
                 m_joyState[AIM_RIGHT] = keyState;
                 continue;
             }
             break;
 
-        case SDL_WINDOWEVENT:
-            if (event.window.event == SDL_WINDOWEVENT_RESIZED && !m_app.isFullscreen)
+        case SDL_EVENT_WINDOW_RESIZED:
+            if (!m_app.isFullscreen)
             {
                 printf("resized\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
 
-        case SDL_MOUSEBUTTONDOWN:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (event.button.button != 0 &&
                 m_game->mode() == CGame::MODE_CLICKSTART)
             {
-                setupTitleScreen();
-#ifdef __EMSCRIPTEN__
-                EM_ASM(
-                    enableButtons(););
-#endif
-                initMusic();
-                initSounds();
-                initControllers();
+                leaveClickStart();
             }
             break;
 
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
 #ifdef __EMSCRIPTEN__
 //           emscripten_cancel_main_loop();
 #else
@@ -321,16 +361,16 @@ void CRuntime::doInput()
             m_isRunning = false;
             break;
 
-        case SDL_CONTROLLERDEVICEADDED:
+        case SDL_EVENT_GAMEPAD_ADDED:
             joystick_index = event.cdevice.which;
-            if (SDL_IsGameController(joystick_index))
+            if (SDL_IsGamepad(joystick_index))
             {
-                controller = SDL_GameControllerOpen(joystick_index);
+                controller = SDL_OpenGamepad(joystick_index);
                 if (controller)
                 {
                     m_gameControllers.push_back(controller);
                     printf("Controller ADDED: %s (Index:%d)\n",
-                           SDL_GameControllerName(controller), joystick_index);
+                           SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
                 }
                 else
                 {
@@ -339,17 +379,17 @@ void CRuntime::doInput()
             }
             break;
 
-        case SDL_CONTROLLERDEVICEREMOVED:
-            controller = SDL_GameControllerFromInstanceID(event.cdevice.which);
+        case SDL_EVENT_GAMEPAD_REMOVED:
+            controller = SDL_GetGamepadFromID(event.cdevice.which);
             if (controller)
             {
-                std::string controllerName = SDL_GameControllerName(controller);
+                std::string controllerName = SDL_GetGamepadNameForID(event.cdevice.which);
                 printf("Controller REMOVED: %s\n", controllerName.c_str());
                 for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
                 {
                     if (*it == controller)
                     {
-                        SDL_GameControllerClose(*it);
+                        SDL_CloseGamepad(*it);
                         m_gameControllers.erase(it);
                         break;
                     }
@@ -357,62 +397,62 @@ void CRuntime::doInput()
             }
             break;
 
-        case SDL_CONTROLLERBUTTONDOWN:
+#ifndef __EMSCRIPTEN__
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             buttonState = BUTTON_PRESSED;
             [[fallthrough]];
-
-        case SDL_CONTROLLERBUTTONUP:
-            controller = SDL_GameControllerFromInstanceID(event.cbutton.which);
-            switch (event.cbutton.button)
+        case SDL_EVENT_GAMEPAD_BUTTON_UP:
+            controller = SDL_GetGamepadFromID(event.button.which);
+            switch (event.button.button)
             {
-            case SDL_CONTROLLER_BUTTON_DPAD_UP:
+            case SDL_GAMEPAD_BUTTON_DPAD_UP:
                 m_joyState[AIM_UP] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_DPAD_DOWN:
+            case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
                 m_joyState[AIM_DOWN] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_DPAD_LEFT:
+            case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
                 m_joyState[AIM_LEFT] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_DPAD_RIGHT:
+            case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
                 m_joyState[AIM_RIGHT] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_A:
+            case SDL_GAMEPAD_BUTTON_SOUTH:
                 m_buttonState[BUTTON_A] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_B:
+            case SDL_GAMEPAD_BUTTON_EAST:
                 m_buttonState[BUTTON_B] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_X:
+            case SDL_GAMEPAD_BUTTON_WEST:
                 m_buttonState[BUTTON_X] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_Y:
+            case SDL_GAMEPAD_BUTTON_NORTH:
                 m_buttonState[BUTTON_Y] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_START:
+            case SDL_GAMEPAD_BUTTON_START:
                 m_buttonState[BUTTON_START] = buttonState;
                 continue;
-            case SDL_CONTROLLER_BUTTON_BACK:
+            case SDL_GAMEPAD_BUTTON_BACK:
                 m_buttonState[BUTTON_BACK] = buttonState;
                 continue;
             default:
                 printf("Controller: %s - Button %s: %s\n",
-                       SDL_GameControllerName(controller),
+                       SDL_GetGamepadName(controller),
                        buttonState ? "DOWN" : "UP",
-                       SDL_GameControllerGetStringForButton((SDL_GameControllerButton)event.cbutton.button));
+                       SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button));
             }
             break;
-
-        case SDL_CONTROLLERAXISMOTION:
-            controller = SDL_GameControllerFromInstanceID(event.caxis.which);
-            if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX ||
-                event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX)
+#endif
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            controller = SDL_GetGamepadFromID(event.gaxis.which);
+            if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ||
+                event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTX)
             {
-                if (event.caxis.value < -xAxisSensitivity)
+                if (event.gaxis.value < -xAxisSensitivity)
                 {
                     m_joyState[AIM_LEFT] = KEY_PRESSED;
                 }
-                else if (event.caxis.value > xAxisSensitivity)
+                else if (event.gaxis.value > xAxisSensitivity)
                 {
                     m_joyState[AIM_RIGHT] = KEY_PRESSED;
                 }
@@ -422,14 +462,14 @@ void CRuntime::doInput()
                     m_joyState[AIM_RIGHT] = KEY_RELEASED;
                 }
             }
-            else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY ||
-                     event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY)
+            else if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY ||
+                     event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTY)
             {
-                if (event.caxis.value < -yAxisSensitivity)
+                if (event.gaxis.value < -yAxisSensitivity)
                 {
                     m_joyState[AIM_UP] = KEY_PRESSED;
                 }
-                else if (event.caxis.value > yAxisSensitivity)
+                else if (event.gaxis.value > yAxisSensitivity)
                 {
                     m_joyState[AIM_DOWN] = KEY_PRESSED;
                 }
@@ -441,19 +481,51 @@ void CRuntime::doInput()
             }
             // Axis value ranges from -32768 to 32767
             // Apply a deadzone to ignore small movements
-            else if (event.caxis.value < -8000 || event.caxis.value > 8000)
+            else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
             { // Example deadzone
-                printf("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GameControllerName(controller),
-                       SDL_GameControllerGetStringForAxis((SDL_GameControllerAxis)event.caxis.axis),
-                       event.caxis.value);
+                printf("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
+                       SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
+                       event.gaxis.value);
             }
             break;
         default:
             break;
         }
     }
+
+#ifdef __EMSCRIPTEN__
+    int buttonMask = pollGamepadButtons();
+    if (buttonMask && (m_game->mode() == CGame::MODE_CLICKSTART))
+    {
+        leaveClickStart();
+    }
+    else if (buttonMask)
+    {
+        // printf("buttons: %.4x\n", buttonMask);
+    }
+    for (int i = 0; i < Button_Count; ++i)
+    {
+        if (buttonMask & (1 << i))
+        {
+            m_buttonState[i] = BUTTON_PRESSED;
+        }
+        else
+        {
+            m_buttonState[i] = BUTTON_RELEASED;
+        }
+    }
+#endif
 }
 
+/**
+ * @brief Read data into memory
+ *
+ * @param path filepath
+ * @param dest memory buffer holding data
+ * @param terminator add a null char terminator
+ * @return true
+ * @return false
+ */
 bool CRuntime::fetchFile(const std::string &path, char **dest, const bool terminator)
 {
     CFileWrap file;
@@ -485,12 +557,12 @@ void CRuntime::preloadAssets()
     CFrameSet **frameSets[] = {
         &m_tiles,
         &m_animz,
-        &m_annie,
+        &m_users,
         &m_title,
     };
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
-        const std::string filename = m_prefix + m_assetFiles[i];
+        const std::string filename = m_prefix + "assets/" + m_assetFiles[i];
         *frameSets[i] = new CFrameSet();
         if (file.open(filename.c_str(), "rb"))
         {
@@ -586,23 +658,24 @@ void CRuntime::cleanUpCredits()
 
 void CRuntime::preRun()
 {
+    printf("prerun()");
     if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);
     }
     else
     {
-        setupTitleScreen();
         initMusic();
         initSounds();
         initControllers();
+        setupTitleScreen();
     }
 }
 
 void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
-    openMusicForLevel(m_game->level());
+    m_music->setVolume(ISound::MAX_VOLUME);
     printf("volume: %d\n", m_music->getVolume());
 }
 
@@ -618,9 +691,9 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
     {
         result = key - SDLK_0 + Key_0;
     }
-    else if (range(key, SDLK_a, SDLK_z))
+    else if (range(key, SDLK_A, SDLK_Z))
     {
-        result = key - SDLK_a + Key_A;
+        result = key - SDLK_A + Key_A;
     }
     else if (range(key, SDLK_F1, SDLK_F12))
     {
@@ -773,7 +846,8 @@ void CRuntime::load()
 #else
     std::string path = m_workspace + SAVEGAME_FILE;
 #endif
-    m_game->setMode(CGame::MODE_IDLE);
+    CGame &game = *m_game;
+    game.setMode(CGame::MODE_IDLE);
     std::string name;
     printf("reading: %s\n", path.c_str());
     FILE *sfile = fopen(path.c_str(), "rb");
@@ -789,40 +863,38 @@ void CRuntime::load()
     {
         fprintf(stderr, "can't read:%s\n", path.c_str());
     }
-    m_game->setMode(CGame::MODE_PLAY);
+    game.setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
     centerCamera();
+    int userID = game.getUserID();
+    loadColorMaps(userID);
 }
 
 void CRuntime::initSounds()
 {
+    printf("initSound\n");
     m_sound = new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
         const auto soundName = m_prefix + std::string("sounds/") + m_soundFiles[i];
-        if (file.open(soundName.c_str(), "rb"))
-        {
-            const int size = file.getSize();
-            auto sound = new uint8_t[size];
-            file.read(sound, size);
-            file.close();
-            if (m_verbose)
-                printf("loaded %s: %d bytes\n", soundName.c_str(), size);
-            m_sound->add(sound, size, i + 1);
-            delete[] sound;
-        }
-        else
-        {
-            fprintf(stderr, "failed to open %s\n", soundName.c_str());
-        }
+        bool result = m_sound->add(soundName.c_str(), i + 1);
+        if (m_verbose)
+            printf("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
     }
     m_game->attach(m_sound);
 }
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const std::string music = m_prefix + std::string("musics/") + m_musicFiles[i % m_musicFiles.size()];
+    const std::string filename = m_musicFiles[i % m_musicFiles.size()];
+    openMusic(filename);
+}
+
+void CRuntime::openMusic(const std::string &filename)
+{
+    printf("open music: %s\n", filename.c_str());
+    const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
         m_music->play();
@@ -880,6 +952,10 @@ bool CRuntime::parseConfig(const char *filename)
             else if (section == "assets")
             {
                 m_assetFiles.push_back(p);
+            }
+            else if (section == "users")
+            {
+                m_userNames.push_back(p);
             }
             else if (section == "config")
             {
@@ -971,19 +1047,30 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
     {
         const CMenuItem &item = menu.at(i);
         const std::string &text = item.str();
-        const int x = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
-        Color color = static_cast<int>(i) == menu.index() ? YELLOW : BLUE;
+        const int bx = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
+        const bool selected = static_cast<int>(i) == menu.index();
+        Color color = selected ? YELLOW : BLUE;
         if (item.isDisabled())
         {
             color = LIGHTGRAY;
         }
-        drawFont(bitmap, x, baseY + i * spacingY, text.c_str(), color, CLEAR, scaleX, scaleY);
+        int x = bx;
+        const int y = baseY + i * spacingY;
+        if (item.role() == MENU_ITEM_SELECT_USER)
+        {
+            const uint16_t animeOffset = selected ? (m_ticks / 3) & 0x1f : 0;
+            const CFrameSet &users = *m_users;
+            CFrame &frame = *users[PLAYER_TOTAL_FRAMES * item.userData() + PLAYER_DOWN_INDEX + animeOffset];
+            drawTileFaz(bitmap, x, y, frame, 0, selected ? COLOR_NOCHANGE : COLOR_GRAYSCALE);
+            x += 32;
+        }
+        drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
         if (static_cast<int>(i) == menu.index())
         {
             char tmp[2];
             tmp[0] = CHARS_TRIGHT;
             tmp[1] = '\0';
-            drawFont(bitmap, 32, baseY + i * spacingY, tmp, RED, CLEAR, scaleX, scaleY);
+            drawFont(bitmap, 32, y, tmp, RED, CLEAR, scaleX, scaleY);
         }
     }
 }
@@ -1062,8 +1149,13 @@ void CRuntime::drawScroller(CFrame &bitmap)
     }
 }
 
+/**
+ * @brief Setup the title screen. Create Menu. Clear key/button states. etc
+ *
+ */
 void CRuntime::setupTitleScreen()
 {
+    m_game->resetSugar();
     size_t len = scrollerBufSize();
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;
@@ -1111,12 +1203,15 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
-#ifdef __EMSCRIPTEN__
-    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
-#else
+    // #ifdef __EMSCRIPTEN__
+    //     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+    // #else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
-#endif
+    // #endif
     m_game->setMode(CGame::MODE_TITLE);
+
+    if (m_config["theme"] != "")
+        openMusic(m_config["theme"]);
 }
 
 /**
@@ -1126,8 +1221,10 @@ void CRuntime::setupTitleScreen()
 void CRuntime::takeScreenshot()
 {
     CFrame bitmap(WIDTH, HEIGHT);
-    bitmap.fill(BLACK);
-    drawScreen(bitmap);
+    if (m_bitmap)
+        bitmap = *m_bitmap;
+    else
+        bitmap.fill(BLACK);
     auto rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
     {
@@ -1155,11 +1252,11 @@ void CRuntime::takeScreenshot()
     {
         file.write(png, size);
         file.close();
-        printf("screenshot save: %s\n", path.c_str());
+        printf("screenshot saved: %s\n", path.c_str());
     }
     else
     {
-        fprintf(stderr, "can't write %s\n", path.c_str());
+        fprintf(stderr, "can't write png: %s\n", path.c_str());
     }
     delete[] png;
 }
@@ -1230,21 +1327,25 @@ void CRuntime::initOptions()
     {
         m_healthBar = HEALTHBAR_CLASSIC;
     }
+    if (isTrue(m_config["level_summary"]))
+    {
+        m_summaryEnabled = true;
+    }
 }
 
 /**
- * @brief  Function to toggle fullscreen mode
+ * @brief  Function to toggle fullscreen mode on/off
  *
  */
-
 void CRuntime::toggleFullscreen()
 {
 #ifdef __EMSCRIPTEN__
     if (m_config["webfullscreen"] == "true")
     {
-        if (SDL_SetWindowFullscreen(
-                m_app.window,
-                !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
+        if (!SDL_SetWindowFullscreen(m_app.window, m_app.isFullscreen))
+        // if (SDL_SetWindowFullscreen(
+        //         m_app.window,
+        //         !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
         {
             fprintf(stderr, "Fullscreen toggle error: %s\n", SDL_GetError());
         }
@@ -1271,11 +1372,21 @@ void CRuntime::toggleFullscreen()
     {
         // Currently in fullscreen, switch to windowed
         printf("Switching to windowed mode.\n");
-        SDL_SetWindowFullscreen(m_app.window, 0); // 0 means windowed mode
+        if (!SDL_SetWindowFullscreen(m_app.window, false)) // false means windowed mode
+        {
+            fprintf(stderr, "Switching to windowed mode failed: %s\n", SDL_GetError());
+        }
 
         // Restore original window size and position
-        SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth);
-        SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX);
+        if (!SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth))
+        {
+            fprintf(stderr, "SDL_SetWindowSize failed: %s\n", SDL_GetError());
+        }
+
+        if (!SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX))
+        {
+            fprintf(stderr, "SDL_SetWindowPosition failed: %s\n", SDL_GetError());
+        }
     }
     else
     {
@@ -1286,28 +1397,33 @@ void CRuntime::toggleFullscreen()
         SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
         SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
 
-        SDL_DisplayMode dm;
-        SDL_GetCurrentDisplayMode(0, &dm);
-
         // Use SDL_WINDOW_FULLSCREEN_DESKTOP for borderless fullscreen
         // or SDL_WINDOW_FULLSCREEN for exclusive fullscreen
-        SDL_SetWindowSize(m_app.window, dm.w, dm.h);
-        SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+        // SDL_SetWindowSize(m_app.window, dm->w, dm->h);
+        // SDL_SetWindowFullscreenMode(m_app.window, dm);
+        if (!SDL_SetWindowFullscreen(m_app.window, true))
+        {
+            fprintf(stderr, "Switching to fullscreen mode failed: %s\n", SDL_GetError());
+        }
+        // SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
 #endif
-    int x, y, w, h;
-    SDL_GetWindowPosition(m_app.window, &x, &y);
-    SDL_GetWindowSize(m_app.window, &w, &h);
-    printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+    if (m_verbose)
+    {
+        int x, y, w, h;
+        SDL_GetWindowPosition(m_app.window, &x, &y);
+        SDL_GetWindowSize(m_app.window, &w, &h);
+        printf("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+    }
 
     m_app.isFullscreen = !m_app.isFullscreen;
     m_fullscreen = (int)m_app.isFullscreen;
 }
 
-void CRuntime::sanityTest()
-{
-}
-
+/**
+ * @brief resize the scroller for the intro screen
+ *
+ */
 void CRuntime::resizeScroller()
 {
     if (m_scroll)
@@ -1331,7 +1447,6 @@ void CRuntime::manageTitleScreen()
  * @brief handles the game menu
  *
  */
-
 void CRuntime::manageGameMenu()
 {
     manageMenu(*m_gameMenu);
@@ -1341,12 +1456,25 @@ void CRuntime::manageGameMenu()
  * @brief handles the option screen
  *
  */
-
 void CRuntime::manageOptionScreen()
 {
     manageMenu(*m_optionMenu);
 }
 
+/**
+ * @brief handles the user menu (character selection screen
+ *
+ */
+void CRuntime::manageUserMenu()
+{
+    manageMenu(*m_userMenu);
+}
+
+/**
+ * @brief Handle interractions with the menu
+ *
+ * @param menu
+ */
 void CRuntime::manageMenu(CMenu &menu)
 {
     CGame &game = *m_game;
@@ -1358,25 +1486,25 @@ void CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_joyState[AIM_UP])
     {
-        if (menu.up())
+        if (menu.up() && m_sound != nullptr)
             m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_DOWN])
     {
-        if (menu.down())
+        if (menu.down() && m_sound != nullptr)
             m_sound->play(SOUND_SPRING05);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_LEFT])
     {
-        if (item.left())
+        if (item.left() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
     else if (m_joyState[AIM_RIGHT])
     {
-        if (item.right())
+        if (item.right() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
     }
@@ -1384,7 +1512,8 @@ void CRuntime::manageMenu(CMenu &menu)
              m_keyStates[Key_Enter] ||
              m_buttonState[BUTTON_A])
     {
-        m_sound->play(SOUND_POUF);
+        if (m_sound)
+            m_sound->play(SOUND_POUF);
         if (item.role() == MENU_ITEM_NEW_GAME ||
             item.role() == MENU_ITEM_SKILL ||
             item.role() == MENU_ITEM_LEVEL)
@@ -1394,18 +1523,14 @@ void CRuntime::manageMenu(CMenu &menu)
                 setupTitleScreen();
                 return;
             }
-
-            if (game.level() != m_startLevel)
-            {
-                game.setLevel(m_startLevel);
-                openMusicForLevel(m_startLevel);
-            }
+            game.setLevel(m_startLevel);
             m_gameMenuActive = false;
-            game.loadLevel(CGame::MODE_LEVEL_INTRO);
-            centerCamera();
             game.setSkill(m_skill);
             game.resetStats();
-            startCountdown(COUNTDOWN_INTRO);
+            initUserMenu();
+            game.setMode(CGame::MODE_USERSELECT);
+            clearKeyStates();
+            m_optionCooldown = 8;
         }
         else if (item.role() == MENU_ITEM_HISCORES)
         {
@@ -1446,6 +1571,15 @@ void CRuntime::manageMenu(CMenu &menu)
         {
             m_gameMenuActive = false;
             m_game->setMode(CGame::MODE_PLAY);
+        }
+        else if (item.role() == MENU_ITEM_SELECT_USER)
+        {
+            int userID = item.userData();
+            game.setUserID(userID);
+            openMusicForLevel(m_startLevel);
+            m_gameMenuActive = false;
+            beginLevelIntro(CGame::MODE_LEVEL_INTRO);
+            loadColorMaps(userID);
         }
     }
 
@@ -1513,6 +1647,10 @@ void CRuntime::resizeGameMenu()
     }
 }
 
+/**
+ * @brief Toggle Game Menu On/Off (show/hide)
+ *
+ */
 void CRuntime::toggleGameMenu()
 {
     m_gameMenuActive = !m_gameMenuActive;
@@ -1524,23 +1662,24 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
-#ifdef __EMSCRIPTEN__
-    menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
-        .setRole(MENU_ITEM_MUSIC_VOLUME);
-    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
-        .setRole(MENU_ITEM_SND_VOLUME);
-#else
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
-#endif
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
 }
 
+/**
+ * @brief Initialize controller devices
+ *
+ * @return true
+ * @return false
+ */
 bool CRuntime::initControllers()
 {
+    printf("initControllers()\n");
+
     // Initialize SDL's video and game controller subsystems
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
-        fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL could not initialize gamepad! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
 
@@ -1552,15 +1691,17 @@ bool CRuntime::initControllers()
     // SDL_GameControllerAddMappingsFromFile("data/gamecontrollerdb.txt");
 
     // Check for connected controllers initially
-    for (int i = 0; i < SDL_NumJoysticks(); ++i)
+    int count;
+    SDL_GetJoysticks(&count);
+    for (int i = 0; i < count; ++i)
     {
-        if (SDL_IsGameController(i))
+        if (SDL_IsGamepad(i))
         {
-            SDL_GameController *controller = SDL_GameControllerOpen(i);
+            SDL_Gamepad *controller = SDL_OpenGamepad(i);
             if (controller)
             {
                 m_gameControllers.push_back(controller);
-                printf("Opened Game Controller: %d: %s\n", i, SDL_GameControllerName(controller));
+                printf("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
             }
             else
             {
@@ -1591,6 +1732,11 @@ size_t CRuntime::scrollerBufSize()
     return WIDTH / FONT_SIZE;
 }
 
+/**
+ * @brief Draw Ootion Menu
+ *
+ * @param bitmap
+ */
 void CRuntime::drawOptions(CFrame &bitmap)
 {
     CMenu &menu = *m_optionMenu;
@@ -1598,17 +1744,20 @@ void CRuntime::drawOptions(CFrame &bitmap)
     drawMenu(bitmap, menu, 48, menuBaseY);
 }
 
+/**
+ * @brief Initialize Option Menu
+ *
+ * @return CMenu&
+ */
 CMenu &CRuntime::initOptionMenu()
 {
     CMenu &menu = *m_optionMenu;
     menu.setScaleY(2);
     menu.setScaleX(1);
     menu.clear();
-    // menu.addItem(CMenuItem("%s MUSIC", {"PLAY", "MUTE"}, &m_musicMuted))
-    //     .setRole(MENU_ITEM_MUSIC);
     menu.addItem(CMenuItem("MUSIC VOLUME: %d%%", 0, 10, &m_musicVolume, 0, 10))
         .setRole(MENU_ITEM_MUSIC_VOLUME);
-    menu.addItem(CMenuItem("SND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
+    menu.addItem(CMenuItem("SOUND VOLUME: %d%%", 0, 10, &m_sndVolume, 0, 10))
         .setRole(MENU_ITEM_SND_VOLUME);
     menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
         .setRole(MENU_ITEM_CAMERA);
@@ -1636,13 +1785,44 @@ CMenu &CRuntime::initOptionMenu()
 }
 
 /**
+ * @brief Initialize the User Selection Menu Options
+ *
+ * @return CMenu&
+ */
+
+CMenu &CRuntime::initUserMenu()
+{
+    CMenu &menu = *m_userMenu;
+    menu.clear();
+    menu.setCurrent(0);
+    menu.setScaleY(2);
+    menu.setScaleX(1);
+
+    for (size_t i = 0; i < m_userNames.size(); ++i)
+    {
+        menu.addItem(CMenuItem(m_userNames[i].c_str(), MENU_ITEM_SELECT_USER)).setUserData(static_cast<int>(i));
+    }
+    return menu;
+}
+
+/**
  * @brief Create a list of available resolutions
  *
  */
 void CRuntime::createResolutionList()
 {
+    // Get all connected displays
+    int numDisplays;
+    SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
+    if (numDisplays <= 0)
+    {
+        fprintf(stderr, "No displays found: %s\n", SDL_GetError());
+        return;
+    }
+
     const int displayIndex = 0;
-    int numModes = SDL_GetNumDisplayModes(displayIndex);
+    int numModes;
+    SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
         fprintf(stderr, "SDL_GetNumDisplayModes failed: %s\n", SDL_GetError());
@@ -1653,12 +1833,7 @@ void CRuntime::createResolutionList()
     int ph = -1;
     for (int i = 0; i < numModes; ++i)
     {
-        SDL_DisplayMode mode;
-        if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
-        {
-            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-            continue;
-        }
+        const SDL_DisplayMode &mode = *modes[i];
         // ignore anything larger than 720p
         if (mode.w > 1280 || mode.h > 800)
             continue;
@@ -1733,7 +1908,17 @@ void CRuntime::resize(int w, int h)
  */
 void CRuntime::listResolutions(int displayIndex)
 {
-    int numModes = SDL_GetNumDisplayModes(displayIndex);
+    // Get all connected displays
+    int numDisplays;
+    SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
+    if (numDisplays <= 0)
+    {
+        fprintf(stderr, "No displays found: %s\n", SDL_GetError());
+        return;
+    }
+
+    int numModes;
+    SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
         fprintf(stderr, "SDL_GetNumDisplayModes failed:%s\n", SDL_GetError());
@@ -1743,13 +1928,8 @@ void CRuntime::listResolutions(int displayIndex)
     printf("Available display modes:\n");
     for (int i = 0; i < numModes; ++i)
     {
-        SDL_DisplayMode mode;
-        if (SDL_GetDisplayMode(displayIndex, i, &mode) != 0)
-        {
-            fprintf(stderr, "SDL_GetDisplayMode failed: %s\n", SDL_GetError());
-            continue;
-        }
-        printf("Mode %d: %dx%d @ %dHz\n", i, mode.w, mode.h, mode.refresh_rate);
+        const SDL_DisplayMode &mode = *modes[i];
+        printf("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
     }
 }
 
@@ -1771,4 +1951,199 @@ void CRuntime::notifyExitFullScreen()
 {
     m_app.isFullscreen = false;
     m_fullscreen = m_app.isFullscreen;
+}
+
+/**
+ * @brief Draw User Selection Screen
+ *
+ * @param bitmap
+ */
+void CRuntime::drawUserMenu(CFrame &bitmap)
+{
+    int baseY = (_HEIGHT - m_userMenu->height()) / 2;
+    drawFont(bitmap, 32, baseY - 32, "SELECT DIAMOND HUNTER", GRAY, BLACK, 1, 2);
+    drawMenu(bitmap, *m_userMenu, 48, baseY);
+}
+
+/**
+ * @brief check if all the music files are present, this only applies to desktop version
+ *        because remote files cannot reliably be tested.
+ *
+ * @return true
+ * @return false
+ */
+bool CRuntime::checkMusicFiles()
+{
+    bool result = true;
+    for (const auto &file : m_musicFiles)
+    {
+        std::string music = getMusicPath(file);
+        if (!fileExists(music))
+        {
+            fprintf(stderr, "*** File not found: %s\n", music.c_str());
+            result = false;
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Full path to the music file
+ *
+ * @param filename
+ * @return std::string
+ */
+std::string CRuntime::getMusicPath(const std::string &filename)
+{
+#ifdef __EMSCRIPTEN__
+    const std::string music = endswith(filename.c_str(), ".xm") ? m_prefix + std::string("musics/") + filename : filename;
+#else
+    const std::string music = m_prefix + std::string("musics/") + filename;
+#endif
+    return music;
+}
+
+/**
+ * @brief Load the corresponding ColorMap for a player sprite
+ *
+ * @param userID
+ */
+void CRuntime::loadColorMaps(const int userID)
+{
+    std::string name = m_userNames[userID];
+    std::string path = m_prefix + "colormaps/" + name + ".ini";
+    CFileWrap file;
+    if (file.open(path.c_str(), "rb"))
+    {
+        parseColorMaps(file, m_colormaps);
+        file.close();
+    }
+    else
+    {
+        fprintf(stderr, "can't read %s\n", path.c_str());
+    }
+}
+
+/**
+ * @brief Leave ClickStart screen
+ *
+ */
+void CRuntime::leaveClickStart()
+{
+    initMusic();
+    initSounds();
+    initControllers();
+    setupTitleScreen();
+}
+
+/**
+ * @brief Draw Post Level Summary
+ *
+ * @param bitmap
+ */
+void CRuntime::drawLevelSummary(CFrame &bitmap)
+{
+    struct Text
+    {
+        std::string text;
+        Color color;
+        int scaleX;
+        int scaleY;
+    };
+    std::vector<Text> listStr;
+    char tmp[128];
+    sprintf(tmp, "LEVEL %.2d COMPLETED", m_game->level() + 1);
+    if (_WIDTH < MIN_WIDTH_FULL)
+        listStr.push_back({tmp, YELLOW, 1, 2});
+    else
+        listStr.push_back({tmp, YELLOW, 2, 2});
+    sprintf(tmp, "Fruits Collected: %d %%", m_summary.ppFruits);
+    listStr.push_back({tmp, PINK, 1, 2});
+    sprintf(tmp, "Treasures Collected: %d %%", m_summary.ppBonuses);
+    listStr.push_back({tmp, ORANGE, 1, 2});
+    sprintf(tmp, "Secrets: %d %%", m_summary.ppSecrets);
+    listStr.push_back({tmp, GREEN, 1, 2});
+    sprintf(tmp, "Time Taken: %.2d:%.2d", m_summary.timeTaken / 60, m_summary.timeTaken % 60);
+    listStr.push_back({tmp, CYAN, 1, 2});
+
+    if (m_countdown == 0 && ((m_ticks >> 3) & 1))
+    {
+        listStr.push_back({"", BLACK, 1, 2});
+        listStr.push_back({"PRESS SPACE TO CONTINUE", LIGHTGRAY, 1, 2});
+    }
+    else
+    {
+        listStr.push_back({"", BLACK, 1, 2});
+        listStr.push_back({"", BLACK, 1, 2});
+    }
+
+    int height = 0;
+    for (const auto &item : listStr)
+    {
+        height += FONT_SIZE * item.scaleY + FONT_SIZE;
+    }
+
+    int y = (_HEIGHT - height) / 2;
+    for (const auto &item : listStr)
+    {
+        const auto &str = item.text;
+        const int x = (_WIDTH - str.length() * FONT_SIZE * item.scaleX) / 2;
+        drawFont(bitmap, x, y, str.c_str(), item.color, BLACK, item.scaleX, item.scaleY);
+        y += FONT_SIZE * item.scaleY + FONT_SIZE;
+    }
+}
+
+/**
+ * @brief Manage Post Level Summary Screen
+ *
+ */
+void CRuntime::manageLevelSummary()
+{
+    // resume to next level
+    if (m_countdown == 0 &&
+        (m_keyStates[Key_Space] ||
+         m_keyStates[Key_Enter] ||
+         m_buttonState[BUTTON_A]))
+    {
+        nextLevel();
+    }
+}
+
+/**
+ * @brief Initialize Post Level Summary Screen Data
+ *
+ */
+void CRuntime::initLevelSummary()
+{
+    CGame &game = *m_game;
+    const MapReport &report0 = game.originalMapReport();
+    const MapReport report1 = game.currentMapReport();
+    m_summary.ppFruits = report0.fruits ? 100 * (report0.fruits - report1.fruits) / report0.fruits : 100;
+    m_summary.ppBonuses = report0.bonuses ? 100 * (report0.bonuses - report1.bonuses) / report0.bonuses : 100;
+    m_summary.ppSecrets = report0.secrets ? 100 * (report0.secrets - report1.secrets) / report0.secrets : 100;
+    m_summary.timeTaken = game.timeTaken();
+}
+
+/**
+ * @brief Change game music for specific situation
+ *
+ * @param mode
+ */
+void CRuntime::changeMoodMusic(CGame::GameMode mode)
+{
+    if (mode == CGame::MODE_GAMEOVER)
+    {
+        openMusic(m_config["gameover_theme"]);
+    }
+    else if (mode == CGame::MODE_RESTART)
+    {
+        // openMusic("death.ogg");
+    }
+    else if (mode == CGame::MODE_PLAY)
+    {
+        openMusicForLevel(m_game->level());
+    }
+    else if (mode == CGame::MODE_LEVEL_INTRO)
+    {
+    }
 }

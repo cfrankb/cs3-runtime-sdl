@@ -4,8 +4,9 @@ from os.path import join
 import os
 import glob
 from datetime import date
+
 year = date.today().year
-license_cpp = f'''/*
+license_cpp = f"""/*
     cs3-runtime-sdl
     Copyright (C) {year} Francois Blanchette
 
@@ -21,28 +22,27 @@ license_cpp = f'''/*
 
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/\n'''
+*/\n"""
 
-license_lua = license_cpp.replace('/*', '--[[').replace('*/', ']]--')
+license_lua = license_cpp.replace("/*", "--[[").replace("*/", "]]--")
 
-specs = [
-    'src', 'tests'
-]
+specs = ["src", "tests"]
+
 
 def scan_folder(folder):
-    folders = [x[0] for x in os.walk(folder) if '/build/' not in x[0]]
+    folders = [x[0] for x in os.walk(folder) if "/build/" not in x[0]]
     for x in folders[1:]:
         scan_folder(x)
 
-    for ext in ['*.h', '*.cpp', '*.rc']:
-        for x in glob.glob(f'{folder}/{ext}'):
-            if 'version.h' in x or 'ss_' in x:
+    for ext in ["*.h", "*.cpp", "*.rc"]:
+        for x in glob.glob(f"{folder}/{ext}"):
+            if "version.h" in x or "ss_" in x:
                 continue
-            with open(x, 'r') as s:
+            with open(x, "r") as s:
                 data = s.read()
-            if data[0:2] != '/*':
-                print('*', x)
-                with open(x, 'w') as t:
+            if data[0:2] != "/*":
+                print("*", x)
+                with open(x, "w") as t:
                     t.write(license_cpp + data)
 
 

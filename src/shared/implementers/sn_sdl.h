@@ -32,6 +32,7 @@ public:
     ~CSndSDL() override;
     void forget() override;
     bool add(unsigned char *data, unsigned int size, unsigned int uid) override;
+    bool add(const char *filename, unsigned int uid) override;
     void replace(unsigned char *data, unsigned int size, unsigned int uid) override;
     void remove(unsigned int uid) override;
     void play(unsigned int uid) override;
@@ -55,5 +56,5 @@ public:
 
 protected:
     bool m_valid;
-    int m_volume = MIX_MAX_VOLUME;
+    int m_volume = ISound::MAX_VOLUME;
 };

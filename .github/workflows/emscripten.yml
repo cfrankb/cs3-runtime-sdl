@@ -6,7 +6,7 @@ on:
       - master
       - develop
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
     branches:
       - master
@@ -16,42 +16,63 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up Emscripten SDK
-      uses: mymindstorm/setup-emsdk@v12
-      with:
-        version: 'latest'
+      - name: Set up Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v12
+        with:
+          version: "latest"
 
-    - name: Verify Emscripten Setup
-      run: |
-        emcc --version
-        em++ --version
+      - name: Verify Emscripten Setup
+        run: |
+          emcc --version
+          em++ --version
 
-    - name: Build your app
-      run: |
-        python3 bin/gen.py emsdl2 -s
-        mkdir -p build/cs3
-        make
-        cp build/cs3v2.* build/cs3
-        cp LICENSE build/cs3
-        mv build/cs3/cs3v2.html build/cs3/index.html
-        bin/prepare.sh
+      - name: Build mapzutil
+        run: |
+          echo "Preparing mapzutil"
+          cd tools/mapzutil
+          mkdir -p build
+          python3 bin/gen.py
+          make
+          cp  build/mapzutil ../../bin
 
-    - name: Upload WebAssembly Build Artifacts (itchio)
-      uses: actions/upload-artifact@v4
-      with:
-        name: cs3-itchio
-        path: |
-          build/cs3/*
-        retention-days: 7
+      - name: Strip private maps
+        run: |
+          echo "Strip private maps"
+          bin/mapzutil -s data/levels.mapz
 
-    - name: Upload WebAssembly Build Artifacts (local)
-      uses: actions/upload-artifact@v4
-      with:
-        name: cs3-local
-        path: |
-          build/local/*
-        retention-days: 7
-    
+      - name: Build your app
+        run: |
+          echo "Preparing itch.io version"
+          mkdir -p build/cs3
+          cp data/musics/*.ogg build/cs3
+          python3 bin/gen.py emsdl2 -s
+          make
+          cp build/cs3v2.* build/cs3
+          cp LICENSE build/cs3
+          mv build/cs3/cs3v2.html build/cs3/index.html
+          echo "Preparing local version"
+          mkdir -p ./build/local
+          cp ./build/cs3v2.* ./build/local
+          gzip  ./build/local/*.data ./build/local/*.wasm
+          mv ./build/local/cs3v2.data.gz ./build/local/cs3v2.data
+          mv ./build/local/cs3v2.wasm.gz ./build/local/cs3v2.wasm
+          cp build/cs3/*.ogg ./build/local
+
+      - name: Upload WebAssembly Build Artifacts (itchio)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs3-itchio
+          path: |
+            build/cs3/*
+          retention-days: 7
+
+      - name: Upload WebAssembly Build Artifacts (local)
+        uses: actions/upload-artifact@v4
+        with:
+          name: cs3-local
+          path: |
+            build/local/*
+          retention-days: 7

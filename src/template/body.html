@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Emscripten-Generated Code</title>
-    <style>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Modularized Canvas App</title>
+  <style>
+    canvas1 { width: 100vw; height: 100vh; display: block; background: black; }
+
       .emscripten {
         padding-right: 0;
         margin-left: auto;
@@ -91,9 +92,6 @@
       display:block;
       box-sizing: border-box;
     }
-    </style>
-
-    <style>
       #fs-btn {
         position: absolute;
         top: 10px;
@@ -102,10 +100,11 @@
         font-size: 14px;
         z-index: 1000;
       }
-    </style>
 
-  </head>
-  <body>
+  </style>
+</head>
+<body>
+
     <div class="emscripten">
       <button id="fs-btn">Go Fullscreen</button>
     </div>
@@ -126,62 +125,25 @@
         tabindex="-1"
       ></canvas>
     </div>
-    <!--<hr />-->
 
-
-    <div class="emscripten" id="resizebox">
-      <input type="checkbox" id="resize" />Resize canvas
-      <input type="checkbox" id="pointerLock" checked />Lock/hide mouse pointer
-      &nbsp;&nbsp;&nbsp;
-      <input
-        type="button"
-        value="Fullscreen"
-        onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked,
-                                                                                document.getElementById('resize').checked)"
-      />
-    </div>
-    <div id="buttonbox">
-      <button id="btnOutput" onclick="toggle('output');">Console</button>
-      &nbsp;
-      <button
-        id="btnMute"
-        disabled
-        onclick="Module.ccall('mute',  'number',  ['number'], [this.innerHTML=='Mute'?0:1]); this.innerHTML = (this.innerHTML =='Mute'? 'Play':'Mute'); "
-      >
-        Mute
-      </button>
-      &nbsp;
-      <button
-        disabled
-        id="btnLoad"
-        onclick="Module.ccall('savegame',  'number',  ['number'], [0]);"
-      >
-        Load
-      </button>
-      &nbsp;
-      <button
-        disabled
-        id="btnSave"
-        onclick="Module.ccall('savegame',  'number',  ['number'], [1]);"
-      >
-        Save
-      </button>
-    </div>
     <hr />
     <textarea class="emscripten" id="output" rows="8"></textarea>
     <hr />
-    <script type="text/javascript">
-      var statusElement = document.getElementById("status");
-      var progressElement = document.getElementById("progress");
-      var spinnerElement = document.getElementById("spinner");
-
-      var Module = {
-        onRuntimeInitialized: function () {
-          // my_add = Module.cwrap('my_add', 'number', ['number', 'number'])
-          // alert('1 + 2 = ' + my_add(1, 2));
+<script src="cs3v2.js"></script>
+  <script>
+    var statusElement = document.getElementById("status");
+    var progressElement = document.getElementById("progress");
+    var spinnerElement = document.getElementById("spinner");
+    var setStatusLast = NaN;
+    MyApp({
+      canvas: document.getElementById('canvas'),
+      locateFile: (filename) => {
+        // Optional: customize path to .wasm or .data
+        return filename;
+      },
+      onRuntimeInitialized: function () {
           console.log("GOT HERE");
           document.getElementById('fs-btn').addEventListener('click', () => {
-            console.log("fdfdfdf");
             const canvas = document.getElementById('canvas');
             if (canvas.requestFullscreen) {
               canvas.requestFullscreen().catch(err => {
@@ -197,8 +159,11 @@
               document.getElementById('fs-btn').style.display = 'none';
             }
           });
-        },
-        print: (function () {
+
+        // Start your app
+        this._main();
+      },
+          print: (function () {
           var element = document.getElementById("output");
           if (element) element.value = ""; // clear browser cache
           return (...args) => {
@@ -217,7 +182,6 @@
         })(),
         canvas: (() => {
           var canvas = document.getElementById("canvas");
-
           // As a default initial behavior, pop up an alert when webgl context is lost. To make your
           // application robust, you may want to override this behavior before shipping!
           // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2
@@ -229,18 +193,18 @@
             },
             false
           );
-
           return canvas;
         })(),
         setStatus: (text) => {
-          if (!Module.setStatus.last)
-            Module.setStatus.last = { time: Date.now(), text: "" };
-          if (text === Module.setStatus.last.text) return;
+          if (setStatusLast === NaN) {
+            setStatusLast = { time: Date.now(), text: "" };
+          }
+          if (text === setStatusLast.text) return;
           var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
           var now = Date.now();
-          if (m && now - Module.setStatus.last.time < 30) return; // if this is a progress update, skip it if too soon
-          Module.setStatus.last.time = now;
-          Module.setStatus.last.text = text;
+          if (m && now - setStatusLast.time < 30) return; // if this is a progress update, skip it if too soon
+          setStatusLast.time = now;
+          setStatusLast.text = text;
           if (m) {
             text = m[1];
             progressElement.value = parseInt(m[2]) * 100;
@@ -256,9 +220,10 @@
           statusElement.innerHTML = text;
         },
         totalDependencies: 0,
-        monitorRunDependencies: (left) => {
+        /*monitorRunDependencies: (left) => {
           this.totalDependencies = Math.max(this.totalDependencies, left);
-          Module.setStatus(
+          if (this.setStatus)
+          this.setStatus(
             left
               ? "Preparing... (" +
                   (this.totalDependencies - left) +
@@ -267,8 +232,10 @@
                   ")"
               : "All downloads complete."
           );
-        },
-      };
+        },*/
+    }).then(Module => {
+      // You can store Module globally if needed
+      window.myAppModule = Module;
       Module.setStatus("Downloading...");
       window.onerror = () => {
         Module.setStatus("Exception thrown, see JavaScript console");
@@ -277,41 +244,54 @@
           if (text) console.error("[post-exception status] " + text);
         };
       };
-    </script>
+    });
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const gainNode = audioCtx.createGain(); // Volume controller
+    gainNode.connect(audioCtx.destination);
+    let source;
+    document.addEventListener('touchstart', () => {
+    if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    }, { once: true });
+
+
+    function setVolume(value) {
+       gainNode.gain.value = value / 128; // Value between 0.0 and 1.0
+    }
+
+    function stopAudio() {
+       if (source) {
+        source.stop(); // Stops playback immediately
+        source.disconnect();
+        source = null;
+      }
+    }
+
+    function startAudio(filename) {
+      console.log(">>>>> " + filename);
+      fetch(filename)
+        .then(res => res.arrayBuffer())
+        .then(data => audioCtx.decodeAudioData(data))
+        .then(buffer => {
+          source = audioCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(gainNode); // Route through gain node
+          source.loop = true;
+          source.start(0);
+        });
+    }
+
+    window.addEventListener("gamepadconnected", (e) => {
+        console.log(`Gamepad connected at index ${e.gamepad.index}: ${e.gamepad.id}`);
+      });
+
+    window.addEventListener("gamepaddisconnected", (e) => {
+      console.log(`Gamepad disconnected from index ${e.gamepad.index}: ${e.gamepad.id}`);
+    });
+
+  </script>
     {{{ SCRIPT }}}
-  </body>
+</body>
 </html>
-<script>
-  function setStatus(s) {
-    Module.setStatus(s);
-  }
-
-  function enableButtons() {
-    byID("btnSave").disabled = false;
-    byID("btnLoad").disabled = false;
-    byID("btnMute").disabled = false;
-  }
-
-  function byID(id) {
-    return document.getElementById(id);
-  }
-
-  function toggle(id) {
-    let el = byID(id);
-    if (el) {
-      el.style.display = el.style.display == "block" ? "none" : "block";
-    }
-  }
-
-  function show(id, b) {
-    let el = byID(id);
-    if (el) {
-      el.style.display = b ? "block" : "none";
-    }
-  }
-
-  let ids = ["resizebox", "output"];
-  ids.forEach((id) => {
-    show(id, false);
-  });
-</script>

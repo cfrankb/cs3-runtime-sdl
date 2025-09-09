@@ -1,0 +1,46 @@
+[
+    {
+        "name": "SDL2",
+        "version": "",
+        "license": "zlib",
+        "SPDX_ID": "Zlib",
+        "source": {
+            "name": "libsdl.org",
+            "url": "https://libsdl.org"
+        },
+        "attribution": "No"
+    },
+    {
+        "name": "SDL2_mixer",
+        "version": "",
+        "license": "zlib",
+        "SPDX_ID": "Zlib",
+        "source": {
+            "name": "SDL_mixer GitHub",
+            "url": "https://github.com/libsdl-org/SDL_mixer"
+        },
+        "attribution": "No"
+    },
+    {
+        "name": "zlib",
+        "version": "",
+        "license": "zlib",
+        "SPDX_ID": "Zlib",
+        "source": {
+            "name": "zlib GitHub",
+            "url": "https://github.com/madler/zlib"
+        },
+        "attribution": "No"
+    },
+    {
+        "name": "libXMP",
+        "version": "",
+        "license": "",
+        "SPDX_ID": "",
+        "source": {
+            "name": "libXMP GitHub",
+            "url": "https://github.com/libxmp/libxmp"
+        },
+        "attribution": "No"
+    }
+]

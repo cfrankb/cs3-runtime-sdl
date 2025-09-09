@@ -17,34 +17,27 @@
 */
 
 #include <cstdio>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_audio.h>
-#include <SDL2/SDL_mixer.h>
+#include "SDL3/SDL.h"
+#include "SDL3_mixer/SDL_mixer.h"
 #include "sn_sdl.h"
 
 std::unordered_map<unsigned int, CSndSDL::SND *> m_sounds;
 
 CSndSDL::CSndSDL()
 {
-    m_valid = false;
+    m_valid = true;
     // Initialize all SDL subsystems
-    if (SDL_Init(SDL_INIT_AUDIO) < 0)
+    if (!SDL_Init(SDL_INIT_AUDIO))
     {
         printf("SDL_init failed: %s\n", SDL_GetError());
         m_valid = false;
     }
-    if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
-    {
-        printf("SDL_init failed: %s\n", SDL_GetError());
-        return;
-    }
-    m_valid = true;
 }
 
 CSndSDL::~CSndSDL()
 {
     forget();
-    SDL_CloseAudio();
+    Mix_CloseAudio();
 }
 
 void CSndSDL::forget()
@@ -62,8 +55,36 @@ void CSndSDL::forget()
     m_sounds.clear();
 }
 
+bool CSndSDL::add(const char *filename, unsigned int uid)
+{
+    if (m_sounds.count(uid) != 0)
+    {
+        printf("ADD: sound already added: %u\n", uid);
+        return false;
+    }
+    SND *snd = new SND;
+    for (int i = 0; i < MAX_INSTANCES; ++i)
+    {
+        snd->channels[i] = -1;
+    }
+    snd->chunk = Mix_LoadWAV(filename);
+    bool fail = false;
+    if (snd->chunk)
+    {
+        Mix_VolumeChunk(snd->chunk, m_volume);
+    }
+    else
+    {
+        fail = true;
+        printf("Mix_LoadWAV_RW Failed: %s\n", SDL_GetError());
+    }
+    m_sounds[uid] = snd;
+    return !fail;
+}
+
 bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
 {
+    // TODO: FIX OR REMOVE THIS FUNCTION
     if (m_sounds.count(uid) != 0)
     {
         printf("ADD: sound already added: %u\n", uid);
@@ -76,7 +97,7 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
     }
     snd->chunk = nullptr;
     bool fail = false;
-    SDL_RWops *rw = SDL_RWFromConstMem(static_cast<void *>(data), size);
+    SDL_IOStream *rw = SDL_IOFromConstMem(static_cast<void *>(data), size);
     if (!rw)
     {
         fail = true;
@@ -84,7 +105,8 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
     }
     else
     {
-        snd->chunk = Mix_LoadWAV_RW(rw, 1);
+        snd->chunk = Mix_LoadWAV("assets/sound1.wav");
+        //  Mix_LoadWAV_RW(rw, 1);
         if (snd->chunk)
         {
             Mix_VolumeChunk(snd->chunk, m_volume);
@@ -92,7 +114,7 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
         else
         {
             fail = true;
-            printf("Mix_LoadWAV_RW Failed: %s\n", Mix_GetError());
+            printf("Mix_LoadWAV_RW Failed: %s\n", SDL_GetError());
         }
     }
     m_sounds[uid] = snd;
@@ -142,7 +164,7 @@ void CSndSDL::play(unsigned int uid)
                 snd->channels[i], snd->chunk, 0);
             if (snd->channels[i] == -1)
             {
-                printf("Mix_PlayChannel: %s\n", Mix_GetError());
+                printf("Mix_PlayChannel: %s\n", SDL_GetError());
             }
             break;
         }
@@ -189,6 +211,7 @@ const char *CSndSDL::signature() const
  */
 void CSndSDL::setVolume(int v)
 {
+    return;
     m_volume = v;
     for (auto &[key, val] : m_sounds)
     {

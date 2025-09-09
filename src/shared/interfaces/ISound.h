@@ -20,9 +20,14 @@
 class ISound
 {
 public:
+    enum
+    {
+        MAX_VOLUME = 128
+    };
     virtual ~ISound() = 0;
     virtual void forget() = 0;
     virtual bool add(unsigned char *data, unsigned int size, unsigned int uid) = 0;
+    virtual bool add(const char *filename, unsigned int uid) = 0;
     virtual void remove(unsigned int uid) = 0;
     virtual void replace(unsigned char *data, unsigned int size, unsigned int uid) = 0;
     virtual void play(unsigned int uid) = 0;

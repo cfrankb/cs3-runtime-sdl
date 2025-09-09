@@ -26,13 +26,14 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "colormap.h"
+#include "game.h"
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
 
 class CActor;
 class CFrameSet;
-class CGame;
 class CFrame;
 class CMapArch;
 class CAnimator;
@@ -98,14 +99,24 @@ protected:
         PLAYER_HIT_FRAME = 7,
         PLAYER_STD_FRAMES = 7,
         PLAYER_DOWN_INDEX = 8,
+        PLAYER_TOTAL_FRAMES = 44,
+        PLAYER_IDLE_BASE = 0x28,
         ANIMZ_INSECT1_FRAMES = 8,
         INSECT1_MAX_OFFSET = 7,
         CAMERA_MODE_STATIC = 0,
         CAMERA_MODE_DYNAMIC = 1,
         FAZ_INV_BITSHIFT = 1,
-        INDEX_ANNIE_DEAD = 4,
+        INDEX_PLAYER_DEAD = 4,
         HEALTHBAR_CLASSIC = 0,
         HEALTHBAR_HEARTHS = 1,
+    };
+
+    enum
+    {
+        Annie,
+        Lisa,
+        Alana,
+        Paul
     };
 
     enum : int32_t
@@ -211,9 +222,18 @@ protected:
         BUTTON_B,
         BUTTON_X,
         BUTTON_Y,
-        BUTTON_START,
         BUTTON_BACK,
+        BUTTON_GUIDE,
+        BUTTON_START,
+        LEFTSTICK,
+        RIGHTSTICK,
+        LEFTSHOULDER,
+        RIGHTSHOULDER,
         Button_Count,
+        DPAD_UP = 12,
+        DPAD_DOWN = 13,
+        DPAD_LEFT = 14,
+        DPAD_RIGHT = 15,
     };
 
     uint8_t m_keyStates[Key_Count];
@@ -244,6 +264,12 @@ protected:
         uint8_t attr;
     };
 
+    struct visualCues_t
+    {
+        bool diamondShimmer;
+        bool livesShimmer;
+    };
+
     struct hiscore_t
     {
         int32_t score;
@@ -258,7 +284,7 @@ protected:
     CAnimator *m_animator;
     CFrameSet *m_tiles = nullptr;
     CFrameSet *m_animz = nullptr;
-    CFrameSet *m_annie = nullptr;
+    CFrameSet *m_users = nullptr;
     uint8_t *m_fontData = nullptr;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
@@ -273,6 +299,7 @@ protected:
     bool m_assetPreloaded = false;
     bool m_scoresLoaded = false;
     bool m_hiscoreEnabled = false;
+    bool m_summaryEnabled = false;
     bool m_paused = false;
     int m_musicMuted = false; // Note: this has to be an int
     Prompt m_prompt = PROMPT_NONE;
@@ -288,6 +315,7 @@ protected:
     int m_timer;
     int _WIDTH = DEFAULT_WIDTH;
     int _HEIGHT = DEFAULT_HEIGHT;
+    ColorMaps m_colormaps;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -303,9 +331,10 @@ protected:
     inline void drawSugarMeter(CFrame &bitmap, const int bx);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    void drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &tile, int fazBitShift = 0, const ColorMask colorMask = COLOR_NOCHANGE);
     inline CFrame *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
-    void drawHealthBar(CFrame &bitmap);
-    void drawGameStatus(CFrame &bitmap);
+    void drawHealthBar(CFrame &bitmap, const bool isPlayerHurt);
+    void drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues);
     CFrame *specialFrame(const sprite_t &sprite);
     void nextLevel();
     void restartLevel();
@@ -325,12 +354,15 @@ protected:
     void clearButtonStates();
     void manageGamePlay();
     void handleFunctionKeys();
+    void handleFunctionKeys_Game(int k);
+    void handleFunctionKeys_General(int k);
     bool handlePrompts();
     void centerCamera();
     void moveCamera();
     int cameraSpeed() const;
     void setCameraMode(const int mode);
     void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);
+    void beginLevelIntro(CGame::GameMode mode);
 
     inline uint32_t fazFilter(int shift) const;
     inline int getWidth() const
@@ -360,6 +392,11 @@ protected:
     virtual void toggleGameMenu() = 0;
     virtual void manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
+    virtual void manageUserMenu() = 0;
+
+    virtual void manageLevelSummary() = 0;
+    virtual void initLevelSummary() = 0;
+    virtual void changeMoodMusic(CGame::GameMode mode) = 0;
 
 private:
     void stopRecorder();

@@ -18,8 +18,10 @@
 #pragma once
 
 #include "../interfaces/IMusic.h"
-#include "SDL2/SDL_mixer.h"
-#include <pthread.h>
+#include <string>
+#include <cinttypes>
+#include "SDL3/SDL.h"
+#include "SDL3_mixer/SDL_mixer.h"
 
 class CMusicSDL : public IMusic
 {
@@ -34,23 +36,26 @@ public:
     const char *signature() const override;
     int getVolume() override;
     void setVolume(int volume) override;
-    static int type() { return m_type; }
-    static int isPlaying() { return m_playing; }
+    int type() { return m_type; }
+    int isPlaying() { return m_playing; }
     enum
     {
         TYPE_NONE,
-        TYPE_OGG
+        TYPE_OGG,
+        TYPE_STREAM
     };
 
 protected:
     typedef struct
     {
+        SDL_AudioDeviceID audioDevice;
         Mix_Music *mixData;
         uint8_t *xmData;
     } MusicData;
 
     MusicData m_data; // Background Music
     char *m_name;
-    static uint8_t m_type;
-    static bool m_playing;
+    std::string m_filepath;
+    uint8_t m_type = TYPE_NONE;
+    bool m_playing = false;
 };

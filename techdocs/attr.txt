@@ -1,9 +1,10 @@
 Attributes
 
 00          do nothing
-00-7f       trigger keys
+01-1f       passages
+40-4f       secret
 
-e0          wait for contact
-e1          freeze trap
-e2          trap
+e0-e9       wait for contact
+ea          freeze trap
+eb          trap
 f0-ff       messages

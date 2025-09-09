@@ -1,3 +1,4 @@
+data/*mapz.bak*
 .vscode/*
 backup/*
 build/*
@@ -6,7 +7,9 @@ workspace/*
 notes.txt
 /Makefile
 tests/out/*
+tests/in/backup
 setup/*
-images/originals
+techdocs/originals
+local/*
 #VERSION
 CMakeLists.txt
