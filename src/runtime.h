@@ -130,6 +130,7 @@ private:
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
     Summary m_summary;
+    int m_mainMenuBar = 0;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -170,6 +171,10 @@ private:
         MENU_ITEM_CAMERA,
         MENU_ITEM_RETURN_TO_GAME,
         MENU_ITEM_SELECT_USER,
+        MENU_ITEM_MAINMENU_BAR,
+        MENUBAR_OPTIONS = 0,
+        MENUBAR_CREDITS,
+        MENUBAR_HISCORES,
         DEFAULT_OPTION_COOLDOWN = 3,
         MAX_OPTION_COOLDOWN = 6,
         MUSIC_VOLUME_STEPS = 1 + (ISound::MAX_VOLUME / 10),

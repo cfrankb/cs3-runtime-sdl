@@ -24,9 +24,9 @@ Check out the gameplay demo on [YouTube](https://www.youtube.com/watch?v=K8tYE7s
 
 ## Building the runtime
 
-## Build options
+You build the game from the source code using the step provided.
 
-see all [build options](techdocs/BUILD.md)
+See all the build options [here](techdocs/BUILD.md).
 
 ## Join the chaos
 

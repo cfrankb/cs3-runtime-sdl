@@ -29,12 +29,14 @@ public:
         ITEM_STATIC,
         ITEM_RANGE,
         ITEM_OPTIONS,
+        ITEM_BAR,
         ROLE_NONE = 0,
     };
 
     CMenuItem(const std::string &tmpl, const int role = ROLE_NONE, CMenu *menu = nullptr);
     CMenuItem(const std::string &tmpl, const int rangeMin, const int rangeMax, int *value, int start = 1, int factor = 1);
-    CMenuItem(const std::string &tmpl, const std::vector<std::string> &options, int *value);
+    CMenuItem(const std::string &tmpl, const std::vector<std::string> &options, int *value, const int type = ITEM_OPTIONS);
+    CMenuItem(const std::vector<std::string> &options, int *value, const int type = ITEM_BAR);
     ~CMenuItem();
 
     CMenuItem &disable(const bool value = true);
@@ -48,6 +50,10 @@ public:
     std::string str() const;
     CMenuItem &setUserData(const int userData);
     int userData() const;
+    int type() const;
+    CMenuItem &setType(const int type = ITEM_STATIC);
+    std::string option(int i) const;
+    size_t size() const;
 
 private:
     std::vector<std::string> m_options;

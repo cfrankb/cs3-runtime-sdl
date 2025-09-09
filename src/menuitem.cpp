@@ -36,12 +36,20 @@ CMenuItem::CMenuItem(const std::string &tmpl, const int rangeMin, const int rang
     m_type = ITEM_RANGE;
 }
 
-CMenuItem::CMenuItem(const std::string &tmpl, const std::vector<std::string> &options, int *value)
+CMenuItem::CMenuItem(const std::string &tmpl, const std::vector<std::string> &options, int *value, const int type)
 {
     m_tmpl = tmpl;
     m_options = options;
     m_value = value;
-    m_type = ITEM_OPTIONS;
+    m_type = type;
+}
+
+CMenuItem::CMenuItem(const std::vector<std::string> &options, int *value, const int type)
+{
+    m_tmpl = "";
+    m_options = options;
+    m_type = type;
+    m_value = value;
 }
 
 CMenuItem::~CMenuItem()
@@ -63,7 +71,7 @@ bool CMenuItem::left()
             return true;
         }
     }
-    else if (m_type == ITEM_OPTIONS)
+    else if (m_type == ITEM_OPTIONS || m_type == ITEM_BAR)
     {
         if (value > 0)
         {
@@ -89,7 +97,7 @@ bool CMenuItem::right()
             return true;
         }
     }
-    else if (m_type == ITEM_OPTIONS)
+    else if (m_type == ITEM_OPTIONS || m_type == ITEM_BAR)
     {
         if (value < static_cast<int>(m_options.size() - 1))
         {
@@ -164,4 +172,25 @@ CMenuItem &CMenuItem::setUserData(const int userData)
 int CMenuItem::userData() const
 {
     return m_userdata;
+}
+
+int CMenuItem::type() const
+{
+    return m_type;
+}
+
+CMenuItem &CMenuItem::setType(const int type)
+{
+    m_type = type;
+    return *this;
+}
+
+std::string CMenuItem::option(int i) const
+{
+    return m_options[i];
+}
+
+size_t CMenuItem::size() const
+{
+    return m_options.size();
 }

@@ -1057,7 +1057,32 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
         }
         int x = bx;
         const int y = baseY + i * spacingY;
-        if (item.role() == MENU_ITEM_SELECT_USER)
+        if (static_cast<int>(i) == menu.index())
+        {
+            // draw red triangle
+            char tmp[2];
+            tmp[0] = CHARS_TRIGHT;
+            tmp[1] = '\0';
+            drawFont(bitmap, 32, y, tmp, RED, CLEAR, scaleX, scaleY);
+        }
+        if (item.type() == CMenuItem::ITEM_BAR)
+        {
+            const int scaleX = 1;
+            size_t len = 0;
+            for (size_t j = 0; j < item.size(); ++j)
+                len += item.option(j).size() + (j != 0);
+
+            x = (WIDTH - len * FONT_SIZE * scaleX) / 2;
+            for (size_t j = 0; j < item.size(); ++j)
+            {
+                const Color color = selected && (j == item.value()) ? YELLOW : BLUE;
+                const std::string option = item.option(j);
+                drawFont(bitmap, x, y, option.c_str(), BLACK, color, scaleX, scaleY);
+                x += (FONT_SIZE + 1) * option.size() * scaleX;
+            }
+            continue;
+        }
+        else if (item.role() == MENU_ITEM_SELECT_USER)
         {
             const uint16_t animeOffset = selected ? (m_ticks / 3) & 0x1f : 0;
             const CFrameSet &users = *m_users;
@@ -1066,13 +1091,6 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
             x += 32;
         }
         drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
-        if (static_cast<int>(i) == menu.index())
-        {
-            char tmp[2];
-            tmp[0] = CHARS_TRIGHT;
-            tmp[1] = '\0';
-            drawFont(bitmap, 32, y, tmp, RED, CLEAR, scaleX, scaleY);
-        }
     }
 }
 
@@ -1204,11 +1222,8 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
-    // #ifdef __EMSCRIPTEN__
-    //     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
-    // #else
+    // menu.addItem(CMenuItem({"OPTIONS", "CREDITS", "HI SCORES"}, &m_mainMenuBar)).setRole(MENU_ITEM_MAINMENU_BAR);
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
-    // #endif
     m_game->setMode(CGame::MODE_TITLE);
 
     if (m_config["theme"] != "")
