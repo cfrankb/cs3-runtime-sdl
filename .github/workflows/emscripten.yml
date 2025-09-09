@@ -29,6 +29,15 @@ jobs:
           emcc --version
           em++ --version
 
+      - name: build SDL3 from source
+        run: |
+          git submodule update --init --recursive
+          ls external/SDL3 -l
+          python3 bin/ems/patch-xmp.py
+          bin/ems/build-xmp.sh
+          bin/ems/build-sdl3.sh
+          bin/ems/build-sdl3-mixer.sh
+
       - name: Build mapzutil
         run: |
           echo "Preparing mapzutil"
@@ -48,7 +57,7 @@ jobs:
           echo "Preparing itch.io version"
           mkdir -p build/cs3
           cp data/musics/*.ogg build/cs3
-          python3 bin/gen.py emsdl2 -s
+          python3 bin/gen.py emsdl3 -s
           make
           cp build/cs3v2.* build/cs3
           cp LICENSE build/cs3
