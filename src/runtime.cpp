@@ -1070,12 +1070,12 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
             const int scaleX = 1;
             size_t len = 0;
             for (size_t j = 0; j < item.size(); ++j)
-                len += item.option(j).size() + (j != 0);
+                len += item.option(j).size() + (size_t)(j != 0);
 
             x = (WIDTH - len * FONT_SIZE * scaleX) / 2;
             for (size_t j = 0; j < item.size(); ++j)
             {
-                const Color color = selected && (j == item.value()) ? YELLOW : BLUE;
+                const Color color = selected && (j == (size_t)item.value()) ? YELLOW : BLUE;
                 const std::string option = item.option(j);
                 drawFont(bitmap, x, y, option.c_str(), BLACK, color, scaleX, scaleY);
                 x += (FONT_SIZE + 1) * option.size() * scaleX;

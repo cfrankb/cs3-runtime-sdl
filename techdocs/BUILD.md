@@ -6,20 +6,14 @@ This version requires SDL3, SDL3-mixer, libXMP, zlib and Emscripten.
 
 First install [emscripten](https://emscripten.org/index.html)
 
-#### Build SDL3 and other external dependencies
-
-```
-$ git submodule update --init --recursive
-$ python bin/ems/patch-xmp.py
-$ bin/ems/build-xmp.sh
-$ bin/ems/build-sdl3.sh
-$ bin/ems/build-sdl3-mixer.sh
-```
+If your system uses `python3` rather than `python`, update
+the snippets accordingly.
 
 #### Run these commands
 
 ```
 $ python bin/gen.py emsdl3
+$ make build_libs
 $ make
 ```
 
@@ -29,21 +23,13 @@ $ make
 $ emrun build/cs3v2.html
 ```
 
-## Arch Linux
-
-#### Build SDL3 and other dependencies
-
-```
-$ git submodule update --init --recursive
-$ bin/std/build-xmp.sh
-$ bin/std/build-sdl3.sh
-$ bin/std/build-sdl3-mixer.sh
-```
+## Arch Linux / Ubuntu
 
 #### Run these commands
 
 ```
 $ python bin/gen.py sdl3
+$ make build_libs
 $ make
 ```
 

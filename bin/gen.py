@@ -35,7 +35,7 @@ def prepare_deps(deps, fname):
     return "\n".join(lines)
 
 
-def get_deps_blocks(paths, excluded, run_cmd):
+def get_deps_blocks(paths, excluded, run_cmd, libs_steps):
     deps_blocks = ["all: $(TARGET)"]
     deps = []
 
@@ -51,8 +51,7 @@ def get_deps_blocks(paths, excluded, run_cmd):
         f"\t$(PREBUILD) && $(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) -o $@"
         f'&& echo "to run app: {run_cmd}"'
     )
-    deps_blocks.append("\n".join(lines))
-    lines = []
+    lines.append("")
     lines.append("clean:")
     lines.append("\trm -rf $(BPATH)/*")
     lines.append("")
@@ -66,6 +65,10 @@ def get_deps_blocks(paths, excluded, run_cmd):
     lines.append("\tfind src  -type f -print0 | xargs -0 wc -l")
     lines.append("\tcloc src")
     lines.append("")
+    if libs_steps:
+        lines.append("build_libs:")
+        lines.append("\t" + "\n\t".join(libs_steps) + "\n")
+
     deps_blocks.append("\n".join(lines))
     return deps_blocks, objs
 
@@ -130,13 +133,15 @@ def main():
         bname = "tests"
     if params.strip:
         strip = "-s "
+    libs_steps = []
+    python_cmd = ntpath.basename(sys.executable)
 
     #################################################
     ##  SDL3
     if params.action == "sdl3":
         vars = [
             "CXX=g++",
-            "INC=-Ilocal/std/SDL3/include -Ilocal/std/SDL3_mixer/include",
+            "INC=-Ilocal/std/include",
             f"LDFLAGS={strip}",
             "LIBS=-Llocal/std/lib -lSDL3_mixer -lz -lxmp -lSDL3",
             "CXXFLAGS=-O3 -Wall -Wextra",
@@ -145,6 +150,12 @@ def main():
             "TARGET=$(BPATH)/$(BNAME)",
             'PREBUILD=echo "building game"',
         ]
+        libs_steps = [
+            "git submodule update --init --recursive",
+            "bin/std/build-sdl3.sh",
+            "bin/std/build-sdl3-mixer.sh",
+        ]
+        run_cmd = "LD_LIBRARY_PATH=local/std/lib:$LD_LIBRARY_PATH " + run_cmd
     ##################################################
     ##  EMSDL3
     elif params.action == "emsdl3":
@@ -190,6 +201,13 @@ def main():
                 rm build/data/musics/*.ogg
             endef"""
             ),
+        ]
+        libs_steps = [
+            "git submodule update --init --recursive",
+            f"{python_cmd} bin/ems/patch-xmp.py",
+            "bin/ems/build-xmp.sh",
+            "bin/ems/build-sdl3.sh",
+            "bin/ems/build-sdl3-mixer.sh",
         ]
     ############################
     ## SDL2-STATIC
@@ -239,7 +257,7 @@ def main():
     print("type `make` to generare binary.")
     print("type `make clean` to delete the content of the build folder.")
 
-    deps_blocks, objs = get_deps_blocks(paths, excluded, run_cmd)
+    deps_blocks, objs = get_deps_blocks(paths, excluded, run_cmd, libs_steps)
     vars.append(f"DEPS={objs}")
     vars.append(f"EXT={ext}")
     with open("Makefile", "w") as tfile:

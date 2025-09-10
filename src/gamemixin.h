@@ -131,7 +131,8 @@ protected:
         COLOR_NOCHANGE,
         COLOR_FADE,
         COLOR_INVERTED,
-        COLOR_GRAYSCALE
+        COLOR_GRAYSCALE,
+        COLOR_ALL_WHITE,
     };
 
     enum Color : uint32_t
@@ -270,6 +271,14 @@ protected:
         bool livesShimmer;
     };
 
+    struct visualStates_t
+    {
+        int rGoalCount = 0;
+        int rLives = 0;
+        int rSugar = 0;
+        int sugarFx = 0;
+    };
+
     struct hiscore_t
     {
         int32_t score;
@@ -316,6 +325,7 @@ protected:
     int _WIDTH = DEFAULT_WIDTH;
     int _HEIGHT = DEFAULT_HEIGHT;
     ColorMaps m_colormaps;
+    visualStates_t m_visualStates;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -363,6 +373,7 @@ protected:
     void setCameraMode(const int mode);
     void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);
     void beginLevelIntro(CGame::GameMode mode);
+    void clearVisualStates();
 
     inline uint32_t fazFilter(int shift) const;
     inline int getWidth() const

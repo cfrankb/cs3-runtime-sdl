@@ -242,6 +242,10 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                     const uint16_t avg = (c[0] + c[1] + c[2]) / 3;
                     c[0] = c[1] = c[2] = avg;
                 }
+                else if (colorMask == COLOR_ALL_WHITE)
+                {
+                    color = WHITE;
+                }
                 dest[col] = color;
             }
             dest += width;
@@ -293,6 +297,10 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
                     uint8_t *c = reinterpret_cast<uint8_t *>(&color);
                     const uint16_t avg = (c[0] + c[1] + c[2]) / 3;
                     c[0] = c[1] = c[2] = avg;
+                }
+                else if (colorMask == COLOR_ALL_WHITE)
+                {
+                    color = WHITE;
                 }
                 dest[col] = color;
             }
@@ -355,7 +363,7 @@ void CGameMixin::drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &t
     const int width = bitmap.len();
     const uint32_t *tileData = tile.getRGB();
     uint32_t *dest = bitmap.getRGB() + x + y * width;
-    const uint32_t colorFilter = fazFilter(fazBitShift);
+    const uint32_t colorFilter = fazBitShift ? fazFilter(fazBitShift) : 0;
     for (uint32_t row = 0; row < TILE_SIZE; ++row)
     {
         for (uint32_t col = 0; col < TILE_SIZE; ++col)
@@ -375,6 +383,10 @@ void CGameMixin::drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &t
                 const uint16_t avg = (c[0] + c[1] + c[2]) / 3;
                 c[0] = c[1] = c[2] = avg;
             }
+            else if (colorMask == COLOR_ALL_WHITE)
+            {
+                color = WHITE;
+            }
             dest[col] = color;
         }
         dest += width;
@@ -386,18 +398,25 @@ void CGameMixin::drawKeys(CFrame &bitmap)
 {
     CGame &game = *m_game;
     CFrameSet &tiles = *m_tiles;
-    int y = HEIGHT - TILE_SIZE;
+    const int y = HEIGHT - TILE_SIZE;
     int x = WIDTH - TILE_SIZE;
-    const uint8_t *keys = game.keys();
+    const CGame::userKeys_t &keys = game.keys();
     for (size_t i = 0; i < CGame::MAX_KEYS; ++i)
     {
-        uint8_t k = keys[i];
+        const uint8_t &k = keys.tiles[i];
+        const uint8_t &u = keys.indicators[i];
         if (k)
         {
-            drawTile(bitmap, x, y, *tiles[k], true);
+            // add visual sfx for key pickup
+            if (u == CGame::MAX_KEY_STATE)
+                drawTileFaz(bitmap, x, y, *tiles[k], 0, COLOR_ALL_WHITE);
+            else
+                drawTileFaz(bitmap, x, y, *tiles[k], u);
             x -= TILE_SIZE;
         }
     }
+    if ((m_ticks >> 1) & 1)
+        game.decKeyIndicators();
 }
 
 void CGameMixin::drawScreen(CFrame &bitmap)
@@ -420,14 +439,12 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     }
 
     // visual cues
-    static int rGoalCount = 0;
-    static int rLives = 0;
     const visualCues_t visualcues{
-        .diamondShimmer = game.goalCount() < rGoalCount,
-        .livesShimmer = game.lives() > rLives,
+        .diamondShimmer = game.goalCount() < m_visualStates.rGoalCount,
+        .livesShimmer = game.lives() > m_visualStates.rLives,
     };
-    rGoalCount = game.goalCount();
-    rLives = game.lives();
+    m_visualStates.rGoalCount = game.goalCount();
+    m_visualStates.rLives = game.lives();
 
     // draw game status
     drawGameStatus(bitmap, visualcues);
@@ -1521,6 +1538,7 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     clearButtonStates();
     clearJoyStates();
     clearKeyStates();
+    clearVisualStates();
     m_paused = false;
     m_prompt = PROMPT_NONE;
     readfile(&m_ticks, sizeof(m_ticks));
@@ -1846,8 +1864,24 @@ void CGameMixin::manageTimer()
 
 void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
 {
+    constexpr const Color colors[] = {
+        RED,
+        DEEPPINK,
+        HOTPINK,
+        ORANGE,
+        PINK,
+        YELLOW,
+        WHITE,
+    };
+    const int MAX_FX_COLOR = sizeof(colors) / sizeof(colors[0]) - 1;
     CGame &game = *m_game;
     const int sugar = game.sugar();
+    if ((sugar > m_visualStates.rSugar || game.hasExtraSpeed()) &&
+        !m_visualStates.sugarFx)
+        m_visualStates.sugarFx = MAX_FX_COLOR;
+    else if (m_visualStates.sugarFx && ((m_ticks >> 1) & 1))
+        --m_visualStates.sugarFx;
+    m_visualStates.rSugar = sugar;
     for (int i = 0; i < (int)CGame::MAX_SUGAR_RUSH_LEVEL; ++i)
     {
         const Rect rect{
@@ -1855,8 +1889,8 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
             .y = Y_STATUS + 2,
             .width = 4,
             .height = 4};
-        if (static_cast<int>(i) < sugar)
-            drawRect(bitmap, rect, RED, true);
+        if (static_cast<int>(i) < sugar || game.hasExtraSpeed())
+            drawRect(bitmap, rect, colors[m_visualStates.sugarFx], true);
         else
             drawRect(bitmap, rect, WHITE, false);
     }
@@ -2010,4 +2044,13 @@ void CGameMixin::beginLevelIntro(CGame::GameMode mode)
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(mode);
     centerCamera();
+    clearVisualStates();
+}
+
+void CGameMixin::clearVisualStates()
+{
+    m_visualStates.rGoalCount = 0;
+    m_visualStates.rLives = 0;
+    m_visualStates.rSugar = 0;
+    m_visualStates.sugarFx = 0;
 }

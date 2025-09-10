@@ -52,8 +52,9 @@ jobs:
 
       - name: Compile C++ Application
         run: |
-          python3 bin/gen.py sdl2 -s
+          python3 bin/gen.py sdl3 -s
           mkdir -p build
+          make build_libs
           make
         # env: # Optional: set environment variables if your Makefile needs them
         #   BUILD_TYPE: Release
