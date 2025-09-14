@@ -25,6 +25,8 @@ $ emrun build/cs3v2.html
 
 ## Arch Linux / Ubuntu
 
+This version requires that libXMP and zlib be installed on your system.
+
 #### Run these commands
 
 ```

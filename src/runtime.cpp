@@ -1101,7 +1101,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
  */
 void CRuntime::drawTitleScreen(CFrame &bitmap)
 {
-    bitmap.clear();
+    bitmap.fill(BLACK);
     if (m_title->getSize() == 0)
         return;
 

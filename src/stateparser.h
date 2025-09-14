@@ -36,8 +36,8 @@ public:
     void parseStates(FILE *sfile, CStates &states);
     void parseStates(IFile &sfile, CStates &states);
     void parse(const char *data);
-    uint16_t get(const char *k);
-    bool exists(const char *k);
+    uint16_t get(const char *k) const;
+    bool exists(const char *k) const;
     void debug();
 
 private:

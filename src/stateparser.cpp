@@ -34,9 +34,10 @@ void CStateParser::clear()
     m_defines.clear();
 }
 
-bool CStateParser::exists(const char *k)
+bool CStateParser::exists(const char *k) const
 {
-    return m_defines.count(k) != 0;
+    const auto &it = m_defines.find(k);
+    return it != m_defines.end();
 }
 
 void CStateParser::parseStates(FILE *sfile, CStates &states)
@@ -110,11 +111,12 @@ void CStateParser::parseStates(const char *data, CStates &states)
     delete[] t;
 }
 
-uint16_t CStateParser::get(const char *k)
+uint16_t CStateParser::get(const char *k) const
 {
-    if (m_defines.count(k))
+    const auto &it = m_defines.find(k);
+    if (it != m_defines.end())
     {
-        return m_defines[k];
+        return it->second;
     }
     else
     {

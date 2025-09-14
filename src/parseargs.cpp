@@ -24,7 +24,7 @@
 
 void showHelp()
 {
-    puts("\ncs3v2-runtime\n"
+    puts("\ncs3v2-runtime (Creepspread III)\n"
          "\n"
          "options:\n"
          "-p <prefix>               set data path prefix\n"
@@ -33,9 +33,11 @@ void showHelp()
          "--window 999x999          set window size\n"
          "\n"
          "flags:\n"
+         "--easy                    switch to easy mode\n"
          "--hard                    switch to hard mode\n"
          "--normal                  switch to normal mode\n"
          "-f                        start in fullscreen\n"
+         "-v                        verbose\n"
          "-h --help                 show this screen\n"
          "-q                        mute music by default\n");
 }
@@ -159,6 +161,10 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
         else if (strcmp(args[i], "--normal") == 0)
         {
             params.skill = SKILL_NORMAL;
+        }
+        else if (strcmp(args[i], "--easy") == 0)
+        {
+            params.skill = SKILL_EASY;
         }
         else if (strcmp(args[i], "--help") == 0)
         {

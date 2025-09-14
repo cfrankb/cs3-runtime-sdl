@@ -30,7 +30,7 @@ See all the build options [here](techdocs/BUILD.md).
 
 ## Join the chaos
 
-Stay updated on the [latest updates](https://discord.gg/c7AmpFu4).
+Stay updated on the [latest updates](https://disboard.org/server/1409084038689456182).
 
 ## Other resources
 

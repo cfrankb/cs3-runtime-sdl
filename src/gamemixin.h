@@ -124,6 +124,8 @@ protected:
         MAX_IDLE_CYCLES = 0x100,
         IDLE_ACTIVATION = 0x40,
         MIN_WIDTH_FULL = 320,
+        SUGAR_CUBES = 5,
+        SCREEN_SHAKES = 4,
     };
 
     enum ColorMask : uint8_t
@@ -277,6 +279,7 @@ protected:
         int rLives = 0;
         int rSugar = 0;
         int sugarFx = 0;
+        uint8_t sugarCubes[SUGAR_CUBES];
     };
 
     struct hiscore_t
@@ -345,7 +348,7 @@ protected:
     inline CFrame *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void drawHealthBar(CFrame &bitmap, const bool isPlayerHurt);
     void drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues);
-    CFrame *specialFrame(const sprite_t &sprite);
+    CFrame *calcSpecialFrame(const sprite_t &sprite);
     void nextLevel();
     void restartLevel();
     void restartGame();
@@ -375,7 +378,13 @@ protected:
     void beginLevelIntro(CGame::GameMode mode);
     void clearVisualStates();
 
-    inline uint32_t fazFilter(int shift) const;
+    constexpr inline uint32_t fazFilter(const int bitShift) const
+    {
+        return (0xff >> bitShift) << 16 |
+               (0xff >> bitShift) << 8 |
+               0xff >> bitShift;
+    }
+
     inline int getWidth() const
     {
         return _WIDTH;

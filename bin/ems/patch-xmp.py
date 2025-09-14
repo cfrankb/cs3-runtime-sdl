@@ -1,5 +1,5 @@
 source = "external/libxmp/src/control.c"
-dest = "external/libxmp/src/control.c"
+dest = source
 
 lines = []
 with open(source, "r") as sfile:

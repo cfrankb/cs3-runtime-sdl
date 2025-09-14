@@ -176,8 +176,9 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     runtime.setSkill(params.skill);
-    runtime.init(&maparch, params.level % maparch.size());
-    runtime.setStartLevel(params.level % maparch.size());
+    const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
+    runtime.init(&maparch, startLevel);
+    runtime.setStartLevel(startLevel);
     if (params.fullscreen == true)
     {
         runtime.setConfig("fullscreen", "true");
