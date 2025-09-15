@@ -404,8 +404,8 @@ void CRuntime::doInput()
             buttonState = BUTTON_PRESSED;
             [[fallthrough]];
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            controller = SDL_GetGamepadFromID(event.button.which);
-            switch (event.button.button)
+            controller = SDL_GetGamepadFromID(event.cdevice.which);
+            switch (event.gbutton.button)
             {
             case SDL_GAMEPAD_BUTTON_DPAD_UP:
                 m_joyState[AIM_UP] = buttonState;
@@ -438,10 +438,11 @@ void CRuntime::doInput()
                 m_buttonState[BUTTON_BACK] = buttonState;
                 continue;
             default:
-                printf("Controller: %s - Button %s: %s\n",
+                printf("Controller: %s - Button %s: %s [%d]\n",
                        SDL_GetGamepadName(controller),
                        buttonState ? "DOWN" : "UP",
-                       SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button));
+                       SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
+                       event.button.button);
             }
             break;
 #endif
@@ -489,6 +490,9 @@ void CRuntime::doInput()
                        SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
                        event.gaxis.value);
             }
+            break;
+        case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+            printf("touchpad down\n");
             break;
         default:
             break;
@@ -1729,6 +1733,14 @@ bool CRuntime::initControllers()
     {
         fprintf(stderr, "No game controllers found. Connect one now!\n");
     }
+
+    const std::string controllerDB = m_prefix + m_config["controllerdb"];
+    if (!m_config["controllerdb"].empty() &&
+        SDL_AddGamepadMappingsFromFile(controllerDB.c_str()) == -1)
+    {
+        fprintf(stderr, "SDL_AddGamepadMappingsFromFile error: %s\n", SDL_GetError());
+    }
+
     return true;
 }
 

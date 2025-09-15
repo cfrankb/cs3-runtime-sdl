@@ -37,6 +37,7 @@ jobs:
           bin/ems/build-xmp.sh
           bin/ems/build-sdl3.sh
           bin/ems/build-sdl3-mixer.sh
+          rm data/gamecontrollerdb.txt
 
       - name: Build mapzutil
         run: |
@@ -45,7 +46,7 @@ jobs:
           mkdir -p build
           python3 bin/gen.py
           make
-          cp  build/mapzutil ../../bin
+          cp build/mapzutil ../../bin
 
       - name: Strip private maps
         run: |

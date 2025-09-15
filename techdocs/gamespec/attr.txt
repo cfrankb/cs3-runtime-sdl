@@ -4,7 +4,9 @@ Attributes
 01-1f       passages
 40-4f       secret
 
-e0-e9       wait for contact
+d0-d3       crusher vertical
+d4-d7       crusher horizontal
+e0-e9       idle until contact
 ea          freeze trap
 eb          trap
 f0-ff       messages
