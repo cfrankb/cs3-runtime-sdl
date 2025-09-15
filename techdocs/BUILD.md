@@ -37,27 +37,16 @@ $ make
 
 ## Mingw32 on Linux (manual)
 
-This build is outdated
-
-#### Building the docker image
+Install build dependencies
 
 ```
-$ sudo docker build -t sdl2-mingw32-static . -f packages/docker/dockerfile-mingw32-static
-```
-
-#### Deleting an existing image
-
-```
-$ sudo docker rmi sdl2-mingw32-static
-
-# also delete all caches
-$ docker system prune -a
+$ apt install mingw-w64 autoconf automake libtool pkg-config git make
 ```
 
 #### Building cs3 runtime
 
 ```
-$ sudo docker run -it --rm -v "$(pwd)":/workspace sdl2-mingw32-static
-$ python3 bin/gen.py mingw32-sdl2
+$ python bin/gen.py mingw32-sdl3
+$ make build_libs
 $ make
 ```

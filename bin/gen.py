@@ -73,7 +73,7 @@ def get_deps_blocks(paths, excluded, run_cmd, libs_steps):
     return deps_blocks, objs
 
 
-options = ["sdl3", "sdl2-static", "emsdl3", "mingw32-sdl2"]
+options = ["sdl3", "emsdl3", "mingw32-sdl3"]
 
 help_text = f"""
 makefile generator
@@ -88,7 +88,7 @@ examples:
 
 python bin/gen.py sdl3
 python bin/gen.py emsdl3
-python bin/gen.py mingw32-sdl2
+python bin/gen.py mingw32-sdl3
 
 """.strip()
 
@@ -209,40 +209,39 @@ def main():
             "bin/ems/build-sdl3.sh",
             "bin/ems/build-sdl3-mixer.sh",
         ]
-    ############################
-    ## SDL2-STATIC
-    elif params.action == "sdl2-static":
-        prefix = params.prefix if params.has_prefix() else "/usr/local"
-        vars = [
-            "CXX=g++",
-            f"INC=-I{prefix}/include",
-            f"LDFLAGS=-L{prefix}/lib {strip}",
-            "LIBS=-static -lSDL2_mixer -lSDL2 -lSDL2main -lz -lxmp",
-            "CXXFLAGS=-O3",
-            "BPATH=build",
-            f"BNAME={bname}",
-            "TARGET=$(BPATH)/$(BNAME)",
-            'PREBUILD=echo "building game"',
-        ]
+
     ###################################
-    ## MINGW32-SDL2
-    elif params.action == "mingw32-sdl2":
+    ## MINGW32-SDL3
+    elif params.action == "mingw32-sdl3":
         arch = "x86_64-w64"
         paths += ["src/*.rc"]
-        prefix = params.prefix if params.has_prefix() else "/sdl2-windows"
+        prefix = params.prefix if params.has_prefix() else "local/mingw"
         vars = [
             f"WINDRES={arch}-mingw32-windres",
             f"CXX={arch}-mingw32-g++",
             f"INC=-I{prefix}/include",
             f"LDFLAGS=-L{prefix}/lib -Wl,-t {strip}",
-            "LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic -lwinpthread -lmingw32 -lxmp -lSDL2main -lSDL2 -lSDL2_mixer "
-            "-lvorbisfile -lvorbis -logg -lz -Wl,-Bdynamic -lm -ldinput8 -ldxguid -ldxerr8 -luser32 "
+            # "LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic "
+            "LIBS=-static-libstdc++ -static-libgcc -lwinpthread -lmingw32 "
+            "-lvorbisfile -lvorbis -logg -lz "
+            # "-Wl,-Bdynamic "
+            "-lxmp -lSDL3 -lSDL3_mixer "
+            "-lm -ldinput8 -ldxguid -ldxerr8 -luser32 "
             "-lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid",
             "CXXFLAGS=-O3 -pthread -std=c++17",
             "BPATH=build",
             f"BNAME={bname}",
             "TARGET=$(BPATH)/$(BNAME)",
             'PREBUILD=echo "building game"',
+        ]
+        libs_steps = [
+            "git submodule update --init --recursive",
+            "bin/mingw/build-ogg.sh",
+            "bin/mingw/build-vorbis.sh",
+            "bin/mingw/build-zlib.sh",
+            "bin/mingw/build-xmp.sh",
+            "bin/mingw/build-sdl3.sh",
+            "bin/mingw/build-sdl3-mixer.sh",
         ]
     ###################################################
     ## unhandled cases

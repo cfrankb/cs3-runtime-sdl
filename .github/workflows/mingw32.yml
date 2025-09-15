@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - "master"
-      #- 'develop'
+      - "develop"
     tags:
       - "v*"
   pull_request:
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
@@ -34,7 +34,8 @@ jobs:
             unzip \
             zip \
             python3 \
-            git
+            git \
+            make
 
       - name: Build mapzutil
         run: |
@@ -50,24 +51,21 @@ jobs:
           echo "Strip private maps"
           bin/mapzutil -s data/levels.mapz
 
-      - name: Download SDL2 mingw
-        run: |
-          mkdir -p $GITHUB_WORKSPACE/deps
-          cd $GITHUB_WORKSPACE/deps
-          wget https://cfrankb.com/files/libs/sdl2-mingw.zip
-          unzip sdl2-mingw.zip
-          rm sdl2-mingw.zip
-
       - name: Build your app
         run: |
-          python3 bin/gen.py mingw32-sdl2 $GITHUB_WORKSPACE/deps -s
+          python3 bin/gen.py mingw32-sdl3 -s
           mkdir -p build
+          make build_libs
           make
           mkdir -p setup/data
           cp -R data/* setup/data
           cp build/*.exe setup
-          cp LICENSE setup
-          cp $GITHUB_WORKSPACE/deps/bin/libxmp-lite.dll setup
+          cp -R techdocs/legal/* setup
+          cp techdocs/*.md setup
+          PTHREAD_DLL=$(find /usr/x86_64-w64-mingw32/ | grep libwinpthread-1.dll | head -n 1)
+          echo PTHREAD_DLL=$PTHREAD_DLL
+          cp $PTHREAD_DLL setup
+          cp local/mingw/bin/*.dll setup
           ls -l setup
 
       - name: Compress to zip file
