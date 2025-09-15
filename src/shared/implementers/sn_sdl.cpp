@@ -17,6 +17,9 @@
 */
 
 #include <cstdio>
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
 #include "SDL3/SDL.h"
 #include "SDL3_mixer/SDL_mixer.h"
 #include "sn_sdl.h"

@@ -20,6 +20,9 @@
 #include "../interfaces/IMusic.h"
 #include <string>
 #include <cinttypes>
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
 #include "SDL3/SDL.h"
 #include "SDL3_mixer/SDL_mixer.h"
 

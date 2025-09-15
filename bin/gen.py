@@ -221,7 +221,7 @@ def main():
             f"WINDRES={arch}-mingw32-windres",
             f"CXX={arch}-mingw32-g++",
             f"INC=-I{prefix}/include",
-            f"LDFLAGS=-L{prefix}/lib -Wl,-t {strip}",
+            f"LDFLAGS=-L{prefix}/lib -Wl,-t -mwindows {strip}",
             # "LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic "
             "LIBS=-static-libstdc++ -static-libgcc -lwinpthread -lmingw32 "
             "-lvorbisfile -lvorbis -logg -lz "
