@@ -139,11 +139,13 @@ def main():
     #################################################
     ##  SDL3
     if params.action == "sdl3":
+        run_cmd = "LD_LIBRARY_PATH=local/std/lib:$LD_LIBRARY_PATH " + run_cmd
+        prefix = "local/std"
         vars = [
             "CXX=g++",
-            "INC=-Ilocal/std/include",
+            f"INC=-I{prefix}/include",
             f"LDFLAGS={strip}",
-            "LIBS=-Llocal/std/lib -lSDL3_mixer -lz -lxmp -lSDL3",
+            f"LIBS=-L{prefix}/lib -lSDL3_mixer -lz -lxmp -lSDL3",
             "CXXFLAGS=-O3 -Wall -Wextra",
             "BPATH=build",
             f"BNAME={bname}",
@@ -155,17 +157,17 @@ def main():
             "bin/std/build-sdl3.sh",
             "bin/std/build-sdl3-mixer.sh",
         ]
-        run_cmd = "LD_LIBRARY_PATH=local/std/lib:$LD_LIBRARY_PATH " + run_cmd
     ##################################################
     ##  EMSDL3
     elif params.action == "emsdl3":
+        prefix = "local/ems"
         run_cmd = "emrun --hostname 0.0.0.0 $(TARGET)"
         if params.tests:
             print("tests unsupported for this config")
         vars = [
             "CXX=em++",
-            "INC=-Ilocal/ems/include",
-            "LIBS=-lopenal -lidbfs.js -Llocal/ems/lib -lSDL3 -lSDL3_mixer -lxmp-lite",
+            f"INC=-I{prefix}/include",
+            f"LIBS=-lopenal -lidbfs.js -L{prefix}/lib -lSDL3 -lSDL3_mixer -lxmp-lite",
             strip_padding(
                 """define CXXFLAGS
                 -sUSE_SDL=0 \\
@@ -209,7 +211,6 @@ def main():
             "bin/ems/build-sdl3.sh",
             "bin/ems/build-sdl3-mixer.sh",
         ]
-
     ###################################
     ## MINGW32-SDL3
     elif params.action == "mingw32-sdl3":
@@ -227,7 +228,8 @@ def main():
             # "-Wl,-Bdynamic "
             "-lxmp -lSDL3 -lSDL3_mixer "
             "-lm -ldinput8 -ldxguid -ldxerr8 -luser32 "
-            "-lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 -lversion -luuid -lws2_32 -lsetupapi -lhid",
+            "-lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 "
+            "-lversion -luuid -lws2_32 -lsetupapi -lhid",
             "CXXFLAGS=-O3 -pthread -std=c++17",
             "BPATH=build",
             f"BNAME={bname}",

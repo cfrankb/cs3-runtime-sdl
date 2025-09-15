@@ -35,7 +35,8 @@ jobs:
             zip \
             python3 \
             git \
-            make
+            make \
+            nsis
 
       - name: Build mapzutil
         run: |
@@ -57,38 +58,25 @@ jobs:
           mkdir -p build
           make build_libs
           make
-          mkdir -p setup/data
-          mkdir -p setup/legal
-          cp -R data/* setup/data
-          cp build/*.exe setup
-          cp -R techdocs/legal/* setup/legal
-          cp techdocs/*.md setup/legal
-          cp LICENSE setup
-          PTHREAD_DLL=$(find /usr/x86_64-w64-mingw32/ | grep libwinpthread-1.dll | head -n 1)
-          echo PTHREAD_DLL=$PTHREAD_DLL
-          cp $PTHREAD_DLL setup
-          cp local/mingw/bin/*.dll setup
-          ls -l setup
 
-      - name: Compress to zip file
+      - name: Make Installer
         run: |
-          cd setup
-          zip -r Creepspread_III_mingw-win32.zip *
-          ls -l
-          mv Creepspread_III_mingw-win32.zip ..
-          ls -l ..
+          packages/bin/makesetup.sh
+          makensis packages/data/win32/cs3-setup.nsi
+          mkdir -p release
+          cp build/*Setup.exe release
+          cp LICENSE release
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            LICENSE
-            *.zip
+            release/*
 
       - name: Upload Windows executable
         uses: actions/upload-artifact@master
         with:
           name: cs3v2-mingw-win32
-          path: setup
+          path: release
           retention-days: 7
