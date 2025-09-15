@@ -42,7 +42,7 @@ appimage: clean_appimage $(EXECUTABLE)
 	# --desktop-file: Path to your .desktop file inside the AppDir
 	# --icon: Path to your icon file inside the AppDir
 	# --library-path: Hint to linuxdeploy where to find specific libraries (optional, but good for SDL)
-	bin/linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir $(APPDIR) \
+	LD_LIBRARY_PATH=local/std/lib:$LD_LIBRARY_PATH bin/linuxdeploy-x86_64.AppImage --appimage-extract-and-run --appdir $(APPDIR) \
 	              --executable $(APPDIR)/usr/bin/${APP_NAME} \
 	              --output appimage \
 	              --desktop-file $(APP_DESKTOP_FILE) \

@@ -18,6 +18,7 @@
 #pragma once
 #include <string>
 #include <cstdint>
+#include <vector>
 
 typedef struct
 {
@@ -34,4 +35,4 @@ typedef struct
     int height;
 } params_t;
 
-bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit);
+bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &appExit);

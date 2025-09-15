@@ -72,7 +72,7 @@ void verbose(const char *path)
     }
 }
 
-bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
+bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &appExit)
 {
     typedef struct
     {
@@ -89,12 +89,12 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
     };
     const size_t defcount = sizeof(paramdefs) / sizeof(paramdefs[0]);
     bool result = true;
-    for (int i = 1; i < argc; ++i)
+    for (size_t i = 0; i < list.size(); ++i)
     {
         size_t j;
         for (j = 0; j < defcount; ++j)
         {
-            if (strcmp(args[i], paramdefs[j].param) == 0)
+            if (strcmp(list[i].c_str(), paramdefs[j].param) == 0)
             {
                 break;
             }
@@ -102,9 +102,9 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
         // handle options
         if (j != defcount)
         {
-            if (i + 1 < argc && args[i + 1][0] != '-')
+            if (i + 1 < list.size() && list[i + 1].c_str()[0] != '-')
             {
-                *(paramdefs[j].dest) = args[i + 1];
+                *(paramdefs[j].dest) = list[i + 1].c_str();
                 ++i;
             }
             else
@@ -113,12 +113,13 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                 result = false;
             }
         }
-        else if (strcmp(args[i], "--window") == 0)
+        else if (strcmp(list[i].c_str(), "--window") == 0)
         {
-            if (i + 1 < argc && args[i + 1][0] != '-')
+            if (i + 1 < list.size() && list[i + 1].c_str()[0] != '-')
             {
-                char *w = args[++i];
-                char *h = strstr(w, "x");
+                std::string s = list[++i];
+                const char *w = s.c_str();
+                const char *h = strstr(w, "x");
                 if (w && h)
                 {
                     params.width = strtol(w, nullptr, 10) / 2;
@@ -148,45 +149,44 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                 result = false;
             }
         }
-        else if (strcmp(args[i], "--short") == 0)
+        else if (strcmp(list[i].c_str(), "--short") == 0)
         {
             printf("switching to short resolution\n");
             params.width = 480 / 2;
             params.height = 640 / 2;
         }
-        else if (strcmp(args[i], "--hard") == 0)
+        else if (strcmp(list[i].c_str(), "--hard") == 0)
         {
             params.skill = SKILL_HARD;
         }
-        else if (strcmp(args[i], "--normal") == 0)
+        else if (strcmp(list[i].c_str(), "--normal") == 0)
         {
             params.skill = SKILL_NORMAL;
         }
-        else if (strcmp(args[i], "--easy") == 0)
+        else if (strcmp(list[i].c_str(), "--easy") == 0)
         {
             params.skill = SKILL_EASY;
         }
-        else if (strcmp(args[i], "--help") == 0)
+        else if (strcmp(list[i].c_str(), "--help") == 0)
         {
             showHelp();
             appExit = true;
             return true;
         }
-        else if (memcmp(args[i], "--", 2) == 0)
+        else if (memcmp(list[i].c_str(), "--", 2) == 0)
         {
-            fprintf(stderr, "invalid option: %s\n", args[i]);
+            fprintf(stderr, "invalid option: %s\n", list[i].c_str());
             result = false;
         }
         // handle switch
-        else if (args[i][0] == '-')
+        else if (list[i].c_str()[0] == '-')
         {
-            for (size_t j = 1; j < strlen(args[i]); ++j)
+            for (size_t j = 1; j < strlen(list[i].c_str()); ++j)
             {
-                switch (args[i][j])
+                switch (list[i].c_str()[j])
                 {
                 case 'v':
                     printf("verbose\n");
-                    verbose(args[0]);
                     params.verbose = true;
                     break;
                 case 'f':
@@ -202,14 +202,14 @@ bool parseArgs(const int argc, char *args[], params_t &params, bool &appExit)
                     appExit = true;
                     return true;
                 default:
-                    fprintf(stderr, "invalid switch: %c\n", args[i][j]);
+                    fprintf(stderr, "invalid switch: %c\n", list[i].c_str()[j]);
                     result = false;
                 }
             }
         }
         else
         {
-            params.level = atoi(args[i]);
+            params.level = atoi(list[i].c_str());
         }
     }
     return result;

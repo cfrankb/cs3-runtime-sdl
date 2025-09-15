@@ -25,6 +25,7 @@
 #include "maparch.h"
 #include "parseargs.h"
 #include "game.h"
+#include "strhelper.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -144,8 +145,27 @@ const std::string getPrefix()
     }
 }
 
+#if defined(__MINGW32__)
+#pragma message "Compiling with MinGW"
+#include <windows.h>
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    std::vector<std::string> list;
+    splitString2(lpCmdLine, list);
+    printf("CMD: %s\n", lpCmdLine);
+    for (size_t i = 0; i < list.size(); ++i)
+    {
+        printf("%d>>> %s\n", i, list[i].c_str());
+    }
+#else
 int main(int argc, char *args[])
 {
+    std::vector<std::string> list;
+    for (int i = 1; i < argc; ++i)
+    {
+        list.push_back(args[i]);
+    }
+#endif
     srand(static_cast<unsigned int>(time(NULL)));
     CMapArch maparch;
     CRuntime runtime;
@@ -155,7 +175,7 @@ int main(int argc, char *args[])
     params.prefix = getPrefix();
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
     bool appExit = false;
-    if (!parseArgs(argc, args, params, appExit))
+    if (!parseArgs(list, params, appExit))
         return EXIT_FAILURE;
     if (appExit)
         return EXIT_SUCCESS;

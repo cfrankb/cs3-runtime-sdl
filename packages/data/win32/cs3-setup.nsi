@@ -6,8 +6,6 @@
 !define DESCRIPTION "High-speed, pixel-art arcade chaos with a tracker soundtrack. Dive into Creepspread III, a fast-paced retro action game that combines a unique tracker-music soundtrack with fluid, high-speed pixel graphics. Master its challenging levels and experience a dynamic audio system that adapts to the on-screen action."
 !define INSTALLER_NAME "../../../build/CreepSpread_III-Setup.exe"
 !define MAIN_APP_EXE "cs3-runtime.exe"
-#!define ICON "../packages/data/win32/system-installer.ico"
-#!define BANNER "../packages/data/win32/bitmap1.bmp"
 !define ICON "system-installer.ico"
 !define BANNER "bitmap1.bmp"
 #!define LICENSE_TXT "[CHANGEME License Text Document]"

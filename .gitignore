@@ -11,5 +11,6 @@ tests/in/backup
 setup/*
 techdocs/originals
 local/*
+setup/*
 #VERSION
 CMakeLists.txt
