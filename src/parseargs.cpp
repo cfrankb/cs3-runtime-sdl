@@ -17,7 +17,6 @@
 */
 #include <cstdio>
 #include <cstring>
-#include <filesystem>
 #include "parseargs.h"
 #include "skills.h"
 #include "runtime.h"
@@ -52,24 +51,6 @@ void initArgs(params_t &params)
     params.verbose = false;
     params.width = CRuntime::DEFAULT_WIDTH;
     params.height = CRuntime::DEFAULT_HEIGHT;
-}
-
-void verbose(const char *path)
-{
-    printf("app:%s\n", path);
-    try
-    {
-        // Get the current working directory
-        std::filesystem::path currentPath = std::filesystem::current_path();
-
-        // Print the path to the console
-        printf("Current folder (std::filesystem): %s\n", currentPath.c_str());
-    }
-    catch (const std::filesystem::filesystem_error &e)
-    {
-        // Handle potential errors (e.g., permissions issues)
-        fprintf(stderr, "Filesystem error: %s\n", e.what());
-    }
 }
 
 bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &appExit)

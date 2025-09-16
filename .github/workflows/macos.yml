@@ -1,0 +1,96 @@
+name: macOS SDL3 Build
+
+on:
+  push:
+    branches:
+      - toto
+      #- master
+      #- develop
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - master
+
+env:
+  APP_NAME: CS3GAME
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v3
+
+      - name: Generate CMakeLists.txt
+        run: |
+          echo "$APP_NAME"
+          python3 packages/bin/macos-genc.py --app "$APP_NAME" -o "CMakeLists.txt"
+          cat CMakeLists.txt
+
+      - name: Copy data
+        run: |
+          mkdir -p build/${APP_NAME}.app/Contents/Resources/data
+          cp -r data/* build/${APP_NAME}.app/Contents/Resources/data
+
+      - name: Check iconutil
+        run: which iconutil
+
+      - name: Convert iconset to .icns
+        run: |
+          mkdir -p build/icon.iconset
+          cp packages/data/macos/icon16.png build/icon.iconset/icon_16x16.png
+          cp packages/data/macos/icon16.png build/icon.iconset/icon_16x16@2x.png
+          cp packages/data/macos/icon32.png build/icon.iconset/icon_32x32.png
+          cp packages/data/macos/icon32.png build/icon.iconset/icon_32x32@2x.png
+          cp packages/data/macos/icon128.png build/icon.iconset/icon_128x128.png
+          cp packages/data/macos/icon128.png build/icon.iconset/icon_128x128@2x.png
+          cp packages/data/macos/icon256.png build/icon.iconset/icon_256x256.png
+          cp packages/data/macos/icon256.png build/icon.iconset/icon_256x256@2x.png
+          cp packages/data/macos/icon512.png build/icon.iconset/icon_512x512.png
+          cp packages/data/macos/icon512.png build/icon.iconset/icon_512x512@2x.png
+          ls -lh build/icon.iconset
+          iconutil -c icns build/icon.iconset -o build/${APP_NAME}.app/Contents/Resources/${APP_NAME}.icns
+          ls -lh build/${APP_NAME}.app/Contents/Resources/
+
+      - name: Install dependencies
+        run: |
+          brew install cmake libxmp zlib libogg libvorbis
+
+      - name: Verify Python
+        run: |
+          python3 --version
+          #pip3 install --upgrade pip
+          #pip3 install numpy pillow  # example Python packages
+
+      - name: Configure and build
+        run: |
+          git submodule update --init --recursive
+          ls -l
+          pwd
+          cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+          cmake --build build --config Release
+          ls -l
+          ls -l build
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyGame-macOS
+          path: build/${{ env.APP_NAME }}.App
+          retention-days: 7
+
+      - name: Create DMG
+        run: |
+          mkdir -p dmg_output
+          hdiutil create -volname "DiamondHunter" \
+            -srcfolder "build/${APP_NAME}.app" \
+            -ov -format UDZO "dmg_output/${APP_NAME}.dmg"
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyGame-DMG
+          path: dmg_output/${{ env.APP_NAME }}.dmg
+          retention-days: 7

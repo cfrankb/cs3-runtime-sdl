@@ -220,7 +220,7 @@ def main():
         prefix = params.prefix if params.has_prefix() else "local/mingw"
         vars = [
             f"WINDRES={arch}-mingw32-windres",
-            f"CXX={arch}-mingw32-g++",
+            f"CXX={arch}-mingw32-g++",  # -fno-exceptions -fno-rtti
             f"INC=-I{prefix}/include",
             f"LDFLAGS=-L{prefix}/lib -Wl,-t -mwindows {strip}",
             # "LIBS=-static-libstdc++ -static-libgcc -Wl,-Bstatic "

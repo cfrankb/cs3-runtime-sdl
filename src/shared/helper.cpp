@@ -19,7 +19,6 @@
 #include <ctype.h>
 #include <cstdio>
 #include <zlib.h>
-#include <filesystem>
 #include "helper.h"
 #ifdef USE_QFILE
 #define FILEWRAP QFileWrap
@@ -28,8 +27,6 @@
 #define FILEWRAP CFileWrap
 #include "../shared/FileWrap.h"
 #endif
-
-namespace fs = std::filesystem;
 
 const char *toUpper(char *s)
 {
@@ -152,16 +149,4 @@ int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **
         in_data,
         in_size,
         Z_DEFAULT_COMPRESSION);
-}
-
-uint64_t getFileSize(const std::string &filename)
-{
-    try
-    {
-        return fs::file_size(filename);
-    }
-    catch (const fs::filesystem_error &e)
-    {
-        throw std::runtime_error("Error accessing file: " + std::string(e.what()));
-    }
 }

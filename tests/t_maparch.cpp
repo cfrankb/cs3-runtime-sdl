@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <filesystem>
 #include "t_maparch.h"
 #include "../src/maparch.h"
 #include "../src/map.h"
@@ -29,6 +30,20 @@
 #define IN_FILE "tests/in/levels1.mapz"
 #define OUT_FILE1 "tests/out/levels1.mapz"
 #define OUT_FILE2 "tests/out/levels2.mapz"
+
+namespace fs = std::filesystem;
+
+uint64_t getFileSize(const std::string &filename)
+{
+    try
+    {
+        return fs::file_size(filename);
+    }
+    catch (const fs::filesystem_error &e)
+    {
+        throw std::runtime_error("Error accessing file: " + std::string(e.what()));
+    }
+}
 
 void injectStates(CMapArch &arch)
 {

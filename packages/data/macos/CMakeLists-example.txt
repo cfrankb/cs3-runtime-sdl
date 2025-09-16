@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.16)
+project(MyGame)
+
+set(CMAKE_CXX_STANDARD 17)
+
+find_package(SDL3 REQUIRED)
+find_package(SDL3_mixer REQUIRED)
+
+find_library(XMP_LIBRARY xmp)
+find_library(ZLIB_LIBRARY z)
+find_library(OGG_LIBRARY ogg)
+find_library(VORBIS_LIBRARY vorbisfile)
+
+add_executable(MyGame src/main.cpp)
+
+target_link_libraries(MyGame
+    SDL3::SDL3
+    SDL3_mixer::SDL3_mixer
+    ${XMP_LIBRARY}
+    ${ZLIB_LIBRARY}
+    ${OGG_LIBRARY}
+    ${VORBIS_LIBRARY}
+)

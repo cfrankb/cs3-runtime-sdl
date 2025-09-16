@@ -43,6 +43,19 @@ uint32_t sleepDelay = SLEEP;
 #define DEFAULT_MAPARCH "levels.mapz"
 #define CONF_FILE "game.cfg"
 
+#if defined(__APPLE__)
+#include <TargetConditionals.h>
+#if TARGET_OS_MAC && !TARGET_OS_IPHONE
+#include <CoreFoundation/CoreFoundation.h>
+#define IS_MACOS 1
+#define PLATFORM_NAME "macOS"
+#else
+#define PLATFORM_NAME "Other Apple OS"
+#endif
+#else
+#define PLATFORM_NAME "Non-Apple OS"
+#endif
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -119,8 +132,26 @@ void loop_handler(void *arg)
     }
 }
 
+#ifdef IS_MACOS
+std::string GetResourcePath(const std::string &relativePath)
+{
+    CFBundleRef bundle = CFBundleGetMainBundle();
+    CFURLRef resURL = CFBundleCopyResourcesDirectoryURL(bundle);
+    char path[PATH_MAX];
+    if (CFURLGetFileSystemRepresentation(resURL, true, (UInt8 *)path, PATH_MAX))
+    {
+        return std::string(path) + "/" + relativePath;
+    }
+    return relativePath;
+}
+#endif
+
 const std::string getPrefix()
 {
+#ifdef IS_MACOS
+    std::string relativePath = "";
+    return GetResourcePath(relativePath);
+#else
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
     {
@@ -146,6 +177,7 @@ const std::string getPrefix()
         }
         return DEFAULT_PREFIX;
     }
+#endif
 }
 
 #if defined(__MINGW32__)

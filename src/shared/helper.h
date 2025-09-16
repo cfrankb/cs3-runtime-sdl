@@ -31,4 +31,3 @@ int upperClean(int c);
 // #include <linux/limits.h>
 #endif
 int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long &out_size);
-uint64_t getFileSize(const std::string &filename);
