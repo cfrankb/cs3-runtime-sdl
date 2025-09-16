@@ -535,7 +535,8 @@ void CRuntime::doInput()
 bool CRuntime::fetchFile(const std::string &path, char **dest, const bool terminator)
 {
     CFileWrap file;
-    printf("loading: %s\n", path.c_str());
+    if (m_verbose)
+        printf("loading: %s\n", path.c_str());
     if (file.open(path.c_str(), "rb"))
     {
         const int size = file.getSize();

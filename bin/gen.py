@@ -139,8 +139,8 @@ def main():
     #################################################
     ##  SDL3
     if params.action == "sdl3":
-        run_cmd = "LD_LIBRARY_PATH=local/std/lib:$LD_LIBRARY_PATH " + run_cmd
         prefix = "local/std"
+        run_cmd = f"LD_LIBRARY_PATH={prefix}/lib:$LD_LIBRARY_PATH " + run_cmd
         vars = [
             "CXX=g++",
             f"INC=-I{prefix}/include",
@@ -160,6 +160,7 @@ def main():
     ##################################################
     ##  EMSDL3
     elif params.action == "emsdl3":
+        bname = "cs3v2.html"
         prefix = "local/ems"
         run_cmd = "emrun --hostname 0.0.0.0 $(TARGET)"
         if params.tests:
@@ -192,7 +193,7 @@ def main():
             endef"""
             ),
             "BPATH=build",
-            "BNAME=cs3v2.html",
+            f"BNAME={bname}",
             "TARGET=$(BPATH)/$(BNAME)",
             strip_padding(
                 """define PREBUILD

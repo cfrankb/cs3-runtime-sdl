@@ -87,7 +87,6 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
     }
     return EM_TRUE;
 }
-
 #endif
 
 void loop_handler(void *arg)
@@ -155,7 +154,8 @@ const std::string getPrefix()
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     std::vector<std::string> list;
-    splitString2(lpCmdLine, list);
+    if (lpCmdLine[0])
+        splitString2(lpCmdLine, list);
     printf("CMD: %s\n", lpCmdLine);
     for (size_t i = 0; i < list.size(); ++i)
     {
