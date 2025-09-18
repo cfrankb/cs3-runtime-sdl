@@ -1759,7 +1759,7 @@ CMenu &CRuntime::initOptionMenu()
         .setRole(MENU_ITEM_SND_VOLUME);
     menu.addItem(CMenuItem("VIEWPORT: %s", {"STATIC", "DYNAMIC"}, &m_cameraMode))
         .setRole(MENU_ITEM_CAMERA);
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
     char tmp[16];
     std::vector<std::string> resolutions;
     for (const auto &rez : m_resolutions)
@@ -1772,7 +1772,7 @@ CMenu &CRuntime::initOptionMenu()
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
-    if (m_gameControllers.size() != 0)
+    if (m_gameControllers.empty())
     {
         menu.addItem(CMenuItem("X-AXIS SENSITIVITY: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
@@ -1823,7 +1823,7 @@ void CRuntime::createResolutionList()
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        ELOG("SDL_GetNumDisplayModes failed: %s\n", SDL_GetError());
+        ELOG("SDL_GetFullscreenDisplayModes failed: %s\n", SDL_GetError());
         return;
     }
     m_resolutions.clear();
@@ -1919,7 +1919,7 @@ void CRuntime::listResolutions(int displayIndex)
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        ELOG("SDL_GetNumDisplayModes failed:%s\n", SDL_GetError());
+        ELOG("SDL_GetFullscreenDisplayModes failed:%s\n", SDL_GetError());
         return;
     }
 

@@ -13,4 +13,4 @@ techdocs/originals
 local/*
 setup/*
 #VERSION
-CMakeLists.txt
+./CMakeLists.txt
