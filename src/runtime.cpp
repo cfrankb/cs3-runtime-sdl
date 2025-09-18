@@ -195,15 +195,20 @@ void CRuntime::paint()
  */
 bool CRuntime::initSDL()
 {
-    const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
     LOGI("SDL Init()\n");
-    LOGI("texture: %dx%d\n", WIDTH, HEIGHT);
-    SDL_WindowFlags windowFlags = 0;
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         LOGE("SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
+    return true;
+}
+
+bool CRuntime::createSDLWindow()
+{
+    const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
+    LOGI("texture: %dx%d\n", WIDTH, HEIGHT);
+    SDL_WindowFlags windowFlags = 0;
     m_app.window = SDL_CreateWindow(
         title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
     if (m_app.window == NULL)
@@ -353,7 +358,8 @@ void CRuntime::doInput()
 
         case SDL_EVENT_QUIT:
 #ifdef __EMSCRIPTEN__
-//           emscripten_cancel_main_loop();
+            emscripten_cancel_main_loop();
+            SDL_Delay(300);
 #else
             if (m_app.isFullscreen)
             {
@@ -493,8 +499,21 @@ void CRuntime::doInput()
             }
             break;
         case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-            LOGI("touchpad down\n");
+            LOGI("SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN\n");
             break;
+
+        case SDL_EVENT_WINDOW_MINIMIZED:
+            LOGI("SDL_EVENT_WINDOW_MINIMIZED\n");
+            break;
+
+        case SDL_EVENT_WINDOW_RESTORED:
+            LOGI("SDL_EVENT_WINDOW_RESTORED\n");
+            break;
+
+        case SDL_EVENT_DISPLAY_ORIENTATION:
+            LOGI("SDL_EVENT_WINDOW_RESTORED\n");
+            break;
+
         default:
             break;
         }

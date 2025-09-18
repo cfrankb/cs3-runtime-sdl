@@ -3,10 +3,10 @@ import glob
 import ntpath
 import os
 import sys
+from pathlib import Path
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
-
 
 def strip_ext(s):
     i = s.rfind(".")
@@ -135,6 +135,8 @@ def main():
         strip = "-s "
     libs_steps = []
     python_cmd = ntpath.basename(sys.executable)
+    Path("build").mkdir(parents=True, exist_ok=True)
+
 
     #################################################
     ##  SDL3
@@ -257,7 +259,8 @@ def main():
         print(help_text)
         return EXIT_FAILURE
 
-    print("type `make` to generare binary.")
+    print("type `make build_libs` to create the libraries.")
+    print("type `make` to generare the executable.")
     print("type `make clean` to delete the content of the build folder.")
 
     deps_blocks, objs = get_deps_blocks(paths, excluded, run_cmd, libs_steps)

@@ -17,9 +17,9 @@
 */
 #define LOG_TAG "main"
 #ifndef __ANDROID__
-    #ifndef SDL_MAIN_HANDLED
-        #define SDL_MAIN_HANDLED
-    #endif
+#ifndef SDL_MAIN_HANDLED
+#define SDL_MAIN_HANDLED
+#endif
 #else
 #endif
 #include <SDL3/SDL_main.h>
@@ -49,19 +49,17 @@ uint32_t sleepDelay = SLEEP;
 #define DEFAULT_MAPARCH "levels.mapz"
 #define CONF_FILE "game.cfg"
 
-#if defined (__ANDROID__)
+#if defined(__ANDROID__)
 int ANDROID_WIDTH = 0;
 int ANDROID_HEIGHT = 0;
 
 #include <jni.h>
 #include <android/log.h>
 
-//#define LOG(...) __android_log_print(ANDROID_LOG_INFO, "ScreenSize", __VA_ARGS__)
-
 // This function should be called from Java/Kotlin
 extern "C" JNIEXPORT void JNICALL
-    Java_org_libsdl_app_SDLActivity_getScreenSize(JNIEnv *env, jobject thiz) {
-    //Java_com_yourpackage_MainActivity_getScreenSize(JNIEnv *env, jobject thiz) {
+Java_org_libsdl_app_SDLActivity_getScreenSize(JNIEnv *env, jobject thiz)
+{
 
     // Get display metrics
     jclass metricsClass = env->FindClass("android/util/DisplayMetrics");
@@ -99,23 +97,33 @@ extern "C" JNIEXPORT void JNICALL
     jmethodID getRotation = env->GetMethodID(displayClass, "getRotation", "()I");
     int rotation = env->CallIntMethod(display, getRotation);
 
-    const char* orientationName;
-    switch(rotation) {
-        case 0: orientationName = "Portrait"; break;
-        case 1: orientationName = "Landscape (90°)"; break;
-        case 2: orientationName = "Portrait Upside Down (180°)"; break;
-        case 3: orientationName = "Landscape (270°)"; break;
-        default: orientationName = "Unknown"; break;
+    const char *orientationName;
+    switch (rotation)
+    {
+    case 0:
+        orientationName = "Portrait";
+        break;
+    case 1:
+        orientationName = "Landscape (90°)";
+        break;
+    case 2:
+        orientationName = "Portrait Upside Down (180°)";
+        break;
+    case 3:
+        orientationName = "Landscape (270°)";
+        break;
+    default:
+        orientationName = "Unknown";
+        break;
     }
 
     LOGI("Orientation: %s (rotation: %d)", orientationName, rotation);
 
-        // Determine orientation
+    // Determine orientation
     bool isPortrait = ANDROID_HEIGHT > ANDROID_WIDTH;
-    const char* orientation = isPortrait ? "Portrait" : "Landscape";
+    const char *orientation = isPortrait ? "Portrait" : "Landscape";
 
     LOGI("Screen: %dx%d, %s, Rotation: %d", ANDROID_WIDTH, ANDROID_HEIGHT, orientation, rotation);
-
 }
 #endif
 
@@ -286,12 +294,13 @@ int main(int argc, char *args[])
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
 
 #if defined(__ANDROID__)
-    const char* path = SDL_GetAndroidInternalStoragePath();
-    if (!path) {
+    const char *path = SDL_GetAndroidInternalStoragePath();
+    if (!path)
+    {
         LOGE("Failed to get internal storage path: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
-    params.workspace =  path;
+    params.workspace = path;
     LOGI("workspace: %s\n", params.workspace.c_str());
 #endif
 
@@ -317,13 +326,6 @@ int main(int argc, char *args[])
     CAssetMan::setPrefix(params.prefix);
     runtime.setWorkspace(params.workspace.c_str());
 
-#if defined(__ANDROID__)
-    runtime.setWidth(ANDROID_WIDTH > ANDROID_HEIGHT ? ANDROID_WIDTH /2 : ANDROID_HEIGHT/2);
-    runtime.setHeight(ANDROID_WIDTH > ANDROID_HEIGHT ? ANDROID_HEIGHT/2 :ANDROID_WIDTH/2);
-#else
-    runtime.setWidth(params.width);
-    runtime.setHeight(params.height);
-#endif
     if (!CAssetMan::read(configFile, data, true))
         return EXIT_FAILURE;
     if (!runtime.parseConfig(data.ptr))
@@ -348,13 +350,24 @@ int main(int argc, char *args[])
         runtime.enableMusic(false);
     }
     if (!runtime.initSDL())
-    {
         return EXIT_FAILURE;
-    }
+
+#if defined(__ANDROID__)
+    int width = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
+    int height = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
+    runtime.setWidth(width / 2);
+    runtime.setHeight(height / 2);
+#else
+    runtime.setWidth(params.width);
+    runtime.setHeight(params.height);
+#endif
+
+    if (!runtime.createSDLWindow())
+        return EXIT_FAILURE;
+
     runtime.initOptions();
     runtime.preRun();
     runtime.paint();
-
 
 #if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
     runtime.checkMusicFiles();

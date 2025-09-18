@@ -57,6 +57,7 @@ public:
     void notifyExitFullScreen();
     bool checkMusicFiles();
     void loadColorMaps(const int userID);
+    bool createSDLWindow();
 
 private:
     typedef struct

@@ -9,45 +9,52 @@
 #include <jni.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h> // For AAssetManager_fromJava()
-#include <android/log.h> // For logging
+#include <android/log.h>               // For logging
 #include <string>
 #include <vector>
 
 // Global or class member to store the AAssetManager
-AAssetManager* globalAssetManager = nullptr;
+AAssetManager *globalAssetManager = nullptr;
 
-extern "C" {
-    JNIEXPORT void JNICALL Java_org_libsdl_app_SDLActivity_nativeInitAssetManager (JNIEnv *env, jobject /* this */, jobject java_asset_manager)
+extern "C"
+{
+    JNIEXPORT void JNICALL Java_org_libsdl_app_SDLActivity_nativeInitAssetManager(JNIEnv *env, jobject /* this */, jobject java_asset_manager)
     {
         globalAssetManager = AAssetManager_fromJava(env, java_asset_manager);
-        if (globalAssetManager == nullptr) {
+        if (globalAssetManager == nullptr)
+        {
             LOGE("Failed to get AAssetManager from Java");
-        } else {
+        }
+        else
+        {
             LOGI("AAssetManager initialized successfully in C++");
         }
     }
 } // extern "C"
 
-uint8_t *readBinary(const char *assetPath, size_t & size)
+static uint8_t *readBinary(const char *assetPath, size_t &size)
 {
-    if (globalAssetManager == nullptr) {
+    if (globalAssetManager == nullptr)
+    {
         LOGE("AssetManager not initialized!");
         return nullptr;
     }
 
-    AAsset* asset = AAssetManager_open(globalAssetManager, assetPath, AASSET_MODE_BUFFER);
-    if (asset == nullptr) {
+    AAsset *asset = AAssetManager_open(globalAssetManager, assetPath, AASSET_MODE_BUFFER);
+    if (asset == nullptr)
+    {
         LOGE("Failed to open asset: %s", assetPath);
         return nullptr;
     }
 
     off_t assetLength = AAsset_getLength(asset);
     size = assetLength;
-    uint8_t *buffer = new uint8_t[assetLength + 1];
+    auto *buffer = new uint8_t[assetLength + 1];
     int bytesRead = AAsset_read(asset, buffer, assetLength);
     AAsset_close(asset);
 
-    if (bytesRead < 0) {
+    if (bytesRead < 0)
+    {
         LOGE("Failed to read asset: %s", assetPath);
         return nullptr;
     }
@@ -59,19 +66,16 @@ uint8_t *readBinary(const char *assetPath, size_t & size)
 
 #endif
 
-
-
 static std::string g_prefix = DEFAULT_PREFIX;
 
-
-const std::string defaultPrefix()
+std::string defaultPrefix()
 {
     return DEFAULT_PREFIX;
 }
 
 std::string &CAssetMan::addTrailSlash(std::string &path)
 {
-    if (path.size() != 0 && path.back() != '/' &&
+    if (!path.empty() && path.back() != '/' &&
         path.back() != '\\')
     {
         path += "/";
@@ -125,4 +129,3 @@ void CAssetMan::free(const data_t data)
     if (data.ptr)
         delete[] data.ptr;
 }
-
