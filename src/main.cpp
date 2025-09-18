@@ -15,8 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef SDL_MAIN_HANDLED
-#define SDL_MAIN_HANDLED
+#ifndef __ANDROID__
+    #ifndef SDL_MAIN_HANDLED
+        #define SDL_MAIN_HANDLED
+    #endif
+#else
 #endif
 #include <SDL3/SDL_main.h>
 #include <algorithm>
@@ -133,9 +136,9 @@ void loop_handler(void *arg)
     }
 }
 
-#ifdef IS_MACOS
-std::string getResourcePath()
+const std::string getPrefix()
 {
+#ifdef IS_MACOS
     CFBundleRef bundle = CFBundleGetMainBundle();
     CFURLRef resURL = CFBundleCopyResourcesDirectoryURL(bundle);
     char path[PATH_MAX];
@@ -144,13 +147,6 @@ std::string getResourcePath()
         return std::string(path) + "/";
     }
     return "";
-}
-#endif
-
-const std::string getPrefix()
-{
-#ifdef IS_MACOS
-    return getResourcePath();
 #elif defined(__ANDROID__)
     return "";
 #else
@@ -203,8 +199,11 @@ int main(int argc, char *args[])
     {
         list.push_back(args[i]);
     }
+    ILOG("CMD: %s\n", args[0]);
+    ILOG("ARGS: %d\n", argc);
 #endif
 
+    ILOG("Starting Game\n");
     srand(static_cast<unsigned int>(time(NULL)));
     CMapArch maparch;
     CRuntime runtime;
@@ -213,12 +212,23 @@ int main(int argc, char *args[])
     params.level = 0;
     params.prefix = getPrefix();
     params.mapArch = params.prefix + DEFAULT_MAPARCH;
+
+#if defined(__ANDROID__)
+    const char* path = SDL_GetAndroidInternalStoragePath();
+    if (!path) {
+        ELOG("Failed to get internal storage path: %s", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+    params.workspace =  path;
+#endif
+
     bool appExit = false;
     if (!parseArgs(list, params, appExit))
         return EXIT_FAILURE;
     if (appExit)
         return EXIT_SUCCESS;
 
+    ILOG("MapArch: %s\n", params.mapArch.c_str());
     data_t data;
     if (!CAssetMan::read(params.mapArch, data))
         return EXIT_FAILURE;
@@ -250,7 +260,7 @@ int main(int argc, char *args[])
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
     runtime.init(&maparch, startLevel);
     runtime.setStartLevel(startLevel);
-    if (params.fullscreen == true)
+    if (params.fullscreen)
     {
         runtime.setConfig("fullscreen", "true");
     }

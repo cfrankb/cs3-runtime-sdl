@@ -17,6 +17,7 @@ public:
     static const std::string &getPrefix();
     static bool read(const std::string &filepath, data_t &data, bool terminator = false);
     static void free(const data_t data);
+    static const std::string defaultPrefix();
 
 private:
     CAssetMan() {}
