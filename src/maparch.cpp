@@ -361,3 +361,30 @@ void CMapArch::removeAll()
 {
     m_size = 0;
 }
+
+bool CMapArch::fromMemory(uint8_t *ptr)
+{
+    if (memcmp(ptr, MAAZ_SIG, 4) != 0)
+    {
+        m_lastError = "mapArch signature is wrong";
+        return false;
+    }
+    forget();
+    uint16_t count = 0;
+    memcpy(&count, ptr + 6, sizeof(count));
+    uint32_t indexBase = 0;
+    memcpy(&indexBase, ptr + 8, sizeof(indexBase));
+    for (uint16_t i = 0; i < count; ++i)
+    {
+        uint32_t idx = 0;
+        memcpy(&idx, ptr + indexBase + i * 4, 4);
+        CMap *map = new CMap();
+        if (!map->fromMemory(ptr + idx))
+        {
+            m_lastError = "map data is corrupt";
+            return false;
+        }
+        add(map);
+    }
+    return true;
+}

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cstring>
 #include "recorder.h"
+#include "logger.h"
 
 CRecorder::CRecorder(const size_t bufSize)
 {
@@ -65,12 +66,12 @@ bool CRecorder::start(FILE *file, bool isWrite)
         readFile(sig, sizeof(sig));
         if (memcmp(sig, SIG, sizeof(SIG)) != 0)
         {
-            fprintf(stderr, "signature mismatch:\n");
+            ELOG("signature mismatch:\n");
         }
         readFile(&version, sizeof(version));
         if (version != VERSION)
         {
-            fprintf(stderr, "version mismatch: 0x%.8x\n", version);
+            ELOG("version mismatch: 0x%.8x\n", version);
         }
         readFile(&m_size, sizeof(m_size)); // total datasize of data
         readNextBatch();
@@ -78,7 +79,7 @@ bool CRecorder::start(FILE *file, bool isWrite)
     else
     {
         m_mode = MODE_CLOSED;
-        fprintf(stderr, "invalid file handle\n");
+        ELOG("invalid file handle\n");
         return false;
     }
     return true;

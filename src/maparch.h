@@ -46,6 +46,7 @@ public:
     void removeAll();
     static bool indexFromFile(const char *filename, IndexVector &index);
     static bool indexFromMemory(uint8_t *ptr, IndexVector &index);
+    bool fromMemory(uint8_t *ptr);
 
 protected:
     void allocSpace();

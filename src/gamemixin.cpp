@@ -34,6 +34,7 @@
 #include "sprtypes.h"
 #include "gamestats.h"
 #include "attr.h"
+#include "logger.h"
 
 // Check windows
 #ifdef _WIN64
@@ -51,11 +52,6 @@
 #else
 #define ENVIRONMENT32
 #endif
-#endif
-
-#ifdef USE_QFILE
-#include <QDebug>
-#define printf qDebug
 #endif
 
 CGameMixin::CGameMixin()
@@ -1625,7 +1621,7 @@ void CGameMixin::recordGame()
     FILE *tfile = fopen(path.c_str(), "wb");
     if (!tfile)
     {
-        fprintf(stderr, "cannot create: %s\n", path.c_str());
+        ELOG("cannot create: %s\n", path.c_str());
         return;
     }
     write(tfile, name);
@@ -1641,7 +1637,7 @@ void CGameMixin::playbackGame()
     FILE *sfile = fopen(path.c_str(), "rb");
     if (!sfile)
     {
-        fprintf(stderr, "cannot read: %s\n", path.c_str());
+        ELOG("cannot read: %s\n", path.c_str());
         return;
     }
     read(sfile, name);

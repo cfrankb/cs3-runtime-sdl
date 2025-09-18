@@ -32,12 +32,6 @@ struct MapReport
     int fruits;
     int bonuses;
     int secrets;
-    void debug()
-    {
-        printf("fruits: %d\n", fruits);
-        printf("bonuses: %d\n", bonuses);
-        printf("secrets: %d\n", secrets);
-    }
 };
 
 class CGame

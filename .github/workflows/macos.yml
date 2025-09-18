@@ -3,8 +3,7 @@ name: macOS SDL3 Build
 on:
   push:
     branches:
-      - toto
-      #- master
+      - master
       #- develop
     tags:
       - "v*"

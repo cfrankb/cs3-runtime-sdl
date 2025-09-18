@@ -30,6 +30,8 @@
 #include "parseargs.h"
 #include "game.h"
 #include "strhelper.h"
+#include "assetman.h"
+#include "logger.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -64,7 +66,6 @@ extern "C"
 {
     int savegame(int x)
     {
-        /// printf("savegame: %d\n", x);
         if (x == 0)
         {
             g_runtime->load();
@@ -94,7 +95,7 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 {
     if (!e->isFullscreen)
     {
-        printf("Exited fullscreen—likely via ESC\n");
+        ILOG("Exited fullscreen—likely via ESC\n");
         // Trigger your custom logic here
         g_runtime->notifyExitFullScreen();
     }
@@ -133,35 +134,36 @@ void loop_handler(void *arg)
 }
 
 #ifdef IS_MACOS
-std::string GetResourcePath(const std::string &relativePath)
+std::string getResourcePath()
 {
     CFBundleRef bundle = CFBundleGetMainBundle();
     CFURLRef resURL = CFBundleCopyResourcesDirectoryURL(bundle);
     char path[PATH_MAX];
     if (CFURLGetFileSystemRepresentation(resURL, true, (UInt8 *)path, PATH_MAX))
     {
-        return std::string(path) + "/" + relativePath;
+        return std::string(path) + "/";
     }
-    return relativePath;
+    return "";
 }
 #endif
 
 const std::string getPrefix()
 {
 #ifdef IS_MACOS
-    std::string relativePath = "";
-    return GetResourcePath(relativePath);
+    return getResourcePath();
+#elif defined(__ANDROID__)
+    return "";
 #else
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
     {
-        printf("APPDIR environment variable found: %s\n", appdir_env);
+        ILOG("APPDIR environment variable found: %s\n", appdir_env);
         // Construct the full path to your embedded data (e.g., an image)
         return std::string(appdir_env) + "/usr/share/data/";
     }
     else
     {
-        printf("APPDIR environment variable not found.\n");
+        ILOG("APPDIR environment variable not found.\n");
         // Fallback or error handling: If not running as AppImage,
         const std::vector<std::string> paths = {
             "data",
@@ -188,10 +190,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::vector<std::string> list;
     if (lpCmdLine[0])
         splitString2(lpCmdLine, list);
-    printf("CMD: %s\n", lpCmdLine);
+    ILOG("CMD: %s\n", lpCmdLine);
     for (size_t i = 0; i < list.size(); ++i)
     {
-        printf("%d>>> %s\n", i, list[i].c_str());
+        ILOG("%d>>> %s\n", i, list[i].c_str());
     }
 #else
 int main(int argc, char *args[])
@@ -202,6 +204,7 @@ int main(int argc, char *args[])
         list.push_back(args[i]);
     }
 #endif
+
     srand(static_cast<unsigned int>(time(NULL)));
     CMapArch maparch;
     CRuntime runtime;
@@ -215,22 +218,34 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     if (appExit)
         return EXIT_SUCCESS;
-    if (!maparch.read(params.mapArch.c_str()))
+
+    data_t data;
+    if (!CAssetMan::read(params.mapArch, data))
+        return EXIT_FAILURE;
+    if (!maparch.fromMemory(data.ptr))
     {
-        fprintf(stderr, "failed to read maparch: %s %s\n", params.mapArch.c_str(), maparch.lastError());
+        CAssetMan::free(data);
+        ELOG("mapArch error: %s\n", maparch.lastError());
         return EXIT_FAILURE;
     }
-    std::string configFile = CRuntime::addTrailSlash(params.prefix) + CONF_FILE;
+    CAssetMan::free(data);
+    std::string configFile = CAssetMan::addTrailSlash(params.prefix) + CONF_FILE;
     runtime.setVerbose(params.verbose);
-    runtime.setPrefix(params.prefix.c_str());
+    CAssetMan::setPrefix(params.prefix);
     runtime.setWorkspace(params.workspace.c_str());
     runtime.setWidth(params.width);
     runtime.setHeight(params.height);
-    if (!runtime.parseConfig(configFile.c_str()))
+
+    if (!CAssetMan::read(configFile, data, true))
+        return EXIT_FAILURE;
+    if (!runtime.parseConfig(data.ptr))
     {
-        printf("failed to parse config file: %s\n", configFile.c_str());
+        CAssetMan::free(data);
+        ELOG("failed to parse config file: %s\n", configFile.c_str());
         return EXIT_FAILURE;
     }
+    CAssetMan::free(data);
+
     runtime.setSkill(params.skill);
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
     runtime.init(&maparch, startLevel);

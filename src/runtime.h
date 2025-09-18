@@ -46,14 +46,12 @@ public:
     void startMusic() override;
     void save() override;
     void load() override;
-    bool parseConfig(const char *filename);
+    bool parseConfig(uint8_t *buf);
     void setConfig(const char *key, const char *val);
-    void setPrefix(const char *prefix);
     void setWorkspace(const char *workspace);
     void initOptions();
     void setStartLevel(int level);
     bool isRunning() const;
-    static std::string &addTrailSlash(std::string &path);
     void init(CMapArch *maparch, int index) override;
     void setVerbose(bool enable);
     void notifyExitFullScreen();
@@ -111,7 +109,6 @@ private:
     std::vector<std::string> m_soundFiles;
     std::vector<std::string> m_assetFiles;
     std::vector<std::string> m_userNames;
-    std::string m_prefix = "data/";
     std::string m_workspace = "";
     CFrameSet *m_title;
     char *m_credits = nullptr;

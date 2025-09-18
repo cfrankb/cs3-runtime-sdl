@@ -37,11 +37,7 @@
 #include "statedata.h"
 #include "gamestats.h"
 #include "attr.h"
-
-#ifdef USE_QFILE
-#include <QDebug>
-#define printf qDebug
-#endif
+#include "logger.h"
 
 CMap CGame::m_map(30, 30);
 CGame::userKeys_t CGame::m_keys;
@@ -1349,7 +1345,7 @@ bool CGame::isFruit(const uint8_t tileID)
 {
     const uint8_t fruits[] = {
         TILES_APPLE,
-        TILES_FRUIT1,
+        TILES_POMEGRENADE,
         TILES_WATERMELON,
         TILES_PEAR,
         TILES_CHERRY,
@@ -1372,7 +1368,7 @@ bool CGame::isBonusItem(const uint8_t tileID)
         TILES_CHEST,
         TILES_GIFTBOX,
         TILES_LIGHTBUL,
-        TILES_SCROLL1,
+        TILES_SCROLL,
         TILES_SHIELD,
         TILES_CLOVER,
         TILES_1ST_AID,

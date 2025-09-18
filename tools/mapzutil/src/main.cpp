@@ -16,6 +16,7 @@
 #include "../../../src/map.h"
 #include "../../../src/states.h"
 #include "../../../src/statedata.h"
+#include "../../../src/logger.h"
 
 struct AppParams
 {
@@ -56,7 +57,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
             }
             if (strlen(src) != 2)
             {
-                fprintf(stderr, "invalid switch: %s\n", src);
+                ELOG("invalid switch: %s\n", src);
                 return EXIT_FAILURE;
             }
             else if (src[1] == 's')
@@ -64,7 +65,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
                 appSettings.strip = true;
                 continue;
             }
-            fprintf(stderr, "invalid switch: %s\n", src);
+            ELOG("invalid switch: %s\n", src);
             return EXIT_FAILURE;
         }
         appSettings.files.push_back(src);
@@ -98,7 +99,7 @@ bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &par
             }
             else
             {
-                fprintf(stderr, "failed to replace: %s\n", filepath.c_str());
+                ELOG("failed to replace: %s\n", filepath.c_str());
                 return false;
             }
         }
@@ -123,14 +124,14 @@ bool processFile(const std::string &filepath, const AppParams &params)
         }
         else
         {
-            fprintf(stderr, "failed to read arch: %s\n", arch.lastError());
+            ELOG("failed to read arch: %s\n", arch.lastError());
             file.close();
             return false;
         }
     }
     else
     {
-        fprintf(stderr, "can't open %s\n", filepath.c_str());
+        ELOG("can't open %s\n", filepath.c_str());
         return false;
     }
 

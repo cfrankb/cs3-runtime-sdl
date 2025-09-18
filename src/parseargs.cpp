@@ -20,6 +20,7 @@
 #include "parseargs.h"
 #include "skills.h"
 #include "runtime.h"
+#include "logger.h"
 
 void showHelp()
 {
@@ -90,7 +91,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
             }
             else
             {
-                fprintf(stderr, "missing %s value on cmdline\n", paramdefs[j].name);
+                ELOG("missing %s value on cmdline\n", paramdefs[j].name);
                 result = false;
             }
         }
@@ -106,13 +107,13 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     params.width = strtol(w, nullptr, 10) / 2;
                     if (params.width < 240)
                     {
-                        fprintf(stderr, "invalid width: %d for --window\n", params.width);
+                        ELOG("invalid width: %d for --window\n", params.width);
                         result = false;
                     }
                     params.height = strtol(++h, nullptr, 10) / 2;
                     if (params.height < 240)
                     {
-                        fprintf(stderr, "invalid height: %d for --window\n", params.height);
+                        ELOG("invalid height: %d for --window\n", params.height);
                         result = false;
                     }
                     if (params.verbose)
@@ -120,13 +121,13 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                 }
                 else
                 {
-                    fprintf(stderr, "invalid size for --window\n");
+                    ELOG("invalid size for --window\n");
                     result = false;
                 }
             }
             else
             {
-                fprintf(stderr, "missing size for --window\n");
+                ELOG("missing size for --window\n");
                 result = false;
             }
         }
@@ -156,7 +157,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
         }
         else if (memcmp(list[i].c_str(), "--", 2) == 0)
         {
-            fprintf(stderr, "invalid option: %s\n", list[i].c_str());
+            ELOG("invalid option: %s\n", list[i].c_str());
             result = false;
         }
         // handle switch
@@ -183,7 +184,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     appExit = true;
                     return true;
                 default:
-                    fprintf(stderr, "invalid switch: %c\n", list[i].c_str()[j]);
+                    ELOG("invalid switch: %c\n", list[i].c_str()[j]);
                     result = false;
                 }
             }

@@ -215,6 +215,7 @@ def main():
     ###################################
     ## MINGW32-SDL3
     elif params.action == "mingw32-sdl3":
+        run_cmd += ".exe"
         arch = "x86_64-w64"
         paths += ["src/*.rc"]
         prefix = params.prefix if params.has_prefix() else "local/mingw"
