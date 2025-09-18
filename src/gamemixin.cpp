@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "gamemixin"
 #include <cstring>
 #include "gamemixin.h"
 #include "tilesdata.h"
@@ -1621,7 +1622,7 @@ void CGameMixin::recordGame()
     FILE *tfile = fopen(path.c_str(), "wb");
     if (!tfile)
     {
-        ELOG("cannot create: %s\n", path.c_str());
+        LOGE("cannot create: %s\n", path.c_str());
         return;
     }
     write(tfile, name);
@@ -1637,7 +1638,7 @@ void CGameMixin::playbackGame()
     FILE *sfile = fopen(path.c_str(), "rb");
     if (!sfile)
     {
-        ELOG("cannot read: %s\n", path.c_str());
+        LOGE("cannot read: %s\n", path.c_str());
         return;
     }
     read(sfile, name);

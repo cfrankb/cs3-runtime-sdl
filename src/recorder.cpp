@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "recorder"
 #include <algorithm>
 #include <cstring>
 #include "recorder.h"
@@ -66,12 +67,12 @@ bool CRecorder::start(FILE *file, bool isWrite)
         readFile(sig, sizeof(sig));
         if (memcmp(sig, SIG, sizeof(SIG)) != 0)
         {
-            ELOG("signature mismatch:\n");
+            LOGE("signature mismatch:\n");
         }
         readFile(&version, sizeof(version));
         if (version != VERSION)
         {
-            ELOG("version mismatch: 0x%.8x\n", version);
+            LOGE("version mismatch: 0x%.8x\n", version);
         }
         readFile(&m_size, sizeof(m_size)); // total datasize of data
         readNextBatch();
@@ -79,7 +80,7 @@ bool CRecorder::start(FILE *file, bool isWrite)
     else
     {
         m_mode = MODE_CLOSED;
-        ELOG("invalid file handle\n");
+        LOGE("invalid file handle\n");
         return false;
     }
     return true;

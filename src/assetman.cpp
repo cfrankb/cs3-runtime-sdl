@@ -1,3 +1,4 @@
+#define LOG_TAG "assetman"
 #include "assetman.h"
 #include "shared/FileWrap.h"
 #include "logger.h"
@@ -11,10 +12,6 @@
 #include <android/log.h> // For logging
 #include <string>
 #include <vector>
-
-#define LOG_TAG "MyNativeAssets"
-#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
 // Global or class member to store the AAssetManager
 AAssetManager* globalAssetManager = nullptr;
@@ -100,7 +97,7 @@ bool CAssetMan::read(const std::string &filepath, data_t &data, bool terminator)
     data.ptr = readBinary(filepath.c_str(), data.size);
     if (!data.ptr)
     {
-        ELOG("can't fetch asset: %s\n", filepath.c_str());
+        LOGE("can't fetch asset: %s\n", filepath.c_str());
         return false;
     }
     return true;
@@ -117,7 +114,7 @@ bool CAssetMan::read(const std::string &filepath, data_t &data, bool terminator)
     }
     else
     {
-        ELOG("can't read: %s\n", filepath.c_str());
+        LOGE("can't read: %s\n", filepath.c_str());
         return false;
     }
 #endif

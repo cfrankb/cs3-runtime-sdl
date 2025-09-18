@@ -1,3 +1,4 @@
+#define LOG_TAG "mapzutil"
 #include <cstdlib>
 #include <time.h>
 #include <unistd.h>
@@ -57,7 +58,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
             }
             if (strlen(src) != 2)
             {
-                ELOG("invalid switch: %s\n", src);
+                LOGE("invalid switch: %s\n", src);
                 return EXIT_FAILURE;
             }
             else if (src[1] == 's')
@@ -65,7 +66,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
                 appSettings.strip = true;
                 continue;
             }
-            ELOG("invalid switch: %s\n", src);
+            LOGE("invalid switch: %s\n", src);
             return EXIT_FAILURE;
         }
         appSettings.files.push_back(src);
@@ -99,7 +100,7 @@ bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &par
             }
             else
             {
-                ELOG("failed to replace: %s\n", filepath.c_str());
+                LOGE("failed to replace: %s\n", filepath.c_str());
                 return false;
             }
         }
@@ -124,14 +125,14 @@ bool processFile(const std::string &filepath, const AppParams &params)
         }
         else
         {
-            ELOG("failed to read arch: %s\n", arch.lastError());
+            LOGE("failed to read arch: %s\n", arch.lastError());
             file.close();
             return false;
         }
     }
     else
     {
-        ELOG("can't open %s\n", filepath.c_str());
+        LOGE("can't open %s\n", filepath.c_str());
         return false;
     }
 

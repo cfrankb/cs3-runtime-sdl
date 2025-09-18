@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "runtime"
 #include <ctime>
 #include <chrono>
 #include <cstring>
@@ -75,7 +76,7 @@ CRuntime::~CRuntime()
 {
     if (m_app.window)
     {
-        ILOG("detroying SDL3 objects\n");
+        LOGI("detroying SDL3 objects\n");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
@@ -195,19 +196,19 @@ void CRuntime::paint()
 bool CRuntime::initSDL()
 {
     const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
-    ILOG("SDL Init()\n");
-    ILOG("texture: %dx%d\n", WIDTH, HEIGHT);
+    LOGI("SDL Init()\n");
+    LOGI("texture: %dx%d\n", WIDTH, HEIGHT);
     SDL_WindowFlags windowFlags = 0;
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        ELOG("SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
+        LOGE("SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     m_app.window = SDL_CreateWindow(
         title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
     if (m_app.window == NULL)
     {
-        ELOG("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        LOGE("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
     else
@@ -216,7 +217,7 @@ bool CRuntime::initSDL()
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
         {
-            ELOG("Failed to create renderer: %s\n", SDL_GetError());
+            LOGE("Failed to create renderer: %s\n", SDL_GetError());
             return false;
         }
 
@@ -225,13 +226,13 @@ bool CRuntime::initSDL()
             SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
         if (m_app.texture == nullptr)
         {
-            ELOG("Failed to create texture: %s\n", SDL_GetError());
+            LOGE("Failed to create texture: %s\n", SDL_GetError());
             return false;
         }
 
         if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
         {
-            ELOG("SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
         }
     }
 
@@ -253,7 +254,7 @@ bool CRuntime::initSDL()
         CAssetMan::free(data);
     }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
     createResolutionList();
 #endif
     m_resolution = findResolutionIndex();
@@ -262,7 +263,7 @@ bool CRuntime::initSDL()
 
 void CRuntime::cleanup()
 {
-    ILOG("cleanup()\n");
+    LOGI("cleanup()\n");
 }
 
 void CRuntime::run()
@@ -337,7 +338,7 @@ void CRuntime::doInput()
         case SDL_EVENT_WINDOW_RESIZED:
             if (!m_app.isFullscreen)
             {
-                ILOG("resized\n");
+                LOGI("resized\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             break;
@@ -359,7 +360,7 @@ void CRuntime::doInput()
                 toggleFullscreen();
             }
 #endif
-            ILOG("SQL_QUIT\n");
+            LOGI("SQL_QUIT\n");
             m_isRunning = false;
             break;
 
@@ -371,12 +372,12 @@ void CRuntime::doInput()
                 if (controller)
                 {
                     m_gameControllers.push_back(controller);
-                    ILOG("Controller ADDED: %s (Index:%d)\n",
+                    LOGI("Controller ADDED: %s (Index:%d)\n",
                          SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
                 }
                 else
                 {
-                    ELOG("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
+                    LOGE("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
                 }
             }
             break;
@@ -386,7 +387,7 @@ void CRuntime::doInput()
             if (controller)
             {
                 std::string controllerName = SDL_GetGamepadNameForID(event.cdevice.which);
-                ILOG("Controller REMOVED: %s\n", controllerName.c_str());
+                LOGI("Controller REMOVED: %s\n", controllerName.c_str());
                 for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
                 {
                     if (*it == controller)
@@ -438,7 +439,7 @@ void CRuntime::doInput()
                 m_buttonState[BUTTON_BACK] = buttonState;
                 continue;
             default:
-                ILOG("Controller: %s - Button %s: %s [%d]\n",
+                LOGI("Controller: %s - Button %s: %s [%d]\n",
                      SDL_GetGamepadName(controller),
                      buttonState ? "DOWN" : "UP",
                      SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
@@ -486,13 +487,13 @@ void CRuntime::doInput()
             // Apply a deadzone to ignore small movements
             else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
             { // Example deadzone
-                ILOG("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
+                LOGI("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
                      SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
                      event.gaxis.value);
             }
             break;
         case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-            ILOG("touchpad down\n");
+            LOGI("touchpad down\n");
             break;
         default:
             break;
@@ -536,7 +537,7 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
 {
     CFileWrap file;
     if (m_verbose)
-        ILOG("loading: %s\n", path.c_str());
+        LOGI("loading: %s\n", path.c_str());
     if (file.open(path.c_str(), "rb"))
     {
         const int size = file.getSize();
@@ -547,13 +548,13 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         }
         file.read(data, size);
         file.close();
-        ILOG("-> loaded %s: %d bytes\n", path.c_str(), size);
+        LOGI("-> loaded %s: %d bytes\n", path.c_str(), size);
         *dest = data;
         return true;
     }
     else
     {
-        ELOG("failed to open %s\n", path.c_str());
+        LOGE("failed to open %s\n", path.c_str());
         return false;
     }
 }
@@ -574,16 +575,16 @@ void CRuntime::preloadAssets()
         data_t data;
         if (CAssetMan::read(filename, data))
         {
-            ILOG("reading %s\n", filename.c_str());
+            LOGI("reading %s\n", filename.c_str());
             mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
             if ((*frameSets[i])->extract(mem))
             {
-                ILOG("extracted: %d\n", ((*frameSets[i])->getSize()));
+                LOGI("extracted: %d\n", ((*frameSets[i])->getSize()));
             }
         }
         else
         {
-            ELOG("can't read: %s\n", filename.c_str());
+            LOGE("can't read: %s\n", filename.c_str());
         }
     }
 
@@ -686,7 +687,7 @@ void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
     m_music->setVolume(ISound::MAX_VOLUME);
-    ILOG("volume: %d\n", m_music->getVolume());
+    LOGI("volume: %d\n", m_music->getVolume());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -742,7 +743,7 @@ bool CRuntime::loadScores()
 #else
     std::string path = m_workspace + HISCORE_FILE;
 #endif
-    ILOG("reading %s\n", path.c_str());
+    LOGI("reading %s\n", path.c_str());
     CFileWrap file;
     if (file.open(path.c_str(), "rb"))
     {
@@ -753,12 +754,12 @@ bool CRuntime::loadScores()
         }
         else
         {
-            ELOG("hiscore size mismatch. resetting to default.\n");
+            LOGE("hiscore size mismatch. resetting to default.\n");
             clearScores();
         }
         return true;
     }
-    ELOG("can't read %s\n", path.c_str());
+    LOGE("can't read %s\n", path.c_str());
     return false;
 }
 
@@ -784,7 +785,7 @@ bool CRuntime::saveScores()
 #endif
         return true;
     }
-    ELOG("can't write %s\n", path.c_str());
+    LOGE("can't write %s\n", path.c_str());
     return false;
 }
 
@@ -825,10 +826,10 @@ void CRuntime::save()
 
     if (m_game->mode() != CGame::MODE_PLAY)
     {
-        ELOG("cannot save while not playing\n");
+        LOGE("cannot save while not playing\n");
         return;
     }
-    ILOG("writing: %s\n", path.c_str());
+    LOGI("writing: %s\n", path.c_str());
     std::string name{"Testing123"};
     FILE *tfile = fopen(path.c_str(), "wb");
     if (tfile)
@@ -845,7 +846,7 @@ void CRuntime::save()
     }
     else
     {
-        ELOG("can't write:%s\n", path.c_str());
+        LOGE("can't write:%s\n", path.c_str());
     }
 }
 
@@ -859,19 +860,19 @@ void CRuntime::load()
     CGame &game = *m_game;
     game.setMode(CGame::MODE_IDLE);
     std::string name;
-    ILOG("reading: %s\n", path.c_str());
+    LOGI("reading: %s\n", path.c_str());
     FILE *sfile = fopen(path.c_str(), "rb");
     if (sfile)
     {
         if (!read(sfile, name))
         {
-            ELOG("incompatible file\n");
+            LOGE("incompatible file\n");
         }
         fclose(sfile);
     }
     else
     {
-        ELOG("can't read:%s\n", path.c_str());
+        LOGE("can't read:%s\n", path.c_str());
     }
     game.setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
@@ -882,7 +883,7 @@ void CRuntime::load()
 
 void CRuntime::initSounds()
 {
-    ILOG("initSound\n");
+    LOGI("initSound\n");
     m_sound = new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
@@ -890,7 +891,7 @@ void CRuntime::initSounds()
         const auto soundName = CAssetMan::getPrefix() + std::string("sounds/") + m_soundFiles[i];
         bool result = m_sound->add(soundName.c_str(), i + 1);
         if (m_verbose)
-            ILOG("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
+            LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
     }
     m_game->attach(m_sound);
 }
@@ -903,7 +904,7 @@ void CRuntime::openMusicForLevel(int i)
 
 void CRuntime::openMusic(const std::string &filename)
 {
-    ILOG("open music: %s\n", filename.c_str());
+    LOGI("open music: %s\n", filename.c_str());
     const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
@@ -934,7 +935,7 @@ bool CRuntime::parseConfig(uint8_t *buf)
                 *pe = 0;
             if (!pe)
             {
-                ELOG("missing section terminator on line %d\n", line);
+                LOGE("missing section terminator on line %d\n", line);
             }
             section = p;
         }
@@ -966,12 +967,12 @@ bool CRuntime::parseConfig(uint8_t *buf)
                 }
                 else
                 {
-                    ELOG("string %s on line %d split into %zu parts\n", p, line, list.size());
+                    LOGE("string %s on line %d split into %zu parts\n", p, line, list.size());
                 }
             }
             else
             {
-                ELOG("item for unknown section %s on line %d\n", section.c_str(), line);
+                LOGE("item for unknown section %s on line %d\n", section.c_str(), line);
             }
         }
         p = next;
@@ -1242,11 +1243,11 @@ void CRuntime::takeScreenshot()
     {
         file.write(png, size);
         file.close();
-        ILOG("screenshot saved: %s\n", path.c_str());
+        LOGI("screenshot saved: %s\n", path.c_str());
     }
     else
     {
-        ELOG("can't write png: %s\n", path.c_str());
+        LOGE("can't write png: %s\n", path.c_str());
     }
     delete[] png;
 }
@@ -1291,22 +1292,22 @@ void CRuntime::initOptions()
     }
     if (isTrue(m_config["fullscreen"]))
     {
-        ILOG("is full screen?\n");
+        LOGI("is full screen?\n");
         toggleFullscreen();
     }
     if (m_config["viewport"] == "static")
     {
         m_cameraMode = CAMERA_MODE_STATIC;
-        ILOG("using viewport static\n");
+        LOGI("using viewport static\n");
     }
     else if (m_config["viewport"] == "dynamic")
     {
         m_cameraMode = CAMERA_MODE_DYNAMIC;
-        ILOG("using viewport dynamic\n");
+        LOGI("using viewport dynamic\n");
     }
     else
     {
-        ILOG("using viewport default\n");
+        LOGI("using viewport default\n");
     }
 
     if (m_config["healthbar"] == "hearts")
@@ -1337,7 +1338,7 @@ void CRuntime::toggleFullscreen()
         //         m_app.window,
         //         !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
         {
-            ELOG("Fullscreen toggle error: %s\n", SDL_GetError());
+            LOGE("Fullscreen toggle error: %s\n", SDL_GetError());
         }
     }
     else
@@ -1361,27 +1362,27 @@ void CRuntime::toggleFullscreen()
     if (m_app.isFullscreen)
     {
         // Currently in fullscreen, switch to windowed
-        ILOG("Switching to windowed mode.\n");
+        LOGI("Switching to windowed mode.\n");
         if (!SDL_SetWindowFullscreen(m_app.window, false)) // false means windowed mode
         {
-            ELOG("Switching to windowed mode failed: %s\n", SDL_GetError());
+            LOGE("Switching to windowed mode failed: %s\n", SDL_GetError());
         }
 
         // Restore original window size and position
         if (!SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth))
         {
-            ELOG("SDL_SetWindowSize failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetWindowSize failed: %s\n", SDL_GetError());
         }
 
         if (!SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX))
         {
-            ELOG("SDL_SetWindowPosition failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetWindowPosition failed: %s\n", SDL_GetError());
         }
     }
     else
     {
         // Currently in windowed, switch to fullscreen
-        ILOG("Switching to fullscreen desktop mode.\n");
+        LOGI("Switching to fullscreen desktop mode.\n");
 
         // Save current windowed position and size before going fullscreen
         SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
@@ -1393,7 +1394,7 @@ void CRuntime::toggleFullscreen()
         // SDL_SetWindowFullscreenMode(m_app.window, dm);
         if (!SDL_SetWindowFullscreen(m_app.window, true))
         {
-            ELOG("Switching to fullscreen mode failed: %s\n", SDL_GetError());
+            LOGE("Switching to fullscreen mode failed: %s\n", SDL_GetError());
         }
         // SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
@@ -1403,7 +1404,7 @@ void CRuntime::toggleFullscreen()
         int x, y, w, h;
         SDL_GetWindowPosition(m_app.window, &x, &y);
         SDL_GetWindowSize(m_app.window, &w, &h);
-        ILOG("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+        LOGI("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
     }
 
     m_app.isFullscreen = !m_app.isFullscreen;
@@ -1664,12 +1665,12 @@ void CRuntime::toggleGameMenu()
  */
 bool CRuntime::initControllers()
 {
-    ILOG("initControllers()\n");
+    LOGI("initControllers()\n");
 
     // Initialize SDL's video and game controller subsystems
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
-        ELOG("SDL could not initialize gamepad! SDL_Error: %s\n", SDL_GetError());
+        LOGE("SDL could not initialize gamepad! SDL_Error: %s\n", SDL_GetError());
         return false;
     }
 
@@ -1691,24 +1692,24 @@ bool CRuntime::initControllers()
             if (controller)
             {
                 m_gameControllers.push_back(controller);
-                ILOG("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
+                LOGI("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
             }
             else
             {
-                ELOG("Could not open game controller:%d! SDL_Error: %s\n", i, SDL_GetError());
+                LOGE("Could not open game controller:%d! SDL_Error: %s\n", i, SDL_GetError());
             }
         }
     }
     if (m_gameControllers.empty())
     {
-        WLOG("No game controllers found. Connect one now!\n");
+        LOGW("No game controllers found. Connect one now!\n");
     }
 
     const std::string controllerDB = CAssetMan::getPrefix() + m_config["controllerdb"];
     if (!m_config["controllerdb"].empty() &&
         SDL_AddGamepadMappingsFromFile(controllerDB.c_str()) == -1)
     {
-        WLOG("SDL_AddGamepadMappingsFromFile error: %s\n", SDL_GetError());
+        LOGW("SDL_AddGamepadMappingsFromFile error: %s\n", SDL_GetError());
     }
 
     return true;
@@ -1814,7 +1815,7 @@ void CRuntime::createResolutionList()
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
     if (numDisplays <= 0)
     {
-        ELOG("No displays found: %s\n", SDL_GetError());
+        LOGE("No displays found: %s\n", SDL_GetError());
         return;
     }
 
@@ -1823,7 +1824,7 @@ void CRuntime::createResolutionList()
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        ELOG("SDL_GetFullscreenDisplayModes failed: %s\n", SDL_GetError());
+        LOGE("SDL_GetFullscreenDisplayModes failed: %s\n", SDL_GetError());
         return;
     }
     m_resolutions.clear();
@@ -1856,12 +1857,12 @@ int CRuntime::findResolutionIndex()
     {
         if (rez.h == h && rez.w == w)
         {
-            ILOG("found resolution %dx%d: %d\n", w, h, i);
+            LOGI("found resolution %dx%d: %d\n", w, h, i);
             return i;
         }
         ++i;
     }
-    ILOG("new resolution %dx%d: %d\n", w, h, i);
+    LOGI("new resolution %dx%d: %d\n", w, h, i);
     m_resolutions.push_back({w, h});
     return i;
 }
@@ -1875,7 +1876,7 @@ int CRuntime::findResolutionIndex()
 void CRuntime::resize(int w, int h)
 {
     if (m_verbose)
-        ILOG("switch to: %dx%d\n", w, h);
+        LOGI("switch to: %dx%d\n", w, h);
     setWidth(w / 2);
     setHeight(h / 2);
     SDL_SetWindowSize(m_app.window, w, h);
@@ -1885,7 +1886,7 @@ void CRuntime::resize(int w, int h)
         SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
     if (m_app.texture == nullptr)
     {
-        ELOG("Failed to create texture: %s\n", SDL_GetError());
+        LOGE("Failed to create texture: %s\n", SDL_GetError());
         return;
     }
     SDL_DestroyTexture(oldTexture);
@@ -1911,7 +1912,7 @@ void CRuntime::listResolutions(int displayIndex)
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
     if (numDisplays <= 0)
     {
-        ELOG("No displays found: %s\n", SDL_GetError());
+        LOGE("No displays found: %s\n", SDL_GetError());
         return;
     }
 
@@ -1919,15 +1920,15 @@ void CRuntime::listResolutions(int displayIndex)
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        ELOG("SDL_GetFullscreenDisplayModes failed:%s\n", SDL_GetError());
+        LOGE("SDL_GetFullscreenDisplayModes failed:%s\n", SDL_GetError());
         return;
     }
 
-    ILOG("Available display modes:\n");
+    LOGI("Available display modes:\n");
     for (int i = 0; i < numModes; ++i)
     {
         const SDL_DisplayMode &mode = *modes[i];
-        ILOG("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
+        LOGI("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
     }
 }
 
@@ -1978,7 +1979,7 @@ bool CRuntime::checkMusicFiles()
         std::string music = getMusicPath(file);
         if (!fileExists(music))
         {
-            ELOG("*** File not found: %s\n", music.c_str());
+            LOGE("*** File not found: %s\n", music.c_str());
             result = false;
         }
     }
@@ -2019,7 +2020,7 @@ void CRuntime::loadColorMaps(const int userID)
     }
     else
     {
-        ELOG("can't read %s\n", path.c_str());
+        LOGE("can't read %s\n", path.c_str());
     }
 }
 

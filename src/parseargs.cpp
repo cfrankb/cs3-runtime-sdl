@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "parseargs"
 #include <cstdio>
 #include <cstring>
 #include "parseargs.h"
@@ -91,7 +92,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
             }
             else
             {
-                ELOG("missing %s value on cmdline\n", paramdefs[j].name);
+                LOGE("missing %s value on cmdline\n", paramdefs[j].name);
                 result = false;
             }
         }
@@ -107,13 +108,13 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     params.width = strtol(w, nullptr, 10) / 2;
                     if (params.width < 240)
                     {
-                        ELOG("invalid width: %d for --window\n", params.width);
+                        LOGE("invalid width: %d for --window\n", params.width);
                         result = false;
                     }
                     params.height = strtol(++h, nullptr, 10) / 2;
                     if (params.height < 240)
                     {
-                        ELOG("invalid height: %d for --window\n", params.height);
+                        LOGE("invalid height: %d for --window\n", params.height);
                         result = false;
                     }
                     if (params.verbose)
@@ -121,13 +122,13 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                 }
                 else
                 {
-                    ELOG("invalid size for --window\n");
+                    LOGE("invalid size for --window\n");
                     result = false;
                 }
             }
             else
             {
-                ELOG("missing size for --window\n");
+                LOGE("missing size for --window\n");
                 result = false;
             }
         }
@@ -157,7 +158,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
         }
         else if (memcmp(list[i].c_str(), "--", 2) == 0)
         {
-            ELOG("invalid option: %s\n", list[i].c_str());
+            LOGE("invalid option: %s\n", list[i].c_str());
             result = false;
         }
         // handle switch
@@ -184,7 +185,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     appExit = true;
                     return true;
                 default:
-                    ELOG("invalid switch: %c\n", list[i].c_str()[j]);
+                    LOGE("invalid switch: %c\n", list[i].c_str()[j]);
                     result = false;
                 }
             }

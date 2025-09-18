@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "main"
 #ifndef __ANDROID__
     #ifndef SDL_MAIN_HANDLED
         #define SDL_MAIN_HANDLED
@@ -93,7 +94,7 @@ extern "C" JNIEXPORT void JNICALL
 
     ANDROID_WIDTH = env->GetIntField(metrics, widthField);
     ANDROID_HEIGHT = env->GetIntField(metrics, heightField);
-    ILOG("Screen size: %d x %d", ANDROID_WIDTH, ANDROID_HEIGHT);
+    LOGI("Screen size: %d x %d", ANDROID_WIDTH, ANDROID_HEIGHT);
 
     jmethodID getRotation = env->GetMethodID(displayClass, "getRotation", "()I");
     int rotation = env->CallIntMethod(display, getRotation);
@@ -107,13 +108,13 @@ extern "C" JNIEXPORT void JNICALL
         default: orientationName = "Unknown"; break;
     }
 
-    ILOG("Orientation: %s (rotation: %d)", orientationName, rotation);
+    LOGI("Orientation: %s (rotation: %d)", orientationName, rotation);
 
         // Determine orientation
     bool isPortrait = ANDROID_HEIGHT > ANDROID_WIDTH;
     const char* orientation = isPortrait ? "Portrait" : "Landscape";
 
-    ILOG("Screen: %dx%d, %s, Rotation: %d", ANDROID_WIDTH, ANDROID_HEIGHT, orientation, rotation);
+    LOGI("Screen: %dx%d, %s, Rotation: %d", ANDROID_WIDTH, ANDROID_HEIGHT, orientation, rotation);
 
 }
 #endif
@@ -169,7 +170,7 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 {
     if (!e->isFullscreen)
     {
-        ILOG("Exited fullscreen—likely via ESC\n");
+        LOGI("Exited fullscreen—likely via ESC\n");
         // Trigger your custom logic here
         g_runtime->notifyExitFullScreen();
     }
@@ -224,13 +225,13 @@ const std::string getPrefix()
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
     {
-        ILOG("APPDIR environment variable found: %s\n", appdir_env);
+        LOGI("APPDIR environment variable found: %s\n", appdir_env);
         // Construct the full path to your embedded data (e.g., an image)
         return std::string(appdir_env) + "/usr/share/data/";
     }
     else
     {
-        ILOG("APPDIR environment variable not found.\n");
+        LOGI("APPDIR environment variable not found.\n");
         // Fallback or error handling: If not running as AppImage,
         const std::vector<std::string> paths = {
             "data",
@@ -257,10 +258,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::vector<std::string> list;
     if (lpCmdLine[0])
         splitString2(lpCmdLine, list);
-    ILOG("CMD: %s\n", lpCmdLine);
+    LOGI("CMD: %s\n", lpCmdLine);
     for (size_t i = 0; i < list.size(); ++i)
     {
-        ILOG("%d>>> %s\n", i, list[i].c_str());
+        LOGI("%d>>> %s\n", i, list[i].c_str());
     }
 #else
 int main(int argc, char *args[])
@@ -270,11 +271,11 @@ int main(int argc, char *args[])
     {
         list.push_back(args[i]);
     }
-    ILOG("CMD: %s\n", args[0]);
-    ILOG("ARGS: %d\n", argc);
+    LOGI("CMD: %s\n", args[0]);
+    LOGI("ARGS: %d\n", argc);
 #endif
 
-    ILOG("Starting Game\n");
+    LOGI("Starting Game\n");
     srand(static_cast<unsigned int>(time(NULL)));
     CMapArch maparch;
     CRuntime runtime;
@@ -287,11 +288,11 @@ int main(int argc, char *args[])
 #if defined(__ANDROID__)
     const char* path = SDL_GetAndroidInternalStoragePath();
     if (!path) {
-        ELOG("Failed to get internal storage path: %s", SDL_GetError());
+        LOGE("Failed to get internal storage path: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
     params.workspace =  path;
-    ILOG("workspace: %s\n", params.workspace.c_str());
+    LOGI("workspace: %s\n", params.workspace.c_str());
 #endif
 
     bool appExit = false;
@@ -300,14 +301,14 @@ int main(int argc, char *args[])
     if (appExit)
         return EXIT_SUCCESS;
 
-    ILOG("MapArch: %s\n", params.mapArch.c_str());
+    LOGI("MapArch: %s\n", params.mapArch.c_str());
     data_t data;
     if (!CAssetMan::read(params.mapArch, data))
         return EXIT_FAILURE;
     if (!maparch.fromMemory(data.ptr))
     {
         CAssetMan::free(data);
-        ELOG("mapArch error: %s\n", maparch.lastError());
+        LOGE("mapArch error: %s\n", maparch.lastError());
         return EXIT_FAILURE;
     }
     CAssetMan::free(data);
@@ -328,7 +329,7 @@ int main(int argc, char *args[])
     if (!runtime.parseConfig(data.ptr))
     {
         CAssetMan::free(data);
-        ELOG("failed to parse config file: %s\n", configFile.c_str());
+        LOGE("failed to parse config file: %s\n", configFile.c_str());
         return EXIT_FAILURE;
     }
     CAssetMan::free(data);

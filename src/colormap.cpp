@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "colormap"
 #include "colormap.h"
 #include "shared/IFile.h"
 #include "strhelper.h"
@@ -25,7 +26,7 @@ bool parseListKV(std::vector<std::string> &list, uint32_t &k, uint32_t &v, const
 {
     if (list.size() != 2)
     {
-        ELOG("list expected to be 2 items. found %zu on line %d\n", list.size(), line);
+        LOGE("list expected to be 2 items. found %zu on line %d\n", list.size(), line);
         return false;
     }
     k = std::stoul(list[0].substr(2).c_str(), nullptr, 16);
@@ -65,7 +66,7 @@ bool parseColorMaps(char *tmp, ColorMaps &colorMaps)
                 *pe = 0;
             if (!pe)
             {
-                ELOG("missing section terminator on line %d\n", line);
+                LOGE("missing section terminator on line %d\n", line);
             }
             section = p;
         }
@@ -91,7 +92,7 @@ bool parseColorMaps(char *tmp, ColorMaps &colorMaps)
                 }
                 else
                 {
-                    ELOG("item for unknown section %s on line %d\n", section.c_str(), line);
+                    LOGE("item for unknown section %s on line %d\n", section.c_str(), line);
                 }
             }
         }
