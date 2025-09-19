@@ -49,8 +49,6 @@ const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
 
-#define _I(V) static_cast<int>(V)
-
 CRuntime::CRuntime() : CGameMixin()
 {
 #ifdef __EMSCRIPTEN__
@@ -66,7 +64,7 @@ CRuntime::CRuntime() : CGameMixin()
             err ? console.log(err) : null; }));
 #endif
     m_music = nullptr;
-    memset(&m_app, 0, sizeof(App));
+    m_app = App();
     m_startLevel = 0;
     m_mainMenu = new CMenu(MENUID_MAINMENU);
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
@@ -74,6 +72,9 @@ CRuntime::CRuntime() : CGameMixin()
     m_userMenu = new CMenu(MENUID_USERS);
     m_skillMenu = new CMenu(MENUID_SKILLS);
     m_title = nullptr;
+    m_skill = 0;
+    m_verbose = false;
+    m_summary = Summary{0, 0, 0, 0};
 }
 
 CRuntime::~CRuntime()
@@ -86,51 +87,15 @@ CRuntime::~CRuntime()
         SDL_DestroyWindow(m_app.window);
         //  SDL_Quit();
     }
-
-    if (m_music)
-    {
-        delete m_music;
-    }
-
-    if (m_title)
-    {
-        delete m_title;
-    }
-
-    if (m_scroll)
-    {
-        delete[] m_scroll;
-    }
-
-    if (m_credits)
-    {
-        delete[] m_credits;
-    }
-
-    if (m_mainMenu)
-    {
-        delete m_mainMenu;
-    }
-
-    if (m_gameMenu)
-    {
-        delete m_gameMenu;
-    }
-
-    if (m_optionMenu)
-    {
-        delete m_optionMenu;
-    }
-
-    if (m_userMenu)
-    {
-        delete m_userMenu;
-    }
-
-    if (m_skillMenu)
-    {
-        delete m_skillMenu;
-    }
+    delete m_music;
+    delete m_title;
+    delete[] m_scroll;
+    delete[] m_credits;
+    delete m_mainMenu;
+    delete m_gameMenu;
+    delete m_optionMenu;
+    delete m_userMenu;
+    delete m_skillMenu;
 }
 
 /**
@@ -191,12 +156,12 @@ void CRuntime::paint()
         break;
     };
 
-    SDL_UpdateTexture(m_app.texture, NULL, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
+    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
     int width;
     int height;
     SDL_GetWindowSize(m_app.window, &width, &height);
     SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
-    SDL_RenderTexture(m_app.renderer, m_app.texture, NULL, &rectDest);
+    SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }
 
@@ -224,7 +189,7 @@ bool CRuntime::createSDLWindow()
     SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
     m_app.window = SDL_CreateWindow(
         title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
-    if (m_app.window == NULL)
+    if (m_app.window == nullptr)
     {
         LOGE("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return false;
@@ -246,7 +211,7 @@ bool CRuntime::createSDLWindow()
             LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
         }
         LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
-        // SDL_SetRenderLogicalPresentation(m_app.renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+        // SDL_SetRenderLogicalPresentation(m_app.renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
         int pixelW, pixelH;
         if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
@@ -255,11 +220,7 @@ bool CRuntime::createSDLWindow()
         }
         LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
 
-        SDL_DisplayID display = SDL_GetPrimaryDisplay();
-        const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
-        int screenW = mode->w;
-        int screenH = mode->h;
-        LOGI("SDL_GetDesktopDisplayMode %d x %d\n", screenW, screenH);
+        Rez rez = getScreenSize();
 
         m_app.texture = SDL_CreateTexture(
             m_app.renderer,
@@ -279,7 +240,7 @@ bool CRuntime::createSDLWindow()
     const std::string iconFile = CAssetMan::getPrefix() + m_config["icon"];
     CFrameSet frames;
     CFileMem mem;
-    data_t data;
+    data_t data{nullptr, 0};
     if (CAssetMan::read(iconFile, data))
     {
         mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
@@ -357,6 +318,8 @@ void CRuntime::doInput()
     SDL_Gamepad *controller;
     SDL_Event event;
     int joystick_index;
+    pos_t pos{0, 0};
+
     while (SDL_PollEvent(&event))
     {
         SDL_ConvertEventToRenderCoordinates(m_app.renderer, &event);
@@ -402,7 +365,7 @@ void CRuntime::doInput()
 
         case SDL_EVENT_MOUSE_BUTTON_UP:
             m_mouseButtons[event.button.button] = BUTTON_RELEASED;
-
+            pos = convertPosition(posF_t{event.button.x, event.button.y});
             if (trace)
                 LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
                      event.button.button, event.button.x, event.button.y, event.button.clicks);
@@ -412,7 +375,8 @@ void CRuntime::doInput()
             }
             else if (mode == CGame::MODE_PLAY)
             {
-                handleMouse(event.button.x, event.button.y);
+                // handleMouse(event.button.x, event.button.y);
+                handleMouse(pos.x, pos.y);
             }
             break;
 
@@ -421,23 +385,29 @@ void CRuntime::doInput()
             // SDL_BUTTON_LEFT
             // SDL_BUTTON_RIGHT
             // SDL_BUTTON_MIDDLE
-            if (trace)
-                LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
-                     event.button.button, event.button.x, event.button.y, event.button.clicks);
+            // if (trace)
+            //  LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
+            //     event.button.button, event.button.x, event.button.y, event.button.clicks);
+
+            pos = convertPosition(posF_t{event.button.x, event.button.y});
+            LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN from {%f, %f}\n",
+                 pos.x, pos.y, event.button.x, event.button.y);
 
             if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
             {
                 leaveClickStart();
             }
             else if (leftBtn &&
-                     ((isMenuActive() && menuItemAt(event.button.x, event.button.y) != INVALID) ||
+                     //                    ((isMenuActive() && menuItemAt(event.button.x, event.button.y) != INVALID) ||
+                     ((isMenuActive() && menuItemAt(pos.x, pos.y) != INVALID) ||
                       mode == CGame::MODE_LEVEL_SUMMARY))
             {
                 m_buttonState[BUTTON_A] = BUTTON_PRESSED;
             }
             else if (mode == CGame::MODE_PLAY)
             {
-                handleMouse(event.button.x, event.button.y);
+                // handleMouse(event.button.x, event.button.y);
+                handleMouse(pos.x, pos.y);
             }
             break;
 
@@ -452,13 +422,16 @@ void CRuntime::doInput()
             if (trace)
                 LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
                      event.motion.x, event.motion.y);
+            pos = convertPosition(posF_t{event.motion.x, event.motion.y});
             if (isMenuActive())
             {
-                followPointer(event.motion.x, event.motion.y);
+                // followPointer(event.motion.x, event.motion.y);
+                followPointer(pos.x, pos.y);
             }
             else if (leftBtn && mode == CGame::MODE_PLAY)
             {
-                handleMouse(event.button.x, event.button.y);
+                // handleMouse(event.button.x, event.button.y);
+                handleMouse(pos.x, pos.y);
             }
             break;
 
@@ -490,7 +463,7 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_GAMEPAD_ADDED:
-            joystick_index = event.cdevice.which;
+            joystick_index = event.gdevice.which; //  .cdevice.which;
             if (SDL_IsGamepad(joystick_index))
             {
                 controller = SDL_OpenGamepad(joystick_index);
@@ -508,10 +481,10 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_GAMEPAD_REMOVED:
-            controller = SDL_GetGamepadFromID(event.cdevice.which);
+            controller = SDL_GetGamepadFromID(event.gdevice.which);
             if (controller)
             {
-                std::string controllerName = SDL_GetGamepadNameForID(event.cdevice.which);
+                std::string controllerName = SDL_GetGamepadNameForID(event.gdevice.which);
                 LOGI("Controller REMOVED: %s\n", controllerName.c_str());
                 for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
                 {
@@ -530,7 +503,7 @@ void CRuntime::doInput()
             buttonState = BUTTON_PRESSED;
             [[fallthrough]];
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            controller = SDL_GetGamepadFromID(event.cdevice.which);
+            controller = SDL_GetGamepadFromID(event.gdevice.which);
             switch (event.gbutton.button)
             {
             case SDL_GAMEPAD_BUTTON_DPAD_UP:
@@ -630,7 +603,7 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_DISPLAY_ORIENTATION:
-            LOGI("SDL_EVENT_WINDOW_RESTORED\n");
+            LOGI("SDL_EVENT_DISPLAY_ORIENTATION\n");
             break;
 
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
@@ -1529,8 +1502,8 @@ void CRuntime::toggleFullscreen()
                 .scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_DEFAULT,
                 .canvasResolutionScaleMode = EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_NONE,
                 .filteringMode = EMSCRIPTEN_FULLSCREEN_FILTERING_DEFAULT,
-                .canvasResizedCallback = NULL,
-                .canvasResizedCallbackUserData = NULL};
+                .canvasResizedCallback = nullptr,
+                .canvasResizedCallbackUserData = nullptr};
             emscripten_enter_soft_fullscreen("#canvas", &strategy);
         }
         else
@@ -2416,4 +2389,24 @@ void CRuntime::clearVJoyStates()
 void CRuntime::clearMouseButtons()
 {
     memset(m_mouseButtons, 0, sizeof(m_mouseButtons));
+}
+
+Rez CRuntime::getScreenSize()
+{
+    SDL_DisplayID display = SDL_GetPrimaryDisplay();
+    const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
+    // LOGI("SDL_GetDesktopDisplayMode %d x %d\n", mode->w, mode->h);
+    return Rez{.w = mode->w, .h = mode->h};
+}
+
+pos_t CRuntime::convertPosition(posF_t pos)
+{
+#if defined(__ANDROID__)
+    Rez rez = getScreenSize();
+    float w = _WIDTH * 2;
+    float h = _HEIGHT * 2;
+    return {.x = static_cast<int>(w * pos.x / rez.w), .y = static_cast<int>(h * pos.y / rez.h)};
+#else
+    return {.x = static_cast<int>(pos.x), .y = static_cast<int>(pos.y)};
+#endif
 }

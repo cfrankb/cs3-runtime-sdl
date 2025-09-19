@@ -30,6 +30,24 @@ class CFrameSet;
 class CMenu;
 typedef std::vector<std::string> StringVector;
 
+struct Rez
+{
+    int w;
+    int h;
+};
+
+struct posF_t
+{
+    float x;
+    float y;
+};
+
+struct pos_t
+{
+    int x;
+    int y;
+};
+
 class CRuntime : public CGameMixin
 {
 public:
@@ -38,7 +56,7 @@ public:
 
     void paint();
     void run();
-    bool initSDL();
+    static bool initSDL();
     void doInput();
     void preRun();
     void enableMusic(bool state);
@@ -58,6 +76,7 @@ public:
     bool checkMusicFiles();
     void loadColorMaps(const int userID);
     bool createSDLWindow();
+    static Rez getScreenSize();
 
 private:
     typedef struct
@@ -141,11 +160,6 @@ private:
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
-    struct Rez
-    {
-        int w;
-        int h;
-    };
 
     std::vector<Rez> m_resolutions = {
         {640, 480},
@@ -228,4 +242,5 @@ private:
     void clearMouseButtons();
     void handleMouse(int x, int y);
     void handleFingerDown(float x, float y);
+    pos_t convertPosition(posF_t sf);
 };

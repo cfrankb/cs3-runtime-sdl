@@ -11,6 +11,7 @@ add_library(main SHARED
         ../../../src/recorder.cpp
         ../../../src/strhelper.cpp
         ../../../src/game.cpp
+        ../../../src/gameui.cpp
         ../../../src/actor.cpp
         ../../../src/statedata.cpp
         ../../../src/colormap.cpp

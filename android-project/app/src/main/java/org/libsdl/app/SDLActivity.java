@@ -346,7 +346,6 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
     protected native void nativeInitAssetManager(AssetManager assetManager);
 
-    public native void getScreenSize();
 
     // Setup
     @Override
@@ -403,7 +402,7 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
         nativeInitAssetManager(assetManagerInstance);
 
 
-        getScreenSize(); // Call your C++ function
+
 
         if (!mBrokenLibraries) {
             String expected_version = String.valueOf(SDL_MAJOR_VERSION) + "." +

@@ -49,84 +49,6 @@ uint32_t sleepDelay = SLEEP;
 #define DEFAULT_MAPARCH "levels.mapz"
 #define CONF_FILE "game.cfg"
 
-#if defined(__ANDROID__)
-int ANDROID_WIDTH = 0;
-int ANDROID_HEIGHT = 0;
-
-#include <jni.h>
-#include <android/log.h>
-
-// This function should be called from Java/Kotlin
-extern "C" JNIEXPORT void JNICALL
-Java_org_libsdl_app_SDLActivity_getScreenSize(JNIEnv *env, jobject thiz)
-{
-
-    // Get display metrics
-    jclass metricsClass = env->FindClass("android/util/DisplayMetrics");
-    jmethodID metricsInit = env->GetMethodID(metricsClass, "<init>", "()V");
-    jobject metrics = env->NewObject(metricsClass, metricsInit);
-
-    // Get window manager from activity
-    jclass activityClass = env->GetObjectClass(thiz);
-    jmethodID getSystemService = env->GetMethodID(activityClass,
-                                                  "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;");
-
-    jstring windowService = env->NewStringUTF("window");
-    jobject windowManager = env->CallObjectMethod(thiz, getSystemService, windowService);
-
-    // Get display
-    jclass windowManagerClass = env->GetObjectClass(windowManager);
-    jmethodID getDefaultDisplay = env->GetMethodID(windowManagerClass,
-                                                   "getDefaultDisplay", "()Landroid/view/Display;");
-    jobject display = env->CallObjectMethod(windowManager, getDefaultDisplay);
-
-    // Get metrics
-    jclass displayClass = env->GetObjectClass(display);
-    jmethodID getMetrics = env->GetMethodID(displayClass,
-                                            "getMetrics", "(Landroid/util/DisplayMetrics;)V");
-    env->CallVoidMethod(display, getMetrics, metrics);
-
-    // Get dimensions
-    jfieldID widthField = env->GetFieldID(metricsClass, "widthPixels", "I");
-    jfieldID heightField = env->GetFieldID(metricsClass, "heightPixels", "I");
-
-    ANDROID_WIDTH = env->GetIntField(metrics, widthField);
-    ANDROID_HEIGHT = env->GetIntField(metrics, heightField);
-    LOGI("Screen size: %d x %d", ANDROID_WIDTH, ANDROID_HEIGHT);
-
-    jmethodID getRotation = env->GetMethodID(displayClass, "getRotation", "()I");
-    int rotation = env->CallIntMethod(display, getRotation);
-
-    const char *orientationName;
-    switch (rotation)
-    {
-    case 0:
-        orientationName = "Portrait";
-        break;
-    case 1:
-        orientationName = "Landscape (90°)";
-        break;
-    case 2:
-        orientationName = "Portrait Upside Down (180°)";
-        break;
-    case 3:
-        orientationName = "Landscape (270°)";
-        break;
-    default:
-        orientationName = "Unknown";
-        break;
-    }
-
-    LOGI("Orientation: %s (rotation: %d)", orientationName, rotation);
-
-    // Determine orientation
-    bool isPortrait = ANDROID_HEIGHT > ANDROID_WIDTH;
-    const char *orientation = isPortrait ? "Portrait" : "Landscape";
-
-    LOGI("Screen: %dx%d, %s, Rotation: %d", ANDROID_WIDTH, ANDROID_HEIGHT, orientation, rotation);
-}
-#endif
-
 // Platform detection
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -284,7 +206,7 @@ int main(int argc, char *args[])
 #endif
 
     LOGI("Starting Game\n");
-    srand(static_cast<unsigned int>(time(NULL)));
+    srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
     CRuntime runtime;
     params_t params;
