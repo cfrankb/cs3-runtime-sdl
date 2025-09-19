@@ -43,12 +43,15 @@ public:
     int paddingY() const;
     void setScaleX(const int v);
     void setScaleY(const int v);
+    CMenu &disableCaret();
+    bool isCaretDisabled();
 
 private:
     enum
     {
         FONT_SIZE = 8,
     };
+    bool m_caretDisabled = false;
     int m_scaleX = 2;
     int m_scaleY = 2;
     int m_padding = FONT_SIZE;

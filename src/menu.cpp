@@ -126,3 +126,14 @@ void CMenu::setScaleY(const int v)
 {
     m_scaleY = v;
 }
+
+CMenu &CMenu::disableCaret()
+{
+    m_caretDisabled = true;
+    return *this;
+}
+
+bool CMenu::isCaretDisabled()
+{
+    return m_caretDisabled;
+}

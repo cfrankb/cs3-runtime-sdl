@@ -248,7 +248,7 @@ void CStates::debug() const
 std::vector<StateValuePair> CStates::getValues() const
 {
     std::vector<StateValuePair> pairs;
-    // C++ 20 not supported yet by appImage
+    // TODO: C++ 20 not supported yet by appImage
     // std::format("0x{:02x}", v)
     pairs.clear();
     char tmp1[16];

@@ -1183,7 +1183,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
         }
         int x = bx;
         const int y = baseY + i * spacingY;
-        if (static_cast<int>(i) == menu.index())
+        if (static_cast<int>(i) == menu.index() && !menu.isCaretDisabled())
         {
             // draw red triangle
             char tmp[2];
@@ -1965,6 +1965,7 @@ CMenu &CRuntime::initOptionMenu()
 CMenu &CRuntime::initUserMenu()
 {
     CMenu &menu = *m_userMenu;
+    menu.disableCaret();
     menu.clear();
     menu.setCurrent(0);
     menu.setScaleY(2);
@@ -2372,6 +2373,7 @@ void CRuntime::manageSkillMenu()
 void CRuntime::initSkillMenu()
 {
     CMenu &menu = *m_skillMenu;
+    menu.disableCaret();
     menu.clear();
     menu.setScaleX(2);
     menu.setScaleY(2);
