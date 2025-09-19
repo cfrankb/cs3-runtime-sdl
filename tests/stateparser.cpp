@@ -67,7 +67,7 @@ void CStateParser::parseStates(const char *data, CStates &states)
 {
     size_t len = strlen(data);
     char *t = new char[len + 1];
-    strcpy(t, data);
+    strncpy(t, data, len + 1);
     char *p = t;
     int line = 1;
     while (p && *p)
@@ -128,7 +128,7 @@ void CStateParser::parse(const char *data)
 {
     size_t len = strlen(data);
     char *t = new char[len + 1];
-    strcpy(t, data);
+    strncpy(t, data, len + 1);
     char *p = t;
     int line = 1;
     while (p && *p)

@@ -26,3 +26,4 @@
 #define EVENT_FREEZE 7
 #define EVENT_TRAP 8
 #define EVENT_PASSAGE 9
+#define EVENT_EXIT_OPENED 10

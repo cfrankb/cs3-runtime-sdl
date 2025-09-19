@@ -256,10 +256,10 @@ std::vector<StateValuePair> CStates::getValues() const
     for (const auto &[k, v] : m_stateU)
     {
         if (v <= 0xff)
-            sprintf(tmp1, "0x%.2x", v);
+            snprintf(tmp1, sizeof(tmp1), "0x%.2x", v);
         else
-            sprintf(tmp1, "0x%.4x", v);
-        sprintf(tmp2, "%d", v);
+            snprintf(tmp1, sizeof(tmp1), "0x%.4x", v);
+        snprintf(tmp2, sizeof(tmp2), "%d", v);
         pairs.push_back({k, v ? tmp1 : "", v ? tmp2 : ""});
     }
 

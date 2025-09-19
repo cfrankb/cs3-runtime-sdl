@@ -255,7 +255,8 @@ bool convertCs3Level(CMap &map, const char *fname)
 
 bool fetchLevel(CMap &map, const char *fname, std::string &error)
 {
-    char *tmp = new char[strlen(fname) + 128];
+    const int bufferSize = strlen(fname) + 128;
+    char *tmp = new char[bufferSize];
     printf("fetching: %s\n", fname);
 
     FILE *sfile = fopen(fname, "rb");
@@ -265,7 +266,7 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
     };
     if (!sfile)
     {
-        sprintf(tmp, "can't open file: %s", fname);
+        snprintf(tmp, bufferSize, "can't open file: %s", fname);
         error = tmp;
         delete[] tmp;
         return false;

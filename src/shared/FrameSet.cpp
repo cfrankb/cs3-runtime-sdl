@@ -179,7 +179,7 @@ bool CFrameSet::write(IFile &file)
 
     default:
         char tmp[256];
-        sprintf(tmp, "unknown OBL5 version: %x", version);
+        snprintf(tmp, sizeof(tmp), "unknown OBL5 version: %x", version);
         m_lastError = tmp;
         return false;
     }
@@ -268,7 +268,7 @@ bool CFrameSet::read(IFile &file)
     if (memcmp(signature, "OBL5", 4) != 0)
     {
         char tmp[128];
-        sprintf(tmp, "bad signature: %s", signature);
+        snprintf(tmp, sizeof(tmp), "bad signature: %s", signature);
         m_lastError = tmp;
         return false;
     }
@@ -304,7 +304,7 @@ bool CFrameSet::read(IFile &file)
 
     default:
         char tmp[128];
-        sprintf(tmp, "unknown OBL5 version: %x", version);
+        snprintf(tmp, sizeof(tmp), "unknown OBL5 version: %x", version);
         m_lastError = tmp;
         result = false;
     }

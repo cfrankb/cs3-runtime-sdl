@@ -1384,13 +1384,13 @@ void CRuntime::takeScreenshot()
     auto now = std::chrono::system_clock::now();
     std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
     std::tm *localTime = std::localtime(&currentTime);
-    sprintf(filename, "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
-            localTime->tm_year + 1900,
-            localTime->tm_mon + 1,
-            localTime->tm_mday,
-            localTime->tm_hour,
-            localTime->tm_min,
-            localTime->tm_sec);
+    snprintf(filename, sizeof(filename), "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
+             localTime->tm_year + 1900,
+             localTime->tm_mon + 1,
+             localTime->tm_mday,
+             localTime->tm_hour,
+             localTime->tm_min,
+             localTime->tm_sec);
     std::string path = m_workspace + filename;
     if (file.open(path.c_str(), "wb"))
     {
@@ -1938,7 +1938,7 @@ CMenu &CRuntime::initOptionMenu()
     std::vector<std::string> resolutions;
     for (const auto &rez : m_resolutions)
     {
-        sprintf(tmp, "%dx%d", rez.w, rez.h);
+        snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
         resolutions.push_back(tmp);
     }
     menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
@@ -2225,18 +2225,18 @@ void CRuntime::drawLevelSummary(CFrame &bitmap)
     };
     std::vector<Text> listStr;
     char tmp[128];
-    sprintf(tmp, "LEVEL %.2d COMPLETED", m_game->level() + 1);
+    snprintf(tmp, sizeof(tmp), "LEVEL %.2d COMPLETED", m_game->level() + 1);
     if (_WIDTH < MIN_WIDTH_FULL)
         listStr.push_back({tmp, YELLOW, 1, 2});
     else
         listStr.push_back({tmp, YELLOW, 2, 2});
-    sprintf(tmp, "Fruits Collected: %d %%", m_summary.ppFruits);
+    snprintf(tmp, sizeof(tmp), "Fruits Collected: %d %%", m_summary.ppFruits);
     listStr.push_back({tmp, PINK, 1, 2});
-    sprintf(tmp, "Treasures Collected: %d %%", m_summary.ppBonuses);
+    snprintf(tmp, sizeof(tmp), "Treasures Collected: %d %%", m_summary.ppBonuses);
     listStr.push_back({tmp, ORANGE, 1, 2});
-    sprintf(tmp, "Secrets: %d %%", m_summary.ppSecrets);
+    snprintf(tmp, sizeof(tmp), "Secrets: %d %%", m_summary.ppSecrets);
     listStr.push_back({tmp, GREEN, 1, 2});
-    sprintf(tmp, "Time Taken: %.2d:%.2d", m_summary.timeTaken / 60, m_summary.timeTaken % 60);
+    snprintf(tmp, sizeof(tmp), "Time Taken: %.2d:%.2d", m_summary.timeTaken / 60, m_summary.timeTaken % 60);
     listStr.push_back({tmp, CYAN, 1, 2});
 
     if (m_countdown == 0 && ((m_ticks >> 3) & 1))

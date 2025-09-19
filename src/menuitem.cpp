@@ -113,12 +113,12 @@ std::string CMenuItem::str() const
     char tmp[256];
     if (m_type == ITEM_RANGE)
     {
-        sprintf(tmp, m_tmpl.c_str(), ((*m_value) + m_start) * m_factor);
+        snprintf(tmp, sizeof(tmp), m_tmpl.c_str(), ((*m_value) + m_start) * m_factor);
         return tmp;
     }
     else if (m_type == ITEM_OPTIONS)
     {
-        sprintf(tmp, m_tmpl.c_str(), m_options[*m_value].c_str());
+        snprintf(tmp, sizeof(tmp), m_tmpl.c_str(), m_options[*m_value].c_str());
         return tmp;
     }
     else if (m_type == ITEM_STATIC)

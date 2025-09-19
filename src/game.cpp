@@ -844,6 +844,8 @@ void CGame::checkClosure()
         const uint16_t exitKey = m_map.states().getU(POS_EXIT);
         if (exitKey != 0)
         {
+            // TODO: add message here
+            m_events.push_back(EVENT_EXIT_OPENED);
             const bool revealExit = m_gameStats->get(S_REVEAL_EXIT) != 0;
             const Pos exitPos = CMap::toPos(exitKey);
             if (!revealExit)
@@ -1279,8 +1281,9 @@ const char *CGame::getHintText()
 void CGame::parseHints(const char *data)
 {
     m_hints.clear();
-    char *t = new char[strlen(data) + 1];
-    strcpy(t, data);
+    const int bufferSize = strlen(data) + 1;
+    char *t = new char[bufferSize];
+    strncpy(t, data, bufferSize);
     char *p = t;
     while (p && *p)
     {

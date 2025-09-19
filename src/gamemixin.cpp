@@ -479,7 +479,7 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
     if (timeout)
     {
         char tmp[16];
-        sprintf(tmp, "%.2d", timeout - 1);
+        snprintf(tmp, sizeof(tmp), "%.2d", timeout - 1);
         const bool lowTime = timeout <= 15;
         const int scaleX = !lowTime ? 3 : 5;
         const int scaleY = !lowTime ? 4 : 5;
@@ -775,23 +775,23 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
     switch (mode)
     {
     case CGame::MODE_LEVEL_INTRO:
-        sprintf(t, "LEVEL %.2d", m_game->level() + 1);
+        snprintf(t, sizeof(t), "LEVEL %.2d", m_game->level() + 1);
         break;
     case CGame::MODE_RESTART:
         if (m_game->lives() > 1)
         {
-            sprintf(t, "LIVES LEFT %.2d", m_game->lives());
+            snprintf(t, sizeof(t), "LIVES LEFT %.2d", m_game->lives());
         }
         else
         {
-            strcpy(t, "LAST LIFE !");
+            strncpy(t, "LAST LIFE !", sizeof(t));
         }
         break;
     case CGame::MODE_GAMEOVER:
-        strcpy(t, "GAME OVER");
+        strncpy(t, "GAME OVER", sizeof(t));
         break;
     case CGame::MODE_TIMEOUT:
-        strcpy(t, "OUT OF TIME");
+        strncpy(t, "OUT OF TIME", sizeof(t));
     };
 
     const int x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
@@ -1227,7 +1227,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     bitmap.fill(BLACK);
     char t[50];
     int y = 1;
-    strcpy(t, "HALL OF HEROES");
+    strncpy(t, "HALL OF HEROES", sizeof(t));
     int x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
@@ -1244,11 +1244,11 @@ void CGameMixin::drawScores(CFrame &bitmap)
             color = YELLOW;
         }
         bool showCaret = (color == YELLOW) && (m_ticks & CARET_SPEED);
-        sprintf(t, " %.8d %.2d %s%c",
-                m_hiscores[i].score,
-                m_hiscores[i].level,
-                m_hiscores[i].name,
-                showCaret ? CHARS_CARET : '\0');
+        snprintf(t, sizeof(t), " %.8d %.2d %s%c",
+                 m_hiscores[i].score,
+                 m_hiscores[i].level,
+                 m_hiscores[i].name,
+                 showCaret ? CHARS_CARET : '\0');
         drawFont(bitmap, 1, y * FONT_SIZE, t, color, BLACK, scaleX / 2, scaleY / 2);
         y += scaleX / 2;
     }
@@ -1256,12 +1256,12 @@ void CGameMixin::drawScores(CFrame &bitmap)
     y += scaleX / 2;
     if (m_scoreRank == INVALID)
     {
-        strcpy(t, " SORRY, YOU DIDN'T QUALIFY.");
+        strncpy(t, " SORRY, YOU DIDN'T QUALIFY.", sizeof(t));
         drawFont(bitmap, 0, y * FONT_SIZE, t, YELLOW, BLACK, scaleX / 2, scaleY / 2);
     }
     else if (m_recordScore)
     {
-        strcpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.");
+        strncpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.", sizeof(t));
         x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
         drawFont(bitmap, x, y++ * FONT_SIZE, t, YELLOW, BLACK, scaleX / 2, scaleY / 2);
     }
@@ -1755,7 +1755,7 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
         scaleX = 2;
         color = PURPLE;
         char tmp[16];
-        sprintf(tmp, "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
+        snprintf(tmp, sizeof(tmp), "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
         return tmp;
     }
     else if (m_currentEvent >= MSG0)
@@ -1782,6 +1782,12 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
         scaleX = 2;
         color = RED;
         return "TRAP";
+    }
+    else if (m_currentEvent == EVENT_EXIT_OPENED)
+    {
+        scaleX = 2;
+        color = SEAGREEN;
+        return "EXIT DOOR IS OPENED";
     }
     else
     {
@@ -2075,13 +2081,13 @@ void CGameMixin::drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues)
     {
         int tx;
         int bx = 0;
-        tx = sprintf(tmp, "%.8d ", game.score());
+        tx = snprintf(tmp, sizeof(tmp), "%.8d ", game.score());
         drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
         bx += tx;
-        tx = sprintf(tmp, "DIAMONDS %.2d ", game.goalCount());
+        tx = snprintf(tmp, sizeof(tmp), "DIAMONDS %.2d ", game.goalCount());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.diamondShimmer ? DEEPSKYBLUE : YELLOW);
         bx += tx;
-        tx = sprintf(tmp, "LIVES %.2d ", game.lives());
+        tx = snprintf(tmp, sizeof(tmp), "LIVES %.2d ", game.lives());
         drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.livesShimmer ? GREEN : PURPLE);
         bx += tx;
         if (m_recorder->isRecording())
@@ -2136,8 +2142,6 @@ void CGameMixin::initUI()
     {
         m_ui.addButton(btn);
     }
-    //    if (m_config)
-    //  m_ui.show();
 }
 
 void CGameMixin::drawUI(CFrame &bitmap)

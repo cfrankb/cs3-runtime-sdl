@@ -28,6 +28,8 @@
 #include "../shared/FileWrap.h"
 #endif
 
+#define UUID_BUFFER_SIZE 40
+
 const char *toUpper(char *s)
 {
     for (unsigned int i = 0; i < strlen(s); ++i)
@@ -47,16 +49,16 @@ int upperClean(int c)
 
 char *getUUID()
 {
-    char *uuid = new char[40];
-    sprintf(uuid, "%.4x%.4x-%.4x-%.4x-%.4x-%.4x%.4x%.4x",
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff,
-            rand() & 0xffff);
+    char *uuid = new char[UUID_BUFFER_SIZE];
+    snprintf(uuid, UUID_BUFFER_SIZE, "%.4x%.4x-%.4x-%.4x-%.4x-%.4x%.4x%.4x",
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff,
+             rand() & 0xffff);
     return uuid;
 }
 
@@ -78,8 +80,9 @@ bool copyFile(const std::string in, const std::string out, std::string &errMsg)
         }
         else
         {
-            char *tmp = new char[out.length() + 128];
-            sprintf(tmp, "couldn't write: %s", out.c_str());
+            const int bufferSize = out.length() + 128;
+            char *tmp = new char[bufferSize];
+            snprintf(tmp, bufferSize, "couldn't write: %s", out.c_str());
             errMsg = tmp;
             result = false;
             delete[] tmp;
@@ -88,8 +91,9 @@ bool copyFile(const std::string in, const std::string out, std::string &errMsg)
     }
     else
     {
-        char *tmp = new char[in.length() + 128];
-        sprintf(tmp, "couldn't read: %s", in.c_str());
+        const int bufferSize = in.length() + 128;
+        char *tmp = new char[bufferSize];
+        snprintf(tmp, bufferSize, "couldn't read: %s", in.c_str());
         errMsg = tmp;
         result = false;
         delete[] tmp;
@@ -118,8 +122,9 @@ bool concat(const std::list<std::string> files, std::string out, std::string &ms
             }
             else
             {
-                char *tmp = new char[in.length() + 128];
-                sprintf(tmp, "couldn't read: %s", in.c_str());
+                const int bufferSize = in.length() + 128;
+                char *tmp = new char[bufferSize];
+                snprintf(tmp, bufferSize, "couldn't read: %s", in.c_str());
                 msg = tmp;
                 result = false;
                 delete[] tmp;
@@ -130,8 +135,9 @@ bool concat(const std::list<std::string> files, std::string out, std::string &ms
     }
     else
     {
-        char *tmp = new char[out.length() + 128];
-        sprintf(tmp, "couldn't write: %s", out.c_str());
+        const int bufferSize = out.length() + 128;
+        char *tmp = new char[bufferSize];
+        snprintf(tmp, bufferSize, "couldn't write: %s", out.c_str());
         msg = tmp;
         result = false;
         delete[] tmp;
