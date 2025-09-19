@@ -52,6 +52,7 @@ public:
         MODE_OPTIONS,
         MODE_USERSELECT,
         MODE_LEVEL_SUMMARY,
+        MODE_SKLLSELECT,
     };
 
     enum : uint32_t

@@ -15,8 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "states"
 #include "states.h"
 #include "shared/IFile.h"
+#include "logger.h"
+#include <cstring>
 
 CStates::CStates()
 {
@@ -157,6 +160,43 @@ bool CStates::read(FILE *sfile)
     return true;
 }
 
+bool CStates::fromMemory(uint8_t *ptr)
+{
+    auto copyData = [&ptr](auto dest, auto size)
+    {
+        memcpy(dest, ptr, size);
+        ptr += size;
+    };
+
+    size_t count = 0;
+    copyData(&count, COUNT_BYTES);
+
+    m_stateU.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        uint16_t k = 0;
+        uint16_t v = 0;
+        copyData(&k, sizeof(k));
+        copyData(&v, sizeof(v));
+        m_stateU[k] = v;
+    }
+    char *v = new char[MAX_STRING];
+    copyData(&count, COUNT_BYTES);
+    m_stateS.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        uint16_t k = 0;
+        uint16_t len = 0;
+        copyData(&k, sizeof(k));
+        copyData(&len, sizeof(len));
+        v[len] = '\0';
+        copyData(v, len);
+        m_stateS[k] = v;
+    }
+    delete[] v;
+    return true;
+}
+
 bool CStates::write(FILE *tfile) const
 {
     auto writefile = [tfile](auto ptr, auto size)
@@ -208,7 +248,7 @@ void CStates::debug() const
 std::vector<StateValuePair> CStates::getValues() const
 {
     std::vector<StateValuePair> pairs;
-    // C++ 20 not supported yet
+    // C++ 20 not supported yet by appImage
     // std::format("0x{:02x}", v)
     pairs.clear();
     char tmp1[16];

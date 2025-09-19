@@ -908,6 +908,9 @@ void CGameMixin::mainLoop()
         return;
     case CGame::MODE_LEVEL_SUMMARY:
         manageLevelSummary();
+        return;
+    case CGame::MODE_SKLLSELECT:
+        manageSkillMenu();
     }
 }
 

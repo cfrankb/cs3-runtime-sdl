@@ -413,6 +413,7 @@ protected:
     virtual void manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
     virtual void manageUserMenu() = 0;
+    virtual void manageSkillMenu() = 0;
 
     virtual void manageLevelSummary() = 0;
     virtual void initLevelSummary() = 0;

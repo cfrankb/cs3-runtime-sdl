@@ -15,12 +15,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "map"
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
 #include "map.h"
 #include "shared/IFile.h"
 #include "states.h"
+#include "logger.h"
 
 static const char SIG[]{'M', 'A', 'P', 'Z'};
 static const char XTR_SIG[]{"XTR"};
@@ -325,7 +327,7 @@ bool CMap::fromMemory(uint8_t *mem)
     // read title
     extrahdr_t hdr;
     memcpy(&hdr, ptr, sizeof(hdr));
-    if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0) && (hdr.ver == XTR_VER))
+    if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0))
     {
         ptr += sizeof(hdr);
         uint8_t size = *ptr;
@@ -334,6 +336,9 @@ bool CMap::fromMemory(uint8_t *mem)
         memcpy(tmp, ptr, size);
         tmp[size] = 0;
         m_title = tmp;
+        ptr += size;
+        if (hdr.ver >= XTR_VER1)
+            m_states->fromMemory(ptr);
     }
     return true;
 }
@@ -360,8 +365,6 @@ bool CMap::write(FILE *tfile)
             fwrite(&a, sizeof(a), 1, tfile);
         }
 
-        ////        if (!m_title.empty() && m_title.size() < MAX_TITLE)
-        //    {
         // write title
         extrahdr_t hdr;
         memcpy(&hdr.sig, XTR_SIG, sizeof(hdr.sig));
@@ -373,7 +376,6 @@ bool CMap::write(FILE *tfile)
 
         // write states
         m_states->write(tfile);
-        //  }
     }
     return tfile != nullptr;
 }

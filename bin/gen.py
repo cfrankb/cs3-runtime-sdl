@@ -8,6 +8,7 @@ from pathlib import Path
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 
+
 def strip_ext(s):
     i = s.rfind(".")
     return s[0:i]
@@ -137,7 +138,6 @@ def main():
     python_cmd = ntpath.basename(sys.executable)
     Path("build").mkdir(parents=True, exist_ok=True)
 
-
     #################################################
     ##  SDL3
     if params.action == "sdl3":
@@ -248,6 +248,7 @@ def main():
             "bin/mingw/build-xmp.sh",
             "bin/mingw/build-sdl3.sh",
             "bin/mingw/build-sdl3-mixer.sh",
+            "bin/mingw/copydll.sh",
         ]
     ###################################################
     ## unhandled cases

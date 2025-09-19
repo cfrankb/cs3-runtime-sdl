@@ -20,6 +20,7 @@
 #include <chrono>
 #include <cstring>
 #include <unistd.h>
+#include "SDL3/SDL_gamepad.h"
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
@@ -35,6 +36,7 @@
 #include "sounds.h"
 #include "assetman.h"
 #include "logger.h"
+#include "attr.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -46,7 +48,7 @@ const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 #endif
 
-#include "SDL3/SDL_gamepad.h"
+#define _I(V) static_cast<int>(V)
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -69,6 +71,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_gameMenu = new CMenu(MENUID_GAMEMENU);
     m_optionMenu = new CMenu(MENUID_OPTIONMENU);
     m_userMenu = new CMenu(MENUID_USERS);
+    m_skillMenu = new CMenu(MENUID_SKILLS);
     m_title = nullptr;
 }
 
@@ -122,6 +125,11 @@ CRuntime::~CRuntime()
     {
         delete m_userMenu;
     }
+
+    if (m_skillMenu)
+    {
+        delete m_skillMenu;
+    }
 }
 
 /**
@@ -168,6 +176,7 @@ void CRuntime::paint()
         break;
     case CGame::MODE_OPTIONS:
         drawOptions(bitmap);
+        break;
     case CGame::MODE_IDLE:
         break;
     case CGame::MODE_USERSELECT:
@@ -175,6 +184,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_LEVEL_SUMMARY:
         drawLevelSummary(bitmap);
+        break;
+    case CGame::MODE_SKLLSELECT:
+        drawSkillMenu(bitmap);
         break;
     };
 
@@ -208,7 +220,7 @@ bool CRuntime::createSDLWindow()
 {
     const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
     LOGI("texture: %dx%d\n", WIDTH, HEIGHT);
-    SDL_WindowFlags windowFlags = 0;
+    SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
     m_app.window = SDL_CreateWindow(
         title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
     if (m_app.window == NULL)
@@ -225,6 +237,7 @@ bool CRuntime::createSDLWindow()
             LOGE("Failed to create renderer: %s\n", SDL_GetError());
             return false;
         }
+        // SDL_SetRenderLogicalPresentation(m_app.renderer, WIDTH * 2, HEIGHT * 2, SDL_LOGICAL_PRESENTATION_DISABLED);
 
         m_app.texture = SDL_CreateTexture(
             m_app.renderer,
@@ -297,12 +310,26 @@ EM_JS(int, pollGamepadButtons, (), {
 });
 #endif
 
+bool CRuntime::isMenuActive()
+{
+    const int mode = m_game->mode();
+    return mode == CGame::MODE_TITLE ||
+           mode == CGame::MODE_USERSELECT ||
+           mode == CGame::MODE_SKLLSELECT ||
+           mode == CGame::MODE_OPTIONS ||
+           mode == CGame::MODE_LEVEL_SUMMARY ||
+           m_gameMenuActive;
+}
+
 /**
  * @brief Read input devices for user inputs
  *
  */
 void CRuntime::doInput()
 {
+    const int mode = m_game->mode();
+    bool trace = isTrue(m_config["trace"]);
+
     int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
     int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
     SDL_Gamepad *controller;
@@ -310,6 +337,7 @@ void CRuntime::doInput()
     int joystick_index;
     while (SDL_PollEvent(&event))
     {
+        SDL_ConvertEventToRenderCoordinates(m_app.renderer, &event);
         uint8_t keyState = KEY_RELEASED;
         uint8_t buttonState = BUTTON_RELEASED;
         switch (event.type)
@@ -341,6 +369,7 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_WINDOW_RESIZED:
+            LOGI("SDL_EVENT_WINDOW_RESIZED\n");
             if (!m_app.isFullscreen)
             {
                 LOGI("resized\n");
@@ -348,11 +377,55 @@ void CRuntime::doInput()
             }
             break;
 
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            if (trace)
+                LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
+                     event.button.button, event.button.x, event.button.y, event.button.clicks);
+            if (event.button.button == SDL_BUTTON_LEFT && isMenuActive())
+            {
+                m_buttonState[BUTTON_A] = BUTTON_RELEASED;
+            }
+            break;
+
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            if (event.button.button != 0 &&
-                m_game->mode() == CGame::MODE_CLICKSTART)
+            // SDL_BUTTON_LEFT
+            // SDL_BUTTON_RIGHT
+            // SDL_BUTTON_MIDDLE
+            if (trace)
+                LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
+                     event.button.button, event.button.x, event.button.y, event.button.clicks);
+            if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
             {
                 leaveClickStart();
+            }
+            else if (event.button.button == SDL_BUTTON_LEFT &&
+                     isMenuActive() &&
+                     menuItemAt(event.button.x, event.button.y) != INVALID)
+            {
+                m_buttonState[BUTTON_A] = BUTTON_PRESSED;
+            }
+            break;
+
+        case SDL_EVENT_MOUSE_MOTION:
+            if (trace)
+                LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
+                     event.motion.x, event.motion.y);
+            if (isMenuActive())
+            {
+                followPointer(event.motion.x, event.motion.y);
+            }
+            break;
+
+        case SDL_EVENT_MOUSE_WHEEL:
+            LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
+                 event.wheel.x, event.wheel.y);
+            if (static_cast<int>(event.wheel.y) == 1)
+            {
+                m_joyState[AIM_LEFT] = KEY_PRESSED;
+            }
+            else if (static_cast<int>(event.wheel.y) == -1)
+            {
+                m_joyState[AIM_RIGHT] = KEY_PRESSED;
             }
             break;
 
@@ -1034,6 +1107,10 @@ void CRuntime::setWorkspace(const char *workspace)
  */
 void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY)
 {
+    m_lastMenu = &menu;
+    m_lastMenuBaseY = baseY;
+    m_lastMenuBaseX = baseX;
+
     const int scaleX = menu.scaleX();
     const int scaleY = menu.scaleY();
     const int paddingY = menu.paddingY();
@@ -1212,12 +1289,14 @@ void CRuntime::setupTitleScreen()
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
-    menu.addItem(CMenuItem("%s MODE", {"EASY", "NORMAL", "HARD"}, &m_skill))
-        .setRole(MENU_ITEM_SKILL);
+    // menu.addItem(CMenuItem("%s MODE", {"EASY", "NORMAL", "HARD"}, &m_skill))
+    //     .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
     // menu.addItem(CMenuItem({"OPTIONS", "CREDITS", "HI SCORES"}, &m_mainMenuBar)).setRole(MENU_ITEM_MAINMENU_BAR);
+
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
+    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
     m_game->setMode(CGame::MODE_TITLE);
 
     if (m_config["theme"] != "")
@@ -1511,12 +1590,14 @@ void CRuntime::manageMenu(CMenu &menu)
         if (item.left() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        m_joyState[AIM_LEFT] = KEY_RELEASED;
     }
     else if (m_joyState[AIM_RIGHT])
     {
         if (item.right() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
+        m_joyState[AIM_RIGHT] = KEY_RELEASED;
     }
     else if (m_keyStates[Key_Space] ||
              m_keyStates[Key_Enter] ||
@@ -1535,12 +1616,12 @@ void CRuntime::manageMenu(CMenu &menu)
             }
             game.setLevel(m_startLevel);
             m_gameMenuActive = false;
-            game.setSkill(m_skill);
+            //            game.setSkill(m_skill);
             game.resetStats();
             initUserMenu();
             game.setMode(CGame::MODE_USERSELECT);
             clearKeyStates();
-            m_optionCooldown = 8;
+            m_optionCooldown = MAX_OPTION_COOLDOWN;
         }
         else if (item.role() == MENU_ITEM_HISCORES)
         {
@@ -1586,10 +1667,22 @@ void CRuntime::manageMenu(CMenu &menu)
         {
             int userID = item.userData();
             game.setUserID(userID);
+            // openMusicForLevel(m_startLevel);
+            // m_gameMenuActive = false;
+            // beginLevelIntro(CGame::MODE_LEVEL_INTRO);
+            m_game->setMode(CGame::MODE_SKLLSELECT);
+            initSkillMenu();
+            loadColorMaps(userID);
+            m_optionCooldown = MAX_OPTION_COOLDOWN;
+        }
+        else if (item.role() == MENU_ITEM_SKILLGROUP)
+        {
             openMusicForLevel(m_startLevel);
             m_gameMenuActive = false;
             beginLevelIntro(CGame::MODE_LEVEL_INTRO);
-            loadColorMaps(userID);
+            m_skill = item.userData();
+            game.setSkill(m_skill);
+            m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
         }
     }
 
@@ -1623,6 +1716,8 @@ void CRuntime::manageMenu(CMenu &menu)
     {
         toggleFullscreen();
     }
+
+    m_buttonState[BUTTON_A] = BUTTON_RELEASED;
 }
 
 void CRuntime::setStartLevel(int level)
@@ -2165,4 +2260,64 @@ void CRuntime::changeMoodMusic(CGame::GameMode mode)
     else if (mode == CGame::MODE_LEVEL_INTRO)
     {
     }
+}
+
+int CRuntime::menuItemAt(int x, int y)
+{
+    if (!m_lastMenu)
+        return -1;
+
+    CMenu &menu = *m_lastMenu;
+    int baseY = m_lastMenuBaseY * PIXEL_SCALE;
+    int startY = baseY;
+    for (size_t i = 0; i < menu.size(); ++i)
+    {
+        int h = menu.scaleY() * FONT_SIZE * PIXEL_SCALE;
+        if (RANGE(y, startY, startY + h))
+        {
+            bool trace = isTrue(m_config["trace"]);
+            if (trace)
+                LOGI("menuItem at: %d %d ==> %ld\n", x, y, i);
+            return i;
+        }
+        startY += h + menu.paddingY() * PIXEL_SCALE;
+    }
+    return -1;
+}
+
+void CRuntime::followPointer(int x, int y)
+{
+    if (!m_lastMenu)
+        return;
+
+    CMenu &menu = *m_lastMenu;
+    int i = menuItemAt(x, y);
+    if (i != INVALID)
+        menu.setCurrent(i);
+}
+
+void CRuntime::drawSkillMenu(CFrame &bitmap)
+{
+    const int baseY = (_HEIGHT - m_userMenu->height()) / 2;
+    const char *t = "GAME DIFFICULTY";
+    int x = (_WIDTH - strlen(t) * FONT_SIZE * 2) / 2;
+    drawFont(bitmap, x, baseY - 32, t, GRAY, BLACK, 2, 2);
+    drawMenu(bitmap, *m_skillMenu, -1, baseY);
+}
+
+void CRuntime::manageSkillMenu()
+{
+    manageMenu(*m_skillMenu);
+}
+
+void CRuntime::initSkillMenu()
+{
+    CMenu &menu = *m_skillMenu;
+    menu.clear();
+    menu.setScaleX(2);
+    menu.setScaleY(2);
+    menu.addItem(CMenuItem("EASY", MENU_ITEM_SKILLGROUP).setUserData(SKILL_EASY));
+    menu.addItem(CMenuItem("NORMAL", MENU_ITEM_SKILLGROUP).setUserData(SKILL_NORMAL));
+    menu.addItem(CMenuItem("HARD", MENU_ITEM_SKILLGROUP).setUserData(SKILL_HARD));
+    menu.setCurrent(m_skill);
 }

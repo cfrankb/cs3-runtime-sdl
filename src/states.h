@@ -50,6 +50,7 @@ public:
     bool write(IFile &tfile) const;
     bool read(FILE *sfile);
     bool write(FILE *tfile) const;
+    bool fromMemory(uint8_t *ptr);
 
     void debug() const;
     void clear();

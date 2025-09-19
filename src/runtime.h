@@ -97,6 +97,7 @@ private:
     void toggleGameMenu() override;
     void manageGameMenu() override;
     void manageUserMenu() override;
+    void manageSkillMenu() override;
     void manageLevelSummary() override;
     void initLevelSummary() override;
     void changeMoodMusic(CGame::GameMode mode) override;
@@ -128,10 +129,14 @@ private:
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
     CMenu *m_userMenu = nullptr;
+    CMenu *m_skillMenu = nullptr;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
     Summary m_summary;
     int m_mainMenuBar = 0;
+    int m_lastMenuBaseY = 0;
+    int m_lastMenuBaseX = 0;
+    CMenu *m_lastMenu = nullptr;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -154,6 +159,7 @@ private:
         MENUID_GAMEMENU = 0x11,
         MENUID_OPTIONMENU,
         MENUID_USERS,
+        MENUID_SKILLS,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -173,6 +179,7 @@ private:
         MENU_ITEM_RETURN_TO_GAME,
         MENU_ITEM_SELECT_USER,
         MENU_ITEM_MAINMENU_BAR,
+        MENU_ITEM_SKILLGROUP,
         MENUBAR_OPTIONS = 0,
         MENUBAR_CREDITS,
         MENUBAR_HISCORES,
@@ -181,6 +188,7 @@ private:
         MUSIC_VOLUME_STEPS = 1 + (ISound::MAX_VOLUME / 10),
         MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,
+        PIXEL_SCALE = 2,
     };
 
     void drawTitleScreen(CFrame &bitmap);
@@ -207,7 +215,12 @@ private:
     void resizeGameMenu();
     void openMusic(const std::string &filename);
     void drawUserMenu(CFrame &bitmap);
+    void drawSkillMenu(CFrame &bitmap);
     std::string getMusicPath(const std::string &filename);
     void leaveClickStart();
     void drawLevelSummary(CFrame &bitmap);
+    int menuItemAt(int x, int y);
+    void followPointer(int x, int y);
+    void initSkillMenu();
+    bool isMenuActive();
 };
