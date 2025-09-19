@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include "colormap.h"
 #include "game.h"
+#include "gameui.h"
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
@@ -291,6 +292,7 @@ protected:
 
     hiscore_t m_hiscores[MAX_SCORES];
     uint8_t m_joyState[JOY_AIMS];
+    uint8_t m_vjoyState[JOY_AIMS];
     uint8_t m_buttonState[Button_Count];
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
@@ -329,6 +331,7 @@ protected:
     int _HEIGHT = DEFAULT_HEIGHT;
     ColorMaps m_colormaps;
     visualStates_t m_visualStates;
+    CGameUI m_ui;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -377,6 +380,9 @@ protected:
     void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);
     void beginLevelIntro(CGame::GameMode mode);
     void clearVisualStates();
+    void initUI();
+    void drawUI(CFrame &bitmap);
+    int whatButtons(int x, int y);
 
     constexpr inline uint32_t fazFilter(const int bitShift) const
     {
@@ -413,11 +419,11 @@ protected:
     virtual void manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
     virtual void manageUserMenu() = 0;
-    virtual void manageSkillMenu() = 0;
-
     virtual void manageLevelSummary() = 0;
     virtual void initLevelSummary() = 0;
     virtual void changeMoodMusic(CGame::GameMode mode) = 0;
+
+    virtual void manageSkillMenu() = 0;
 
 private:
     void stopRecorder();

@@ -340,6 +340,7 @@ void CRuntime::doInput()
         SDL_ConvertEventToRenderCoordinates(m_app.renderer, &event);
         uint8_t keyState = KEY_RELEASED;
         uint8_t buttonState = BUTTON_RELEASED;
+        bool leftBtn = event.button.button == SDL_BUTTON_LEFT;
         switch (event.type)
         {
         case SDL_EVENT_KEY_DOWN:
@@ -378,6 +379,8 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_MOUSE_BUTTON_UP:
+            m_mouseButtons[event.button.button] = BUTTON_RELEASED;
+
             if (trace)
                 LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
                      event.button.button, event.button.x, event.button.y, event.button.clicks);
@@ -385,24 +388,34 @@ void CRuntime::doInput()
             {
                 m_buttonState[BUTTON_A] = BUTTON_RELEASED;
             }
+            else if (mode == CGame::MODE_PLAY)
+            {
+                handleMouse(event.button.x, event.button.y);
+            }
             break;
 
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            m_mouseButtons[event.button.button] = BUTTON_PRESSED;
             // SDL_BUTTON_LEFT
             // SDL_BUTTON_RIGHT
             // SDL_BUTTON_MIDDLE
             if (trace)
                 LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
                      event.button.button, event.button.x, event.button.y, event.button.clicks);
+
             if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
             {
                 leaveClickStart();
             }
-            else if (event.button.button == SDL_BUTTON_LEFT &&
-                     isMenuActive() &&
-                     menuItemAt(event.button.x, event.button.y) != INVALID)
+            else if (leftBtn &&
+                     ((isMenuActive() && menuItemAt(event.button.x, event.button.y) != INVALID) ||
+                      mode == CGame::MODE_LEVEL_SUMMARY))
             {
                 m_buttonState[BUTTON_A] = BUTTON_PRESSED;
+            }
+            else if (mode == CGame::MODE_PLAY)
+            {
+                handleMouse(event.button.x, event.button.y);
             }
             break;
 
@@ -413,6 +426,10 @@ void CRuntime::doInput()
             if (isMenuActive())
             {
                 followPointer(event.motion.x, event.motion.y);
+            }
+            else if (leftBtn && mode == CGame::MODE_PLAY)
+            {
+                handleMouse(event.button.x, event.button.y);
             }
             break;
 
@@ -614,6 +631,25 @@ void CRuntime::doInput()
         }
     }
 #endif
+}
+
+void CRuntime::handleMouse(int x, int y)
+{
+    if (!m_ui.isVisible())
+        return;
+    // SDL_BUTTON_LEFT
+    // SDL_BUTTON_RIGHT
+    // SDL_BUTTON_MIDDLE
+    clearVJoyStates();
+    if (m_mouseButtons[SDL_BUTTON_LEFT] == BUTTON_PRESSED)
+    {
+        int btn = whatButtons(x, y);
+        if (btn != INVALID)
+        {
+            m_vjoyState[btn] = BUTTON_PRESSED;
+            // LOGI("vjoy: %d\n", btn);
+        }
+    }
 }
 
 /**
@@ -1838,6 +1874,10 @@ void CRuntime::init(CMapArch *maparch, int index)
 {
     CGameMixin::init(maparch, index);
     resizeScroller();
+    if (isTrue(m_config["betaui"]))
+    {
+        m_ui.show();
+    }
 }
 
 size_t CRuntime::scrollerBufSize()
@@ -2320,4 +2360,14 @@ void CRuntime::initSkillMenu()
     menu.addItem(CMenuItem("NORMAL", MENU_ITEM_SKILLGROUP).setUserData(SKILL_NORMAL));
     menu.addItem(CMenuItem("HARD", MENU_ITEM_SKILLGROUP).setUserData(SKILL_HARD));
     menu.setCurrent(m_skill);
+}
+
+void CRuntime::clearVJoyStates()
+{
+    memset(m_vjoyState, 0, sizeof(m_vjoyState));
+}
+
+void CRuntime::clearMouseButtons()
+{
+    memset(m_mouseButtons, 0, sizeof(m_mouseButtons));
 }

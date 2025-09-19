@@ -3,8 +3,6 @@ import glob
 
 def main():
     paths = ["src/*.cpp", "src/**/*.cpp", "src/*.h", "src/**/*.h"]
-    deps_blocks = ["all: $(TARGET)"]
-    deps = []
 
     for pattern in paths:
         for f in glob.glob(pattern):

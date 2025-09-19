@@ -15,28 +15,42 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <string>
-#include <cstdint>
-
 #pragma once
 
-struct data_t
+#include <vector>
+#include <cstdint>
+#include <string>
+
+struct button_t
 {
-    uint8_t *ptr;
-    size_t size;
+    int id;
+    int x;
+    int y;
+    int width;
+    int height;
+    std::string text;
+    uint32_t color;
 };
 
-class CAssetMan
+class CGameUI
 {
 public:
-    static std::string &addTrailSlash(std::string &path);
-    static void setPrefix(const std::string &prefix);
-    static const std::string &getPrefix();
-    static bool read(const std::string &filepath, data_t &data, bool terminator = false);
-    static void free(const data_t data);
-    static std::string defaultPrefix();
+    CGameUI();
+    ~CGameUI();
+    const button_t &addButton(const button_t &button);
+    void clear();
+    size_t size();
+    button_t &at(int i);
+    void show();
+    void hide();
+    bool isVisible();
+    const std::vector<button_t> &buttons();
+    int width();
+    int height();
 
 private:
-    CAssetMan() {}
-    ~CAssetMan() {}
+    bool m_show = false;
+    std::vector<button_t> m_buttons;
+    int m_height = 0;
+    int m_width = 0;
 };

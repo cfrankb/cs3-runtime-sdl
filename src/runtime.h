@@ -137,6 +137,7 @@ private:
     int m_lastMenuBaseY = 0;
     int m_lastMenuBaseX = 0;
     CMenu *m_lastMenu = nullptr;
+    uint8_t m_mouseButtons[3];
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -223,4 +224,7 @@ private:
     void followPointer(int x, int y);
     void initSkillMenu();
     bool isMenuActive();
+    void clearVJoyStates();
+    void clearMouseButtons();
+    void handleMouse(int x, int y);
 };

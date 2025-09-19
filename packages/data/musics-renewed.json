@@ -26,7 +26,7 @@
         "modifications": ""
     },
     {
-        "name": "04 - Grab the Diamonds Dont get killed.xm",
+        "name": "04 - Grab the Diamonds.xm",
         "author": "BigToeMan",
         "version": "",
         "license": "",
@@ -59,6 +59,19 @@
         "SPDX_ID": "",
         "source": {
             "name": "torn",
+            "url": ""
+        },
+        "attribution": "",
+        "modifications": ""
+    },
+    {
+        "name": "bitshift.xm",
+        "author": "",
+        "version": "",
+        "license": "CC0",
+        "SPDX_ID": "",
+        "source": {
+            "name": "",
             "url": ""
         },
         "attribution": "",

@@ -67,6 +67,7 @@ CGameMixin::CGameMixin()
     m_recorder = new CRecorder;
     m_eventCountdown = 0;
     m_currentEvent = EVENT_NONE;
+    initUI();
 }
 
 CGameMixin::~CGameMixin()
@@ -461,6 +462,10 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         // draw keys
         drawKeys(bitmap);
     }
+
+    // drawButtons
+    if (m_ui.isVisible())
+        drawUI(bitmap);
 
     // draw timeout
     drawTimeout(bitmap);
@@ -947,6 +952,11 @@ void CGameMixin::manageGamePlay()
     CGame &game = *m_game;
     uint8_t joyState[JOY_AIMS];
     memcpy(joyState, m_joyState, JOY_AIMS);
+    // merge joystick and virtual joystick
+    for (size_t i = 0; i < sizeof(m_vjoyState); ++i)
+    {
+        joyState[i] |= m_vjoyState[i];
+    }
 
     if (m_recorder->isRecording())
     {
@@ -1518,6 +1528,7 @@ void CGameMixin::clearKeyStates()
 void CGameMixin::clearJoyStates()
 {
     memset(m_joyState, 0, sizeof(m_joyState));
+    memset(m_vjoyState, 0, sizeof(m_vjoyState));
 }
 
 bool CGameMixin::read(FILE *sfile, std::string &name)
@@ -2110,4 +2121,50 @@ void CGameMixin::clearVisualStates()
     m_visualStates.rSugar = 0;
     m_visualStates.sugarFx = 0;
     memset(m_visualStates.sugarCubes, '\0', sizeof(m_visualStates.sugarCubes));
+}
+
+void CGameMixin::initUI()
+{
+    const int BTN_SIZE = 16;
+    std::vector<button_t> buttons{
+        {.id = AIM_UP, .x = BTN_SIZE, .y = 0, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
+        {.id = AIM_LEFT, .x = 0, .y = BTN_SIZE, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
+        {.id = AIM_DOWN, .x = BTN_SIZE, .y = BTN_SIZE, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
+        {.id = AIM_RIGHT, .x = BTN_SIZE * 2, .y = BTN_SIZE, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
+    };
+    for (const auto &btn : buttons)
+    {
+        m_ui.addButton(btn);
+    }
+    //    if (m_config)
+    //  m_ui.show();
+}
+
+void CGameMixin::drawUI(CFrame &bitmap)
+{
+    int MARGIN = FONT_SIZE;
+    int baseX = _WIDTH - m_ui.width() - MARGIN;
+    int baseY = _HEIGHT - m_ui.height() - MARGIN;
+    for (const auto &btn : m_ui.buttons())
+    {
+        drawRect(bitmap, Rect{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, static_cast<Color>(btn.color), true);
+        drawRect(bitmap, Rect{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, RED, false);
+    }
+}
+
+int CGameMixin::whatButtons(int x, int y)
+{
+    // LOGI("x=%d y=%d\n", x, y);
+    int MARGIN = FONT_SIZE;
+    int baseX = _WIDTH - m_ui.width() - MARGIN;
+    int baseY = _HEIGHT - m_ui.height() - MARGIN;
+    for (const auto &btn : m_ui.buttons())
+    {
+        if (RANGE(x / 2, baseX + btn.x, baseX + btn.x + btn.width) &&
+            RANGE(y / 2, baseY + btn.y, baseY + btn.y + btn.height))
+        {
+            return btn.id;
+        }
+    }
+    return INVALID;
 }

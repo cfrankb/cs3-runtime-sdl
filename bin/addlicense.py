@@ -24,8 +24,6 @@ license_cpp = f"""/*
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */\n"""
 
-license_lua = license_cpp.replace("/*", "--[[").replace("*/", "]]--")
-
 specs = ["src", "tests"]
 
 
