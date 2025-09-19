@@ -352,7 +352,7 @@ int main(int argc, char *args[])
     if (!runtime.initSDL())
         return EXIT_FAILURE;
 
-#if defined(__ANDROID__)
+#if false // defined(__ANDROID__)
     int width = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
     int height = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
     runtime.setWidth(width / 2);

@@ -227,4 +227,5 @@ private:
     void clearVJoyStates();
     void clearMouseButtons();
     void handleMouse(int x, int y);
+    void handleFingerDown(float x, float y);
 };

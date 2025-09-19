@@ -21,6 +21,7 @@
 #include <cstring>
 #include <unistd.h>
 #include "SDL3/SDL_gamepad.h"
+#include "SDL3/SDL_render.h"
 #include "runtime.h"
 #include "game.h"
 #include "shared/Frame.h"
@@ -238,6 +239,27 @@ bool CRuntime::createSDLWindow()
             return false;
         }
         // SDL_SetRenderLogicalPresentation(m_app.renderer, WIDTH * 2, HEIGHT * 2, SDL_LOGICAL_PRESENTATION_DISABLED);
+        int w = 0;
+        int h = 0;
+        if (!SDL_GetCurrentRenderOutputSize(m_app.renderer, &w, &h))
+        {
+            LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
+        }
+        LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
+        // SDL_SetRenderLogicalPresentation(m_app.renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
+
+        int pixelW, pixelH;
+        if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
+        {
+            LOGE("SDL_GetWindowSizeInPixels failed: %s\n", SDL_GetError());
+        }
+        LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
+
+        SDL_DisplayID display = SDL_GetPrimaryDisplay();
+        const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
+        int screenW = mode->w;
+        int screenH = mode->h;
+        LOGI("SDL_GetDesktopDisplayMode %d x %d\n", screenW, screenH);
 
         m_app.texture = SDL_CreateTexture(
             m_app.renderer,
@@ -417,6 +439,13 @@ void CRuntime::doInput()
             {
                 handleMouse(event.button.x, event.button.y);
             }
+            break;
+
+        case SDL_EVENT_FINGER_DOWN:
+            if (trace)
+                LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
+                     event.tfinger.x, event.tfinger.y);
+            handleFingerDown(event.tfinger.x, event.tfinger.y);
             break;
 
         case SDL_EVENT_MOUSE_MOTION:
@@ -604,6 +633,10 @@ void CRuntime::doInput()
             LOGI("SDL_EVENT_WINDOW_RESTORED\n");
             break;
 
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED");
+            break;
+
         default:
             break;
         }
@@ -631,6 +664,19 @@ void CRuntime::doInput()
         }
     }
 #endif
+}
+
+void CRuntime::handleFingerDown(float x, float y)
+{
+    // float touchX = event.tfinger.x; // normalized [0.0, 1.0]
+    // float touchY = event.tfinger.y;
+    // 2. Convert Touch to Pixel Coordinates
+    // int pixelX = static_cast<int>(touchX * windowWidth);
+    // int pixelY = static_cast<int>(touchY * windowHeight);
+    // 3. Convert to Surface Coordinates
+    // If you're rendering to an SDL_Surface (e.g. software rendering): cpp
+    // int surfaceX = pixelX * surface->w / windowWidth;
+    // int surfaceY = pixelY * surface->h / windowHeight;
 }
 
 void CRuntime::handleMouse(int x, int y)
