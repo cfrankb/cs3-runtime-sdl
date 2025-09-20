@@ -1,0 +1,94 @@
+name: android
+
+on:
+  push:
+    branches: 
+      - master
+      - develop 
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      ANDROID_NDK_VERSION: 26.1.10909125
+      JAVA_VERSION: '17'
+      ANDROID_API_LEVEL: '34'   # target; minSdk remains in Gradle
+      GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Patch source
+        run: |
+          printf "\nbetaui        true\n" >> data/game.cfg
+          mkdir -p android-project/app/src/main/assets
+          cp -r data/*  android-project/app/src/main/assets
+          ls -l android-project/app/src/main/assets
+          sed -i -e 's/#ifdef HAVE_FSEEKO/#ifdef HAVE_FSEEKO_DISABLED/g' external/SDL3_mixer/external/wavpack/src/open_filename.c
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Install Android SDK cmdline tools
+        run: |
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses
+
+      - name: Install SDK platforms, build tools, and NDK
+        run: |
+          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-${{ env.ANDROID_API_LEVEL }}" \
+            "platform-tools" \
+            "build-tools;34.0.0" \
+            "ndk;${{ env.ANDROID_NDK_VERSION }}"
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Build Release APK (unsigned)
+        working-directory: android
+        run: ./gradlew assembleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Sign Release APK (optional)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEYSTORE_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+        run: |
+          echo "$KEYSTORE_B64" | base64 -d > "$KEYSTORE_PATH"
+          cd android
+          ./gradlew \
+            -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }} \
+            -PstoreFile="$KEYSTORE_PATH" \
+            -PstorePassword="$KEYSTORE_PASS" \
+            -PkeyAlias="$KEYSTORE_ALIAS" \
+            -PkeyPassword="$KEYSTORE_PASS" \
+            signRelease
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: |
+            android/app/build/outputs/apk/**/app-*.apk
+            android/app/build/outputs/bundle/**/app-*.aab

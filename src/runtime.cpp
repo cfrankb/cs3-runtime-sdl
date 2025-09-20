@@ -941,7 +941,6 @@ void CRuntime::preRun()
     if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);
-        // m_game->setMode(CGame::MODE_NEW_INPUTNAME);
     }
     else
     {
@@ -1472,8 +1471,13 @@ void CRuntime::setupTitleScreen()
         .setRole(MENU_ITEM_LEVEL);
     // menu.addItem(CMenuItem({"OPTIONS", "CREDITS", "HI SCORES"}, &m_mainMenuBar)).setRole(MENU_ITEM_MAINMENU_BAR);
 
+#if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
     menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+#else
+    menu.addItem(CMenuItem("HIGH SCORES", MENU_ITEM_HISCORES));
+    menu.addItem(CMenuItem("QUIT", MENU_ITEM_QUIT));
+#endif
     m_game->setMode(CGame::MODE_TITLE);
 
     if (m_config["theme"] != "")
@@ -1865,6 +1869,10 @@ void CRuntime::manageMenu(CMenu &menu)
             game.setSkill(m_skill);
             m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
         }
+        else if (item.role() == MENU_ITEM_QUIT)
+        {
+            m_isRunning = false;
+        }
     }
 
     if (item.role() == MENU_ITEM_MUSIC &&
@@ -1948,7 +1956,9 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
+#if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
+#endif
     menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
 }
 
