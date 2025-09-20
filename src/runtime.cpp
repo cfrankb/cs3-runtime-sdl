@@ -77,6 +77,8 @@ CRuntime::CRuntime() : CGameMixin()
     m_skill = 0;
     m_verbose = false;
     m_summary = Summary{0, 0, 0, 0};
+    m_virtualKeyboard = new CGameUI();
+    initVirtualKeyboard();
 }
 
 CRuntime::~CRuntime()
@@ -97,6 +99,7 @@ CRuntime::~CRuntime()
     delete m_optionMenu;
     delete m_userMenu;
     delete m_skillMenu;
+    delete m_virtualKeyboard;
 }
 
 /**
@@ -1550,6 +1553,10 @@ void CRuntime::initOptions()
     {
         m_summaryEnabled = true;
     }
+    if (isTrue(m_config["hardcode"]))
+    {
+        m_game->setDefaultLives(1);
+    }
 }
 
 /**
@@ -2526,7 +2533,31 @@ CRuntime::Rect CRuntime::windowRect2textureRect(const Rect &wRect)
     {
         return static_cast<int>(w * (float)u / rez.w);
     };
-    return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height= _c(wRect.height)};
+    return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height = _c(wRect.height)};
+}
+
+void CRuntime::beginInputName()
+{
+    clearKeyStates();
+    // SDL_StartTextInput(m_app.window);
+}
+
+void CRuntime::endInputName()
+{
+    // SDL_StopTextInput(m_app.window);
+}
+
+void CRuntime::initVirtualKeyboard()
+{
+    const int BTN_SIZE = 32;
+    std::vector<button_t> buttons;
+
+    CGameUI &ui = *m_virtualKeyboard;
+
+    for (const auto &btn : buttons)
+    {
+        ui.addButton(btn);
+    }
 }
 
 void CRuntime::onSDLQuit()

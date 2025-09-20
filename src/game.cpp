@@ -54,7 +54,7 @@ CGame::CGame()
     printf("starting up version: 0x%.8x\n", VERSION);
     m_health = 0;
     m_level = 0;
-    m_lives = DEFAULT_LIVES;
+    m_lives = defaultLives();
     m_score = 0;
     m_gameStats = new CGameStats;
     m_gameStats->set(S_SKILL, SKILL_EASY);
@@ -322,7 +322,7 @@ void CGame::restartGame()
     m_level = 0;
     m_nextLife = calcScoreLife();
     m_score = 0;
-    m_lives = DEFAULT_LIVES;
+    m_lives = defaultLives();
     resetSugar();
 }
 
@@ -1629,4 +1629,15 @@ void CGame::decKeyIndicators()
 void CGame::clearKeyIndicators()
 {
     memset(m_keys.indicators, '\0', sizeof(m_keys.indicators));
+}
+
+int CGame::defaultLives()
+{
+    return m_defaultLives;
+}
+
+void CGame::setDefaultLives(int lives)
+{
+    m_defaultLives = lives;
+    m_lives = lives;
 }

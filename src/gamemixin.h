@@ -424,6 +424,8 @@ protected:
     virtual void changeMoodMusic(CGame::GameMode mode) = 0;
 
     virtual void manageSkillMenu() = 0;
+    virtual void beginInputName() = 0;
+    virtual void endInputName() = 0;
 
 private:
     void stopRecorder();

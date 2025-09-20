@@ -835,6 +835,7 @@ void CGameMixin::mainLoop()
         if (m_recordScore && inputPlayerName())
         {
             m_recordScore = false;
+            // endInputName();
             saveScores();
         }
         [[fallthrough]];
@@ -863,6 +864,8 @@ void CGameMixin::mainLoop()
             }
             m_scoreRank = rankScore();
             m_recordScore = m_scoreRank != INVALID;
+            if (m_recordScore)
+                beginInputName();
             m_countdown = HISCORE_DELAY;
             return;
         }
@@ -951,11 +954,10 @@ void CGameMixin::manageGamePlay()
 {
     CGame &game = *m_game;
     uint8_t joyState[JOY_AIMS];
-    memcpy(joyState, m_joyState, JOY_AIMS);
     // merge joystick and virtual joystick
-    for (size_t i = 0; i < sizeof(m_vjoyState); ++i)
+    for (size_t i = 0; i < sizeof(joyState); ++i)
     {
-        joyState[i] |= m_vjoyState[i];
+        joyState[i] = m_joyState[i] | m_vjoyState[i];
     }
 
     if (m_recorder->isRecording())

@@ -132,6 +132,8 @@ public:
     void incTimeTaken();
     void resetSugar();
     void decKeyIndicators();
+    int defaultLives();
+    void setDefaultLives(int lives);
 
 private:
     enum
@@ -174,6 +176,7 @@ private:
     std::vector<std::string> m_hints;
     CGameStats *m_gameStats;
     MapReport m_report;
+    int m_defaultLives = DEFAULT_LIVES;
     void resetKeys();
     void clearKeyIndicators();
 

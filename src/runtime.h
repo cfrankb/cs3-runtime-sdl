@@ -28,6 +28,7 @@
 class ISound;
 class CFrameSet;
 class CMenu;
+class CGameUI;
 typedef std::vector<std::string> StringVector;
 
 struct Rez
@@ -123,6 +124,8 @@ private:
     void manageLevelSummary() override;
     void initLevelSummary() override;
     void changeMoodMusic(CGame::GameMode mode) override;
+    void beginInputName() override;
+    void endInputName() override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -160,6 +163,7 @@ private:
     int m_lastMenuBaseX = 0;
     CMenu *m_lastMenu = nullptr;
     uint8_t m_mouseButtons[3];
+    CGameUI *m_virtualKeyboard;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -250,7 +254,10 @@ private:
     void onGamePadEvent(const SDL_Event &event);
     void onMouseEvent(const SDL_Event &event);
     void onSDLQuit();
+    void initVirtualKeyboard();
+
 #ifdef __EMSCRIPTEN__
-    void readGamePadJs();
+    void
+    readGamePadJs();
 #endif
 };
