@@ -867,7 +867,7 @@ void CGameMixin::mainLoop()
 #if defined(__ANDROID__)
             if (m_recordScore)
             {
-                game.setMode(CGame::MODE_INPUTNAME);
+                game.setMode(CGame::MODE_NEW_INPUTNAME);
             }
 #endif
             return;
@@ -923,7 +923,7 @@ void CGameMixin::mainLoop()
     case CGame::MODE_SKLLSELECT:
         manageSkillMenu();
         return;
-    case CGame::MODE_INPUTNAME:
+    case CGame::MODE_NEW_INPUTNAME:
         return;
     }
 }
@@ -2144,6 +2144,7 @@ void CGameMixin::clearVisualStates()
 void CGameMixin::initUI()
 {
     const int BTN_SIZE = 32;
+    m_ui.setMargin(FONT_SIZE);
     std::vector<button_t> buttons{
         {.id = AIM_UP, .x = BTN_SIZE, .y = 0, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
         {.id = AIM_LEFT, .x = 0, .y = BTN_SIZE, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
@@ -2158,9 +2159,8 @@ void CGameMixin::initUI()
 
 void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 {
-    const int MARGIN = FONT_SIZE;
-    const int baseX = _WIDTH - ui.width() - MARGIN;
-    const int baseY = _HEIGHT - ui.height() - MARGIN;
+    const int baseX = _WIDTH - ui.width() - ui.margin();
+    const int baseY = _HEIGHT - ui.height() - ui.margin();
     for (const auto &btn : ui.buttons())
     {
         int x = baseX + btn.x;
@@ -2173,10 +2173,8 @@ void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 
 int CGameMixin::whichButton(CGameUI &ui, int x, int y)
 {
-    // LOGI("x=%d y=%d\n", x, y);
-    const int MARGIN = FONT_SIZE;
-    const int baseX = _WIDTH - ui.width() - MARGIN;
-    const int baseY = _HEIGHT - ui.height() - MARGIN;
+    const int baseX = _WIDTH - ui.width() - ui.margin();
+    const int baseY = _HEIGHT - ui.height() - ui.margin();
     for (const auto &btn : ui.buttons())
     {
         if (RANGE(x, baseX + btn.x, baseX + btn.x + btn.width) &&

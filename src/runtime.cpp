@@ -158,7 +158,7 @@ void CRuntime::paint()
     case CGame::MODE_SKLLSELECT:
         drawSkillMenu(bitmap);
         break;
-    case CGame::MODE_INPUTNAME:
+    case CGame::MODE_NEW_INPUTNAME:
         drawVirtualKeyboard(bitmap);
     };
 
@@ -520,7 +520,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         {
             handleMouse(pos.x, pos.y);
         }
-        else if (event.button.button == SDL_BUTTON_LEFT && mode == CGame::MODE_INPUTNAME)
+        else if (event.button.button == SDL_BUTTON_LEFT && mode == CGame::MODE_NEW_INPUTNAME)
         {
             handleVKEY(pos.x, pos.y);
         }
@@ -758,8 +758,11 @@ void CRuntime::handleVKEY(int x, int y)
         {
             m_recordScore = false;
             const int j = m_scoreRank;
-            strncpy(m_hiscores[j].name, m_input.c_str(), sizeof(m_hiscores[j].name));
-            saveScores();
+            if (j >= 0)
+            {
+                strncpy(m_hiscores[j].name, m_input.c_str(), sizeof(m_hiscores[j].name));
+                saveScores();
+            }
             m_game->setMode(CGame::MODE_HISCORES);
             m_countdown = HISCORE_DELAY;
             m_input.clear();
@@ -785,7 +788,6 @@ void CRuntime::handleMouse(int x, int y)
         if (btn != INVALID)
         {
             m_vjoyState[btn] = BUTTON_PRESSED;
-            // LOGI("vjoy: %d\n", btn);
         }
     }
 }
@@ -939,6 +941,7 @@ void CRuntime::preRun()
     if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);
+        // m_game->setMode(CGame::MODE_NEW_INPUTNAME);
     }
     else
     {
@@ -2583,6 +2586,7 @@ void CRuntime::initVirtualKeyboard()
     const int BTN_PADDING = 4;
     const int rowSize = 12;
     CGameUI &ui = *m_virtualKeyboard;
+    ui.setMargin(FONT_SIZE);
     const char chars[]{
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "0123456789"

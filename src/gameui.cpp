@@ -21,6 +21,7 @@
 CGameUI::CGameUI()
 {
     m_height = m_width = 0;
+    m_margin = DEFAULT_MARGIN;
 }
 
 CGameUI::~CGameUI()
@@ -78,4 +79,15 @@ int CGameUI::width()
 int CGameUI::height()
 {
     return m_height;
+}
+
+int CGameUI::margin()
+{
+    return m_margin;
+}
+
+CGameUI &CGameUI::setMargin(int margin)
+{
+    m_margin = margin;
+    return *this;
 }

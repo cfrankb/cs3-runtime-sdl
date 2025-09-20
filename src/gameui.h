@@ -47,10 +47,17 @@ public:
     const std::vector<button_t> &buttons();
     int width();
     int height();
+    int margin();
+    CGameUI &setMargin(int margin);
 
 private:
+    enum
+    {
+        DEFAULT_MARGIN = 8
+    };
     bool m_show = false;
     std::vector<button_t> m_buttons;
     int m_height = 0;
     int m_width = 0;
+    int m_margin;
 };
