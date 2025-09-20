@@ -124,8 +124,6 @@ private:
     void manageLevelSummary() override;
     void initLevelSummary() override;
     void changeMoodMusic(CGame::GameMode mode) override;
-    void beginInputName() override;
-    void endInputName() override;
 
     IMusic *m_music = nullptr;
     ISound *m_sound = nullptr;
@@ -164,6 +162,7 @@ private:
     CMenu *m_lastMenu = nullptr;
     uint8_t m_mouseButtons[3];
     CGameUI *m_virtualKeyboard;
+    std::string m_input;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -211,6 +210,9 @@ private:
         MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,
         PIXEL_SCALE = 2,
+        VK_SPACE = ' ',
+        VK_ENTER = '\n',
+        VK_BACKSPACE = 8,
     };
 
     void drawTitleScreen(CFrame &bitmap);
@@ -255,6 +257,8 @@ private:
     void onMouseEvent(const SDL_Event &event);
     void onSDLQuit();
     void initVirtualKeyboard();
+    void drawVirtualKeyboard(CFrame &bitmap);
+    void handleVKEY(int x, int y);
 
 #ifdef __EMSCRIPTEN__
     void

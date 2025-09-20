@@ -158,6 +158,8 @@ void CRuntime::paint()
     case CGame::MODE_SKLLSELECT:
         drawSkillMenu(bitmap);
         break;
+    case CGame::MODE_INPUTNAME:
+        drawVirtualKeyboard(bitmap);
     };
 
     SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -195,9 +197,11 @@ bool CRuntime::createSDLWindow()
 {
     const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
     SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY |
-                                  SDL_WINDOW_BORDERLESS |
                                   SDL_WINDOW_INPUT_FOCUS |
                                   SDL_WINDOW_MOUSE_CAPTURE;
+#if defined(__ANDROID__)
+    windowFlags |= SDL_WINDOW_BORDERLESS;
+#endif
     const int width = PIXEL_SCALE * WIDTH;
     const int height = PIXEL_SCALE * HEIGHT;
     m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
@@ -350,15 +354,17 @@ void CRuntime::doInput()
 
         case SDL_EVENT_JOYSTICK_ADDED:
             [[fallthrough]];
-        case SDL_EVENT_GAMEPAD_ADDED:
-            [[fallthrough]];
-        case SDL_EVENT_GAMEPAD_REMOVED:
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
             [[fallthrough]];
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
             [[fallthrough]];
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
             [[fallthrough]];
-        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+        case SDL_EVENT_GAMEPAD_ADDED:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_REMOVED:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_REMAPPED:
             [[fallthrough]];
         case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
             onGamePadEvent(event);
@@ -514,6 +520,10 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         {
             handleMouse(pos.x, pos.y);
         }
+        else if (event.button.button == SDL_BUTTON_LEFT && mode == CGame::MODE_INPUTNAME)
+        {
+            handleVKEY(pos.x, pos.y);
+        }
     }
     else if (event.type == SDL_EVENT_FINGER_DOWN)
     {
@@ -573,6 +583,10 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
     if (event.type == SDL_EVENT_JOYSTICK_ADDED)
     {
         LOGI("SDL_EVENT_JOYSTICK_ADDED\n");
+    }
+    else if (event.type == SDL_EVENT_GAMEPAD_REMAPPED)
+    {
+        LOGI("SDL_EVENT_GAMEPAD_REMAPPED\n");
     }
     else if (event.type == SDL_EVENT_GAMEPAD_ADDED)
     {
@@ -730,6 +744,33 @@ void CRuntime::handleFingerDown(float x, float y)
     // int surfaceY = pixelY * surface->h / windowHeight;
 }
 
+void CRuntime::handleVKEY(int x, int y)
+{
+    int btn = whichButton(*m_virtualKeyboard, x, y);
+    if (btn != INVALID)
+    {
+        if (btn == VK_BACKSPACE)
+        {
+            if (m_input.length() != 0)
+                m_input.pop_back();
+        }
+        else if (btn == VK_ENTER)
+        {
+            m_recordScore = false;
+            const int j = m_scoreRank;
+            strncpy(m_hiscores[j].name, m_input.c_str(), sizeof(m_hiscores[j].name));
+            saveScores();
+            m_game->setMode(CGame::MODE_HISCORES);
+            m_countdown = HISCORE_DELAY;
+            m_input.clear();
+        }
+        else if (m_input.length() < MAX_NAME_LENGTH - 1)
+        {
+            m_input += (char)btn;
+        }
+    }
+}
+
 void CRuntime::handleMouse(int x, int y)
 {
     if (!m_ui.isVisible())
@@ -740,7 +781,7 @@ void CRuntime::handleMouse(int x, int y)
     clearVJoyStates();
     if (m_mouseButtons[SDL_BUTTON_LEFT] == BUTTON_PRESSED)
     {
-        int btn = whatButtons(x, y);
+        int btn = whichButton(m_ui, x, y);
         if (btn != INVALID)
         {
             m_vjoyState[btn] = BUTTON_PRESSED;
@@ -2536,28 +2577,76 @@ CRuntime::Rect CRuntime::windowRect2textureRect(const Rect &wRect)
     return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height = _c(wRect.height)};
 }
 
-void CRuntime::beginInputName()
-{
-    clearKeyStates();
-    // SDL_StartTextInput(m_app.window);
-}
-
-void CRuntime::endInputName()
-{
-    // SDL_StopTextInput(m_app.window);
-}
-
 void CRuntime::initVirtualKeyboard()
 {
-    const int BTN_SIZE = 32;
-    std::vector<button_t> buttons;
-
+    const int BTN_SIZE = 16;
+    const int BTN_PADDING = 4;
+    const int rowSize = 12;
     CGameUI &ui = *m_virtualKeyboard;
+    const char chars[]{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789"
+        ".,/@$%^&*!"};
 
-    for (const auto &btn : buttons)
+    int i = 0;
+    for (const char &c : chars)
     {
-        ui.addButton(btn);
+        if (c == '\0')
+            break;
+        char t[2];
+        t[0] = c;
+        t[1] = '\0';
+        const int row = i / rowSize;
+        const int col = i % rowSize;
+        button_t button{
+            .id = c,
+            .x = col * (BTN_SIZE + BTN_PADDING),
+            .y = row * (BTN_SIZE + BTN_PADDING),
+            .width = BTN_SIZE,
+            .height = BTN_SIZE,
+            .text = t,
+            .color = WHITE,
+        };
+        ui.addButton(button);
+        ++i;
     }
+    std::vector<const char *> keys = {
+        "SPACE", "BKSP", "ENTER"};
+    const char id[] = {VK_SPACE, VK_BACKSPACE, VK_ENTER};
+    int x = 0;
+    const int y = ui.height() + BTN_PADDING * 2;
+    i = 0;
+    for (const auto &key : keys)
+    {
+        int width = FONT_SIZE * 2 * strlen(key);
+        button_t button{
+            .id = id[i],
+            .x = x,
+            .y = y,
+            .width = width,
+            .height = BTN_SIZE,
+            .text = key,
+            .color = WHITE,
+        };
+        x += width + BTN_PADDING;
+        ui.addButton(button);
+        ++i;
+    }
+    m_input = "";
+    LOGI("virtualkeyboard %d x %d\n", ui.width(), ui.height());
+}
+
+void CRuntime::drawVirtualKeyboard(CFrame &bitmap)
+{
+    CGameUI &ui = *m_virtualKeyboard;
+    const char end = (m_ticks >> 4) & 1 ? (char)CHARS_CARET : ' ';
+    drawUI(bitmap, ui);
+    std::string t = "ENTER YOUR NAME";
+    int x = (_WIDTH - t.length() * FONT_SIZE * 2) / 2;
+    drawFont(bitmap, x, FONT_SIZE, t.c_str(), LIGHTGRAY, CLEAR, 2, 2);
+    t = m_input + end;
+    x = (_WIDTH - t.length() * FONT_SIZE * 2) / 2;
+    drawFont(bitmap, x, 48, t.c_str(), YELLOW, CLEAR, 2, 2);
 }
 
 void CRuntime::onSDLQuit()

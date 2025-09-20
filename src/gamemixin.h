@@ -381,8 +381,8 @@ protected:
     void beginLevelIntro(CGame::GameMode mode);
     void clearVisualStates();
     void initUI();
-    void drawUI(CFrame &bitmap);
-    int whatButtons(int x, int y);
+    void drawUI(CFrame &bitmap, CGameUI &ui);
+    int whichButton(CGameUI &ui, int x, int y);
 
     constexpr inline uint32_t fazFilter(const int bitShift) const
     {
@@ -424,8 +424,6 @@ protected:
     virtual void changeMoodMusic(CGame::GameMode mode) = 0;
 
     virtual void manageSkillMenu() = 0;
-    virtual void beginInputName() = 0;
-    virtual void endInputName() = 0;
 
 private:
     void stopRecorder();

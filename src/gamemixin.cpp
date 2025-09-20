@@ -465,7 +465,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // drawButtons
     if (m_ui.isVisible())
-        drawUI(bitmap);
+        drawUI(bitmap, m_ui);
 
     // draw timeout
     drawTimeout(bitmap);
@@ -835,7 +835,6 @@ void CGameMixin::mainLoop()
         if (m_recordScore && inputPlayerName())
         {
             m_recordScore = false;
-            // endInputName();
             saveScores();
         }
         [[fallthrough]];
@@ -857,16 +856,20 @@ void CGameMixin::mainLoop()
                 restartGame();
                 return;
             }
-            game.setMode(CGame::MODE_HISCORES);
             if (!m_scoresLoaded)
             {
                 m_scoresLoaded = loadScores();
             }
             m_scoreRank = rankScore();
             m_recordScore = m_scoreRank != INVALID;
-            if (m_recordScore)
-                beginInputName();
             m_countdown = HISCORE_DELAY;
+            game.setMode(CGame::MODE_HISCORES);
+#if defined(__ANDROID__)
+            if (m_recordScore)
+            {
+                game.setMode(CGame::MODE_INPUTNAME);
+            }
+#endif
             return;
         }
         else if (game.mode() == CGame::MODE_HISCORES)
@@ -919,6 +922,9 @@ void CGameMixin::mainLoop()
         return;
     case CGame::MODE_SKLLSELECT:
         manageSkillMenu();
+        return;
+    case CGame::MODE_INPUTNAME:
+        return;
     }
 }
 
@@ -1238,12 +1244,16 @@ void CGameMixin::drawScores(CFrame &bitmap)
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
 
-    for (uint32_t i = 0; i < MAX_SCORES; ++i)
+    for (int i = 0; i < static_cast<int>(MAX_SCORES); ++i)
     {
         Color color = i & INTERLINES ? LIGHTGRAY : DARKGRAY;
-        if (m_recordScore && m_scoreRank == static_cast<int>(i))
+        if (m_recordScore && m_scoreRank == i)
         {
             color = YELLOW;
+        }
+        else if (m_scoreRank == i)
+        {
+            color = CYAN;
         }
         bool showCaret = (color == YELLOW) && (m_ticks & CARET_SPEED);
         snprintf(t, sizeof(t), " %.8d %.2d %s%c",
@@ -2146,25 +2156,28 @@ void CGameMixin::initUI()
     }
 }
 
-void CGameMixin::drawUI(CFrame &bitmap)
+void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 {
-    int MARGIN = FONT_SIZE;
-    int baseX = _WIDTH - m_ui.width() - MARGIN;
-    int baseY = _HEIGHT - m_ui.height() - MARGIN;
-    for (const auto &btn : m_ui.buttons())
+    const int MARGIN = FONT_SIZE;
+    const int baseX = _WIDTH - ui.width() - MARGIN;
+    const int baseY = _HEIGHT - ui.height() - MARGIN;
+    for (const auto &btn : ui.buttons())
     {
+        int x = baseX + btn.x;
+        int y = baseY + btn.y;
         drawRect(bitmap, Rect{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, static_cast<Color>(btn.color), true);
+        drawFont(bitmap, x, y, btn.text.c_str(), BLACK, CLEAR, 2, 2);
         drawRect(bitmap, Rect{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, RED, false);
     }
 }
 
-int CGameMixin::whatButtons(int x, int y)
+int CGameMixin::whichButton(CGameUI &ui, int x, int y)
 {
     // LOGI("x=%d y=%d\n", x, y);
-    int MARGIN = FONT_SIZE;
-    int baseX = _WIDTH - m_ui.width() - MARGIN;
-    int baseY = _HEIGHT - m_ui.height() - MARGIN;
-    for (const auto &btn : m_ui.buttons())
+    const int MARGIN = FONT_SIZE;
+    const int baseX = _WIDTH - ui.width() - MARGIN;
+    const int baseY = _HEIGHT - ui.height() - MARGIN;
+    for (const auto &btn : ui.buttons())
     {
         if (RANGE(x, baseX + btn.x, baseX + btn.x + btn.width) &&
             RANGE(y, baseY + btn.y, baseY + btn.y + btn.height))
