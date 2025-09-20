@@ -2131,7 +2131,7 @@ void CGameMixin::clearVisualStates()
 
 void CGameMixin::initUI()
 {
-    const int BTN_SIZE = 16;
+    const int BTN_SIZE = 32;
     std::vector<button_t> buttons{
         {.id = AIM_UP, .x = BTN_SIZE, .y = 0, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},
         {.id = AIM_LEFT, .x = 0, .y = BTN_SIZE, .width = BTN_SIZE, .height = BTN_SIZE, .text = "", .color = WHITE},

@@ -85,7 +85,6 @@ CRuntime::~CRuntime()
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
-        //  SDL_Quit();
     }
     delete m_music;
     delete m_title;
@@ -185,10 +184,13 @@ bool CRuntime::initSDL()
 bool CRuntime::createSDLWindow()
 {
     const std::string title = m_config.count("title") ? m_config["title"] : "CS3v2 Runtime";
-    LOGI("texture: %dx%d\n", WIDTH, HEIGHT);
-    SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    m_app.window = SDL_CreateWindow(
-        title.c_str(), 2 * WIDTH, 2 * HEIGHT, windowFlags);
+    SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY |
+                                  SDL_WINDOW_BORDERLESS |
+                                  SDL_WINDOW_INPUT_FOCUS |
+                                  SDL_WINDOW_MOUSE_CAPTURE;
+    const int width = PIXEL_SCALE * WIDTH;
+    const int height = PIXEL_SCALE * HEIGHT;
+    m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
     if (m_app.window == nullptr)
     {
         LOGE("Window could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -197,13 +199,14 @@ bool CRuntime::createSDLWindow()
     else
     {
         atexit(cleanup);
+        LOGI("SDL Window created: %d x %d\n", width, height);
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
         {
             LOGE("Failed to create renderer: %s\n", SDL_GetError());
             return false;
         }
-        // SDL_SetRenderLogicalPresentation(m_app.renderer, WIDTH * 2, HEIGHT * 2, SDL_LOGICAL_PRESENTATION_DISABLED);
+        LOGI("SDL Rendered created\n");
         int w = 0;
         int h = 0;
         if (!SDL_GetCurrentRenderOutputSize(m_app.renderer, &w, &h))
@@ -211,17 +214,21 @@ bool CRuntime::createSDLWindow()
             LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
         }
         LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
-        // SDL_SetRenderLogicalPresentation(m_app.renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
         int pixelW, pixelH;
         if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
         {
             LOGE("SDL_GetWindowSizeInPixels failed: %s\n", SDL_GetError());
+            return false;
         }
         LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
 
-        Rez rez = getScreenSize();
+        const int displayIndex = SDL_GetDisplayForWindow(m_app.window);
+        SDL_DisplayOrientation currentOrientation = SDL_GetCurrentDisplayOrientation(displayIndex);
+        const Rez rezScreen = getScreenSize();
+        LOGI("SCREENSIZE: %d x %d; Orientation: %d\n", rezScreen.w, rezScreen.h, currentOrientation);
 
+        // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
             m_app.renderer,
             SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
@@ -230,10 +237,13 @@ bool CRuntime::createSDLWindow()
             LOGE("Failed to create texture: %s\n", SDL_GetError());
             return false;
         }
+        LOGI("texture created: %dx%d\n", WIDTH, HEIGHT);
 
+        // this prevents the pixelart from looking fuzy
         if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
         {
             LOGE("SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
+            return false;
         }
     }
 
@@ -272,27 +282,6 @@ void CRuntime::run()
     mainLoop();
 }
 
-#ifdef __EMSCRIPTEN__
-EM_JS(int, pollGamepadButtons, (), {
-    const gp = navigator.getGamepads()[0];
-    if (!gp)
-        return;
-    let i = 0;
-    let buttonMask = 0;
-    for (const button of gp.buttons)
-    {
-        if (button.pressed)
-        {
-            buttonMask |= (1 << i);
-        }
-        ++i;
-        if (i == 31)
-            break;
-    }
-    return buttonMask;
-});
-#endif
-
 bool CRuntime::isMenuActive()
 {
     const int mode = m_game->mode();
@@ -310,22 +299,12 @@ bool CRuntime::isMenuActive()
  */
 void CRuntime::doInput()
 {
-    const int mode = m_game->mode();
-    bool trace = isTrue(m_config["trace"]);
-
-    int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
-    int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
-    SDL_Gamepad *controller;
     SDL_Event event;
-    int joystick_index;
-    pos_t pos{0, 0};
-
     while (SDL_PollEvent(&event))
     {
+        SDL_Window *window = SDL_GetWindowFromID(event.window.windowID);
         SDL_ConvertEventToRenderCoordinates(m_app.renderer, &event);
         uint8_t keyState = KEY_RELEASED;
-        uint8_t buttonState = BUTTON_RELEASED;
-        bool leftBtn = event.button.button == SDL_BUTTON_LEFT;
         switch (event.type)
         {
         case SDL_EVENT_KEY_DOWN:
@@ -354,6 +333,49 @@ void CRuntime::doInput()
             }
             break;
 
+        case SDL_EVENT_JOYSTICK_ADDED:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_ADDED:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_REMOVED:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_BUTTON_UP:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+            [[fallthrough]];
+        case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
+            onGamePadEvent(event);
+            break;
+
+        case SDL_EVENT_MOUSE_BUTTON_UP:
+            [[fallthrough]];
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            [[fallthrough]];
+        case SDL_EVENT_FINGER_DOWN:
+            [[fallthrough]];
+        case SDL_EVENT_FINGER_UP:
+            [[fallthrough]];
+        case SDL_EVENT_FINGER_MOTION:
+            [[fallthrough]];
+        case SDL_EVENT_MOUSE_MOTION:
+            [[fallthrough]];
+        case SDL_EVENT_MOUSE_WHEEL:
+            onMouseEvent(event);
+            break;
+
+        case SDL_EVENT_QUIT:
+            onSDLQuit();
+            break;
+
+        case SDL_EVENT_WINDOW_SHOWN:
+            LOGI("SDL_EVENT_WINDOW_SHOWN\n");
+            break;
+        case SDL_EVENT_WINDOW_HIDDEN:
+            LOGI("SDL_EVENT_WINDOW_HIDDEN\n");
+            break;
+
         case SDL_EVENT_WINDOW_RESIZED:
             LOGI("SDL_EVENT_WINDOW_RESIZED\n");
             if (!m_app.isFullscreen)
@@ -361,237 +383,8 @@ void CRuntime::doInput()
                 LOGI("resized\n");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
-            break;
-
-        case SDL_EVENT_MOUSE_BUTTON_UP:
-            m_mouseButtons[event.button.button] = BUTTON_RELEASED;
-            pos = convertPosition(posF_t{event.button.x, event.button.y});
-            if (trace)
-                LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
-                     event.button.button, event.button.x, event.button.y, event.button.clicks);
-            if (event.button.button == SDL_BUTTON_LEFT && isMenuActive())
-            {
-                m_buttonState[BUTTON_A] = BUTTON_RELEASED;
-            }
-            else if (mode == CGame::MODE_PLAY)
-            {
-                // handleMouse(event.button.x, event.button.y);
-                handleMouse(pos.x, pos.y);
-            }
-            break;
-
-        case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            m_mouseButtons[event.button.button] = BUTTON_PRESSED;
-            // SDL_BUTTON_LEFT
-            // SDL_BUTTON_RIGHT
-            // SDL_BUTTON_MIDDLE
-            // if (trace)
-            //  LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
-            //     event.button.button, event.button.x, event.button.y, event.button.clicks);
-
-            pos = convertPosition(posF_t{event.button.x, event.button.y});
-            LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN from {%f, %f}\n",
-                 pos.x, pos.y, event.button.x, event.button.y);
-
-            if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
-            {
-                leaveClickStart();
-            }
-            else if (leftBtn &&
-                     //                    ((isMenuActive() && menuItemAt(event.button.x, event.button.y) != INVALID) ||
-                     ((isMenuActive() && menuItemAt(pos.x, pos.y) != INVALID) ||
-                      mode == CGame::MODE_LEVEL_SUMMARY))
-            {
-                m_buttonState[BUTTON_A] = BUTTON_PRESSED;
-            }
-            else if (mode == CGame::MODE_PLAY)
-            {
-                // handleMouse(event.button.x, event.button.y);
-                handleMouse(pos.x, pos.y);
-            }
-            break;
-
-        case SDL_EVENT_FINGER_DOWN:
-            if (trace)
-                LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
-                     event.tfinger.x, event.tfinger.y);
-            handleFingerDown(event.tfinger.x, event.tfinger.y);
-            break;
-
-        case SDL_EVENT_MOUSE_MOTION:
-            if (trace)
-                LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
-                     event.motion.x, event.motion.y);
-            pos = convertPosition(posF_t{event.motion.x, event.motion.y});
-            if (isMenuActive())
-            {
-                // followPointer(event.motion.x, event.motion.y);
-                followPointer(pos.x, pos.y);
-            }
-            else if (leftBtn && mode == CGame::MODE_PLAY)
-            {
-                // handleMouse(event.button.x, event.button.y);
-                handleMouse(pos.x, pos.y);
-            }
-            break;
-
-        case SDL_EVENT_MOUSE_WHEEL:
-            LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
-                 event.wheel.x, event.wheel.y);
-            if (static_cast<int>(event.wheel.y) == 1)
-            {
-                m_joyState[AIM_LEFT] = KEY_PRESSED;
-            }
-            else if (static_cast<int>(event.wheel.y) == -1)
-            {
-                m_joyState[AIM_RIGHT] = KEY_PRESSED;
-            }
-            break;
-
-        case SDL_EVENT_QUIT:
-#ifdef __EMSCRIPTEN__
-            emscripten_cancel_main_loop();
-            SDL_Delay(300);
-#else
-            if (m_app.isFullscreen)
-            {
-                toggleFullscreen();
-            }
-#endif
-            LOGI("SQL_QUIT\n");
-            m_isRunning = false;
-            break;
-
-        case SDL_EVENT_GAMEPAD_ADDED:
-            joystick_index = event.gdevice.which; //  .cdevice.which;
-            if (SDL_IsGamepad(joystick_index))
-            {
-                controller = SDL_OpenGamepad(joystick_index);
-                if (controller)
-                {
-                    m_gameControllers.push_back(controller);
-                    LOGI("Controller ADDED: %s (Index:%d)\n",
-                         SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
-                }
-                else
-                {
-                    LOGE("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
-                }
-            }
-            break;
-
-        case SDL_EVENT_GAMEPAD_REMOVED:
-            controller = SDL_GetGamepadFromID(event.gdevice.which);
-            if (controller)
-            {
-                std::string controllerName = SDL_GetGamepadNameForID(event.gdevice.which);
-                LOGI("Controller REMOVED: %s\n", controllerName.c_str());
-                for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
-                {
-                    if (*it == controller)
-                    {
-                        SDL_CloseGamepad(*it);
-                        m_gameControllers.erase(it);
-                        break;
-                    }
-                }
-            }
-            break;
-
-#ifndef __EMSCRIPTEN__
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            buttonState = BUTTON_PRESSED;
-            [[fallthrough]];
-        case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            controller = SDL_GetGamepadFromID(event.gdevice.which);
-            switch (event.gbutton.button)
-            {
-            case SDL_GAMEPAD_BUTTON_DPAD_UP:
-                m_joyState[AIM_UP] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-                m_joyState[AIM_DOWN] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-                m_joyState[AIM_LEFT] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-                m_joyState[AIM_RIGHT] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_SOUTH:
-                m_buttonState[BUTTON_A] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_EAST:
-                m_buttonState[BUTTON_B] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_WEST:
-                m_buttonState[BUTTON_X] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_NORTH:
-                m_buttonState[BUTTON_Y] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_START:
-                m_buttonState[BUTTON_START] = buttonState;
-                continue;
-            case SDL_GAMEPAD_BUTTON_BACK:
-                m_buttonState[BUTTON_BACK] = buttonState;
-                continue;
-            default:
-                LOGI("Controller: %s - Button %s: %s [%d]\n",
-                     SDL_GetGamepadName(controller),
-                     buttonState ? "DOWN" : "UP",
-                     SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
-                     event.button.button);
-            }
-            break;
-#endif
-        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            controller = SDL_GetGamepadFromID(event.gaxis.which);
-            if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ||
-                event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTX)
-            {
-                if (event.gaxis.value < -xAxisSensitivity)
-                {
-                    m_joyState[AIM_LEFT] = KEY_PRESSED;
-                }
-                else if (event.gaxis.value > xAxisSensitivity)
-                {
-                    m_joyState[AIM_RIGHT] = KEY_PRESSED;
-                }
-                else
-                {
-                    m_joyState[AIM_LEFT] = KEY_RELEASED;
-                    m_joyState[AIM_RIGHT] = KEY_RELEASED;
-                }
-            }
-            else if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY ||
-                     event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTY)
-            {
-                if (event.gaxis.value < -yAxisSensitivity)
-                {
-                    m_joyState[AIM_UP] = KEY_PRESSED;
-                }
-                else if (event.gaxis.value > yAxisSensitivity)
-                {
-                    m_joyState[AIM_DOWN] = KEY_PRESSED;
-                }
-                else
-                {
-                    m_joyState[AIM_UP] = KEY_RELEASED;
-                    m_joyState[AIM_DOWN] = KEY_RELEASED;
-                }
-            }
-            // Axis value ranges from -32768 to 32767
-            // Apply a deadzone to ignore small movements
-            else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
-            { // Example deadzone
-                LOGI("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
-                     SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
-                     event.gaxis.value);
-            }
-            break;
-        case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-            LOGI("SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN\n");
+            // updateScreenInfo();
+            onOrientationChange();
             break;
 
         case SDL_EVENT_WINDOW_MINIMIZED:
@@ -600,43 +393,313 @@ void CRuntime::doInput()
 
         case SDL_EVENT_WINDOW_RESTORED:
             LOGI("SDL_EVENT_WINDOW_RESTORED\n");
+            // updateScreenInfo();
             break;
 
         case SDL_EVENT_DISPLAY_ORIENTATION:
             LOGI("SDL_EVENT_DISPLAY_ORIENTATION\n");
+            // updateScreenInfo();
+            onOrientationChange();
             break;
 
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED");
+            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED\n");
+            break;
+
+        case SDL_EVENT_WINDOW_MOUSE_ENTER:
+            LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER\n");
+            break;
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE\n");
+            break;
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+            LOGI("SDL_EVENT_WINDOW_FOCUS_GAINED\n");
+            break;
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            LOGI("SDL_EVENT_WINDOW_FOCUS_LOST\n");
+            break;
+
+        case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+            LOGI("SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED\n");
+            break;
+
+        case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+            LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED\n");
+            SDL_Rect safe;
+            if (SDL_GetWindowSafeArea(window, &safe))
+            {
+                SDL_Log("Safe area changed: x=%d y=%d w=%d h=%d",
+                        safe.x, safe.y, safe.w, safe.h);
+            }
+            break;
+
+        case SDL_EVENT_CLIPBOARD_UPDATE:
+            LOGI("SDL_EVENT_CLIPBOARD_UPDATE\n");
+            break;
+
+        case SDL_EVENT_AUDIO_DEVICE_ADDED:
+            LOGI("SDL_EVENT_AUDIO_DEVICE_ADDED\n");
             break;
 
         default:
-            break;
+            LOGI("UNHANDLED EVENT: %d\n", event.type);
         }
     }
-
 #ifdef __EMSCRIPTEN__
-    int buttonMask = pollGamepadButtons();
-    if (buttonMask && (m_game->mode() == CGame::MODE_CLICKSTART))
-    {
-        leaveClickStart();
-    }
-    else if (buttonMask)
-    {
-        // printf("buttons: %.4x\n", buttonMask);
-    }
-    for (int i = 0; i < Button_Count; ++i)
-    {
-        if (buttonMask & (1 << i))
-        {
-            m_buttonState[i] = BUTTON_PRESSED;
-        }
-        else
-        {
-            m_buttonState[i] = BUTTON_RELEASED;
-        }
-    }
+    readGamePadJs();
 #endif
+}
+
+void CRuntime::onMouseEvent(const SDL_Event &event)
+{
+    const int mode = m_game->mode();
+#if defined(__ANDROID__)
+    bool isAndroid = true;
+#else
+    bool isAndroid = false;
+#endif
+    bool trace = isTrue(m_config["trace"]);
+    if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
+    {
+        m_mouseButtons[event.button.button] = BUTTON_RELEASED;
+        pos_t pos = convertPosition(posF_t{event.button.x, event.button.y});
+        if (trace)
+            LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
+                 event.button.button, event.button.x, event.button.y, event.button.clicks);
+        if (event.button.button == SDL_BUTTON_LEFT && isMenuActive())
+        {
+            m_buttonState[BUTTON_A] = BUTTON_RELEASED;
+        }
+        else if (mode == CGame::MODE_PLAY)
+        {
+            handleMouse(pos.x, pos.y);
+        }
+    }
+    else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+    {
+        m_mouseButtons[event.button.button] = BUTTON_PRESSED;
+        // if (trace)
+        //  LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
+        //     event.button.button, event.button.x, event.button.y, event.button.clicks);
+        pos_t pos = convertPosition(posF_t{event.button.x, event.button.y});
+        LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
+             pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
+
+        if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
+        {
+            leaveClickStart();
+        }
+        else if (event.button.button == SDL_BUTTON_LEFT &&
+                 ((isMenuActive() && menuItemAt(pos.x, pos.y) != INVALID) ||
+                  mode == CGame::MODE_LEVEL_SUMMARY))
+        {
+            m_buttonState[BUTTON_A] = BUTTON_PRESSED;
+        }
+        else if (mode == CGame::MODE_PLAY)
+        {
+            handleMouse(pos.x, pos.y);
+        }
+    }
+    else if (event.type == SDL_EVENT_FINGER_DOWN)
+    {
+        if (trace)
+            LOGI("SDL_EVENT_FINGER_DOWN x=%f y=%f\n",
+                 event.tfinger.x, event.tfinger.y);
+        handleFingerDown(event.tfinger.x, event.tfinger.y);
+    }
+    else if (event.type == SDL_EVENT_FINGER_UP)
+    {
+        if (trace)
+            LOGI("SDL_EVENT_FINGER_UP x=%f y=%f\n",
+                 event.tfinger.x, event.tfinger.y);
+    }
+    else if (event.type == SDL_EVENT_FINGER_MOTION)
+    {
+        LOGI("SDL_EVENT_FINGER_MOTION\n");
+    }
+    else if (event.type == SDL_EVENT_MOUSE_MOTION)
+    {
+        if (trace)
+            LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
+                 event.motion.x, event.motion.y);
+        pos_t pos = convertPosition(posF_t{event.motion.x, event.motion.y});
+        if (isMenuActive())
+        {
+            followPointer(pos.x, pos.y);
+        }
+        else if (event.button.button == SDL_BUTTON_LEFT && mode == CGame::MODE_PLAY)
+        {
+            handleMouse(pos.x, pos.y);
+        }
+    }
+    else if (event.type == SDL_EVENT_MOUSE_WHEEL)
+    {
+        LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
+             event.wheel.x, event.wheel.y);
+        if (static_cast<int>(event.wheel.y) == 1)
+        {
+            m_joyState[AIM_LEFT] = KEY_PRESSED;
+        }
+        else if (static_cast<int>(event.wheel.y) == -1)
+        {
+            m_joyState[AIM_RIGHT] = KEY_PRESSED;
+        }
+    }
+    else
+    {
+        LOGW("unhandled mouseEvent: %d\n", event.type);
+    }
+}
+
+void CRuntime::onGamePadEvent(const SDL_Event &event)
+{
+    int xAxisSensitivity = 8000 / 10 * m_xAxisSensitivity;
+    int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
+    if (event.type == SDL_EVENT_JOYSTICK_ADDED)
+    {
+        LOGI("SDL_EVENT_JOYSTICK_ADDED\n");
+    }
+    else if (event.type == SDL_EVENT_GAMEPAD_ADDED)
+    {
+        int joystick_index = event.gdevice.which; //  .cdevice.which;
+        if (SDL_IsGamepad(joystick_index))
+        {
+            SDL_Gamepad *controller = SDL_OpenGamepad(joystick_index);
+            if (controller)
+            {
+                m_gameControllers.push_back(controller);
+                LOGI("Controller ADDED: %s (Index:%d)\n",
+                     SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
+            }
+            else
+            {
+                LOGE("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
+            }
+        }
+    }
+    else if (event.type == SDL_EVENT_GAMEPAD_REMOVED)
+    {
+        SDL_Gamepad *controller = SDL_GetGamepadFromID(event.gdevice.which);
+        if (controller)
+        {
+            std::string controllerName = SDL_GetGamepadNameForID(event.gdevice.which);
+            LOGI("Controller REMOVED: %s\n", controllerName.c_str());
+            for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
+            {
+                if (*it == controller)
+                {
+                    SDL_CloseGamepad(*it);
+                    m_gameControllers.erase(it);
+                    break;
+                }
+            }
+        }
+    }
+    else if (RANGE(event.type, SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_EVENT_GAMEPAD_BUTTON_UP))
+    {
+#ifndef __EMSCRIPTEN__
+        uint8_t buttonState = BUTTON_RELEASED;
+        if (event.type == SDL_EVENT_GAMEPAD_BUTTON_DOWN)
+            buttonState = BUTTON_PRESSED;
+
+        SDL_Gamepad *controller = SDL_GetGamepadFromID(event.gdevice.which);
+        switch (event.gbutton.button)
+        {
+        case SDL_GAMEPAD_BUTTON_DPAD_UP:
+            m_joyState[AIM_UP] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+            m_joyState[AIM_DOWN] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+            m_joyState[AIM_LEFT] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+            m_joyState[AIM_RIGHT] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_SOUTH:
+            m_buttonState[BUTTON_A] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_EAST:
+            m_buttonState[BUTTON_B] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_WEST:
+            m_buttonState[BUTTON_X] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_NORTH:
+            m_buttonState[BUTTON_Y] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_START:
+            m_buttonState[BUTTON_START] = buttonState;
+            break;
+        case SDL_GAMEPAD_BUTTON_BACK:
+            m_buttonState[BUTTON_BACK] = buttonState;
+            break;
+        default:
+            LOGI("Controller: %s - Button %s: %s [%d]\n",
+                 SDL_GetGamepadName(controller),
+                 buttonState ? "DOWN" : "UP",
+                 SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
+                 event.button.button);
+        }
+#endif
+    }
+    else if (event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION)
+    {
+
+        // case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+        SDL_Gamepad *controller = SDL_GetGamepadFromID(event.gaxis.which);
+        if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ||
+            event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTX)
+        {
+            if (event.gaxis.value < -xAxisSensitivity)
+            {
+                m_joyState[AIM_LEFT] = KEY_PRESSED;
+            }
+            else if (event.gaxis.value > xAxisSensitivity)
+            {
+                m_joyState[AIM_RIGHT] = KEY_PRESSED;
+            }
+            else
+            {
+                m_joyState[AIM_LEFT] = KEY_RELEASED;
+                m_joyState[AIM_RIGHT] = KEY_RELEASED;
+            }
+        }
+        else if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY ||
+                 event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTY)
+        {
+            if (event.gaxis.value < -yAxisSensitivity)
+            {
+                m_joyState[AIM_UP] = KEY_PRESSED;
+            }
+            else if (event.gaxis.value > yAxisSensitivity)
+            {
+                m_joyState[AIM_DOWN] = KEY_PRESSED;
+            }
+            else
+            {
+                m_joyState[AIM_UP] = KEY_RELEASED;
+                m_joyState[AIM_DOWN] = KEY_RELEASED;
+            }
+        }
+        // Axis value ranges from -32768 to 32767
+        // Apply a deadzone to ignore small movements
+        else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
+        { // Example deadzone
+            LOGI("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
+                 SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
+                 event.gaxis.value);
+        }
+    }
+    else if (event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN)
+    {
+        LOGI("SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN\n");
+    }
+    else
+    {
+        LOGW("unhandled gamepad event: %d\n", event.type);
+    }
 }
 
 void CRuntime::handleFingerDown(float x, float y)
@@ -2401,10 +2464,21 @@ Rez CRuntime::getScreenSize()
     return Rez{.w = mode->w, .h = mode->h};
 }
 
-pos_t CRuntime::convertPosition(posF_t pos)
+Rez CRuntime::getWindowSize()
+{
+    int w;
+    int h;
+    if (!SDL_GetWindowSizeInPixels(m_app.window, &w, &h))
+    {
+        LOGE("SDL_GetWindowSizeInPixels failed ! SDL_Error: %s\n", SDL_GetError());
+    }
+    return Rez{.w = w, .h = h};
+}
+
+CRuntime::pos_t CRuntime::convertPosition(posF_t pos)
 {
 #if defined(__ANDROID__)
-    Rez rez = getScreenSize();
+    Rez rez = getWindowSize();
     float w = _WIDTH * 2;
     float h = _HEIGHT * 2;
     return {.x = static_cast<int>(w * pos.x / rez.w), .y = static_cast<int>(h * pos.y / rez.h)};
@@ -2412,3 +2486,73 @@ pos_t CRuntime::convertPosition(posF_t pos)
     return {.x = static_cast<int>(pos.x), .y = static_cast<int>(pos.y)};
 #endif
 }
+
+void CRuntime::onOrientationChange()
+{
+    Rez rez = getScreenSize();
+    bool isLandscape = rez.w > rez.h;
+    LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
+}
+
+void CRuntime::onSDLQuit()
+{
+#ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();
+    SDL_Delay(300);
+#else
+    if (m_app.isFullscreen)
+    {
+        toggleFullscreen();
+    }
+#endif
+    LOGI("SQL_QUIT\n");
+    m_isRunning = false;
+}
+
+#ifdef __EMSCRIPTEN__
+EM_JS(int, pollGamepadButtons, (), {
+    const gp = navigator.getGamepads()[0];
+    if (!gp)
+        return;
+    let i = 0;
+    let buttonMask = 0;
+    for (const button of gp.buttons)
+    {
+        if (button.pressed)
+        {
+            buttonMask |= (1 << i);
+        }
+        ++i;
+        if (i == 31)
+            break;
+    }
+    return buttonMask;
+});
+
+void CRuntime::readGamePadJs()
+{
+    int buttonMask = pollGamepadButtons();
+    if (buttonMask && (m_game->mode() == CGame::MODE_CLICKSTART))
+    {
+        leaveClickStart();
+    }
+    else if (buttonMask)
+    {
+        // printf("buttons: %.4x\n", buttonMask);
+    }
+    for (int i = 0; i < Button_Count; ++i)
+    {
+        if (buttonMask & (1 << i))
+        {
+            m_buttonState[i] = BUTTON_PRESSED;
+        }
+        else
+        {
+            m_buttonState[i] = BUTTON_RELEASED;
+        }
+    }
+}
+#endif
+
+// SDL_SetRenderLogicalPresentation(m_app.renderer, WIDTH * 2, HEIGHT * 2, SDL_LOGICAL_PRESENTATION_DISABLED);
+// SDL_SetRenderLogicalPresentation(m_app.renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);

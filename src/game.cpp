@@ -51,7 +51,7 @@ CGame *g_game = nullptr;
  */
 CGame::CGame()
 {
-    printf("staring up version: 0x%.8x\n", VERSION);
+    printf("starting up version: 0x%.8x\n", VERSION);
     m_health = 0;
     m_level = 0;
     m_lives = DEFAULT_LIVES;

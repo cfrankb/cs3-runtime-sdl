@@ -36,18 +36,6 @@ struct Rez
     int h;
 };
 
-struct posF_t
-{
-    float x;
-    float y;
-};
-
-struct pos_t
-{
-    int x;
-    int y;
-};
-
 class CRuntime : public CGameMixin
 {
 public:
@@ -76,7 +64,8 @@ public:
     bool checkMusicFiles();
     void loadColorMaps(const int userID);
     bool createSDLWindow();
-    static Rez getScreenSize();
+    Rez getScreenSize();
+    Rez getWindowSize();
 
 private:
     typedef struct
@@ -97,6 +86,18 @@ private:
         int ppBonuses;
         int ppSecrets;
         int timeTaken;
+    };
+
+    struct posF_t
+    {
+        float x;
+        float y;
+    };
+
+    struct pos_t
+    {
+        int x;
+        int y;
     };
 
     static void cleanup();
@@ -242,5 +243,12 @@ private:
     void clearMouseButtons();
     void handleMouse(int x, int y);
     void handleFingerDown(float x, float y);
+    void onOrientationChange();
     pos_t convertPosition(posF_t sf);
+    void onGamePadEvent(const SDL_Event &event);
+    void onMouseEvent(const SDL_Event &event);
+    void onSDLQuit();
+#ifdef __EMSCRIPTEN__
+    void readGamePadJs();
+#endif
 };
