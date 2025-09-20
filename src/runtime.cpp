@@ -39,6 +39,8 @@
 #include "logger.h"
 #include "attr.h"
 
+#define _f(x) static_cast<float>(x)
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -156,10 +158,15 @@ void CRuntime::paint()
     };
 
     SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
+#if defined(__ANDROID__)
+    Rect safeArea = getSafeAreaWindow();
+    SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
+#else
     int width;
     int height;
     SDL_GetWindowSize(m_app.window, &width, &height);
     SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
+#endif
     SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }
@@ -227,6 +234,11 @@ bool CRuntime::createSDLWindow()
         SDL_DisplayOrientation currentOrientation = SDL_GetCurrentDisplayOrientation(displayIndex);
         const Rez rezScreen = getScreenSize();
         LOGI("SCREENSIZE: %d x %d; Orientation: %d\n", rezScreen.w, rezScreen.h, currentOrientation);
+
+        Rect safeAreaWmd = getSafeAreaWindow();
+        LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d\n", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
+        Rect safeAreaTexture = windowRect2textureRect(safeAreaWmd);
+        LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d\n", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
 
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
@@ -462,7 +474,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
     {
         m_mouseButtons[event.button.button] = BUTTON_RELEASED;
-        pos_t pos = convertPosition(posF_t{event.button.x, event.button.y});
+        pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (trace)
             LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
                  event.button.button, event.button.x, event.button.y, event.button.clicks);
@@ -481,7 +493,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         // if (trace)
         //  LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
         //     event.button.button, event.button.x, event.button.y, event.button.clicks);
-        pos_t pos = convertPosition(posF_t{event.button.x, event.button.y});
+        pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
              pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
 
@@ -522,7 +534,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         if (trace)
             LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
                  event.motion.x, event.motion.y);
-        pos_t pos = convertPosition(posF_t{event.motion.x, event.motion.y});
+        pos_t pos = windowPos2texturePos(posF_t{event.motion.x, event.motion.y});
         if (isMenuActive())
         {
             followPointer(pos.x, pos.y);
@@ -2391,11 +2403,11 @@ int CRuntime::menuItemAt(int x, int y)
         return -1;
 
     CMenu &menu = *m_lastMenu;
-    int baseY = m_lastMenuBaseY * PIXEL_SCALE;
+    int baseY = m_lastMenuBaseY;
     int startY = baseY;
     for (size_t i = 0; i < menu.size(); ++i)
     {
-        int h = menu.scaleY() * FONT_SIZE * PIXEL_SCALE;
+        int h = menu.scaleY() * FONT_SIZE;
         if (RANGE(y, startY, startY + h))
         {
             bool trace = isTrue(m_config["trace"]);
@@ -2403,7 +2415,7 @@ int CRuntime::menuItemAt(int x, int y)
                 LOGI("menuItem at: %d %d ==> %ld\n", x, y, i);
             return i;
         }
-        startY += h + menu.paddingY() * PIXEL_SCALE;
+        startY += h + menu.paddingY();
     }
     return -1;
 }
@@ -2460,7 +2472,6 @@ Rez CRuntime::getScreenSize()
 {
     SDL_DisplayID display = SDL_GetPrimaryDisplay();
     const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
-    // LOGI("SDL_GetDesktopDisplayMode %d x %d\n", mode->w, mode->h);
     return Rez{.w = mode->w, .h = mode->h};
 }
 
@@ -2475,15 +2486,17 @@ Rez CRuntime::getWindowSize()
     return Rez{.w = w, .h = h};
 }
 
-CRuntime::pos_t CRuntime::convertPosition(posF_t pos)
+CRuntime::pos_t CRuntime::windowPos2texturePos(posF_t pos)
 {
 #if defined(__ANDROID__)
-    Rez rez = getWindowSize();
-    float w = _WIDTH * 2;
-    float h = _HEIGHT * 2;
-    return {.x = static_cast<int>(w * pos.x / rez.w), .y = static_cast<int>(h * pos.y / rez.h)};
+    Rect safeRect = getSafeAreaWindow();
+    pos.x -= safeRect.x;
+    pos.y -= safeRect.y;
+    float w = _WIDTH;
+    float h = _HEIGHT;
+    return {.x = static_cast<int>(w * pos.x / safeRect.width), .y = static_cast<int>(h * pos.y / safeRect.height)};
 #else
-    return {.x = static_cast<int>(pos.x), .y = static_cast<int>(pos.y)};
+    return {.x = static_cast<int>(pos.x) / PIXEL_SCALE, .y = static_cast<int>(pos.y) / PIXEL_SCALE};
 #endif
 }
 
@@ -2492,6 +2505,28 @@ void CRuntime::onOrientationChange()
     Rez rez = getScreenSize();
     bool isLandscape = rez.w > rez.h;
     LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
+}
+
+CRuntime::Rect CRuntime::getSafeAreaWindow()
+{
+    SDL_Rect safe;
+    if (!SDL_GetWindowSafeArea(m_app.window, &safe))
+    {
+        LOGE("SDL_GetWindowSafeArea() failed; error: %s\n", SDL_GetError());
+    }
+    return Rect{.x = safe.x, .y = safe.y, .width = safe.w, .height = safe.h};
+}
+
+CRuntime::Rect CRuntime::windowRect2textureRect(const Rect &wRect)
+{
+    Rez rez = getWindowSize();
+    float w = (float)_WIDTH * 2;
+    float h = (float)_HEIGHT * 2;
+    auto _c = [rez, w, h](auto u)
+    {
+        return static_cast<int>(w * (float)u / rez.w);
+    };
+    return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height= _c(wRect.height)};
 }
 
 void CRuntime::onSDLQuit()

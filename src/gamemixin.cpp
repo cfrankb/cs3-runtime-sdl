@@ -2164,8 +2164,8 @@ int CGameMixin::whatButtons(int x, int y)
     int baseY = _HEIGHT - m_ui.height() - MARGIN;
     for (const auto &btn : m_ui.buttons())
     {
-        if (RANGE(x / 2, baseX + btn.x, baseX + btn.x + btn.width) &&
-            RANGE(y / 2, baseY + btn.y, baseY + btn.y + btn.height))
+        if (RANGE(x, baseX + btn.x, baseX + btn.x + btn.width) &&
+            RANGE(y, baseY + btn.y, baseY + btn.y + btn.height))
         {
             return btn.id;
         }

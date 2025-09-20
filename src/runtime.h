@@ -66,6 +66,8 @@ public:
     bool createSDLWindow();
     Rez getScreenSize();
     Rez getWindowSize();
+    Rect getSafeAreaWindow();
+    Rect windowRect2textureRect(const Rect &wRect);
 
 private:
     typedef struct
@@ -244,7 +246,7 @@ private:
     void handleMouse(int x, int y);
     void handleFingerDown(float x, float y);
     void onOrientationChange();
-    pos_t convertPosition(posF_t sf);
+    pos_t windowPos2texturePos(posF_t sf);
     void onGamePadEvent(const SDL_Event &event);
     void onMouseEvent(const SDL_Event &event);
     void onSDLQuit();
