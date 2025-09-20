@@ -2,12 +2,12 @@ name: android
 
 on:
   push:
-    branches: 
+    branches:
       - master
-      - develop 
-    tags: [ 'v*' ]
+      - develop
+    tags: ["v*"]
   pull_request:
-    branches: [ master, develop ]
+    branches: [master, develop]
 
 jobs:
   build-android:
@@ -16,8 +16,8 @@ jobs:
     env:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_NDK_VERSION: 26.1.10909125
-      JAVA_VERSION: '17'
-      ANDROID_API_LEVEL: '34'   # target; minSdk remains in Gradle
+      JAVA_VERSION: "17"
+      ANDROID_API_LEVEL: "34" # target; minSdk remains in Gradle
       GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC"
 
     steps:
@@ -68,7 +68,7 @@ jobs:
         run: ./gradlew assembleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
       - name: Sign Release APK (optional)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != 'none' }}
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
