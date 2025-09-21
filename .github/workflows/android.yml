@@ -17,7 +17,7 @@ jobs:
       ANDROID_HOME: ${{ github.workspace }}/android-sdk
       #ANDROID_NDK_VERSION: 26.1.10909125
       ANDROID_NDK_VERSION: 29.0.14033849
-      JAVA_VERSION: "21"
+      JAVA_VERSION: "23"
       ANDROID_API_LEVEL: "34"
       GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC"
 
@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0   # fetch full history including tags
 
       - name: Patch source
         run: |
@@ -92,7 +93,7 @@ jobs:
       #  working-directory: android-project
       #  run: ./gradlew assembleDebug -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
-      - name: Build Release APK (unsigned)
+      - name: Build Release APK / AAB (unsigned)
         working-directory: android-project
         run: ./gradlew assembleRelease  bundleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
@@ -126,3 +127,4 @@ jobs:
           path: |
             android-project/app/build/outputs/apk/**/app-*.apk
             android-project/app/build/outputs/bundle/**/app-*.aab
+          retention-days: 7
