@@ -447,7 +447,7 @@ bool CGame::findMonsters()
         m_map.setAttr(pos.x, pos.y, 0);
     }
 
-    printf("%lu monsters found.\n", m_monsters.size());
+    printf("%zu monsters found.\n", m_monsters.size());
     return true;
 }
 

@@ -88,19 +88,29 @@ jobs:
         working-directory: android-project
         run: ./gradlew clean
 
-
-      - name: Build Debug APK
-        working-directory: android-project
-        run: ./gradlew assembleDebug -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
+      #- name: Build Debug APK
+      #  working-directory: android-project
+      #  run: ./gradlew assembleDebug -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
       - name: Build Release APK (unsigned)
         working-directory: android-project
         run: ./gradlew assembleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
+
+      #- name: Build Release bundle(unsigned)
+      #  working-directory: android-project
+      #  run: ./gradlew bundleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Show build outputs
+        working-directory: android-project
+        run: |
+          ls -l app/build/outputs/apk
+          ls -l app/build/outputs/apk/release
+          #ls -l app/build/outputs/bundle
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
           path: |
-            android/app/build/outputs/apk/**/app-*.apk
-            android/app/build/outputs/bundle/**/app-*.aab
+            android-project/app/build/outputs/apk/**/app-*.apk
+            android-project/app/build/outputs/bundle/**/app-*.aab

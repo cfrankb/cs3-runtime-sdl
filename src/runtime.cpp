@@ -2473,7 +2473,7 @@ int CRuntime::menuItemAt(int x, int y)
         {
             bool trace = isTrue(m_config["trace"]);
             if (trace)
-                LOGI("menuItem at: %d %d ==> %ld\n", x, y, i);
+                LOGI("menuItem at: %d %d ==> %zu\n", x, y, i);
             return i;
         }
         startY += h + menu.paddingY();

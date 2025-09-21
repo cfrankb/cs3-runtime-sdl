@@ -606,7 +606,7 @@ Pos CMap::toPos(const uint16_t key)
 void CMap::debug()
 {
     printf("len: %d hei:%d\n", m_len, m_hei);
-    printf("attrCount:%ld\n", m_attrs.size());
+    printf("attrCount:%zu\n", m_attrs.size());
     for (auto &it : m_attrs)
     {
         uint16_t key = it.first;
