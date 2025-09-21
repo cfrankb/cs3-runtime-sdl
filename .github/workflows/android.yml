@@ -3,11 +3,10 @@ name: android
 on:
   push:
     branches:
-      - master
       - develop
     tags: ["v*"]
   pull_request:
-    branches: [master, develop]
+    branches: [main]
 
 jobs:
   build-android:
@@ -17,14 +16,11 @@ jobs:
       ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
       ANDROID_NDK_VERSION: 26.1.10909125
       JAVA_VERSION: "17"
-      ANDROID_API_LEVEL: "34" # target; minSdk remains in Gradle
+      ANDROID_API_LEVEL: "34"
       GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC"
-      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      KEYSTORE_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
-      - name: Checkout
+      - name: Checkout repo and submodules
         uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -62,33 +58,19 @@ jobs:
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Print SDK path
+        working-directory: android-project
+        run: ./gradlew -version
+
       - name: Build Debug APK
-        working-directory: android
+        working-directory: android-project
         run: ./gradlew assembleDebug -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
       - name: Build Release APK (unsigned)
-        working-directory: android
+        working-directory: android-project
         run: ./gradlew assembleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
-      - name: Sign Release APK (optional)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != 'none' }}
-        env:
-          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEYSTORE_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
-          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
-        run: |
-          echo "$KEYSTORE_B64" | base64 -d > "$KEYSTORE_PATH"
-          cd android
-          ./gradlew \
-            -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }} \
-            -PstoreFile="$KEYSTORE_PATH" \
-            -PstorePassword="$KEYSTORE_PASS" \
-            -PkeyAlias="$KEYSTORE_ALIAS" \
-            -PkeyPassword="$KEYSTORE_PASS" \
-            signRelease
-
-      - name: Upload artifacts
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-apks
