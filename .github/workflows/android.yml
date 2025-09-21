@@ -19,6 +19,9 @@ jobs:
       JAVA_VERSION: "17"
       ANDROID_API_LEVEL: "34" # target; minSdk remains in Gradle
       GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4g -XX:+UseParallelGC"
+      KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      KEYSTORE_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
       - name: Checkout
