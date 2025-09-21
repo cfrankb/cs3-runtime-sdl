@@ -3,7 +3,7 @@ name: android
 on:
   push:
     branches:
-      - develop
+      #- develop
       - master
     tags: ["v*"]
   pull_request:
@@ -28,6 +28,11 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0 # fetch full history including tags
+
+      - name: Update build information
+        run: |
+          bin/setbuild.sh
+          cat src/build.h
 
       - name: Patch source
         run: |

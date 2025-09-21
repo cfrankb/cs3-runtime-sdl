@@ -36,6 +36,7 @@
 #include "strhelper.h"
 #include "assetman.h"
 #include "logger.h"
+#include "build.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -175,7 +176,7 @@ int main(int argc, char *args[])
     }
 #endif
 
-    LOGI("Starting Game\n");
+    LOGI("Starting Game: Build [%s]\n", BUILD_HASH);
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
     CRuntime runtime;

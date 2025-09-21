@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-    #   - develop
+      - develop
     tags:
       - "v*"
   pull_request:
@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0 # fetch full history including tags
+
+      - name: Update build information
+        run: |
+          bin/setbuild.sh
+          cat src/build.h
 
       - name: Set up Emscripten SDK
         uses: mymindstorm/setup-emsdk@v12
