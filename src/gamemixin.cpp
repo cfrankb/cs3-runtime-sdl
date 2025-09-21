@@ -860,7 +860,7 @@ void CGameMixin::mainLoop()
             {
                 m_scoresLoaded = loadScores();
             }
-            m_scoreRank = rankScore();
+            m_scoreRank = rankUserScore();
             m_recordScore = m_scoreRank != INVALID;
             m_countdown = HISCORE_DELAY;
             game.setMode(CGame::MODE_HISCORES);
@@ -1179,7 +1179,7 @@ bool CGameMixin::isWithin(int val, int min, int max)
     return val >= min && val <= max;
 }
 
-int CGameMixin::rankScore()
+int CGameMixin::rankUserScore()
 {
     int score = m_game->score();
     if (score <= m_hiscores[MAX_SCORES - 1].score)

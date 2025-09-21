@@ -67,34 +67,6 @@ uint32_t sleepDelay = SLEEP;
 #include <emscripten.h>
 #include <emscripten/html5.h>
 CRuntime *g_runtime = nullptr;
-extern "C"
-{
-    int savegame(int x)
-    {
-        if (x == 0)
-        {
-            g_runtime->load();
-        }
-        else
-        {
-            g_runtime->save();
-        }
-        return 0;
-    }
-
-    int mute(int x)
-    {
-        if (x == 0)
-        {
-            g_runtime->stopMusic();
-        }
-        else
-        {
-            g_runtime->startMusic();
-        }
-        return 0;
-    }
-}
 
 EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEvent *e, void *userData)
 {
@@ -201,8 +173,6 @@ int main(int argc, char *args[])
     {
         list.push_back(args[i]);
     }
-    LOGI("CMD: %s\n", args[0]);
-    LOGI("ARGS: %d\n", argc);
 #endif
 
     LOGI("Starting Game\n");
@@ -274,19 +244,11 @@ int main(int argc, char *args[])
     if (!runtime.initSDL())
         return EXIT_FAILURE;
 
-#if false // defined(__ANDROID__)
-    int width = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
-    int height = std::max(ANDROID_WIDTH, ANDROID_HEIGHT);
-    runtime.setWidth(width / 2);
-    runtime.setHeight(height / 2);
-#else
     runtime.setWidth(params.width);
     runtime.setHeight(params.height);
-#endif
-
     if (!runtime.createSDLWindow())
         return EXIT_FAILURE;
-
+    runtime.debugSDL();
     runtime.initOptions();
     runtime.preRun();
     runtime.paint();

@@ -1,0 +1,6 @@
+// Load game controller mappings from a file (optional, but good practice)
+// SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
+// You can download this file from https://github.com/libsdl-org/sdl/blob/main/src/joystick/SDL_gamecontroller.c
+// or from https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
+// and place it next to your executable.
+// SDL_GameControllerAddMappingsFromFile("data/gamecontrollerdb.txt");

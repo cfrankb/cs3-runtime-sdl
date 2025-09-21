@@ -191,7 +191,7 @@ def main():
                 -sINITIAL_MEMORY=64MB \\
                 -sASYNCIFY \\
                 -sEXPORTED_RUNTIME_METHODS=ccall,cwrap \\
-                -sEXPORTED_FUNCTIONS=_mute,_savegame,_main,_malloc,_free
+                -sEXPORTED_FUNCTIONS=_malloc,_free
             endef"""
             ),
             "BPATH=build",

@@ -356,7 +356,7 @@ protected:
     void restartLevel();
     void restartGame();
     void startCountdown(int f = 1);
-    int rankScore();
+    int rankUserScore();
     void drawScores(CFrame &bitmap);
     bool inputPlayerName();
     bool handleInputString(char *inputDest, const size_t limit);

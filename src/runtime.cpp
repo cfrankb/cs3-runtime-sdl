@@ -159,7 +159,7 @@ void CRuntime::paint()
         drawSkillMenu(bitmap);
         break;
     case CGame::MODE_NEW_INPUTNAME:
-        drawVirtualKeyboard(bitmap);
+        drawVirtualKeyboard(bitmap, "ENTER YOUR NAME", m_input);
     };
 
     SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
@@ -199,9 +199,10 @@ bool CRuntime::createSDLWindow()
     SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                   SDL_WINDOW_INPUT_FOCUS |
                                   SDL_WINDOW_MOUSE_CAPTURE;
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) || defined(EMSCRIPTEN)
     windowFlags |= SDL_WINDOW_BORDERLESS;
 #endif
+    atexit(cleanup);
     const int width = PIXEL_SCALE * WIDTH;
     const int height = PIXEL_SCALE * HEIGHT;
     m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
@@ -212,7 +213,6 @@ bool CRuntime::createSDLWindow()
     }
     else
     {
-        atexit(cleanup);
         LOGI("SDL Window created: %d x %d\n", width, height);
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
@@ -221,31 +221,6 @@ bool CRuntime::createSDLWindow()
             return false;
         }
         LOGI("SDL Rendered created\n");
-        int w = 0;
-        int h = 0;
-        if (!SDL_GetCurrentRenderOutputSize(m_app.renderer, &w, &h))
-        {
-            LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
-        }
-        LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
-
-        int pixelW, pixelH;
-        if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
-        {
-            LOGE("SDL_GetWindowSizeInPixels failed: %s\n", SDL_GetError());
-            return false;
-        }
-        LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
-
-        const int displayIndex = SDL_GetDisplayForWindow(m_app.window);
-        SDL_DisplayOrientation currentOrientation = SDL_GetCurrentDisplayOrientation(displayIndex);
-        const Rez rezScreen = getScreenSize();
-        LOGI("SCREENSIZE: %d x %d; Orientation: %d\n", rezScreen.w, rezScreen.h, currentOrientation);
-
-        Rect safeAreaWmd = getSafeAreaWindow();
-        LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d\n", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
-        Rect safeAreaTexture = windowRect2textureRect(safeAreaWmd);
-        LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d\n", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
 
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
@@ -266,22 +241,9 @@ bool CRuntime::createSDLWindow()
         }
     }
 
-    const std::string iconFile = CAssetMan::getPrefix() + m_config["icon"];
-    CFrameSet frames;
-    CFileMem mem;
-    data_t data{nullptr, 0};
-    if (CAssetMan::read(iconFile, data))
+    if (!loadAppIcon())
     {
-        mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
-        if (frames.extract(mem))
-        {
-            CFrame &frame = *frames[0];
-            SDL_Surface *surface = SDL_CreateSurfaceFrom(
-                frame.len(), frame.hei(), SDL_PIXELFORMAT_RGBA32, frame.getRGB(), frame.len() * sizeof(uint32_t));
-            SDL_SetWindowIcon(m_app.window, surface);
-            SDL_DestroySurface(surface);
-        }
-        CAssetMan::free(data);
+        LOGE("Failed to load appIcon\n");
     }
 
 #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
@@ -289,6 +251,34 @@ bool CRuntime::createSDLWindow()
 #endif
     m_resolution = findResolutionIndex();
     return true;
+}
+
+void CRuntime::debugSDL()
+{
+    int w = 0;
+    int h = 0;
+    if (!SDL_GetCurrentRenderOutputSize(m_app.renderer, &w, &h))
+    {
+        LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
+    }
+    LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
+
+    const int displayIndex = SDL_GetDisplayForWindow(m_app.window);
+    SDL_DisplayOrientation currentOrientation = SDL_GetCurrentDisplayOrientation(displayIndex);
+    const Rez rezScreen = getScreenSize();
+    LOGI("SCREENSIZE: %d x %d; Orientation: %d\n", rezScreen.w, rezScreen.h, currentOrientation);
+
+    Rect safeAreaWmd = getSafeAreaWindow();
+    LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d\n", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
+    Rect safeAreaTexture = windowRect2textureRect(safeAreaWmd);
+    LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d\n", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
+
+    int pixelW = 0, pixelH = 0;
+    if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
+    {
+        LOGE("SDL_GetWindowSizeInPixels failed: %s\n", SDL_GetError());
+    }
+    LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
 }
 
 void CRuntime::cleanup()
@@ -499,16 +489,14 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
     {
         m_mouseButtons[event.button.button] = BUTTON_PRESSED;
-        // if (trace)
-        //  LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
-        //     event.button.button, event.button.x, event.button.y, event.button.clicks);
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
-        LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
-             pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
+        if (trace)
+            LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
+                 pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
 
         if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
         {
-            leaveClickStart();
+            enterGame();
         }
         else if (event.button.button == SDL_BUTTON_LEFT &&
                  ((isMenuActive() && menuItemAt(pos.x, pos.y) != INVALID) ||
@@ -675,7 +663,6 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION)
     {
-
         // case SDL_EVENT_GAMEPAD_AXIS_MOTION:
         SDL_Gamepad *controller = SDL_GetGamepadFromID(event.gaxis.which);
         if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ||
@@ -944,10 +931,7 @@ void CRuntime::preRun()
     }
     else
     {
-        initMusic();
-        initSounds();
-        initControllers();
-        setupTitleScreen();
+        enterGame();
     }
 }
 
@@ -1181,7 +1165,7 @@ void CRuntime::openMusic(const std::string &filename)
 }
 
 /**
- * @brief Extract configuration from filename
+ * @brief parse configuration from buffer
  *
  * @param filename
  * @return true
@@ -1246,7 +1230,6 @@ bool CRuntime::parseConfig(uint8_t *buf)
         p = next;
         ++line;
     }
-    // delete[] tmp;
     return true;
 }
 
@@ -1465,11 +1448,8 @@ void CRuntime::setupTitleScreen()
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!fileExists(getSavePath()));
-    // menu.addItem(CMenuItem("%s MODE", {"EASY", "NORMAL", "HARD"}, &m_skill))
-    //     .setRole(MENU_ITEM_SKILL);
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
-    // menu.addItem(CMenuItem({"OPTIONS", "CREDITS", "HI SCORES"}, &m_mainMenuBar)).setRole(MENU_ITEM_MAINMENU_BAR);
 
 #if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
@@ -1565,15 +1545,18 @@ void CRuntime::initOptions()
     {
         enableHiScore();
     }
+
     if (isTrue(m_config["music_enabled"]))
     {
         enableMusic(true);
     }
+
     if (isTrue(m_config["fullscreen"]))
     {
         LOGI("is full screen?\n");
         toggleFullscreen();
     }
+
     if (m_config["viewport"] == "static")
     {
         m_cameraMode = CAMERA_MODE_STATIC;
@@ -1597,11 +1580,13 @@ void CRuntime::initOptions()
     {
         m_healthBar = HEALTHBAR_CLASSIC;
     }
+
     if (isTrue(m_config["level_summary"]))
     {
         m_summaryEnabled = true;
     }
-    if (isTrue(m_config["hardcode"]))
+
+    if (isTrue(m_config["hardcore"]))
     {
         m_game->setDefaultLives(1);
     }
@@ -1617,9 +1602,6 @@ void CRuntime::toggleFullscreen()
     if (m_config["webfullscreen"] == "true")
     {
         if (!SDL_SetWindowFullscreen(m_app.window, m_app.isFullscreen))
-        // if (SDL_SetWindowFullscreen(
-        //         m_app.window,
-        //         !m_app.isFullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) != 0)
         {
             LOGE("Fullscreen toggle error: %s\n", SDL_GetError());
         }
@@ -1671,15 +1653,10 @@ void CRuntime::toggleFullscreen()
         SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
         SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
 
-        // Use SDL_WINDOW_FULLSCREEN_DESKTOP for borderless fullscreen
-        // or SDL_WINDOW_FULLSCREEN for exclusive fullscreen
-        // SDL_SetWindowSize(m_app.window, dm->w, dm->h);
-        // SDL_SetWindowFullscreenMode(m_app.window, dm);
         if (!SDL_SetWindowFullscreen(m_app.window, true))
         {
             LOGE("Switching to fullscreen mode failed: %s\n", SDL_GetError());
         }
-        // SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
 #endif
     if (m_verbose)
@@ -1689,7 +1666,6 @@ void CRuntime::toggleFullscreen()
         SDL_GetWindowSize(m_app.window, &w, &h);
         LOGI("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
     }
-
     m_app.isFullscreen = !m_app.isFullscreen;
     m_fullscreen = (int)m_app.isFullscreen;
 }
@@ -1801,7 +1777,6 @@ void CRuntime::manageMenu(CMenu &menu)
             }
             game.setLevel(m_startLevel);
             m_gameMenuActive = false;
-            //            game.setSkill(m_skill);
             game.resetStats();
             initUserMenu();
             game.setMode(CGame::MODE_USERSELECT);
@@ -1852,9 +1827,6 @@ void CRuntime::manageMenu(CMenu &menu)
         {
             int userID = item.userData();
             game.setUserID(userID);
-            // openMusicForLevel(m_startLevel);
-            // m_gameMenuActive = false;
-            // beginLevelIntro(CGame::MODE_LEVEL_INTRO);
             m_game->setMode(CGame::MODE_SKLLSELECT);
             initSkillMenu();
             loadColorMaps(userID);
@@ -1979,13 +1951,6 @@ bool CRuntime::initControllers()
         return false;
     }
 
-    // Load game controller mappings from a file (optional, but good practice)
-    // SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt");
-    // You can download this file from https://github.com/libsdl-org/sdl/blob/main/src/joystick/SDL_gamecontroller.c
-    // or from https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt
-    // and place it next to your executable.
-    // SDL_GameControllerAddMappingsFromFile("data/gamecontrollerdb.txt");
-
     // Check for connected controllers initially
     int count;
     SDL_GetJoysticks(&count);
@@ -2106,7 +2071,6 @@ CMenu &CRuntime::initUserMenu()
     menu.setCurrent(0);
     menu.setScaleY(2);
     menu.setScaleX(1);
-
     for (size_t i = 0; i < m_userNames.size(); ++i)
     {
         menu.addItem(CMenuItem(m_userNames[i].c_str(), MENU_ITEM_SELECT_USER)).setUserData(static_cast<int>(i));
@@ -2335,10 +2299,10 @@ void CRuntime::loadColorMaps(const int userID)
 }
 
 /**
- * @brief Leave ClickStart screen
+ * @brief Formely enter the game. This can be directly or after leaving ClickStart screen
  *
  */
-void CRuntime::leaveClickStart()
+void CRuntime::enterGame()
 {
     initMusic();
     initSounds();
@@ -2531,7 +2495,7 @@ void CRuntime::clearMouseButtons()
 
 Rez CRuntime::getScreenSize()
 {
-    SDL_DisplayID display = SDL_GetPrimaryDisplay();
+    const SDL_DisplayID display = SDL_GetPrimaryDisplay();
     const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
     return Rez{.w = mode->w, .h = mode->h};
 }
@@ -2590,6 +2554,10 @@ CRuntime::Rect CRuntime::windowRect2textureRect(const Rect &wRect)
     return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height = _c(wRect.height)};
 }
 
+/**
+ * @brief Initialize the VirtualKeyboard UI (android)
+ *
+ */
 void CRuntime::initVirtualKeyboard()
 {
     const int BTN_SIZE = 16;
@@ -2650,17 +2618,26 @@ void CRuntime::initVirtualKeyboard()
     LOGI("virtualkeyboard %d x %d\n", ui.width(), ui.height());
 }
 
-void CRuntime::drawVirtualKeyboard(CFrame &bitmap)
+/**
+ * @brief Draw a virtual keyboard UI on Android
+ *
+ * @param bitmap
+ * @param title
+ * @param buffer
+ */
+void CRuntime::drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std::string &buffer)
 {
+    const int scaleX = 2;
+    const int scaleY = 2;
     CGameUI &ui = *m_virtualKeyboard;
     const char end = (m_ticks >> 4) & 1 ? (char)CHARS_CARET : ' ';
     drawUI(bitmap, ui);
-    std::string t = "ENTER YOUR NAME";
-    int x = (_WIDTH - t.length() * FONT_SIZE * 2) / 2;
-    drawFont(bitmap, x, FONT_SIZE, t.c_str(), LIGHTGRAY, CLEAR, 2, 2);
-    t = m_input + end;
-    x = (_WIDTH - t.length() * FONT_SIZE * 2) / 2;
-    drawFont(bitmap, x, 48, t.c_str(), YELLOW, CLEAR, 2, 2);
+    std::string t = title;
+    int x = (_WIDTH - t.length() * FONT_SIZE * scaleX) / 2;
+    drawFont(bitmap, x, FONT_SIZE, t.c_str(), LIGHTGRAY, CLEAR, scaleX, scaleY);
+    t = buffer + end;
+    x = (_WIDTH - t.length() * FONT_SIZE * scaleX) / 2;
+    drawFont(bitmap, x, 48, t.c_str(), YELLOW, CLEAR, scaleX, scaleY);
 }
 
 void CRuntime::onSDLQuit()
@@ -2676,6 +2653,29 @@ void CRuntime::onSDLQuit()
 #endif
     LOGI("SQL_QUIT\n");
     m_isRunning = false;
+}
+
+bool CRuntime::loadAppIcon()
+{
+    const std::string iconFile = CAssetMan::getPrefix() + m_config["icon"];
+    CFrameSet frames;
+    data_t data{nullptr, 0};
+    if (CAssetMan::read(iconFile, data))
+    {
+        CFileMem mem;
+        mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
+        if (frames.extract(mem) && frames.getSize() != 0)
+        {
+            CFrame &frame = *frames[0];
+            SDL_Surface *surface = SDL_CreateSurfaceFrom(
+                frame.len(), frame.hei(), SDL_PIXELFORMAT_RGBA32, frame.getRGB(), frame.len() * sizeof(uint32_t));
+            SDL_SetWindowIcon(m_app.window, surface);
+            SDL_DestroySurface(surface);
+        }
+        CAssetMan::free(data);
+        return true;
+    }
+    return false;
 }
 
 #ifdef __EMSCRIPTEN__
@@ -2703,11 +2703,11 @@ void CRuntime::readGamePadJs()
     int buttonMask = pollGamepadButtons();
     if (buttonMask && (m_game->mode() == CGame::MODE_CLICKSTART))
     {
-        leaveClickStart();
+        enterGame();
     }
-    else if (buttonMask)
+    else if (buttonMask && isTrue(m_config["trace"]))
     {
-        // printf("buttons: %.4x\n", buttonMask);
+        printf("buttons: %.4x\n", buttonMask);
     }
     for (int i = 0; i < Button_Count; ++i)
     {
@@ -2722,6 +2722,3 @@ void CRuntime::readGamePadJs()
     }
 }
 #endif
-
-// SDL_SetRenderLogicalPresentation(m_app.renderer, WIDTH * 2, HEIGHT * 2, SDL_LOGICAL_PRESENTATION_DISABLED);
-// SDL_SetRenderLogicalPresentation(m_app.renderer, 640, 480, SDL_LOGICAL_PRESENTATION_LETTERBOX);

@@ -69,6 +69,7 @@ public:
     Rez getWindowSize();
     Rect getSafeAreaWindow();
     Rect windowRect2textureRect(const Rect &wRect);
+    void debugSDL();
 
 private:
     typedef struct
@@ -242,7 +243,7 @@ private:
     void drawUserMenu(CFrame &bitmap);
     void drawSkillMenu(CFrame &bitmap);
     std::string getMusicPath(const std::string &filename);
-    void leaveClickStart();
+    void enterGame();
     void drawLevelSummary(CFrame &bitmap);
     int menuItemAt(int x, int y);
     void followPointer(int x, int y);
@@ -258,11 +259,11 @@ private:
     void onMouseEvent(const SDL_Event &event);
     void onSDLQuit();
     void initVirtualKeyboard();
-    void drawVirtualKeyboard(CFrame &bitmap);
+    void drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std::string &buffer);
     void handleVKEY(int x, int y);
+    bool loadAppIcon();
 
 #ifdef __EMSCRIPTEN__
-    void
-    readGamePadJs();
+    void readGamePadJs();
 #endif
 };
