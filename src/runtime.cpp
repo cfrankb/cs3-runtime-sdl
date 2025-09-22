@@ -576,7 +576,7 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_GAMEPAD_ADDED)
     {
-        int joystick_index = event.gdevice.which; //  .cdevice.which;
+        int joystick_index = event.gdevice.which;
         if (SDL_IsGamepad(joystick_index))
         {
             SDL_Gamepad *controller = SDL_OpenGamepad(joystick_index);
@@ -590,6 +590,11 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             {
                 LOGE("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
             }
+        }
+        if (m_gameControllers.size() != 0 &&
+            !m_optionMenu->containsRole(MENU_ITEM_X_AXIS_SENTIVITY))
+        {
+            addGamePadOptions(*m_optionMenu);
         }
     }
     else if (event.type == SDL_EVENT_GAMEPAD_REMOVED)
@@ -608,6 +613,11 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
                     break;
                 }
             }
+        }
+        if (m_gameControllers.size() == 0)
+        {
+            m_optionMenu->removeRole(MENU_ITEM_X_AXIS_SENTIVITY)
+                .removeRole(MENU_ITEM_Y_AXIS_SENTIVITY);
         }
     }
     else if (RANGE(event.type, SDL_EVENT_GAMEPAD_BUTTON_DOWN, SDL_EVENT_GAMEPAD_BUTTON_UP))
@@ -2052,12 +2062,17 @@ CMenu &CRuntime::initOptionMenu()
 #endif
     if (!m_gameControllers.empty())
     {
-        menu.addItem(CMenuItem("X-AXIS SENSITIVITY: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
-            .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
-        menu.addItem(CMenuItem("Y-AXIS SENSITIVITY: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
-            .setRole(MENU_ITEM_Y_AXIS_SENTIVITY);
+        addGamePadOptions(menu);
     }
     return menu;
+}
+
+void CRuntime::addGamePadOptions(CMenu &menu)
+{
+    menu.addItem(CMenuItem("X-AXIS SENSITIVITY: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
+        .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
+    menu.addItem(CMenuItem("Y-AXIS SENSITIVITY: %d%%", 0, 10, &m_yAxisSensitivity, 0, 10))
+        .setRole(MENU_ITEM_Y_AXIS_SENTIVITY);
 }
 
 /**

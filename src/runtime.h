@@ -263,6 +263,7 @@ private:
     void drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std::string &buffer);
     void handleVKEY(int x, int y);
     bool loadAppIcon();
+    void addGamePadOptions(CMenu &menu);
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

@@ -200,7 +200,7 @@ int main(int argc, char *args[])
     bool appExit = false;
     if (!parseArgs(list, params, appExit))
         return EXIT_FAILURE;
-    if (appExit)
+    else if (appExit)
         return EXIT_SUCCESS;
 
     LOGI("MapArch: %s\n", params.mapArch.c_str());

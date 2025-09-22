@@ -44,7 +44,9 @@ public:
     void setScaleX(const int v);
     void setScaleY(const int v);
     CMenu &disableCaret();
-    bool isCaretDisabled();
+    bool isCaretDisabled() const;
+    bool containsRole(int role) const;
+    CMenu &removeRole(int role);
 
 private:
     enum

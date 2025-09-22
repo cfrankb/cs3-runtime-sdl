@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <algorithm>
 #include "menu.h"
 
 CMenu::CMenu(const int menuid, const int scaleX, const int scaleY, const int padding, CMenu *parent)
@@ -133,7 +134,25 @@ CMenu &CMenu::disableCaret()
     return *this;
 }
 
-bool CMenu::isCaretDisabled()
+bool CMenu::isCaretDisabled() const
 {
     return m_caretDisabled;
+}
+
+bool CMenu::containsRole(int role) const
+{
+    return std::find_if(m_items.begin(), m_items.end(), [role](const auto &item)
+                        { return item.role() == role; }) != m_items.end();
+}
+
+CMenu &CMenu::removeRole(int role)
+{
+    m_items.erase(std::remove_if(m_items.begin(), m_items.end(), [role](const auto &item)
+                                 { return item.role() == role; }),
+                  m_items.end());
+    if (m_currentItem > m_items.size() - 1)
+    {
+        m_currentItem = m_items.size() - 1;
+    }
+    return *this;
 }
