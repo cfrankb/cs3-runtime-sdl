@@ -259,7 +259,6 @@ bool CMap::read(FILE *sfile)
     {
         if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0))
         {
-            // printf("reading4: %s %d\n", hdr.sig, hdr.ver);
             // read title
             uint16_t size = 0;
             if (readfile(&size, 1))

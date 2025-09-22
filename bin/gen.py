@@ -199,6 +199,7 @@ def main():
             "TARGET=$(BPATH)/$(BNAME)",
             strip_padding(
                 """define PREBUILD
+                cp packages/data/win32/cs3-runtime.ico build/favicon.ico
                 cp data/musics/*.ogg build && \\
                 rm -rf build/data && \\
                 mkdir -p build/data && \\

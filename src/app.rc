@@ -17,7 +17,7 @@
 */
 #include "winver.h" // For standard version info definitions
 
-IDI_ICON1 ICON "packages/data/cs3-runtime.ico"
+IDI_ICON1 ICON "packages/data/win32/cs3-runtime.ico"
 
 // -------------------------------------------------------------------------
 // VERSION INFORMATION BLOCK

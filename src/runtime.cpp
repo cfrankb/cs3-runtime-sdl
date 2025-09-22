@@ -308,6 +308,7 @@ bool CRuntime::isMenuActive()
  */
 void CRuntime::doInput()
 {
+    bool trace = isTrue(m_config["trace"]);
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -418,10 +419,10 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
-            LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER\n");
+            // LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER\n");
             break;
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
-            LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE\n");
+            // LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE\n");
             break;
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
             LOGI("SDL_EVENT_WINDOW_FOCUS_GAINED\n");
@@ -436,12 +437,14 @@ void CRuntime::doInput()
 
         case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
             LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED\n");
+            /*
             SDL_Rect safe;
             if (SDL_GetWindowSafeArea(window, &safe))
             {
                 SDL_Log("Safe area changed: x=%d y=%d w=%d h=%d",
                         safe.x, safe.y, safe.w, safe.h);
             }
+            */
             break;
 
         case SDL_EVENT_CLIPBOARD_UPDATE:
@@ -453,7 +456,8 @@ void CRuntime::doInput()
             break;
 
         default:
-            LOGI("UNHANDLED EVENT: %d\n", event.type);
+            if (trace)
+                LOGI("UNHANDLED EVENT: %d\n", event.type);
         }
     }
 #ifdef __EMSCRIPTEN__
@@ -491,18 +495,23 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         m_mouseButtons[event.button.button] = BUTTON_PRESSED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (trace)
+        {
+            LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
+                 event.button.button, event.button.x, event.button.y, event.button.clicks);
             LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
                  pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
-
+        }
         if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
         {
             enterGame();
         }
         else if (event.button.button == SDL_BUTTON_LEFT &&
-                 ((isMenuActive() && menuItemAt(pos.x, pos.y) != INVALID) ||
+                 (menuItemAt(pos.x, pos.y) != INVALID ||
                   mode == CGame::MODE_LEVEL_SUMMARY))
         {
+            // simulate button press
             m_buttonState[BUTTON_A] = BUTTON_PRESSED;
+            manageMenu(*m_lastMenu);
         }
         else if (mode == CGame::MODE_PLAY)
         {
@@ -925,8 +934,10 @@ void CRuntime::cleanUpCredits()
 
 void CRuntime::preRun()
 {
+    LOGI("prerun: %s\n", m_config["clickstart"].c_str());
     if (isTrue(m_config["clickstart"]))
     {
+        LOGI("clickstart\n");
         m_game->setMode(CGame::MODE_CLICKSTART);
     }
     else
@@ -2047,7 +2058,7 @@ CMenu &CRuntime::initOptionMenu()
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
-    if (m_gameControllers.empty())
+    if (!m_gameControllers.empty())
     {
         menu.addItem(CMenuItem("X-AXIS SENSITIVITY: %d%%", 0, 10, &m_xAxisSensitivity, 0, 10))
             .setRole(MENU_ITEM_X_AXIS_SENTIVITY);
@@ -2304,6 +2315,7 @@ void CRuntime::loadColorMaps(const int userID)
  */
 void CRuntime::enterGame()
 {
+    LOGI("enterGame()\n");
     initMusic();
     initSounds();
     initControllers();
@@ -2424,7 +2436,7 @@ void CRuntime::changeMoodMusic(CGame::GameMode mode)
 
 int CRuntime::menuItemAt(int x, int y)
 {
-    if (!m_lastMenu)
+    if (!m_lastMenu || !isMenuActive())
         return -1;
 
     CMenu &menu = *m_lastMenu;

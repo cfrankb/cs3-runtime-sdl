@@ -66,6 +66,7 @@ jobs:
           echo "Preparing itch.io version"
           mkdir -p build/cs3
           cp data/musics/*.ogg build/cs3
+          cp packages/data/win32/cs3-runtime.ico build/cs3/favicon.ico
           python3 bin/gen.py emsdl3 -s
           make
           cp build/cs3v2.* build/cs3
@@ -73,6 +74,7 @@ jobs:
           mv build/cs3/cs3v2.html build/cs3/index.html
           echo "Preparing local version"
           mkdir -p ./build/local
+          cp packages/data/win32/cs3-runtime.ico build/local/favicon.ico
           cp ./build/cs3v2.* ./build/local
           gzip  ./build/local/*.data ./build/local/*.wasm
           mv ./build/local/cs3v2.data.gz ./build/local/cs3v2.data
