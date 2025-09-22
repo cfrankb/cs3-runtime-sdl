@@ -15,11 +15,13 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "level"
 #include <cstring>
 #include <stdio.h>
 #include "level.h"
 #include "map.h"
 #include "tilesdata.h"
+#include "logger.h"
 
 void splitString(const std::string str, StringVector &list)
 {
@@ -62,7 +64,7 @@ uint8_t *readFile(const char *fname)
     }
     else
     {
-        printf("failed to read:%s\n", fname);
+        LOGE("failed to read:%s\n", fname);
     }
     return data;
 }
@@ -72,12 +74,12 @@ bool getChMap(const char *mapFile, char *chMap)
     uint8_t *data = readFile(mapFile);
     if (data == nullptr)
     {
-        printf("cannot read %s\n", mapFile);
+        LOGE("cannot read %s\n", mapFile);
         return false;
     }
 
     char *p = reinterpret_cast<char *>(data);
-    printf("parsing tiles.map: %zull\n", strlen(p));
+    LOGI("parsing tiles.map: %zull\n", strlen(p));
     int i = 0;
 
     while (p && *p)
@@ -107,7 +109,7 @@ bool processLevel(CMap &map, const char *fname)
     if (data == nullptr)
     {
         // delete[] data;
-        printf("failed read: %s\n", fname);
+        LOGE("failed read: %s\n", fname);
         return false;
     }
 
@@ -129,7 +131,7 @@ bool processLevel(CMap &map, const char *fname)
         ps = u ? u + 1 : nullptr;
         //   printf("maxrows %d\n", maxRows);
     }
-    printf("maxRows: %d, maxCols:%d\n", maxRows, maxCols);
+    LOGI("maxRows: %d, maxCols:%d\n", maxRows, maxCols);
 
     map.resize(maxCols, maxRows, true);
     map.clear();
@@ -152,7 +154,7 @@ bool processLevel(CMap &map, const char *fname)
         uint8_t m = getChTile(c);
         if (c != ' ' && m == 0)
         {
-            printf("undefined %c found at %d %d.\n", c, x, y);
+            LOGW("undefined %c found at %d %d.\n", c, x, y);
         }
         map.set(x, y, m);
         ++x;
@@ -223,7 +225,7 @@ bool convertCs3Level(CMap &map, const char *fname)
     uint8_t *data = readFile(fname);
     if (data == nullptr)
     {
-        printf("failed read: %s\n", fname);
+        LOGE("failed read: %s\n", fname);
         return false;
     }
 
@@ -257,7 +259,7 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
 {
     const int bufferSize = strlen(fname) + 128;
     char *tmp = new char[bufferSize];
-    printf("fetching: %s\n", fname);
+    LOGI("fetching: %s\n", fname);
 
     FILE *sfile = fopen(fname, "rb");
     auto readfile = [sfile](auto ptr, auto size)
@@ -271,15 +273,15 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
         delete[] tmp;
         return false;
     }
-
     delete[] tmp;
 
-    char sig[4];
+    const char MAPZ_SIGNATURE[] = {'M', 'A', 'P', 'Z'};
+    char sig[sizeof(MAPZ_SIGNATURE)] = {0, 0, 0, 0};
     readfile(sig, sizeof(sig));
-    if (memcmp(sig, "MAPZ", 4) == 0)
+    if (memcmp(sig, MAPZ_SIGNATURE, sizeof(MAPZ_SIGNATURE)) == 0)
     {
         fclose(sfile);
-        printf("level is MAPZ\n");
+        LOGI("level is MAPZ\n");
         return map.read(fname);
     }
 
@@ -289,11 +291,11 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
     if (size == cs3LevelSize)
     {
         fclose(sfile);
-        printf("level is cs3\n");
+        LOGI("level is cs3\n");
         return convertCs3Level(map, fname);
     }
 
     fclose(sfile);
-    printf("level is map\n");
+    LOGI("level is map\n");
     return processLevel(map, fname);
 }

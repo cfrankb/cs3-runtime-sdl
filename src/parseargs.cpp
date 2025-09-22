@@ -37,6 +37,7 @@ void showHelp()
          "--easy                    switch to easy mode\n"
          "--hard                    switch to hard mode\n"
          "--normal                  switch to normal mode\n"
+         "--short                   optimize for youtube shorts\n"
          "-f                        start in fullscreen\n"
          "-v                        verbose\n"
          "-h --help                 show this screen\n"
@@ -118,7 +119,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                         result = false;
                     }
                     if (params.verbose)
-                        printf("w: %d h: %d\n", params.width, params.height);
+                        LOGI("w: %d h: %d\n", params.width, params.height);
                 }
                 else
                 {
@@ -134,7 +135,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
         }
         else if (strcmp(list[i].c_str(), "--short") == 0)
         {
-            printf("switching to short resolution\n");
+            LOGI("switching to short resolution\n");
             params.width = 480 / 2;
             params.height = 640 / 2;
         }

@@ -113,7 +113,7 @@ void loop_handler(void *arg)
 
 const std::string getPrefix()
 {
-#ifdef IS_MACOS
+#if defined(IS_MACOS)
     CFBundleRef bundle = CFBundleGetMainBundle();
     CFURLRef resURL = CFBundleCopyResourcesDirectoryURL(bundle);
     char path[PATH_MAX];
@@ -205,29 +205,29 @@ int main(int argc, char *args[])
 
     LOGI("MapArch: %s\n", params.mapArch.c_str());
     data_t data;
-    if (!CAssetMan::read(params.mapArch, data))
+    if (!AssetMan::read(params.mapArch, data))
         return EXIT_FAILURE;
     if (!maparch.fromMemory(data.ptr))
     {
-        CAssetMan::free(data);
+        AssetMan::free(data);
         LOGE("mapArch error: %s\n", maparch.lastError());
         return EXIT_FAILURE;
     }
-    CAssetMan::free(data);
-    std::string configFile = CAssetMan::addTrailSlash(params.prefix) + CONF_FILE;
+    AssetMan::free(data);
+    std::string configFile = AssetMan::addTrailSlash(params.prefix) + CONF_FILE;
     runtime.setVerbose(params.verbose);
-    CAssetMan::setPrefix(params.prefix);
+    AssetMan::setPrefix(params.prefix);
     runtime.setWorkspace(params.workspace.c_str());
 
-    if (!CAssetMan::read(configFile, data, true))
+    if (!AssetMan::read(configFile, data, true))
         return EXIT_FAILURE;
     if (!runtime.parseConfig(data.ptr))
     {
-        CAssetMan::free(data);
+        AssetMan::free(data);
         LOGE("failed to parse config file: %s\n", configFile.c_str());
         return EXIT_FAILURE;
     }
-    CAssetMan::free(data);
+    AssetMan::free(data);
 
     runtime.setSkill(params.skill);
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();

@@ -26,17 +26,12 @@ struct data_t
     size_t size;
 };
 
-class CAssetMan
+namespace AssetMan
 {
-public:
-    static std::string &addTrailSlash(std::string &path);
-    static void setPrefix(const std::string &prefix);
-    static const std::string &getPrefix();
-    static bool read(const std::string &filepath, data_t &data, bool terminator = false);
-    static void free(const data_t data);
-    static std::string defaultPrefix();
-
-private:
-    CAssetMan() {}
-    ~CAssetMan() {}
-};
+    std::string addTrailSlash(const std::string &path);
+    void setPrefix(const std::string &prefix);
+    const std::string &getPrefix();
+    bool read(const std::string &filepath, data_t &data, bool terminator = false);
+    void free(const data_t data);
+    std::string defaultPrefix();
+}

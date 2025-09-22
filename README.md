@@ -6,15 +6,15 @@ CreepSpread III is a retro-inspired action game that blends fast-paced gameplay 
 
 Creepspread III is powered by SDL3, this project brings CreepSpread III to a wide range of platforms—play it as a native desktop app or directly in your browser.
 
-![alt text](images/3552as3552as3552.png)
+![alt text](techdocs/images/3552as3552as3552.png)
 
-![alt text](images/screenshot20250807-225257.png)
+![alt text](techdocs/images/screenshot20250807-225257.png)
 
-![alt text](images/screenshot20250807-225306.png)
+![alt text](techdocs/images/screenshot20250807-225306.png)
 
-![alt text](images/screenshot20250807-225315.png)
+![alt text](techdocs/images/screenshot20250807-225315.png)
 
-![alt text](images/screenshot20250807-225339.png)
+![alt text](techdocs/images/screenshot20250807-225339.png)
 
 ## First look at the game
 

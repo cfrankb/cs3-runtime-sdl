@@ -26,92 +26,101 @@ const uint16_t MAAZ_VERSION = 0;
 
 CMapArch::CMapArch()
 {
-    m_max = GROW_BY;
-    m_size = 0;
-    m_maps = new CMap *[m_max];
-    memset(m_maps, 0, sizeof(CMap *) * m_max);
 }
 
 CMapArch::~CMapArch()
 {
-    forget();
+    clear();
 }
 
+/**
+ * @brief get the last error
+ *
+ * @return const char*
+ */
 const char *CMapArch::lastError()
 {
     return m_lastError.c_str();
 }
 
-int CMapArch::size()
+/**
+ * @brief get map count
+ *
+ * @return size_t
+ */
+size_t CMapArch::size()
 {
-    return m_size;
+    return m_maps.size();
 }
 
-void CMapArch::forget()
+/**
+ * @brief clear the maparch. remove all maps.
+ *
+ */
+void CMapArch::clear()
 {
-    if (m_maps)
+    for (auto i = 0; i < m_maps.size(); ++i)
     {
-        for (int i = 0; i < m_size; ++i)
-        {
-            if (m_maps[i])
-                delete m_maps[i];
-        }
-        delete[] m_maps;
-        m_maps = nullptr;
+        if (m_maps[i])
+            delete m_maps[i];
     }
-    m_size = 0;
-    m_max = 0;
+    m_maps.clear();
 }
 
-int CMapArch::add(CMap *map)
+/**
+ * @brief add new map
+ *
+ * @param map
+ * @return size_t mapIndex pos
+ */
+size_t CMapArch::add(CMap *map)
 {
-    allocSpace();
-    m_maps[m_size] = map;
-    return m_size++;
+    m_maps.push_back(map);
+    return m_maps.size() - 1;
 }
 
+/**
+ * @brief remove map at index
+ *
+ * @param i
+ * @return CMap*
+ */
 CMap *CMapArch::removeAt(int i)
 {
     CMap *map = m_maps[i];
-    for (int j = i; j < m_size - 1; ++j)
-    {
-        m_maps[j] = m_maps[j + 1];
-    }
-    --m_size;
+    m_maps.erase(m_maps.begin() + i);
     return map;
 }
 
+/**
+ * @brief insert map at index
+ *
+ * @param i
+ * @param map
+ */
 void CMapArch::insertAt(int i, CMap *map)
 {
-    allocSpace();
-    for (int j = m_size; j > i; --j)
-    {
-        m_maps[j] = m_maps[j - 1];
-    }
-    ++m_size;
-    m_maps[i] = map;
+    m_maps.insert(m_maps.begin() + i, map);
 }
 
-void CMapArch::allocSpace()
-{
-    if (m_size >= m_max)
-    {
-        m_max = m_size + GROW_BY;
-        CMap **t = new CMap *[m_max];
-        for (int i = 0; i < m_max; ++i)
-        {
-            t[i] = i < m_size ? m_maps[i] : nullptr;
-        }
-        delete[] m_maps;
-        m_maps = t;
-    }
-}
-
+/**
+ * @brief get map at index
+ *
+ * @param i
+ * @return CMap*
+ */
 CMap *CMapArch::at(int i)
 {
     return m_maps[i];
 }
 
+/**
+ * @brief Deserialize the data from IFile Interface object
+ *
+ * @param file
+ * @return true
+ * @return false
+ */
 bool CMapArch::read(IFile &file)
 {
     auto readfile = [&file](auto ptr, auto size)
@@ -121,7 +130,7 @@ bool CMapArch::read(IFile &file)
 
     typedef struct
     {
-        uint8_t sig[4];
+        uint8_t sig[sizeof(MAAZ_SIG)];
         uint16_t version;
         uint16_t count;
         uint32_t offset;
@@ -145,25 +154,30 @@ bool CMapArch::read(IFile &file)
     // read index
     file.seek(hdr.offset);
     uint32_t *indexPtr = new uint32_t[hdr.count];
-    readfile(indexPtr, 4 * hdr.count);
-    forget();
-    m_maps = new CMap *[hdr.count];
-    m_size = hdr.count;
-    m_max = m_size;
+    readfile(indexPtr, sizeof(uint32_t) * hdr.count);
     // read levels
+    clear();
     for (int i = 0; i < hdr.count; ++i)
     {
         file.seek(indexPtr[i]);
-        m_maps[i] = new CMap();
-        if (!m_maps[i]->read(file))
+        CMap *map = new CMap();
+        if (!map->read(file))
         {
             return false;
         }
+        m_maps.push_back(map);
     }
     delete[] indexPtr;
     return true;
 }
 
+/**
+ * @brief Deserialize from the standard IO
+ *
+ * @param filename
+ * @return true
+ * @return false
+ */
 bool CMapArch::read(const char *filename)
 {
     // read levelArch
@@ -201,16 +215,14 @@ bool CMapArch::read(const char *filename)
         fseek(sfile, hdr.offset, SEEK_SET);
         uint32_t *indexPtr = new uint32_t[hdr.count];
         readfile(indexPtr, sizeof(uint32_t) * hdr.count);
-        forget();
-        m_maps = new CMap *[hdr.count];
-        m_size = hdr.count;
-        m_max = m_size;
         // read levels
+        clear();
         for (int i = 0; i < hdr.count; ++i)
         {
             fseek(sfile, indexPtr[i], SEEK_SET);
-            m_maps[i] = new CMap();
-            m_maps[i]->read(sfile);
+            CMap *map = new CMap();
+            map->read(sfile);
+            m_maps.push_back(map);
         }
         delete[] indexPtr;
         fclose(sfile);
@@ -222,6 +234,13 @@ bool CMapArch::read(const char *filename)
     return sfile != nullptr;
 }
 
+/**
+ * @brief Write file to disk
+ *
+ * @param filename
+ * @return true
+ * @return false
+ */
 bool CMapArch::write(const char *filename)
 {
     bool result;
@@ -234,7 +253,7 @@ bool CMapArch::write(const char *filename)
         fwrite(MAAZ_SIG, sizeof(MAAZ_SIG), 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
-        for (int i = 0; i < m_size; ++i)
+        for (auto i = 0; i < m_maps.size(); ++i)
         {
             // write maps
             index.push_back(ftell(tfile));
@@ -266,11 +285,23 @@ bool CMapArch::write(const char *filename)
     return result;
 }
 
+/**
+ * @brief get file signature
+ *
+ * @return const char*
+ */
 const char *CMapArch::signature()
 {
     return MAAZ_SIG;
 }
 
+/**
+ * @brief extract map from file. this allows reading maparch, individual map files and legacy files.
+ *
+ * @param filename
+ * @return true
+ * @return false
+ */
 bool CMapArch::extract(const char *filename)
 {
     FILE *sfile = fopen(filename, "rb");
@@ -283,8 +314,8 @@ bool CMapArch::extract(const char *filename)
         m_lastError = "can't read header";
         return false;
     }
-    char sig[4];
-    readfile(sig, 4);
+    char sig[sizeof(MAAZ_SIG)];
+    readfile(sig, sizeof(MAAZ_SIG));
     fclose(sfile);
 
     if (memcmp(sig, MAAZ_SIG, sizeof(MAAZ_SIG)) == 0)
@@ -293,16 +324,25 @@ bool CMapArch::extract(const char *filename)
     }
     else
     {
-        m_size = 1;
+        clear();
+        m_maps.push_back(new CMap());
         return fetchLevel(*m_maps[0], filename, m_lastError);
     }
 }
 
+/**
+ * @brief get mapIndex from file. create a vector of map offsets within the file
+ *
+ * @param filename
+ * @param index
+ * @return true
+ * @return false
+ */
 bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
 {
     typedef struct
     {
-        uint8_t sig[4];
+        uint8_t sig[sizeof(MAAZ_SIG)];
         uint16_t version;
         uint16_t count;
         uint32_t offset;
@@ -336,48 +376,67 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
     return sfile != nullptr;
 }
 
+/**
+ * @brief create an index from memory. create a vector of map offsets within the memory blob
+ *
+ * @param ptr
+ * @param index
+ * @return true
+ * @return false
+ */
 bool CMapArch::indexFromMemory(uint8_t *ptr, IndexVector &index)
 {
     // check signature
-    if (memcmp(ptr, MAAZ_SIG, 4) != 0)
+    if (memcmp(ptr, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
     {
         return false;
     }
     index.clear();
     uint16_t count = 0;
-    memcpy(&count, ptr + 6, sizeof(count));
+    memcpy(&count, ptr + OFFSET_COUNT, sizeof(count));
     uint32_t indexBase = 0;
-    memcpy(&indexBase, ptr + 8, sizeof(indexBase));
+    memcpy(&indexBase, ptr + OFFSET_INDEX, sizeof(indexBase));
     for (uint16_t i = 0; i < count; ++i)
     {
         long idx = 0;
-        memcpy(&idx, ptr + indexBase + i * 4, 4);
+        memcpy(&idx, ptr + indexBase + i * sizeof(uint32_t), sizeof(uint32_t));
         index.push_back(idx);
     }
     return true;
 }
 
+/**
+ * @brief remove all the maps from the maparch without deleting the memory pointers
+ *
+ */
 void CMapArch::removeAll()
 {
-    m_size = 0;
+    m_maps.clear();
 }
 
+/**
+ * @brief Read maps from a memory blob
+ *
+ * @param ptr
+ * @return true
+ * @return false
+ */
 bool CMapArch::fromMemory(uint8_t *ptr)
 {
-    if (memcmp(ptr, MAAZ_SIG, 4) != 0)
+    if (memcmp(ptr, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
     {
         m_lastError = "mapArch signature is wrong";
         return false;
     }
-    forget();
+    clear();
     uint16_t count = 0;
-    memcpy(&count, ptr + 6, sizeof(count));
+    memcpy(&count, ptr + OFFSET_COUNT, sizeof(count));
     uint32_t indexBase = 0;
-    memcpy(&indexBase, ptr + 8, sizeof(indexBase));
+    memcpy(&indexBase, ptr + OFFSET_INDEX, sizeof(indexBase));
     for (uint16_t i = 0; i < count; ++i)
     {
         uint32_t idx = 0;
-        memcpy(&idx, ptr + indexBase + i * 4, 4);
+        memcpy(&idx, ptr + indexBase + i * sizeof(uint32_t), sizeof(uint32_t));
         CMap *map = new CMap();
         if (!map->fromMemory(ptr + idx))
         {

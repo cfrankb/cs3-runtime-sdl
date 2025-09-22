@@ -53,13 +53,13 @@ public:
     bool read(FILE *sfile);
     bool read(IFile &file);
     bool write(FILE *tfile);
-    void forget();
+    void clear();
     int len() const;
     int hei() const;
     bool resize(uint16_t len, uint16_t hei, bool fast);
     const Pos findFirst(uint8_t tileId);
     int count(uint8_t tileId);
-    void clear(uint8_t ch = 0);
+    void fill(uint8_t ch = 0);
     uint8_t getAttr(const uint8_t x, const uint8_t y) const;
     void setAttr(const uint8_t x, const uint8_t y, const uint8_t a);
     int size();

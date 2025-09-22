@@ -28,4 +28,3 @@ bool convertCs3Level(CMap &map, const char *fname);
 void splitString(const std::string str, StringVector &list);
 bool getChMap(const char *mapFile, char *chMap);
 bool fetchLevel(CMap &map, const char *fname, std::string &error);
-std::string findLevel(const char *target);

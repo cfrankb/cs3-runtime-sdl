@@ -31,10 +31,10 @@ public:
     CMapArch();
     virtual ~CMapArch();
 
-    int size();
+    size_t size();
     const char *lastError();
-    void forget();
-    int add(CMap *map);
+    void clear();
+    size_t add(CMap *map);
     CMap *removeAt(int i);
     void insertAt(int i, CMap *map);
     CMap *at(int i);
@@ -49,13 +49,11 @@ public:
     bool fromMemory(uint8_t *ptr);
 
 protected:
-    void allocSpace();
     enum
     {
-        GROW_BY = 5
+        OFFSET_COUNT = 6,
+        OFFSET_INDEX = 8,
     };
-    int m_size;
-    int m_max;
-    CMap **m_maps;
+    std::vector<CMap *> m_maps;
     std::string m_lastError;
 };

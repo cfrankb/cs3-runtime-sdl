@@ -55,7 +55,7 @@ CMap::CMap(uint16_t len, uint16_t hei, uint8_t t)
 
 CMap::~CMap()
 {
-    forget();
+    clear();
     delete m_states;
 };
 
@@ -63,11 +63,11 @@ uint8_t &CMap::at(int x, int y)
 {
     if (x >= m_len)
     {
-        printf("x [%d] greater than m_len\n", x);
+        LOGW("x [%d] greater than m_len\n", x);
     }
     if (y >= m_hei)
     {
-        printf("y [%d] greater than m_hei\n", y);
+        LOGW("y [%d] greater than m_hei\n", y);
     }
     return *(m_map + x + y * m_len);
 }
@@ -82,7 +82,7 @@ void CMap::set(int x, int y, uint8_t t)
     at(x, y) = t;
 }
 
-void CMap::forget()
+void CMap::clear()
 {
     m_states->clear();
     if (m_map != nullptr)
@@ -134,7 +134,7 @@ bool CMap::read(IFile &file)
     if (memcmp(sig, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
     uint16_t ver = 0;
@@ -142,7 +142,7 @@ bool CMap::read(IFile &file)
     if (ver > VERSION)
     {
         m_lastError = "bad version";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
     uint16_t len = 0;
@@ -177,7 +177,6 @@ bool CMap::read(IFile &file)
     {
         if ((memcmp(&hdr, XTR_SIG, sizeof(hdr.sig)) == 0))
         {
-            // printf("reading4: %s %d\n", hdr.sig, hdr.ver);
             // read title
             uint16_t size = 0;
             if (readfile(&size, 1))
@@ -216,7 +215,7 @@ bool CMap::read(FILE *sfile)
     if (memcmp(sig, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
     uint16_t ver = 0;
@@ -224,7 +223,7 @@ bool CMap::read(FILE *sfile)
     if (ver > VERSION)
     {
         m_lastError = "bad version";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
     uint16_t len = 0;
@@ -290,7 +289,7 @@ bool CMap::fromMemory(uint8_t *mem)
     if (memcmp(mem, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
 
@@ -299,7 +298,7 @@ bool CMap::fromMemory(uint8_t *mem)
     if (ver > VERSION)
     {
         m_lastError = "bad version";
-        printf("%s\n", m_lastError.c_str());
+        LOGE("%s\n", m_lastError.c_str());
         return false;
     }
 
@@ -396,12 +395,12 @@ bool CMap::resize(uint16_t len, uint16_t hei, bool fast)
     {
         if (len * hei > m_size)
         {
-            forget();
+            clear();
             m_map = new uint8_t[len * hei];
             if (m_map == nullptr)
             {
                 m_lastError = "resize fail";
-                printf("%s\n", m_lastError.c_str());
+                LOGE("%s\n", m_lastError.c_str());
                 return false;
             }
         }
@@ -457,7 +456,7 @@ int CMap::count(uint8_t tileId)
     return count;
 }
 
-void CMap::clear(uint8_t ch)
+void CMap::fill(uint8_t ch)
 {
     if (m_map && m_len * m_hei > 0)
     {
@@ -508,7 +507,7 @@ int CMap::size()
 
 CMap &CMap::operator=(const CMap &map)
 {
-    forget();
+    clear();
     m_len = map.m_len;
     m_hei = map.m_hei;
     m_size = map.m_len * map.m_hei;
@@ -604,15 +603,15 @@ Pos CMap::toPos(const uint16_t key)
 
 void CMap::debug()
 {
-    printf("len: %d hei:%d\n", m_len, m_hei);
-    printf("attrCount:%zu\n", m_attrs.size());
+    LOGI("len: %d hei:%d\n", m_len, m_hei);
+    LOGI("attrCount:%zu\n", m_attrs.size());
     for (auto &it : m_attrs)
     {
         uint16_t key = it.first;
         uint8_t x = key & 0xff;
         uint8_t y = key >> 8;
         uint8_t a = it.second;
-        printf("key:%.4x x:%.2x y:%.2x a:%.2x\n", key, x, y, a);
+        LOGI("key:%.4x x:%.2x y:%.2x a:%.2x\n", key, x, y, a);
     }
 }
 

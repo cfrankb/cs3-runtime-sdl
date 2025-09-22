@@ -833,10 +833,10 @@ void CRuntime::preloadAssets()
     CFileMem mem;
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
-        const std::string filename = CAssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
+        const std::string filename = AssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
         *frameSets[i] = new CFrameSet();
         data_t data;
-        if (CAssetMan::read(filename, data))
+        if (AssetMan::read(filename, data))
         {
             LOGI("reading %s\n", filename.c_str());
             mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
@@ -852,30 +852,30 @@ void CRuntime::preloadAssets()
     }
 
     data_t data;
-    const std::string fontName = CAssetMan::getPrefix() + m_config["font"];
-    if (!CAssetMan::read(fontName, data))
+    const std::string fontName = AssetMan::getPrefix() + m_config["font"];
+    if (!AssetMan::read(fontName, data))
         return;
     m_fontData = data.ptr;
 
-    const std::string creditsFile = CAssetMan::getPrefix() + m_config["credits"];
-    if (CAssetMan::read(creditsFile, data, true))
+    const std::string creditsFile = AssetMan::getPrefix() + m_config["credits"];
+    if (AssetMan::read(creditsFile, data, true))
     {
         m_credits = reinterpret_cast<char *>(data.ptr);
         cleanUpCredits();
     }
 
-    const std::string hintsFile = CAssetMan::getPrefix() + m_config["hints"];
-    if (CAssetMan::read(hintsFile, data, true))
+    const std::string hintsFile = AssetMan::getPrefix() + m_config["hints"];
+    if (AssetMan::read(hintsFile, data, true))
     {
         m_game->parseHints(reinterpret_cast<char *>(data.ptr));
-        CAssetMan::free(data);
+        AssetMan::free(data);
     }
 
-    const std::string helpFile = CAssetMan::getPrefix() + m_config["help"];
-    if (CAssetMan::read(helpFile, data, true))
+    const std::string helpFile = AssetMan::getPrefix() + m_config["help"];
+    if (AssetMan::read(helpFile, data, true))
     {
         parseHelp(reinterpret_cast<char *>(data.ptr));
-        CAssetMan::free(data);
+        AssetMan::free(data);
     }
 }
 
@@ -1150,7 +1150,7 @@ void CRuntime::initSounds()
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
-        const auto soundName = CAssetMan::getPrefix() + std::string("sounds/") + m_soundFiles[i];
+        const auto soundName = AssetMan::getPrefix() + std::string("sounds/") + m_soundFiles[i];
         bool result = m_sound->add(soundName.c_str(), i + 1);
         if (m_verbose)
             LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
@@ -1263,7 +1263,7 @@ void CRuntime::setWorkspace(const char *workspace)
 {
     m_workspace = workspace;
     // TODO: check this later
-    CAssetMan::addTrailSlash(m_workspace);
+    AssetMan::addTrailSlash(m_workspace);
 }
 
 /**
@@ -1988,7 +1988,7 @@ bool CRuntime::initControllers()
         LOGW("No game controllers found. Connect one now!\n");
     }
 
-    const std::string controllerDB = CAssetMan::getPrefix() + m_config["controllerdb"];
+    const std::string controllerDB = AssetMan::getPrefix() + m_config["controllerdb"];
     if (!m_config["controllerdb"].empty() &&
         SDL_AddGamepadMappingsFromFile(controllerDB.c_str()) == -1)
     {
@@ -2287,9 +2287,9 @@ bool CRuntime::checkMusicFiles()
 std::string CRuntime::getMusicPath(const std::string &filename)
 {
 #ifdef __EMSCRIPTEN__
-    const std::string music = endswith(filename.c_str(), ".xm") ? CAssetMan::getPrefix() + std::string("musics/") + filename : filename;
+    const std::string music = endswith(filename.c_str(), ".xm") ? AssetMan::getPrefix() + std::string("musics/") + filename : filename;
 #else
-    const std::string music = CAssetMan::getPrefix() + std::string("musics/") + filename;
+    const std::string music = AssetMan::getPrefix() + std::string("musics/") + filename;
 #endif
     return music;
 }
@@ -2302,13 +2302,13 @@ std::string CRuntime::getMusicPath(const std::string &filename)
 void CRuntime::loadColorMaps(const int userID)
 {
     std::string name = m_userNames[userID];
-    std::string path = CAssetMan::getPrefix() + "colormaps/" + name + ".ini";
+    std::string path = AssetMan::getPrefix() + "colormaps/" + name + ".ini";
     CFileWrap file;
     data_t data;
-    if (CAssetMan::read(path, data, true))
+    if (AssetMan::read(path, data, true))
     {
         parseColorMaps(reinterpret_cast<char *>(data.ptr), m_colormaps);
-        CAssetMan::free(data);
+        AssetMan::free(data);
     }
     else
     {
@@ -2676,10 +2676,10 @@ void CRuntime::onSDLQuit()
 
 bool CRuntime::loadAppIcon()
 {
-    const std::string iconFile = CAssetMan::getPrefix() + m_config["icon"];
+    const std::string iconFile = AssetMan::getPrefix() + m_config["icon"];
     CFrameSet frames;
     data_t data{nullptr, 0};
-    if (CAssetMan::read(iconFile, data))
+    if (AssetMan::read(iconFile, data))
     {
         CFileMem mem;
         mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
@@ -2691,7 +2691,7 @@ bool CRuntime::loadAppIcon()
             SDL_SetWindowIcon(m_app.window, surface);
             SDL_DestroySurface(surface);
         }
-        CAssetMan::free(data);
+        AssetMan::free(data);
         return true;
     }
     return false;

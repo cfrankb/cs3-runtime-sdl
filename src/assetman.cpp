@@ -22,7 +22,7 @@
 
 #define DEFAULT_PREFIX "data/"
 
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
 #include <jni.h>
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h> // For AAssetManager_fromJava()
@@ -48,101 +48,105 @@ extern "C"
         }
     }
 } // extern "C"
+#endif
 
-static uint8_t *readBinary(const char *assetPath, size_t &size)
+namespace AssetMan
 {
-    if (globalAssetManager == nullptr)
+    std::string g_prefix = DEFAULT_PREFIX;
+
+#if defined(__ANDROID__)
+    static uint8_t *readBinary(const char *assetPath, size_t &size)
     {
-        LOGE("AssetManager not initialized!");
-        return nullptr;
+        if (globalAssetManager == nullptr)
+        {
+            LOGE("AssetManager not initialized!");
+            return nullptr;
+        }
+
+        AAsset *asset = AAssetManager_open(globalAssetManager, assetPath, AASSET_MODE_BUFFER);
+        if (asset == nullptr)
+        {
+            LOGE("Failed to open asset: %s", assetPath);
+            return nullptr;
+        }
+
+        off_t assetLength = AAsset_getLength(asset);
+        size = assetLength;
+        auto *buffer = new uint8_t[assetLength + 1];
+        int bytesRead = AAsset_read(asset, buffer, assetLength);
+        AAsset_close(asset);
+
+        if (bytesRead < 0)
+        {
+            LOGE("Failed to read asset: %s", assetPath);
+            return nullptr;
+        }
+        buffer[assetLength] = '\0'; // Null-terminate
+
+        LOGI("Successfully read asset '%s', length: %lld, bytes read: %d", assetPath, (long long)assetLength, bytesRead);
+        return buffer;
     }
-
-    AAsset *asset = AAssetManager_open(globalAssetManager, assetPath, AASSET_MODE_BUFFER);
-    if (asset == nullptr)
-    {
-        LOGE("Failed to open asset: %s", assetPath);
-        return nullptr;
-    }
-
-    off_t assetLength = AAsset_getLength(asset);
-    size = assetLength;
-    auto *buffer = new uint8_t[assetLength + 1];
-    int bytesRead = AAsset_read(asset, buffer, assetLength);
-    AAsset_close(asset);
-
-    if (bytesRead < 0)
-    {
-        LOGE("Failed to read asset: %s", assetPath);
-        return nullptr;
-    }
-    buffer[assetLength] = '\0'; // Null-terminate
-
-    LOGI("Successfully read asset '%s', length: %lld, bytes read: %d", assetPath, (long long)assetLength, bytesRead);
-    return buffer;
-}
 
 #endif
 
-static std::string g_prefix = DEFAULT_PREFIX;
-
-std::string defaultPrefix()
-{
-    return DEFAULT_PREFIX;
-}
-
-std::string &CAssetMan::addTrailSlash(std::string &path)
-{
-    if (!path.empty() && path.back() != '/' &&
-        path.back() != '\\')
+    std::string defaultPrefix()
     {
-        path += "/";
+        return DEFAULT_PREFIX;
     }
-    return path;
-}
 
-void CAssetMan::setPrefix(const std::string &prefix)
-{
-    std::string tmp = prefix;
-    addTrailSlash(tmp);
-    g_prefix = tmp;
-}
+    std::string addTrailSlash(const std::string &path)
+    {
+        if (!path.empty() && path.back() != '/' &&
+            path.back() != '\\')
+        {
+            return path + "/";
+        }
+        return path;
+    }
 
-const std::string &CAssetMan::getPrefix()
-{
-    return g_prefix;
-}
+    void setPrefix(const std::string &prefix)
+    {
+        g_prefix = addTrailSlash(prefix);
+    }
 
-bool CAssetMan::read(const std::string &filepath, data_t &data, bool terminator)
-{
+    const std::string &getPrefix()
+    {
+        return g_prefix;
+    }
+
+    bool read(const std::string &filepath, data_t &data, bool terminator)
+    {
 #ifdef __ANDROID__
-    data.ptr = readBinary(filepath.c_str(), data.size);
-    if (!data.ptr)
-    {
-        LOGE("can't fetch asset: %s\n", filepath.c_str());
-        return false;
-    }
-    return true;
-#else
-    CFileWrap file;
-    if (file.open(filepath.c_str(), "rb"))
-    {
-        data.size = file.getSize();
-        data.ptr = new uint8_t[terminator ? data.size + 1 : data.size];
-        if (terminator)
-            data.ptr[data.size] = '\0';
-        file.read(data.ptr, data.size);
+        data.ptr = readBinary(filepath.c_str(), data.size);
+        if (!data.ptr)
+        {
+            LOGE("can't fetch asset: %s\n", filepath.c_str());
+            return false;
+        }
         return true;
-    }
-    else
-    {
-        LOGE("can't read: %s\n", filepath.c_str());
-        return false;
-    }
+#else
+        CFileWrap file;
+        if (file.open(filepath.c_str(), "rb"))
+        {
+            data.size = file.getSize();
+            data.ptr = new uint8_t[terminator ? data.size + 1 : data.size];
+            if (terminator)
+                data.ptr[data.size] = '\0';
+            file.read(data.ptr, data.size);
+            return true;
+        }
+        else
+        {
+            LOGE("can't read: %s\n", filepath.c_str());
+            return false;
+        }
 #endif
-}
+    }
 
-void CAssetMan::free(const data_t data)
-{
-    if (data.ptr)
-        delete[] data.ptr;
+    void free(const data_t data)
+    {
+        if (data.ptr)
+            delete[] data.ptr;
+    }
+
 }
