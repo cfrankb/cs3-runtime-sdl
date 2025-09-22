@@ -45,18 +45,6 @@ target_link_libraries(main
     log
 )
 
-
-# SDL sources are in a subfolder named "SDL"
-#add_subdirectory(external/SDL3)
-#add_subdirectory(external/SDL3_mixer)
-#add_subdirectory(external/libxmp)
-
-
-# Compilation of companion libraries
-#add_subdirectory(SDL_image)
-#add_subdirectory(SDL_mixer)
-#add_subdirectory(SDL_ttf)
-
 # Your game and its CMakeLists.txt are in a subfolder named "src"
 #add_subdirectory(src)
 

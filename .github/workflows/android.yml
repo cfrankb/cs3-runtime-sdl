@@ -103,10 +103,6 @@ jobs:
         working-directory: android-project
         run: ./gradlew assembleRelease  bundleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
 
-      #- name: Build Release bundle(unsigned)
-      #  working-directory: android-project
-      #  run: ./gradlew bundleRelease -Pandroid.ndkVersion=${{ env.ANDROID_NDK_VERSION }}
-
       - name: Show build outputs
         working-directory: android-project
         run: |

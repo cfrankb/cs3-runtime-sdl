@@ -28,14 +28,15 @@ jobs:
           cat src/build.h
 
       - name: Set up Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v12
+        uses: mymindstorm/setup-emsdk@v14
         with:
           version: "latest"
+          actions-cache-folder: "emsdk-cache"
 
       - name: Verify Emscripten Setup
         run: |
-          emcc --version
-          em++ --version
+          emcc -v
+          em++ -v
 
       - name: build SDL3 from source
         run: |

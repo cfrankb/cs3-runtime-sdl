@@ -42,5 +42,27 @@
             "url": "https://github.com/libxmp/libxmp"
         },
         "attribution": "No"
+    },
+    {
+        "name": "ogg",
+        "version": "",
+        "license": "BSD3",
+        "SPDX_ID": "",
+        "source": {
+            "name": "libOGG GitHub",
+            "url": "https://github.com/xiph/ogg"
+        },
+        "attribution": "No"
+    },
+    {
+        "name": "libVorbis",
+        "version": "",
+        "license": "BSD3",
+        "SPDX_ID": "",
+        "source": {
+            "name": "libVorbis GitHub",
+            "url": "https://github.com/xiph/vorbis"
+        },
+        "attribution": "No"
     }
 ]
