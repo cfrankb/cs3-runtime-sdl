@@ -53,18 +53,6 @@ const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 
 CRuntime::CRuntime() : CGameMixin()
 {
-#ifdef __EMSCRIPTEN__
-    EM_ASM(
-        // Make a directory other than '/'
-        FS.mkdir('/offline');
-        // Then mount with IDBFS type
-        FS.mount(IDBFS, {autoPersist : true}, '/offline');
-
-        // Then sync
-        FS.syncfs(true, function(err) {
-            console.log(FS.readdir('/offline'));
-            err ? console.log(err) : null; }));
-#endif
     m_music = nullptr;
     m_app = App();
     m_startLevel = 0;
@@ -79,6 +67,10 @@ CRuntime::CRuntime() : CGameMixin()
     m_summary = Summary{0, 0, 0, 0};
     m_virtualKeyboard = new CGameUI();
     initVirtualKeyboard();
+
+#ifdef __EMSCRIPTEN__
+    mountFS();
+#endif
 }
 
 CRuntime::~CRuntime()
@@ -298,7 +290,6 @@ bool CRuntime::isMenuActive()
            mode == CGame::MODE_USERSELECT ||
            mode == CGame::MODE_SKLLSELECT ||
            mode == CGame::MODE_OPTIONS ||
-           mode == CGame::MODE_LEVEL_SUMMARY ||
            m_gameMenuActive;
 }
 
@@ -308,7 +299,6 @@ bool CRuntime::isMenuActive()
  */
 void CRuntime::doInput()
 {
-    bool trace = isTrue(m_config["trace"]);
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
@@ -422,6 +412,7 @@ void CRuntime::doInput()
             // LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER\n");
             break;
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            memset(m_mouseButtons, BUTTON_RELEASED, sizeof(m_mouseButtons));
             // LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE\n");
             break;
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
@@ -456,7 +447,7 @@ void CRuntime::doInput()
             break;
 
         default:
-            if (trace)
+            if (m_trace)
                 LOGI("UNHANDLED EVENT: %d\n", event.type);
         }
     }
@@ -473,12 +464,11 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
 #else
     bool isAndroid = false;
 #endif
-    bool trace = isTrue(m_config["trace"]);
     if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
     {
         m_mouseButtons[event.button.button] = BUTTON_RELEASED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
-        if (trace)
+        if (m_trace)
             LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
                  event.button.button, event.button.x, event.button.y, event.button.clicks);
         if (event.button.button == SDL_BUTTON_LEFT && isMenuActive())
@@ -494,7 +484,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     {
         m_mouseButtons[event.button.button] = BUTTON_PRESSED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
-        if (trace)
+        if (m_trace)
         {
             LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
                  event.button.button, event.button.x, event.button.y, event.button.clicks);
@@ -506,8 +496,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
             enterGame();
         }
         else if (event.button.button == SDL_BUTTON_LEFT &&
-                 (menuItemAt(pos.x, pos.y) != INVALID ||
-                  mode == CGame::MODE_LEVEL_SUMMARY))
+                 (menuItemAt(pos.x, pos.y) != INVALID))
         {
             // simulate button press
             m_buttonState[BUTTON_A] = BUTTON_PRESSED;
@@ -524,14 +513,14 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_FINGER_DOWN)
     {
-        if (trace)
+        if (m_trace)
             LOGI("SDL_EVENT_FINGER_DOWN x=%f y=%f\n",
                  event.tfinger.x, event.tfinger.y);
         handleFingerDown(event.tfinger.x, event.tfinger.y);
     }
     else if (event.type == SDL_EVENT_FINGER_UP)
     {
-        if (trace)
+        if (m_trace)
             LOGI("SDL_EVENT_FINGER_UP x=%f y=%f\n",
                  event.tfinger.x, event.tfinger.y);
     }
@@ -541,7 +530,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_MOUSE_MOTION)
     {
-        if (trace)
+        if (m_trace)
             LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
                  event.motion.x, event.motion.y);
         pos_t pos = windowPos2texturePos(posF_t{event.motion.x, event.motion.y});
@@ -1601,6 +1590,8 @@ void CRuntime::initOptions()
     {
         m_game->setDefaultLives(1);
     }
+
+    m_trace = isTrue(m_config["trace"]);
 }
 
 /**
@@ -1773,6 +1764,7 @@ void CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_keyStates[Key_Space] ||
              m_keyStates[Key_Enter] ||
+             // m_mouseButtons[SDL_BUTTON_LEFT] ||
              m_buttonState[BUTTON_A])
     {
         if (m_sound)
@@ -2389,7 +2381,8 @@ void CRuntime::manageLevelSummary()
     if (m_countdown == 0 &&
         (m_keyStates[Key_Space] ||
          m_keyStates[Key_Enter] ||
-         m_buttonState[BUTTON_A]))
+         m_buttonState[BUTTON_A] ||
+         m_mouseButtons[SDL_BUTTON_LEFT]))
     {
         nextLevel();
     }
@@ -2447,8 +2440,7 @@ int CRuntime::menuItemAt(int x, int y)
         int h = menu.scaleY() * FONT_SIZE;
         if (RANGE(y, startY, startY + h))
         {
-            bool trace = isTrue(m_config["trace"]);
-            if (trace)
+            if (m_trace)
                 LOGI("menuItem at: %d %d ==> %zu\n", x, y, i);
             return i;
         }
@@ -2732,5 +2724,22 @@ void CRuntime::readGamePadJs()
             m_buttonState[i] = BUTTON_RELEASED;
         }
     }
+}
+
+void CRuntime::mountFS()
+{
+
+    EM_ASM(
+        // Make a directory other than '/'
+        FS.mkdir('/offline');
+        // Then mount with IDBFS type
+        FS.mount(IDBFS, {autoPersist : true}, '/offline');
+
+        // Then sync
+        FS.syncfs(true, function(err) {
+            console.log(FS.readdir('/offline'));
+            err ? console.log(err) : null; })
+
+    );
 }
 #endif

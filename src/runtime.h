@@ -148,7 +148,8 @@ private:
     int m_sndVolume = 10;
     int m_xAxisSensitivity = 10;
     int m_yAxisSensitivity = 10;
-    bool m_verbose;
+    bool m_verbose = false;
+    bool m_trace = false;
     CMenu *m_mainMenu = nullptr;
     CMenu *m_gameMenu = nullptr;
     CMenu *m_optionMenu = nullptr;
@@ -264,6 +265,7 @@ private:
     bool loadAppIcon();
 
 #ifdef __EMSCRIPTEN__
+    void mountFS();
     void readGamePadJs();
 #endif
 };
