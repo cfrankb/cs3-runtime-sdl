@@ -53,6 +53,19 @@ CMap::CMap(uint16_t len, uint16_t hei, uint8_t t)
     m_states = new CStates;
 };
 
+CMap::CMap(const CMap &map)
+{
+    m_len = map.m_len;
+    m_hei = map.m_hei;
+    m_size = map.m_len * map.m_hei;
+    m_map = new uint8_t[m_size];
+    memcpy(m_map, map.m_map, m_size);
+    m_attrs = map.m_attrs;
+    m_title = map.m_title;
+    m_states = new CStates();
+    *m_states = *map.m_states;
+}
+
 CMap::~CMap()
 {
     clear();

@@ -44,6 +44,7 @@ class CMap
 {
 public:
     CMap(uint16_t len = 0, uint16_t hei = 0, uint8_t t = 0);
+    CMap(const CMap &map);
     ~CMap();
     uint8_t &at(int x, int y);
     uint8_t *row(int y);

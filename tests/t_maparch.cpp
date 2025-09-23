@@ -62,13 +62,13 @@ bool checkInjectedStates(CMapArch &arch, const char *context)
     auto &states = map->states();
     if (states.getU(KEY1) != VAL1)
     {
-        fprintf(stderr, "missing injected state. %s\n", context);
+        LOGE("missing injected state. %s\n", context);
         return false;
     }
 
     if (std::string(states.getS(KEY2)) != VAL2)
     {
-        fprintf(stderr, "missing injected state. %s\n", context);
+        LOGE("missing injected state. %s\n", context);
         return false;
     }
     return true;
@@ -92,7 +92,7 @@ bool test_maparch_1()
     arch2.read(OUT_FILE1);
     if (arch1.size() != arch2.size())
     {
-        fprintf(stderr, "map count mismatch in arch after write\n");
+        LOGE("map count mismatch in arch after write\n");
         return false;
     }
 
@@ -107,7 +107,7 @@ bool test_maparch_1()
     arch3.write(OUT_FILE2);
     if (getFileSize(OUT_FILE1) != getFileSize(OUT_FILE2))
     {
-        fprintf(stderr, "different disk size for identical content\n");
+        LOGE("different disk size for identical content\n");
         return false;
     }
 
@@ -225,7 +225,6 @@ bool test_maparch_2()
             return false;
         }
         archFileSizes.push_back(file.getSize());
-        LOGI("file %ld; size: %ld\n", i, file.getSize());
         file.close();
         if (i > 0 && archFileSizes[i] != archFileSizes[i - 1])
         {

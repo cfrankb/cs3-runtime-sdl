@@ -18,3 +18,4 @@
 #pragma once
 
 bool test_map();
+bool test_map_2();
