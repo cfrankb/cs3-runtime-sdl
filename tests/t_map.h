@@ -16,6 +16,5 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-bool test_maparch_1();
-bool test_maparch_2();
-bool test_maparch_3();
+
+bool test_map();

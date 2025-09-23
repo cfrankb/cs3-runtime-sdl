@@ -150,7 +150,7 @@ CMenu &CMenu::removeRole(int role)
     m_items.erase(std::remove_if(m_items.begin(), m_items.end(), [role](const auto &item)
                                  { return item.role() == role; }),
                   m_items.end());
-    if (m_currentItem > m_items.size() - 1)
+    if (m_currentItem > static_cast<int>(m_items.size()) - 1)
     {
         m_currentItem = m_items.size() - 1;
     }

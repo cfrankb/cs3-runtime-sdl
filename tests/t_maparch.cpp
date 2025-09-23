@@ -15,6 +15,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "t_maparch"
 #include <filesystem>
 #include "t_maparch.h"
 #include "../src/maparch.h"
@@ -22,6 +23,7 @@
 #include "../src/states.h"
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"
+#include "../src/logger.h"
 
 #define KEY1 0x1990
 #define KEY2 0x1990
@@ -30,6 +32,7 @@
 #define IN_FILE "tests/in/levels1.mapz"
 #define OUT_FILE1 "tests/out/levels1.mapz"
 #define OUT_FILE2 "tests/out/levels2.mapz"
+#define OUT_ARCH_TEST2 "tests/out/arch%ld.mapz"
 
 namespace fs = std::filesystem;
 
@@ -71,7 +74,7 @@ bool checkInjectedStates(CMapArch &arch, const char *context)
     return true;
 }
 
-bool test_maparch()
+bool test_maparch_1()
 {
     CMapArch arch1;
     arch1.read(IN_FILE);
@@ -113,5 +116,191 @@ bool test_maparch()
     {
         return false;
     }
+    return true;
+}
+
+bool test_maparch_2()
+{
+    CMapArch arch1;
+    if (!arch1.read(IN_FILE))
+    {
+        LOGE("can't open %s; last error: %s\n", IN_FILE, arch1.lastError());
+        return false;
+    }
+    size_t size_maparch1 = arch1.size();
+
+    CMap *map = new CMap(16, 16);
+    if (arch1.add(map) != size_maparch1)
+    {
+        LOGE("map not inserted\n");
+        return false;
+    }
+
+    if (arch1.at(size_maparch1) != map)
+    {
+        LOGE("map not inserted at the end\n");
+        return false;
+    };
+
+    if (arch1.removeAt(size_maparch1) != map)
+    {
+        LOGE("last map not what is expected\n");
+        return false;
+    }
+
+    if (arch1.size() != size_maparch1)
+    {
+        LOGE("maparch size is not what is expected\n");
+        return false;
+    }
+
+    CMapArch arch2;
+    if (!arch2.extract(IN_FILE))
+    {
+        LOGE("can't extact from %s; last error: %s\n", IN_FILE, arch2.lastError());
+        return false;
+    }
+
+    if (arch1.size() != arch2.size())
+    {
+        LOGE("maparch1 and maparch2 don't have same map count\n");
+        return false;
+    }
+
+    CFileWrap file;
+    if (!file.open(IN_FILE))
+    {
+        LOGE("can't open %s", IN_FILE);
+        return false;
+    }
+    CMapArch arch3;
+    if (!arch3.read(file))
+    {
+        LOGE("can't read from IFile for %s; last error: %s\n", IN_FILE, arch3.lastError());
+        return false;
+    }
+    file.seek(0);
+
+    if (arch2.size() != arch3.size())
+    {
+        file.close();
+        LOGE("maparch2 and maparch3 don't have same map count\n");
+        return false;
+    }
+
+    int size = file.getSize();
+    char *buf = new char[size];
+    if (file.read(buf, size) != 1)
+    {
+        file.close();
+        LOGE("read error for %s\n", IN_FILE);
+        return false;
+    }
+    file.close();
+
+    CMapArch arch4;
+    if (!arch4.fromMemory(reinterpret_cast<uint8_t *>(buf)))
+    {
+        LOGE("maparch fromMemory on data from IFile failed for %s; last error: %s\n", IN_FILE, arch4.lastError());
+        return false;
+    }
+    delete[] buf;
+
+    std::vector<CMapArch *> archs{&arch1, &arch2, &arch3, &arch4};
+    std::vector<size_t> archFileSizes;
+    for (size_t i = 0; i < archs.size(); ++i)
+    {
+        CMapArch *arch = archs[i];
+        char fpath[128];
+        snprintf(fpath, sizeof(fpath), OUT_ARCH_TEST2, i);
+        if (!arch->write(fpath))
+        {
+            LOGE("write error for %s; last error: %s\n", fpath, arch->lastError());
+            return false;
+        }
+        CFileWrap file;
+        if (!file.open(fpath))
+        {
+            LOGE("can't open %s", fpath);
+            return false;
+        }
+        archFileSizes.push_back(file.getSize());
+        LOGI("file %ld; size: %ld\n", i, file.getSize());
+        file.close();
+        if (i > 0 && archFileSizes[i] != archFileSizes[i - 1])
+        {
+            LOGE("filesize for file%ld and file%ld don't match\n", i, i - 1);
+            return false;
+        }
+    }
+
+    arch1.insertAt(0, map);
+    if (arch1.size() != size_maparch1 + 1)
+    {
+        LOGE("map not inserted sucessfully\n");
+        return false;
+    }
+    if (arch1.at(0) != map)
+    {
+        LOGE("map inserted not found at the start\n");
+        return false;
+    }
+
+    return true;
+}
+
+bool test_maparch_3()
+{
+    CFileWrap file;
+    if (!file.open(IN_FILE))
+    {
+        LOGE("can't open %s", IN_FILE);
+        return false;
+    }
+    int size = file.getSize();
+    char *buf = new char[size];
+    if (file.read(buf, size) != 1)
+    {
+        file.close();
+        LOGE("read error for %s\n", IN_FILE);
+        return false;
+    }
+    file.close();
+
+    IndexVector index1;
+    if (!CMapArch::indexFromFile(IN_FILE, index1))
+    {
+        LOGE("failed to get index from file %s\n", IN_FILE);
+        return false;
+    }
+
+    IndexVector index2;
+    if (!CMapArch::indexFromMemory(reinterpret_cast<uint8_t *>(buf), index2))
+    {
+        LOGE("failed to get index from memory\n");
+        return false;
+    }
+    if (index1.size() != index2.size())
+    {
+        LOGE("index1 size [%ld] doesn't match index2 [%ld\n", index1.size(), index2.size());
+        return false;
+    }
+
+    CMap *map = new CMap();
+    for (size_t i = 0; i < index1.size(); ++i)
+    {
+        if (index1.at(i) != index2.at(i))
+        {
+            LOGE("index1 [0x%.lx] at position %ld mismatch w/ index2 [0x%.lx]\n", index1.at(i), i, index2.at(i));
+            return false;
+        }
+        if (!map->fromMemory(reinterpret_cast<uint8_t *>(buf) + index1.at(i)))
+        {
+            LOGE("failed to serialize map at offset 0x%.lx from archfile %s\n", index1.at(i), IN_FILE);
+            return false;
+        }
+    }
+    delete map;
+    delete[] buf;
     return true;
 }

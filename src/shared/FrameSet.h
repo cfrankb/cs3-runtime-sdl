@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <cstdint>
+#include <vector>
 #include "ISerial.h"
 
 class CFrame;
@@ -34,17 +35,13 @@ class IFile;
 
 class CFrameSet : public ISerial
 {
-    // Construction
 public:
     CFrameSet();
     CFrameSet(CFrameSet *s);
 
-    // Attributes
 public:
-    CFrame *current();
     int getSize();
 
-    // Operations
 public:
     int operator++();
     int operator--();
@@ -57,10 +54,9 @@ public:
 
     CFrame *removeAt(int n);
     void insertAt(int n, CFrame *pFrame);
-    void forget();
+    void clear();
     void removeAll();
     bool extract(IFile &file, char *format = nullptr);
-    bool extractPNG(IFile &file);
 
     static char *ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
@@ -76,27 +72,23 @@ public:
     void assignNewUUID();
     void toSubset(CFrameSet &dest, int start, int end = -1);
 
-    // Implementation
 public:
     ~CFrameSet();
     virtual bool write(IFile &file);
     virtual bool read(IFile &file);
     int m_nCurrFrame;
 
+private:
     enum
     {
         OBL_VERSION = 0x501,
-        GROWBY = 16
     };
 
-protected:
-    void write0x501(IFile &file);
+    bool write0x501(IFile &file);
     bool read0x501(IFile &file, int size);
 
     std::string m_lastError;
-    CFrame **m_arrFrames;
-    int m_max;
-    int m_size;
+    std::vector<CFrame *> m_arrFrames;
     std::string m_name;
     std::unordered_map<std::string, std::string> m_tags;
     friend class CFrameArray;

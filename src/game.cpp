@@ -291,7 +291,7 @@ void CGame::nextLevel()
 {
     addPoints(LEVEL_BONUS + m_health);
     addPoints(m_map.states().getU(TIMEOUT) * 2);
-    if (m_level != m_mapArch->size() - 1)
+    if (m_level != static_cast<int>(m_mapArch->size()) - 1)
     {
         ++m_level;
     }

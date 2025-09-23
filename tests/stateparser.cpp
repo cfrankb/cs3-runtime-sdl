@@ -19,7 +19,7 @@
 #include "stateparser.h"
 #include "../src/strhelper.h"
 #include "../src/states.h"
-#include "../shared/FileWrap.h"
+#include "../src/shared/FileWrap.h"
 
 CStateParser::CStateParser()
 {

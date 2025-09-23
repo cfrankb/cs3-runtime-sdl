@@ -270,19 +270,6 @@ std::vector<StateValuePair> CStates::getValues() const
     return pairs;
 }
 
-void CStates::operator=(const CStates &s)
-{
-    for (const auto &[k, v] : s.m_stateU)
-    {
-        m_stateU[k] = v;
-    }
-
-    for (const auto &[k, v] : s.m_stateS)
-    {
-        m_stateS[k] = v;
-    }
-}
-
 bool CStates::hasU(const uint16_t k) const
 {
     return m_stateU.count(k) != 0;

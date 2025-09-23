@@ -59,7 +59,7 @@ size_t CMapArch::size()
  */
 void CMapArch::clear()
 {
-    for (auto i = 0; i < m_maps.size(); ++i)
+    for (size_t i = 0; i < m_maps.size(); ++i)
     {
         if (m_maps[i])
             delete m_maps[i];
@@ -253,7 +253,7 @@ bool CMapArch::write(const char *filename)
         fwrite(MAAZ_SIG, sizeof(MAAZ_SIG), 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
         fwrite("\0\0\0\0", 4, 1, tfile);
-        for (auto i = 0; i < m_maps.size(); ++i)
+        for (size_t i = 0; i < m_maps.size(); ++i)
         {
             // write maps
             index.push_back(ftell(tfile));

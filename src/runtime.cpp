@@ -545,8 +545,8 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_MOUSE_WHEEL)
     {
-        LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
-             event.wheel.x, event.wheel.y);
+        // LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
+        //      event.wheel.x, event.wheel.y);
         if (static_cast<int>(event.wheel.y) == 1)
         {
             m_joyState[AIM_LEFT] = KEY_PRESSED;
@@ -933,10 +933,8 @@ void CRuntime::cleanUpCredits()
 
 void CRuntime::preRun()
 {
-    LOGI("prerun: %s\n", m_config["clickstart"].c_str());
     if (isTrue(m_config["clickstart"]))
     {
-        LOGI("clickstart\n");
         m_game->setMode(CGame::MODE_CLICKSTART);
     }
     else

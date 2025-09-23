@@ -54,14 +54,11 @@ public:
 
     void debug() const;
     void clear();
-
     std::vector<StateValuePair> getValues() const;
-    void operator=(const CStates &s);
 
 private:
     std::unordered_map<uint16_t, std::string> m_stateS;
     std::unordered_map<uint16_t, uint16_t> m_stateU;
-
     enum
     {
         MAX_STRING = 256,

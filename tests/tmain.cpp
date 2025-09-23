@@ -23,6 +23,7 @@
 #include "t_states.h"
 #include "t_stateparser.h"
 #include "t_maparch.h"
+#include "t_map.h"
 #include "t_strhelper.h"
 
 #define FCT(x) {x, #x}
@@ -42,7 +43,10 @@ int main(int argc, char *args[])
         FCT(test_recorder),
         FCT(test_states),
         FCT(test_stateparser),
-        FCT(test_maparch),
+        FCT(test_map),
+        FCT(test_maparch_1),
+        FCT(test_maparch_2),
+        FCT(test_maparch_3),
         FCT(test_strhelper),
     };
 
