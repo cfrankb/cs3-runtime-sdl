@@ -93,7 +93,6 @@ bool CRecorder::readNextBatch()
     m_index = 0;
     if (m_file->read(m_buffer, m_batchSize) != 1)
         return false;
-    // fread(m_buffer, m_batchSize, 1, m_file);
     return true;
 }
 
@@ -145,7 +144,6 @@ void CRecorder::dump()
     {
         if (m_file->write(m_buffer, m_index) != 1)
             LOGE("CRecorder::dump() failed to write\n");
-        // fwrite(m_buffer, m_index, 1, m_file);
         m_size += m_index;
     }
     m_index = 0;
@@ -202,15 +200,12 @@ void CRecorder::stop()
     {
         storeData(true);
         m_file->seek(m_offset);
-        // fseek(m_file, m_offset, SEEK_SET);
-        // fwrite(&m_size, sizeof(m_size), 1, m_file);
         if (m_file->write(&m_size, sizeof(m_size)) != 1)
             LOGE("CRecorder::stop() write fail\n");
     }
     m_mode = MODE_CLOSED;
     if (m_file)
         m_file->close();
-    // fclose(m_file);
     m_file = nullptr;
 }
 

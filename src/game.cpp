@@ -844,7 +844,7 @@ void CGame::checkClosure()
         const uint16_t exitKey = m_map.states().getU(POS_EXIT);
         if (exitKey != 0)
         {
-            // TODO: add message here
+            // Exit Notification Message
             m_events.push_back(EVENT_EXIT_OPENED);
             const bool revealExit = m_gameStats->get(S_REVEAL_EXIT) != 0;
             const Pos exitPos = CMap::toPos(exitKey);
@@ -1058,7 +1058,6 @@ bool CGame::read(IFile &sfile)
     auto readfile = [&sfile](auto ptr, auto size)
     {
         return sfile.read(ptr, size) == 1;
-        //   return fread(ptr, size, 1, sfile) == 1;
     };
 
     // check signature/version
@@ -1130,7 +1129,6 @@ bool CGame::write(IFile &tfile)
     auto writefile = [&tfile](auto ptr, auto size)
     {
         return tfile.write(ptr, size) == 1;
-        // return fwrite(ptr, size, 1, tfile) == 1;
     };
 
     // writing signature/version

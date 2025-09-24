@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <unordered_map>
 #include <string>
+#include <functional>
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
 struct Pos
@@ -88,6 +89,11 @@ public:
     void debug();
 
 private:
+    template <typename WriteFunc>
+    bool writeCommon(WriteFunc writefile);
+    template <typename ReadFunc>
+    bool readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::function<bool(size_t)> seek, std::function<bool()> readStates);
+
     enum
     {
         XTR_VER0 = 0,

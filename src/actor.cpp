@@ -293,29 +293,41 @@ void CActor::reverveDir()
 
 bool CActor::read(FILE *sfile)
 {
-    auto readfile = [sfile](auto ptr, auto size)
+    if (!sfile)
+        return false;
+
+    auto readfile = [sfile](auto ptr, auto size) -> bool
     {
         return fread(ptr, size, 1, sfile) == 1;
     };
-    readfile(&m_x, sizeof(m_x));
-    readfile(&m_y, sizeof(m_y));
-    readfile(&m_type, sizeof(m_type));
-    readfile(&m_aim, sizeof(m_aim));
-    readfile(&m_pu, sizeof(m_pu));
-    return true;
+
+    return readCommon(readfile);
 }
 
 bool CActor::read(IFile &sfile)
 {
-    auto readfile = [&sfile](auto ptr, auto size)
+    auto readfile = [&sfile](auto ptr, auto size) -> bool
     {
         return sfile.read(ptr, size) == 1;
     };
-    readfile(&m_x, sizeof(m_x));
-    readfile(&m_y, sizeof(m_y));
-    readfile(&m_type, sizeof(m_type));
-    readfile(&m_aim, sizeof(m_aim));
-    readfile(&m_pu, sizeof(m_pu));
+
+    return readCommon(readfile);
+}
+
+template <typename ReadFunc>
+bool CActor::readCommon(ReadFunc readfile)
+{
+    if (!readfile(&m_x, sizeof(m_x)))
+        return false;
+    if (!readfile(&m_y, sizeof(m_y)))
+        return false;
+    if (!readfile(&m_type, sizeof(m_type)))
+        return false;
+    if (!readfile(&m_aim, sizeof(m_aim)))
+        return false;
+    if (!readfile(&m_pu, sizeof(m_pu)))
+        return false;
+
     return true;
 }
 
@@ -328,16 +340,14 @@ bool CActor::read(IFile &sfile)
  */
 bool CActor::write(FILE *tfile)
 {
+    if (!tfile)
+        return false;
+
     auto writefile = [tfile](auto ptr, auto size)
     {
         return fwrite(ptr, size, 1, tfile) == 1;
     };
-    writefile(&m_x, sizeof(m_x));
-    writefile(&m_y, sizeof(m_y));
-    writefile(&m_type, sizeof(m_type));
-    writefile(&m_aim, sizeof(m_aim));
-    writefile(&m_pu, sizeof(m_pu));
-    return true;
+    return writeCommon(writefile);
 }
 
 bool CActor::write(IFile &tfile)
@@ -346,11 +356,23 @@ bool CActor::write(IFile &tfile)
     {
         return tfile.write(ptr, size) == 1;
     };
-    writefile(&m_x, sizeof(m_x));
-    writefile(&m_y, sizeof(m_y));
-    writefile(&m_type, sizeof(m_type));
-    writefile(&m_aim, sizeof(m_aim));
-    writefile(&m_pu, sizeof(m_pu));
+    return writeCommon(writefile);
+}
+
+template <typename WriteFunc>
+bool CActor::writeCommon(WriteFunc writefile)
+{
+    if (!writefile(&m_x, sizeof(m_x)))
+        return false;
+    if (!writefile(&m_y, sizeof(m_y)))
+        return false;
+    if (!writefile(&m_type, sizeof(m_type)))
+        return false;
+    if (!writefile(&m_aim, sizeof(m_aim)))
+        return false;
+    if (!writefile(&m_pu, sizeof(m_pu)))
+        return false;
+
     return true;
 }
 

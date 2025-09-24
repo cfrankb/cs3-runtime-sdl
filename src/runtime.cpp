@@ -44,10 +44,7 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-// const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
-// const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
 #endif
-// #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 
@@ -998,11 +995,7 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 
 bool CRuntime::loadScores()
 {
-    // #ifdef __EMSCRIPTEN__
-    //   std::string path = HISCORE_FILE;
-    // #else
     std::string path = m_workspace + HISCORE_FILE;
-    // #endif
     LOGI("reading %s\n", path.c_str());
     CFileWrap file;
     if (file.open(path.c_str(), "rb"))
@@ -1025,12 +1018,7 @@ bool CRuntime::loadScores()
 
 bool CRuntime::saveScores()
 {
-    // #ifdef __EMSCRIPTEN__
-    //   std::string path = HISCORE_FILE;
-    // #else
     std::string path = m_workspace + HISCORE_FILE;
-    // #endif
-
     CFileWrap file;
     if (file.open(path.c_str(), "wb"))
     {
@@ -1078,12 +1066,7 @@ void CRuntime::startMusic()
 
 void CRuntime::save()
 {
-    // #ifdef __EMSCRIPTEN__
-    //   std::string path = SAVEGAME_FILE;
-    // #else
     std::string path = m_workspace + SAVEGAME_FILE;
-    // #endif
-
     if (m_game->mode() != CGame::MODE_PLAY)
     {
         LOGE("cannot save while not playing\n");
@@ -1095,11 +1078,7 @@ void CRuntime::save()
 
 void CRuntime::load()
 {
-    // #ifdef __EMSCRIPTEN__
-    //   std::string path = SAVEGAME_FILE;
-    // #else
     std::string path = m_workspace + SAVEGAME_FILE;
-    // #endif
     CGame &game = *m_game;
     game.setMode(CGame::MODE_IDLE);
     std::string name;

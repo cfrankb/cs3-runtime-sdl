@@ -80,6 +80,9 @@ private:
     uint8_t m_type;
     JoyAim m_aim;
     uint8_t m_pu;
-
+    template <typename ReadFunc>
+    bool readCommon(ReadFunc readfile);
+    template <typename WriteFunc>
+    bool writeCommon(WriteFunc writefile);
     friend class CGame;
 };

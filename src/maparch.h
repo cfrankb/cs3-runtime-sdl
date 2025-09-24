@@ -54,6 +54,8 @@ protected:
         OFFSET_COUNT = 6,
         OFFSET_INDEX = 8,
     };
+    template <typename ReadFunc, typename SeekFunc, typename ReadMapFunc>
+    bool readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc readmap);
     std::vector<CMap *> m_maps;
     std::string m_lastError;
 };

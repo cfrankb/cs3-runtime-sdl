@@ -61,8 +61,14 @@ private:
     std::unordered_map<uint16_t, uint16_t> m_stateU;
     enum
     {
-        MAX_STRING = 256,
+        MAX_STRING = 1024,
         COUNT_BYTES = sizeof(uint16_t),
         LEN_BYTES = sizeof(uint16_t),
     };
+
+    template <typename ReadFunc>
+    bool readCommon(ReadFunc readfile);
+
+    template <typename WriteFunc>
+    bool writeCommon(WriteFunc writefile) const;
 };

@@ -163,65 +163,65 @@ bool processLevel(CMap &map, const char *fname)
     return true;
 }
 
-const uint16_t convTable[] = {
-    TILES_BLANK,
-    TILES_WALL_BRICK,
-    TILES_ANNIE2,
-    TILES_STOP,
-    TILES_DIAMOND,
-    TILES_AMULET1,
-    TILES_CHEST,
-    TILES_TRIFORCE,
-    TILES_BOULDER,
-    TILES_KEY01,
-    TILES_DOOR01,
-    TILES_KEY02,
-    TILES_DOOR02,
-    TILES_KEY03,
-    TILES_DOOR03,
-    TILES_KEY04,
-    TILES_DOOR04,
-    TILES_WALLS93,
-    TILES_WALLS93_2,
-    TILES_WALLS93_3,
-    TILES_WALLS93_4,
-    TILES_WALLS93_5,
-    TILES_WALLS93_6,
-    TILES_WALLS93_7,
-    TILES_FLOWERS_2,
-    TILES_TREE,
-    TILES_ROCK1,
-    TILES_ROCK2,
-    TILES_ROCK3,
-    TILES_TOMB,
-    TILES_SWAMP,
-    TILES_VAMPLANT,
-    TILES_INSECT1,
-    TILES_TEDDY93,
-    TILES_OCTOPUS,
-    TILES_BLANK,
-    TILES_BLANK,
-    TILES_BLANK,
-    TILES_DIAMOND + 0x100,
-    TILES_WALLS93_2 + 0x100,
-    TILES_DIAMOND + 0x200,
-    TILES_WALLS93_2 + 0x200,
-    TILES_DIAMOND + 0x300,
-    TILES_WALLS93_2 + 0x300,
-    TILES_DIAMOND + 0x400,
-    TILES_BLANK + 0x400,
-    TILES_DIAMOND + 0x500,
-    TILES_BLANK + 0x500,
-    TILES_DIAMOND + 0x600,
-    TILES_BLANK + 0x600, // 0x31
-    TILES_BLANK,         // 0x32
-    TILES_BLANK,         // 0x33
-    TILES_BLANK,         // 0x34
-    TILES_YAHOO,         // 0x35
-};
-
 bool convertCs3Level(CMap &map, const char *fname)
 {
+    const uint16_t convTable[] = {
+        TILES_BLANK,
+        TILES_WALL_BRICK,
+        TILES_ANNIE2,
+        TILES_STOP,
+        TILES_DIAMOND,
+        TILES_AMULET1,
+        TILES_CHEST,
+        TILES_TRIFORCE,
+        TILES_BOULDER,
+        TILES_KEY01,
+        TILES_DOOR01,
+        TILES_KEY02,
+        TILES_DOOR02,
+        TILES_KEY03,
+        TILES_DOOR03,
+        TILES_KEY04,
+        TILES_DOOR04,
+        TILES_WALLS93,
+        TILES_WALLS93_2,
+        TILES_WALLS93_3,
+        TILES_WALLS93_4,
+        TILES_WALLS93_5,
+        TILES_WALLS93_6,
+        TILES_WALLS93_7,
+        TILES_FLOWERS_2,
+        TILES_TREE,
+        TILES_ROCK1,
+        TILES_ROCK2,
+        TILES_ROCK3,
+        TILES_TOMB,
+        TILES_SWAMP,
+        TILES_VAMPLANT,
+        TILES_INSECT1,
+        TILES_TEDDY93,
+        TILES_OCTOPUS,
+        TILES_BLANK,
+        TILES_BLANK,
+        TILES_BLANK,
+        TILES_DIAMOND + 0x100,
+        TILES_WALLS93_2 + 0x100,
+        TILES_DIAMOND + 0x200,
+        TILES_WALLS93_2 + 0x200,
+        TILES_DIAMOND + 0x300,
+        TILES_WALLS93_2 + 0x300,
+        TILES_DIAMOND + 0x400,
+        TILES_BLANK + 0x400,
+        TILES_DIAMOND + 0x500,
+        TILES_BLANK + 0x500,
+        TILES_DIAMOND + 0x600,
+        TILES_BLANK + 0x600, // 0x31
+        TILES_BLANK,         // 0x32
+        TILES_BLANK,         // 0x33
+        TILES_BLANK,         // 0x34
+        TILES_YAHOO,         // 0x35
+    };
+
     uint8_t *data = readFile(fname);
     if (data == nullptr)
     {
