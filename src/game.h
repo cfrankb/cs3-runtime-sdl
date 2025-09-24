@@ -135,6 +135,8 @@ public:
     void decKeyIndicators();
     int defaultLives();
     void setDefaultLives(int lives);
+    bool read(IFile &sfile);
+    bool write(IFile &tfile);
 
 private:
     enum
@@ -190,8 +192,6 @@ private:
     void addHealth(const int hp);
     void addPoints(const int points);
     void addLife();
-    bool read(FILE *sfile);
-    bool write(FILE *tfile);
     int calcScoreLife() const;
     const char *getHintText();
     static bool isFruit(const uint8_t tileID);

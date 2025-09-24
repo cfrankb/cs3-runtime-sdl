@@ -36,6 +36,7 @@
 #include "gamestats.h"
 #include "attr.h"
 #include "logger.h"
+#include "shared/FileWrap.h"
 
 // Check windows
 #ifdef _WIN64
@@ -1543,11 +1544,12 @@ void CGameMixin::clearJoyStates()
     memset(m_vjoyState, 0, sizeof(m_vjoyState));
 }
 
-bool CGameMixin::read(FILE *sfile, std::string &name)
+bool CGameMixin::read(IFile &sfile, std::string &name)
 {
-    auto readfile = [sfile](auto ptr, auto size)
+    auto readfile = [&sfile](auto ptr, auto size)
     {
-        return fread(ptr, size, 1, sfile) == 1;
+        // return fread(ptr, size, 1, sfile) == 1;
+        return sfile.read(ptr, size) == 1;
     };
     if (!m_game->read(sfile))
     {
@@ -1565,9 +1567,11 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     readfile(&m_countdown, sizeof(m_countdown));
 
     size_t ptr = 0;
-    fseek(sfile, SAVENAME_PTR_OFFSET, SEEK_SET);
+    sfile.seek(SAVENAME_PTR_OFFSET);
+    // fseek(sfile, SAVENAME_PTR_OFFSET, SEEK_SET);
     readfile(&ptr, sizeof(uint32_t));
-    fseek(sfile, ptr, SEEK_SET);
+    sfile.seek(ptr);
+    // fseek(sfile, ptr, SEEK_SET);
     size_t size = 0;
     readfile(&size, sizeof(uint16_t));
     char *tmp = new char[size];
@@ -1577,11 +1581,12 @@ bool CGameMixin::read(FILE *sfile, std::string &name)
     return true;
 }
 
-bool CGameMixin::write(FILE *tfile, const std::string &name)
+bool CGameMixin::write(IFile &tfile, const std::string &name)
 {
-    auto writefile = [tfile](auto ptr, auto size)
+    auto writefile = [&tfile](auto ptr, auto size)
     {
-        return fwrite(ptr, size, 1, tfile) == 1;
+        return tfile.write(ptr, size) == 1;
+        // return fwrite(ptr, size, 1, tfile) == 1;
     };
     m_game->write(tfile);
     writefile(&m_ticks, sizeof(m_ticks));
@@ -1589,11 +1594,12 @@ bool CGameMixin::write(FILE *tfile, const std::string &name)
     writefile(&m_healthRef, sizeof(m_healthRef));
     writefile(&m_countdown, sizeof(m_countdown));
 
-    const size_t ptr = ftell(tfile);
+    const size_t ptr = tfile.tell(); // ftell(tfile);
     const size_t size = name.size();
     writefile(&size, sizeof(uint16_t));
     writefile(name.c_str(), name.size());
-    fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
+    tfile.seek(SAVENAME_PTR_OFFSET);
+    // fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
     writefile(&ptr, sizeof(uint32_t));
     return true;
 }
@@ -1645,15 +1651,16 @@ void CGameMixin::recordGame()
     m_recorder->stop();
     const std::string name = "test";
     const std::string path = "test.rec";
-    FILE *tfile = fopen(path.c_str(), "wb");
-    if (!tfile)
+    //  if (!tfile)
+    if (!m_recorderFile.open(path.c_str(), "wb"))
     {
         LOGE("cannot create: %s\n", path.c_str());
         return;
     }
-    write(tfile, name);
-    fseek(tfile, 0, SEEK_END);
-    m_recorder->start(tfile, true);
+    write(m_recorderFile, name);
+    m_recorderFile.seek(m_recorderFile.getSize());
+    // fseek(tfile, 0, SEEK_END);
+    m_recorder->start(&m_recorderFile, true);
 }
 
 void CGameMixin::playbackGame()
@@ -1661,15 +1668,15 @@ void CGameMixin::playbackGame()
     m_recorder->stop();
     std::string name;
     const std::string path = "test.rec";
-    FILE *sfile = fopen(path.c_str(), "rb");
-    if (!sfile)
+    // FILE *sfile = fopen(path.c_str(), "rb");
+    if (!m_recorderFile.open(path.c_str()))
     {
         LOGE("cannot read: %s\n", path.c_str());
         return;
     }
-    read(sfile, name);
+    read(m_recorderFile, name);
     openMusicForLevel(m_game->level());
-    m_recorder->start(sfile, false);
+    m_recorder->start(&m_recorderFile, false);
 }
 
 void CGameMixin::plotLine(CFrame &bitmap, int x0, int y0, const int x1, const int y1, const Color color)

@@ -29,6 +29,7 @@
 #include "colormap.h"
 #include "game.h"
 #include "gameui.h"
+#include "shared/FileWrap.h"
 
 #define WIDTH getWidth()
 #define HEIGHT getHeight()
@@ -332,6 +333,7 @@ protected:
     ColorMaps m_colormaps;
     visualStates_t m_visualStates;
     CGameUI m_ui;
+    CFileWrap m_recorderFile;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
@@ -405,8 +407,8 @@ protected:
     virtual void drawHelpScreen(CFrame &bitmap);
     virtual bool loadScores() = 0;
     virtual bool saveScores() = 0;
-    virtual bool read(FILE *sfile, std::string &name);
-    virtual bool write(FILE *tfile, const std::string &name);
+    virtual bool read(IFile &sfile, std::string &name);
+    virtual bool write(IFile &tfile, const std::string &name);
     virtual void stopMusic() = 0;
     virtual void startMusic() = 0;
     virtual void setZoom(bool zoom);

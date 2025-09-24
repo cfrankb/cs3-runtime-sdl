@@ -44,12 +44,12 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
-const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
-#else
+// const char HISCORE_FILE[] = "/offline/hiscores-cs3.dat";
+// const char SAVEGAME_FILE[] = "/offline/savegame-cs3.dat";
+#endif
+// #else
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
-#endif
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -998,11 +998,11 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 
 bool CRuntime::loadScores()
 {
-#ifdef __EMSCRIPTEN__
-    std::string path = HISCORE_FILE;
-#else
+    // #ifdef __EMSCRIPTEN__
+    //   std::string path = HISCORE_FILE;
+    // #else
     std::string path = m_workspace + HISCORE_FILE;
-#endif
+    // #endif
     LOGI("reading %s\n", path.c_str());
     CFileWrap file;
     if (file.open(path.c_str(), "rb"))
@@ -1025,11 +1025,11 @@ bool CRuntime::loadScores()
 
 bool CRuntime::saveScores()
 {
-#ifdef __EMSCRIPTEN__
-    std::string path = HISCORE_FILE;
-#else
+    // #ifdef __EMSCRIPTEN__
+    //   std::string path = HISCORE_FILE;
+    // #else
     std::string path = m_workspace + HISCORE_FILE;
-#endif
+    // #endif
 
     CFileWrap file;
     if (file.open(path.c_str(), "wb"))
@@ -1078,61 +1078,33 @@ void CRuntime::startMusic()
 
 void CRuntime::save()
 {
-#ifdef __EMSCRIPTEN__
-    std::string path = SAVEGAME_FILE;
-#else
+    // #ifdef __EMSCRIPTEN__
+    //   std::string path = SAVEGAME_FILE;
+    // #else
     std::string path = m_workspace + SAVEGAME_FILE;
-#endif
+    // #endif
 
     if (m_game->mode() != CGame::MODE_PLAY)
     {
         LOGE("cannot save while not playing\n");
         return;
     }
-    LOGI("writing: %s\n", path.c_str());
     std::string name{"Testing123"};
-    FILE *tfile = fopen(path.c_str(), "wb");
-    if (tfile)
-    {
-        write(tfile, name);
-        fclose(tfile);
-#ifdef __EMSCRIPTEN__
-        EM_ASM(
-            FS.syncfs(function(err) {
-                // Error
-                err ? console.log(err) : null;
-            }));
-#endif
-    }
-    else
-    {
-        LOGE("can't write:%s\n", path.c_str());
-    }
+    saveToFile(path, name);
 }
 
 void CRuntime::load()
 {
-#ifdef __EMSCRIPTEN__
-    std::string path = SAVEGAME_FILE;
-#else
+    // #ifdef __EMSCRIPTEN__
+    //   std::string path = SAVEGAME_FILE;
+    // #else
     std::string path = m_workspace + SAVEGAME_FILE;
-#endif
+    // #endif
     CGame &game = *m_game;
     game.setMode(CGame::MODE_IDLE);
     std::string name;
-    LOGI("reading: %s\n", path.c_str());
-    FILE *sfile = fopen(path.c_str(), "rb");
-    if (sfile)
+    if (!loadFromFile(path, name))
     {
-        if (!read(sfile, name))
-        {
-            LOGE("incompatible file\n");
-        }
-        fclose(sfile);
-    }
-    else
-    {
-        LOGE("can't read:%s\n", path.c_str());
     }
     game.setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
@@ -2632,7 +2604,6 @@ void CRuntime::initVirtualKeyboard()
         ++i;
     }
     m_input = "";
-    LOGI("virtualkeyboard %d x %d\n", ui.width(), ui.height());
 }
 
 /**
@@ -2756,3 +2727,49 @@ void CRuntime::mountFS()
     );
 }
 #endif
+
+bool CRuntime::saveToFile(const std::string filepath, const std::string name)
+{
+    LOGI("writing: %s\n", filepath.c_str());
+    CFileWrap tfile;
+    if (tfile.open(filepath.c_str(), "wb"))
+    {
+        write(tfile, name);
+        tfile.close();
+#ifdef __EMSCRIPTEN__
+        EM_ASM(
+            FS.syncfs(function(err) {
+                // Error
+                err ? console.log(err) : null;
+            }));
+#endif
+    }
+    else
+    {
+        LOGE("can't write:%s\n", filepath.c_str());
+        return false;
+    }
+    return true;
+}
+
+bool CRuntime::loadFromFile(const std::string filepath, std::string &name)
+{
+    LOGI("reading: %s\n", filepath.c_str());
+    CFileWrap sfile;
+    if (sfile.open(filepath.c_str(), "rb"))
+    {
+        if (!read(sfile, name))
+        {
+            sfile.close();
+            LOGE("incompatible file: %s\n", filepath.c_str());
+            return false;
+        }
+        sfile.close();
+    }
+    else
+    {
+        LOGE("can't read:%s\n", filepath.c_str());
+        return false;
+    }
+    return true;
+}

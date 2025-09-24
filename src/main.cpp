@@ -194,8 +194,10 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     params.workspace = path;
-    LOGI("workspace: %s\n", params.workspace.c_str());
+#elif defined(__EMSCRIPTEN__)
+    params.workspace = "/offline";
 #endif
+    LOGI("workspace: %s\n", params.workspace.c_str());
 
     bool appExit = false;
     if (!parseArgs(list, params, appExit))

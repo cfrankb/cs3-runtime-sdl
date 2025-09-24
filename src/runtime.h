@@ -70,6 +70,8 @@ public:
     Rect getSafeAreaWindow();
     Rect windowRect2textureRect(const Rect &wRect);
     void debugSDL();
+    bool saveToFile(const std::string filepath, const std::string name);
+    bool loadFromFile(const std::string filepath, std::string &name);
 
 private:
     typedef struct

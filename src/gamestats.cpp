@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "gamestats.h"
+#include "shared/IFile.h"
 
 CGameStats::CGameStats()
 {
@@ -100,6 +101,26 @@ bool CGameStats::read(FILE *sfile)
     return true;
 }
 
+bool CGameStats::read(IFile &sfile)
+{
+    auto readfile = [&sfile](auto ptr, auto size)
+    {
+        // return fread(ptr, size, 1, sfile) == 1;
+        return sfile.read(ptr, size) == 1;
+    };
+    uint16_t count = 0;
+    readfile(&count, sizeof(count));
+    m_stats.clear();
+    for (size_t i = 0; i < count; ++i)
+    {
+        uint16_t key;
+        int32_t value;
+        readfile(&key, sizeof(key));
+        readfile(&value, sizeof(value));
+        m_stats[key] = value;
+    }
+    return true;
+}
 /**
  * @brief Serialize key/value pairs to disk
  *
@@ -112,6 +133,31 @@ bool CGameStats::write(FILE *tfile)
     auto writefile = [tfile](auto ptr, auto size)
     {
         return fwrite(ptr, size, 1, tfile) == 1;
+    };
+    uint16_t count = 0;
+    for (const auto &[key, value] : m_stats)
+    {
+        if (value)
+            ++count;
+    }
+    writefile(&count, sizeof(count));
+    for (const auto &[key, value] : m_stats)
+    {
+        if (value)
+        {
+            writefile(&key, sizeof(key));
+            writefile(&value, sizeof(value));
+        }
+    }
+    return true;
+}
+
+bool CGameStats::write(IFile &tfile)
+{
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        //    return fwrite(ptr, size, 1, tfile) == 1;
+        return tfile.write(ptr, size) == 1;
     };
     uint16_t count = 0;
     for (const auto &[key, value] : m_stats)

@@ -356,39 +356,83 @@ bool CMap::fromMemory(uint8_t *mem)
 
 bool CMap::write(FILE *tfile)
 {
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        return fwrite(ptr, size, 1, tfile) == 1;
+    };
+
     if (tfile)
     {
-        fwrite(SIG, sizeof(SIG), 1, tfile);
-        fwrite(&VERSION, sizeof(VERSION), 1, tfile);
-        fwrite(&m_len, sizeof(uint8_t), 1, tfile);
-        fwrite(&m_hei, sizeof(uint8_t), 1, tfile);
-        fwrite(m_map, m_len * m_hei, 1, tfile);
+        writefile(SIG, sizeof(SIG));          //, 1, tfile);
+        writefile(&VERSION, sizeof(VERSION)); //, 1, tfile);
+        writefile(&m_len, sizeof(uint8_t));   //, 1, tfile);
+        writefile(&m_hei, sizeof(uint8_t));   //, 1, tfile);
+        writefile(m_map, m_len * m_hei);      //, 1, tfile);
         size_t attrCount = m_attrs.size();
-        fwrite(&attrCount, sizeof(uint16_t), 1, tfile);
+        writefile(&attrCount, sizeof(uint16_t)); //, 1, tfile);
         for (auto &it : m_attrs)
         {
             uint16_t key = it.first;
             uint8_t x = key & 0xff;
             uint8_t y = key >> 8;
             uint8_t a = it.second;
-            fwrite(&x, sizeof(x), 1, tfile);
-            fwrite(&y, sizeof(y), 1, tfile);
-            fwrite(&a, sizeof(a), 1, tfile);
+            writefile(&x, sizeof(x)); //, 1, tfile);
+            writefile(&y, sizeof(y)); //, 1, tfile);
+            writefile(&a, sizeof(a)); //, 1, tfile);
         }
 
         // write title
         extrahdr_t hdr;
         memcpy(&hdr.sig, XTR_SIG, sizeof(hdr.sig));
         hdr.ver = XTR_VER1;
-        fwrite(&hdr, sizeof(hdr), 1, tfile);
+        writefile(&hdr, sizeof(hdr)); //, 1, tfile);
         int size = m_title.size();
-        fwrite(&size, 1, 1, tfile);
-        fwrite(m_title.c_str(), m_title.size(), 1, tfile);
+        writefile(&size, 1);                        //, 1, tfile);
+        writefile(m_title.c_str(), m_title.size()); //, 1, tfile);
 
         // write states
         m_states->write(tfile);
     }
     return tfile != nullptr;
+}
+
+bool CMap::write(IFile &tfile)
+{
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        return tfile.write(ptr, size) == 1;
+    };
+
+    writefile(SIG, sizeof(SIG));          //, 1, tfile);
+    writefile(&VERSION, sizeof(VERSION)); //, 1, tfile);
+    writefile(&m_len, sizeof(uint8_t));   //, 1, tfile);
+    writefile(&m_hei, sizeof(uint8_t));   //, 1, tfile);
+    writefile(m_map, m_len * m_hei);      //, 1, tfile);
+    size_t attrCount = m_attrs.size();
+    writefile(&attrCount, sizeof(uint16_t)); //, 1, tfile);
+    for (auto &it : m_attrs)
+    {
+        uint16_t key = it.first;
+        uint8_t x = key & 0xff;
+        uint8_t y = key >> 8;
+        uint8_t a = it.second;
+        writefile(&x, sizeof(x)); //, 1, tfile);
+        writefile(&y, sizeof(y)); //, 1, tfile);
+        writefile(&a, sizeof(a)); //, 1, tfile);
+    }
+
+    // write title
+    extrahdr_t hdr;
+    memcpy(&hdr.sig, XTR_SIG, sizeof(hdr.sig));
+    hdr.ver = XTR_VER1;
+    writefile(&hdr, sizeof(hdr)); //, 1, tfile);
+    int size = m_title.size();
+    writefile(&size, 1);                        //, 1, tfile);
+    writefile(m_title.c_str(), m_title.size()); //, 1, tfile);
+
+    // write states
+    m_states->write(tfile);
+    return true;
 }
 
 int CMap::len() const

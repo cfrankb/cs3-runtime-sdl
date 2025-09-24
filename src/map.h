@@ -54,6 +54,7 @@ public:
     bool read(FILE *sfile);
     bool read(IFile &file);
     bool write(FILE *tfile);
+    bool write(IFile &tfile);
     void clear();
     int len() const;
     int hei() const;

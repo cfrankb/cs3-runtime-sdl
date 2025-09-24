@@ -15,15 +15,26 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "t_recorder"
 #include "../src/recorder.h"
+#include "../src/shared/FileWrap.h"
 #include <cstring>
+#include "../src/logger.h"
 
 bool test_recorder()
 {
-    FILE *tfile;
+    // FILE *tfile;
+    CFileWrap tfile;
     CRecorder rec(5);
-    tfile = fopen("tests/out/test0000.rec", "wb");
-    rec.start(tfile, true);
+
+    // tfile = fopen("tests/out/test0000.rec", "wb");
+    const char *path0 = "tests/out/test0000.rec";
+    if (!tfile.open(path0, "wb"))
+    {
+        LOGE("can't write file %s\n", path0);
+        return false;
+    }
+    rec.start(&tfile, true);
     rec.stop();
 
     enum
@@ -51,8 +62,15 @@ bool test_recorder()
 
     // record a pattern (encode)
     uint8_t input[BUFSIZE];
-    tfile = fopen("tests/out/test0001.rec", "wb");
-    rec.start(tfile, true);
+    const char *path1 = "tests/out/test0001.rec";
+    // tfile = fopen("tests/out/test0001.rec", "wb");
+    if (!tfile.open(path1, "wb"))
+    {
+        LOGE("can't write file %s\n", path1);
+        return false;
+    }
+
+    rec.start(&tfile, true);
     for (size_t i = 0; i < sizeof(data); ++i)
     {
         int j = data[i];
@@ -65,8 +83,14 @@ bool test_recorder()
 
     // decode the pattern and check it against
     // the original source
-    FILE *sfile = fopen("tests/out/test0001.rec", "rb");
-    rec.start(sfile, false);
+    // FILE *sfile = fopen("tests/out/test0001.rec", "rb");
+    CFileWrap sfile;
+    if (!sfile.open(path1, "rb"))
+    {
+        LOGE("can't read file %s\n", path1);
+        return false;
+    }
+    rec.start(&sfile, false);
     uint8_t output[BUFSIZE];
     for (size_t i = 0; i < sizeof(data); ++i)
     {

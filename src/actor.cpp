@@ -21,6 +21,7 @@
 #include "sprtypes.h"
 #include "attr.h"
 #include <cstdio>
+#include "shared/IFile.h"
 
 const JoyAim g_aims[] = {
     AIM_DOWN, AIM_RIGHT, AIM_UP, AIM_LEFT,
@@ -304,6 +305,20 @@ bool CActor::read(FILE *sfile)
     return true;
 }
 
+bool CActor::read(IFile &sfile)
+{
+    auto readfile = [&sfile](auto ptr, auto size)
+    {
+        return sfile.read(ptr, size) == 1;
+    };
+    readfile(&m_x, sizeof(m_x));
+    readfile(&m_y, sizeof(m_y));
+    readfile(&m_type, sizeof(m_type));
+    readfile(&m_aim, sizeof(m_aim));
+    readfile(&m_pu, sizeof(m_pu));
+    return true;
+}
+
 /**
  * @brief Serialize Sprite to disk
  *
@@ -316,6 +331,20 @@ bool CActor::write(FILE *tfile)
     auto writefile = [tfile](auto ptr, auto size)
     {
         return fwrite(ptr, size, 1, tfile) == 1;
+    };
+    writefile(&m_x, sizeof(m_x));
+    writefile(&m_y, sizeof(m_y));
+    writefile(&m_type, sizeof(m_type));
+    writefile(&m_aim, sizeof(m_aim));
+    writefile(&m_pu, sizeof(m_pu));
+    return true;
+}
+
+bool CActor::write(IFile &tfile)
+{
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        return tfile.write(ptr, size) == 1;
     };
     writefile(&m_x, sizeof(m_x));
     writefile(&m_y, sizeof(m_y));

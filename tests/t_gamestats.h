@@ -17,45 +17,4 @@
 */
 #pragma once
 
-#include <cstdint>
-#include <cstdio>
-#include <unordered_map>
-
-class IFile;
-
-enum GameStat : uint16_t
-{
-    S_GOD_MODE_TIMER = 1,
-    S_EXTRA_SPEED_TIMER,
-    S_SUGAR,
-    S_SKILL,
-    S_RAGE_TIMER,
-    S_CLOSURE,
-    S_CLOSURE_TIMER,
-    S_REVEAL_EXIT,
-    S_IDLE_TIME,
-    S_FREEZE_TIMER,
-    S_USER,
-    S_TIME_TAKEN
-};
-
-class CGameStats
-{
-public:
-    CGameStats();
-    ~CGameStats();
-
-    int &get(const GameStat key);
-    void set(const GameStat key, int value);
-    int &dec(const GameStat key);
-    int &inc(const GameStat key);
-
-    bool read(FILE *sfile);
-    bool write(FILE *tfile);
-
-    bool read(IFile &sfile);
-    bool write(IFile &tfile);
-
-private:
-    std::unordered_map<uint16_t, int32_t> m_stats;
-};
+bool test_gamestats();

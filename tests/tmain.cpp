@@ -20,11 +20,14 @@
 #include <functional>
 #include <vector>
 #include <typeinfo>
-#include "t_recorder.h"
-#include "t_states.h"
-#include "t_stateparser.h"
+#include "t_game.h"
+#include "t_gamestats.h"
 #include "t_maparch.h"
 #include "t_map.h"
+#include "t_recorder.h"
+#include "t_runtime.h"
+#include "t_states.h"
+#include "t_stateparser.h"
 #include "t_strhelper.h"
 #include "../src/logger.h"
 
@@ -53,6 +56,9 @@ int main(int argc, char *args[])
         FCT(test_maparch_2),
         FCT(test_maparch_3),
         FCT(test_strhelper),
+        FCT(test_gamestats),
+        FCT(test_runtime),
+        FCT(test_game),
     };
 
     int failed = 0;

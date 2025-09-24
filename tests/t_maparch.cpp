@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #define LOG_TAG "t_maparch"
-#include <filesystem>
+#include "thelper.h"
 #include "t_maparch.h"
 #include "../src/maparch.h"
 #include "../src/map.h"
@@ -33,20 +33,6 @@
 #define OUT_FILE1 "tests/out/levels1.mapz"
 #define OUT_FILE2 "tests/out/levels2.mapz"
 #define OUT_ARCH_TEST2 "tests/out/arch%ld.mapz"
-
-namespace fs = std::filesystem;
-
-uint64_t getFileSize(const std::string &filename)
-{
-    try
-    {
-        return fs::file_size(filename);
-    }
-    catch (const fs::filesystem_error &e)
-    {
-        throw std::runtime_error("Error accessing file: " + std::string(e.what()));
-    }
-}
 
 void injectStates(CMapArch &arch)
 {

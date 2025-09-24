@@ -1053,11 +1053,12 @@ CActor &CGame::getMonster(int i)
  * @return true
  * @return false
  */
-bool CGame::read(FILE *sfile)
+bool CGame::read(IFile &sfile)
 {
-    auto readfile = [sfile](auto ptr, auto size)
+    auto readfile = [&sfile](auto ptr, auto size)
     {
-        return fread(ptr, size, 1, sfile) == 1;
+        return sfile.read(ptr, size) == 1;
+        //   return fread(ptr, size, 1, sfile) == 1;
     };
 
     // check signature/version
@@ -1124,11 +1125,12 @@ bool CGame::read(FILE *sfile)
  * @return false
  */
 
-bool CGame::write(FILE *tfile)
+bool CGame::write(IFile &tfile)
 {
-    auto writefile = [tfile](auto ptr, auto size)
+    auto writefile = [&tfile](auto ptr, auto size)
     {
-        return fwrite(ptr, size, 1, tfile) == 1;
+        return tfile.write(ptr, size) == 1;
+        // return fwrite(ptr, size, 1, tfile) == 1;
     };
 
     // writing signature/version

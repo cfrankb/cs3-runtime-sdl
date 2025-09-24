@@ -33,16 +33,16 @@ CRecorder::~CRecorder()
     delete[] m_buffer;
 }
 
-bool CRecorder::start(FILE *file, bool isWrite)
+bool CRecorder::start(IFile *file, bool isWrite)
 {
     const char SIG[] = {'R', 'E', 'C', '!'};
     auto readFile = [file](auto ptr, auto size)
     {
-        return fread(ptr, size, 1, file) == 1;
+        return file->read(ptr, size) == 1;
     };
     auto writeFile = [file](auto ptr, auto size)
     {
-        return fwrite(ptr, size, 1, file) == 1;
+        return file->write(ptr, size) == 1;
     };
     m_newInfo = true;
     m_index = 0;
@@ -57,7 +57,7 @@ bool CRecorder::start(FILE *file, bool isWrite)
         const uint8_t placeholder[] = {0, 0, 0, 0};
         writeFile(SIG, sizeof(SIG));
         writeFile(&version, sizeof(version));
-        m_offset = ftell(file);
+        m_offset = file->tell();                     //  ftell(file);
         writeFile(placeholder, sizeof(placeholder)); // placeholder for datasize
     }
     else if (m_file && m_mode == MODE_READ)
@@ -90,8 +90,10 @@ bool CRecorder::readNextBatch()
 {
     m_batchSize = std::min(static_cast<uint32_t>(m_bufSize), m_size);
     m_size -= m_batchSize;
-    fread(m_buffer, m_batchSize, 1, m_file);
     m_index = 0;
+    if (m_file->read(m_buffer, m_batchSize) != 1)
+        return false;
+    // fread(m_buffer, m_batchSize, 1, m_file);
     return true;
 }
 
@@ -141,7 +143,9 @@ void CRecorder::dump()
 {
     if (m_index)
     {
-        fwrite(m_buffer, m_index, 1, m_file);
+        if (m_file->write(m_buffer, m_index) != 1)
+            LOGE("CRecorder::dump() failed to write\n");
+        // fwrite(m_buffer, m_index, 1, m_file);
         m_size += m_index;
     }
     m_index = 0;
@@ -197,12 +201,16 @@ void CRecorder::stop()
     if (m_mode == MODE_WRITE)
     {
         storeData(true);
-        fseek(m_file, m_offset, SEEK_SET);
-        fwrite(&m_size, sizeof(m_size), 1, m_file);
+        m_file->seek(m_offset);
+        // fseek(m_file, m_offset, SEEK_SET);
+        // fwrite(&m_size, sizeof(m_size), 1, m_file);
+        if (m_file->write(&m_size, sizeof(m_size)) != 1)
+            LOGE("CRecorder::stop() write fail\n");
     }
     m_mode = MODE_CLOSED;
     if (m_file)
-        fclose(m_file);
+        m_file->close();
+    // fclose(m_file);
     m_file = nullptr;
 }
 
