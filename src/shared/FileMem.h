@@ -16,31 +16,29 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef FILEMEM_H
-#define FILEMEM_H
+#pragma once
 
 #include <string>
 #include "IFile.h"
 
-class CFileMem: public IFile
+class CFileMem : public IFile
 {
 public:
-
     CFileMem();
     virtual ~CFileMem();
 
-    virtual CFileMem & operator >> (std::string & str);
-    virtual CFileMem & operator << (const std::string & str);
-    virtual CFileMem & operator += (const std::string & str);
+    virtual CFileMem &operator>>(std::string &str);
+    virtual CFileMem &operator<<(const std::string &str);
+    virtual CFileMem &operator+=(const std::string &str);
 
-    virtual CFileMem & operator >> (int & n);
-    virtual CFileMem & operator << (int n);
+    virtual CFileMem &operator>>(int &n);
+    virtual CFileMem &operator<<(int n);
 
-    virtual CFileMem & operator >> (bool & b);
-    virtual CFileMem & operator << (bool b);
-    virtual CFileMem & operator += (const char *);
+    virtual CFileMem &operator>>(bool &b);
+    virtual CFileMem &operator<<(bool b);
+    virtual CFileMem &operator+=(const char *);
 
-    virtual bool open(const char *filename ="", const char *mode="");
+    virtual bool open(const char *filename = "", const char *mode = "");
     virtual int read(void *buf, int size);
     virtual int write(const void *buf, int size);
 
@@ -62,9 +60,8 @@ protected:
     int m_ptr;
     std::string m_mode;
 
-    enum {
+    enum
+    {
         GROWBY = 8192
     };
 };
-
-#endif // FILEMEM_H 

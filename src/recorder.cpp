@@ -26,6 +26,7 @@ CRecorder::CRecorder(const size_t bufSize)
     m_bufSize = bufSize;
     m_buffer = new uint8_t[m_bufSize];
     m_mode = MODE_CLOSED;
+    m_file = nullptr;
 }
 
 CRecorder::~CRecorder()
@@ -57,22 +58,28 @@ bool CRecorder::start(IFile *file, bool isWrite)
         const uint8_t placeholder[] = {0, 0, 0, 0};
         writeFile(SIG, sizeof(SIG));
         writeFile(&version, sizeof(version));
-        m_offset = file->tell();                     //  ftell(file);
+        m_offset = file->tell();
         writeFile(placeholder, sizeof(placeholder)); // placeholder for datasize
     }
     else if (m_file && m_mode == MODE_READ)
     {
         uint32_t version = 0xffff;
-        char sig[sizeof(SIG)];
-        readFile(sig, sizeof(sig));
+        char sig[sizeof(SIG) + 1];
+        sig[sizeof(SIG)] = '\0';
+        readFile(sig, sizeof(SIG));
         if (memcmp(sig, SIG, sizeof(SIG)) != 0)
         {
-            LOGE("signature mismatch:\n");
+            char oSig[sizeof(SIG) + 1];
+            oSig[sizeof(SIG)] = '\0';
+            memcpy(oSig, SIG, sizeof(SIG));
+            LOGE("signature mismatch:%s; expecting :%s\n", sig, oSig);
+            return false;
         }
         readFile(&version, sizeof(version));
         if (version != VERSION)
         {
-            LOGE("version mismatch: 0x%.8x\n", version);
+            LOGE("version mismatch: 0x%.8x; expecting :0x%.8x\n", version, VERSION);
+            return false;
         }
         readFile(&m_size, sizeof(m_size)); // total datasize of data
         readNextBatch();

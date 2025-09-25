@@ -58,9 +58,7 @@ CFrameSet::CFrameSet(CFrameSet *s)
 
 void CFrameSet::assignNewUUID()
 {
-    char *t = getUUID();
-    m_tags["UUID"] = t;
-    delete[] t;
+    m_tags["UUID"] = getUUID();
 }
 
 CFrameSet::~CFrameSet()

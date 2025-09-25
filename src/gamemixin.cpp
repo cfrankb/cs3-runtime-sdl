@@ -73,35 +73,12 @@ CGameMixin::CGameMixin()
 
 CGameMixin::~CGameMixin()
 {
-    if (m_animator)
-    {
-        delete m_animator;
-    }
-
-    if (m_tiles)
-    {
-        delete m_tiles;
-    }
-
-    if (m_animz)
-    {
-        delete m_animz;
-    }
-
-    if (m_users)
-    {
-        delete m_users;
-    }
-
-    if (m_fontData)
-    {
-        delete[] m_fontData;
-    }
-
-    if (m_recorder)
-    {
-        delete m_recorder;
-    }
+    delete m_animator;
+    delete m_tiles;
+    delete m_animz;
+    delete m_users;
+    delete[] m_fontData;
+    delete m_recorder;
 }
 
 /**
@@ -1592,7 +1569,7 @@ bool CGameMixin::write(IFile &tfile, const std::string &name)
     writefile(&m_healthRef, sizeof(m_healthRef));
     writefile(&m_countdown, sizeof(m_countdown));
 
-    const size_t ptr = tfile.tell(); // ftell(tfile);
+    const size_t ptr = tfile.tell();
     const size_t size = name.size();
     writefile(&size, sizeof(uint16_t));
     writefile(name.c_str(), name.size());

@@ -18,6 +18,7 @@
 
 #define LOG_TAG "t_runtime"
 #include <cstring>
+#include <filesystem>
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
@@ -27,13 +28,12 @@
 #include "thelper.h"
 #include "t_runtime.h"
 
-#define IN_FILE "tests/in/savegame-cs3.dat"
-#define OUT_FILE "tests/out/savegame-cs3.dat"
+constexpr const char *IN_FILE = "tests/in/savegame-cs3.dat";
+constexpr const char *OUT_FILE = "tests/out/savegame-cs3.dat";
 
 bool test_runtime()
 {
     CRuntime runtime;
-    CGame *game = CGame::getGame();
     std::string name;
     if (!runtime.loadFromFile(IN_FILE, name))
     {
@@ -49,10 +49,12 @@ bool test_runtime()
 
     if (getFileSize(OUT_FILE) != getFileSize(IN_FILE))
     {
-        LOGE("different disk size for %s and %s; %d != %d\n",
+        LOGE("different disk size for %s and %s; %ld != %ld\n",
              IN_FILE, OUT_FILE, getFileSize(IN_FILE), getFileSize(OUT_FILE));
         return false;
     }
 
+    // clean up
+    std::filesystem::remove(OUT_FILE);
     return true;
 }

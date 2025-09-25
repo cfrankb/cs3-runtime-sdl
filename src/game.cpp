@@ -45,6 +45,41 @@ CGame::userKeys_t CGame::m_keys;
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 CGame *g_game = nullptr;
 
+const std::set<uint8_t> g_fruits = {
+    TILES_APPLE,
+    TILES_POMEGRENADE,
+    TILES_WATERMELON,
+    TILES_PEAR,
+    TILES_CHERRY,
+    TILES_STRAWBERRY,
+    TILES_KIWI,
+    TILES_JELLYJAR,
+};
+
+const std::set<uint8_t> g_treasures = {
+    TILES_AMULET1,
+    TILES_CHEST,
+    TILES_GIFTBOX,
+    TILES_LIGHTBUL,
+    TILES_SCROLL,
+    TILES_SHIELD,
+    TILES_CLOVER,
+    TILES_1ST_AID,
+    TILES_POTION1,
+    TILES_POTION2,
+    TILES_POTION3,
+    TILES_FLOWERS,
+    TILES_FLOWERS_2,
+    TILES_TRIFORCE,
+    TILES_ORB,
+    TILES_TNTSTICK,
+    TILES_SMALL_MUSH0,
+    TILES_SMALL_MUSH1,
+    TILES_SMALL_MUSH2,
+    TILES_SMALL_MUSH3,
+    TILES_REDBOOK,
+};
+
 /**
  * @brief Construct a new CGame::CGame object
  *
@@ -66,15 +101,8 @@ CGame::CGame()
  */
 CGame::~CGame()
 {
-    if (m_sound)
-    {
-        delete m_sound;
-    }
-
-    if (m_gameStats)
-    {
-        delete m_gameStats;
-    }
+    delete m_sound;
+    delete m_gameStats;
 }
 
 /**
@@ -231,7 +259,7 @@ void CGame::consume()
     else if (attr >= MSG0 && m_map.states().hasS(attr))
     {
         // Messsage Event (scrolls, books etc)
-        m_events.push_back(attr);
+        m_events.push_back(static_cast<Event>(attr));
     }
 }
 
@@ -1067,14 +1095,14 @@ bool CGame::read(IFile &sfile)
     readfile(&version, sizeof(version));
     if (memcmp(GAME_SIGNATURE, &signature, sizeof(GAME_SIGNATURE)) != 0)
     {
-        char sig[5] = {0, 0, 0, 0, 0};
+        char sig[] = {0, 0, 0, 0, 0};
         memcpy(sig, &signature, sizeof(signature));
-        printf("savegame signature mismatched: %s\n", sig);
+        LOGE("savegame signature mismatched: %s\n", sig);
         return false;
     }
     if (version != VERSION)
     {
-        printf("savegame version mismatched: 0x%.8x\n", version);
+        LOGE("savegame version mismatched: 0x%.8x\n", version);
         return false;
     }
 
@@ -1347,55 +1375,19 @@ int CGame::getEvent()
  */
 bool CGame::isFruit(const uint8_t tileID)
 {
-    const uint8_t fruits[] = {
-        TILES_APPLE,
-        TILES_POMEGRENADE,
-        TILES_WATERMELON,
-        TILES_PEAR,
-        TILES_CHERRY,
-        TILES_STRAWBERRY,
-        TILES_KIWI,
-        TILES_JELLYJAR,
-    };
-    for (const auto &fruit : fruits)
-    {
-        if (tileID == fruit)
-            return true;
-    }
-    return false;
+    return g_fruits.find(tileID) != g_fruits.end();
 }
 
+/**
+ * @brief is this tile a treasure
+ *
+ * @param tileID
+ * @return true
+ * @return false
+ */
 bool CGame::isBonusItem(const uint8_t tileID)
 {
-    const uint8_t treasures[] = {
-        TILES_AMULET1,
-        TILES_CHEST,
-        TILES_GIFTBOX,
-        TILES_LIGHTBUL,
-        TILES_SCROLL,
-        TILES_SHIELD,
-        TILES_CLOVER,
-        TILES_1ST_AID,
-        TILES_POTION1,
-        TILES_POTION2,
-        TILES_POTION3,
-        TILES_FLOWERS,
-        TILES_FLOWERS_2,
-        TILES_TRIFORCE,
-        TILES_ORB,
-        TILES_TNTSTICK,
-        TILES_SMALL_MUSH0,
-        TILES_SMALL_MUSH1,
-        TILES_SMALL_MUSH2,
-        TILES_SMALL_MUSH3,
-        TILES_REDBOOK,
-    };
-    for (const auto &treasure : treasures)
-    {
-        if (tileID == treasure)
-            return true;
-    }
-    return false;
+    return g_treasures.find(tileID) != g_treasures.end();
 }
 
 /**
@@ -1619,11 +1611,8 @@ void CGame::resetKeys()
 
 void CGame::decKeyIndicators()
 {
-    for (size_t i = 0; i < MAX_KEYS; ++i)
-    {
-        uint8_t &u = m_keys.indicators[i];
+    for (auto &u : m_keys.indicators)
         u ? --u : 0;
-    }
 }
 
 void CGame::clearKeyIndicators()

@@ -138,7 +138,7 @@ bool CMap::read(IFile &file)
 {
     auto readfile = [&file](auto ptr, auto size) -> bool
     {
-        return file.read(ptr, size) == 1; // Return true if all bytes read
+        return file.read(ptr, size) == 1;
     };
 
     auto tell = [&file]() -> size_t

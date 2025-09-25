@@ -22,6 +22,7 @@
 #include "actor.h"
 #include "map.h"
 #include "gamesfx.h"
+#include "events.h"
 
 class CGameStats;
 class CMapArch;
@@ -170,7 +171,7 @@ private:
     static userKeys_t m_keys;
     GameMode m_mode;
     int m_introHint = 0;
-    std::vector<int> m_events;
+    std::vector<Event> m_events;
     std::vector<CActor> m_monsters;
     std::vector<sfx_t> m_sfx;
     CActor m_player;

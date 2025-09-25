@@ -15,11 +15,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "states"
 #include "thelper.h"
 #include "../src/states.h"
 #include "../src/shared/FileWrap.h"
 #include <cstdio>
 #include <cstring>
+#include "../src/logger.h"
+#include <filesystem>
 
 const uint8_t k1 = 1;
 const char *v1 = "test1";
@@ -57,41 +60,101 @@ bool test_states()
     FILE *sfile;
     CFileWrap file;
 
+    constexpr const char *outpath0 = "tests/out/state0.bin";
+    constexpr const char *outpath1 = "tests/out/state1.bin";
+    constexpr const char *outpath2 = "tests/out/state2.bin";
+    constexpr const char *outpath3 = "tests/out/state3.bin";
+
     // write test
-    tfile = fopen("tests/out/state0.bin", "wb");
-    states.write(tfile);
+    tfile = fopen(outpath0, "wb");
+    if (!tfile)
+    {
+        LOGE("fail to create %s\n", outpath0);
+        return false;
+    }
+    if (!states.write(tfile))
+    {
+        LOGE("fail to write %s\n", outpath0);
+        return false;
+    }
     fclose(tfile);
 
-    file.open("tests/out/state1.bin", "wb");
-    states.write(file);
+    if (!file.open(outpath1, "wb"))
+    {
+        LOGE("fail to create %s\n", outpath1);
+        return false;
+    }
+    if (!states.write(file))
+    {
+        LOGE("fail to write %s\n", outpath1);
+        return false;
+    }
     file.close();
 
     // read test
     states.clear();
-    sfile = fopen("tests/out/state0.bin", "rb");
-    states.read(sfile);
+    sfile = fopen(outpath0, "rb");
+    if (!sfile)
+    {
+        LOGE("fail to open for reading %s\n", outpath0);
+        return false;
+    }
+    if (!states.read(sfile))
+    {
+        LOGE("fail to read %s\n", outpath0);
+        return false;
+    }
     fclose(sfile);
     if (!checkState(states, "read FILE*"))
         return false;
 
-    file.open("tests/out/state2.bin", "wb");
-    states.write(file);
+    if (!file.open(outpath2, "wb"))
+    {
+        LOGE("fail to create %s\n", outpath2);
+        return false;
+    }
+    if (!states.write(file))
+    {
+        LOGE("fail to write %s\n", outpath2);
+        return false;
+    }
     file.close();
 
     states.clear();
-    file.open("tests/out/state0.bin", "rb");
-    states.read(file);
+    if (!file.open(outpath0, "rb"))
+    {
+        LOGE("fail to open for reading %s\n", outpath0);
+        return false;
+    }
+    if (!states.read(file))
+    {
+        LOGE("fail to read %s\n", outpath0);
+        return false;
+    }
     file.close();
     if (!checkState(states, "read FileWrap"))
         return false;
 
-    file.open("tests/out/state3.bin", "wb");
-    states.write(file);
+    if (!file.open(outpath3, "wb"))
+    {
+        LOGE("fail to create %s\n", outpath3);
+        return false;
+    }
+    if (!states.write(file))
+    {
+        LOGE("fail to write %s\n", outpath3);
+        return false;
+    }
     file.close();
 
     CStates states2 = states;
     if (!checkState(states2, "copy constructor"))
         return false;
 
+    // clean up
+    std::filesystem::remove(outpath0);
+    std::filesystem::remove(outpath1);
+    std::filesystem::remove(outpath2);
+    std::filesystem::remove(outpath3);
     return true;
 }

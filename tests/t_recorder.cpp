@@ -16,19 +16,18 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #define LOG_TAG "t_recorder"
+#include <filesystem>
+#include <cstring>
 #include "../src/recorder.h"
 #include "../src/shared/FileWrap.h"
-#include <cstring>
 #include "../src/logger.h"
 
 bool test_recorder()
 {
-    // FILE *tfile;
     CFileWrap tfile;
     CRecorder rec(5);
 
-    // tfile = fopen("tests/out/test0000.rec", "wb");
-    const char *path0 = "tests/out/test0000.rec";
+    constexpr const char *path0 = "tests/out/test0000.rec";
     if (!tfile.open(path0, "wb"))
     {
         LOGE("can't write file %s\n", path0);
@@ -62,7 +61,7 @@ bool test_recorder()
 
     // record a pattern (encode)
     uint8_t input[BUFSIZE];
-    const char *path1 = "tests/out/test0001.rec";
+    constexpr const char *path1 = "tests/out/test0001.rec";
     // tfile = fopen("tests/out/test0001.rec", "wb");
     if (!tfile.open(path1, "wb"))
     {
@@ -118,5 +117,9 @@ bool test_recorder()
         }
     }
     rec.stop();
+
+    // clean up
+    std::filesystem::remove(path0);
+    std::filesystem::remove(path1);
     return true;
 }

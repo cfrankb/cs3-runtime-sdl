@@ -299,7 +299,7 @@ void CRuntime::doInput()
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        SDL_Window *window = SDL_GetWindowFromID(event.window.windowID);
+        // SDL_Window *window = SDL_GetWindowFromID(event.window.windowID);
         SDL_ConvertEventToRenderCoordinates(m_app.renderer, &event);
         uint8_t keyState = KEY_RELEASED;
         switch (event.type)
@@ -461,6 +461,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
 #else
     bool isAndroid = false;
 #endif
+    (void)isAndroid;
     if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
     {
         m_mouseButtons[event.button.button] = BUTTON_RELEASED;
@@ -734,6 +735,8 @@ void CRuntime::handleFingerDown(float x, float y)
     // If you're rendering to an SDL_Surface (e.g. software rendering): cpp
     // int surfaceX = pixelX * surface->w / windowWidth;
     // int surfaceY = pixelY * surface->h / windowHeight;
+    (void)x;
+    (void)y;
 }
 
 void CRuntime::handleVKEY(int x, int y)
@@ -2441,7 +2444,6 @@ void CRuntime::manageSkillMenu()
 void CRuntime::initSkillMenu()
 {
     CMenu &menu = *m_skillMenu;
-    menu.disableCaret();
     menu.clear();
     menu.setScaleX(2);
     menu.setScaleY(2);
@@ -2691,7 +2693,6 @@ void CRuntime::readGamePadJs()
 
 void CRuntime::mountFS()
 {
-
     EM_ASM(
         // Make a directory other than '/'
         FS.mkdir('/offline');

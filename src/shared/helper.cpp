@@ -47,9 +47,9 @@ int upperClean(int c)
     return isalnum(c) ? ::toupper(c) : '_';
 }
 
-char *getUUID()
+std::string getUUID()
 {
-    char *uuid = new char[UUID_BUFFER_SIZE];
+    char uuid[UUID_BUFFER_SIZE];
     snprintf(uuid, UUID_BUFFER_SIZE, "%.4x%.4x-%.4x-%.4x-%.4x-%.4x%.4x%.4x",
              rand() & 0xffff,
              rand() & 0xffff,
@@ -59,7 +59,7 @@ char *getUUID()
              rand() & 0xffff,
              rand() & 0xffff,
              rand() & 0xffff);
-    return uuid;
+    return std::string(uuid);
 }
 
 bool copyFile(const std::string in, const std::string out, std::string &errMsg)

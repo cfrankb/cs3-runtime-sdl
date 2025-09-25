@@ -21,6 +21,7 @@
 #include "sprtypes.h"
 #include "attr.h"
 #include <cstdio>
+#include <cmath>
 #include "shared/IFile.h"
 
 const JoyAim g_aims[] = {
@@ -314,6 +315,14 @@ bool CActor::read(IFile &sfile)
     return readCommon(readfile);
 }
 
+/**
+ * @brief Common deserializer for this class
+ *
+ * @tparam ReadFunc
+ * @param readfile
+ * @return true
+ * @return false
+ */
 template <typename ReadFunc>
 bool CActor::readCommon(ReadFunc readfile)
 {
@@ -359,6 +368,14 @@ bool CActor::write(IFile &tfile)
     return writeCommon(writefile);
 }
 
+/**
+ * @brief common serializer for this class
+ *
+ * @tparam WriteFunc
+ * @param writefile
+ * @return true
+ * @return false
+ */
 template <typename WriteFunc>
 bool CActor::writeCommon(WriteFunc writefile)
 {
@@ -408,5 +425,5 @@ int CActor::distance(const CActor &actor)
 {
     int dx = std::abs(actor.m_x - m_x);
     int dy = std::abs(actor.m_y - m_y);
-    return std::max(dx, dy);
+    return std::sqrt(dx * dx + dy * dy);
 }

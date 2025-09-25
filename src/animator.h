@@ -17,7 +17,8 @@
 */
 #pragma once
 
-#include <inttypes.h>
+#include <cstdint>
+#include <unordered_map>
 
 struct AnimzInfo
 {
@@ -37,7 +38,6 @@ public:
     bool isSpecialCase(uint8_t tileID);
     AnimzInfo specialInfo(const int tileID);
 
-private:
     using animzSeq_t = struct
     {
         uint8_t srcTile;
@@ -46,15 +46,15 @@ private:
         uint8_t specialID;
     };
 
+private:
     enum : uint32_t
     {
         NO_ANIMZ = 255,
         MAX_TILES = 256,
-        NA = 0,
     };
 
-    static animzSeq_t m_animzSeq[];
     uint8_t m_tileReplacement[MAX_TILES];
     int32_t *m_seqIndex = nullptr;
     uint16_t m_offset = 0;
+    std::unordered_map<uint16_t, AnimzInfo> m_seqLookUp;
 };

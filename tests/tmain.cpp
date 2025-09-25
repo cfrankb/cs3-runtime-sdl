@@ -29,7 +29,9 @@
 #include "t_states.h"
 #include "t_stateparser.h"
 #include "t_strhelper.h"
+#include "t_ifile.h"
 #include "../src/logger.h"
+#include <filesystem>
 
 #define FCT(x) {x, #x}
 using Function = std::function<bool(void)>;
@@ -43,6 +45,8 @@ int main(int argc, char *args[])
 {
     (void)argc;
     (void)args;
+
+    std::filesystem::create_directories("tests/out");
     LOGI("running tests\n");
     LOGI("==============\n\n");
 
@@ -59,6 +63,7 @@ int main(int argc, char *args[])
         FCT(test_gamestats),
         FCT(test_runtime),
         FCT(test_game),
+        FCT(test_ifile),
     };
 
     int failed = 0;

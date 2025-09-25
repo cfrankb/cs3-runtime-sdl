@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #define LOG_TAG "t_maparch"
+#include <filesystem>
 #include "thelper.h"
 #include "t_maparch.h"
 #include "../src/maparch.h"
@@ -25,14 +26,14 @@
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
 
-#define KEY1 0x1990
-#define KEY2 0x1990
-#define VAL1 0x0522
-#define VAL2 "Beginning of the End"
-#define IN_FILE "tests/in/levels1.mapz"
-#define OUT_FILE1 "tests/out/levels1.mapz"
-#define OUT_FILE2 "tests/out/levels2.mapz"
-#define OUT_ARCH_TEST2 "tests/out/arch%ld.mapz"
+constexpr uint16_t KEY1 = 0x1990;
+constexpr uint16_t KEY2 = 0x1990;
+constexpr uint16_t VAL1 = 0x0522;
+constexpr const char *VAL2 = "Beginning of the End";
+constexpr const char *IN_FILE = "tests/in/levels1.mapz";
+constexpr const char *OUT_FILE1 = "tests/out/levels1.mapz";
+constexpr const char *OUT_FILE2 = "tests/out/levels2.mapz";
+constexpr const char *OUT_ARCH_TEST2 = "tests/out/arch%ld.mapz";
 
 void injectStates(CMapArch &arch)
 {
@@ -102,6 +103,10 @@ bool test_maparch_1()
     {
         return false;
     }
+
+    // clean up
+    std::filesystem::remove(OUT_FILE1);
+    std::filesystem::remove(OUT_FILE2);
     return true;
 }
 
@@ -229,6 +234,14 @@ bool test_maparch_2()
     {
         LOGE("map inserted not found at the start\n");
         return false;
+    }
+
+    // clean up
+    for (size_t i = 0; i < archs.size(); ++i)
+    {
+        char fpath[128];
+        snprintf(fpath, sizeof(fpath), OUT_ARCH_TEST2, i);
+        std::filesystem::remove(fpath);
     }
 
     return true;

@@ -25,10 +25,11 @@
 #include "../src/gamestats.h"
 #include "../src/skills.h"
 #include "thelper.h"
+#include <filesystem>
 
-#define Skill SKILL_HARD
-#define IdleTime 3000
-#define Sugar 5
+constexpr int Skill = SKILL_HARD;
+constexpr int IdleTime = 3000;
+constexpr int Sugar = 5;
 
 bool testStats(CGameStats &stats, const char *context)
 {
@@ -121,7 +122,7 @@ bool test_gamestats()
     file = fopen(outFile2, "rb");
     if (!file)
     {
-        LOGE("cannot read %s\n", outFile1);
+        LOGE("cannot read %s\n", outFile2);
         return false;
     }
     stats5.read(file);
@@ -158,5 +159,7 @@ bool test_gamestats()
         return false;
     }
 
+    std::filesystem::remove(outFile1);
+    std::filesystem::remove(outFile2);
     return true;
 }

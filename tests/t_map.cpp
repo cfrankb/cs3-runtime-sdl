@@ -24,18 +24,19 @@
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
+#include <filesystem>
 
-#define IN_FILE "tests/in/levels1.mapz"
-#define OUT_FILE1 "tests/out/map1.mapz"
-#define KEY1 0x1234
-#define KEY2 0x1455
-#define MISSING_KEY 0x5511
-#define STRING1 "Green Grass"
-#define VALUE2 0x1990
-#define TITLE "Roses Are Red"
-#define ATTRX 4
-#define ATTRY 6
-#define ATTRA 0x99
+constexpr const char *IN_FILE = "tests/in/levels1.mapz";
+constexpr const char *OUT_FILE1 = "tests/out/map1.mapz";
+constexpr uint16_t KEY1 = 0x1234;
+constexpr uint16_t KEY2 = 0x1455;
+constexpr uint16_t MISSING_KEY = 0x5511;
+constexpr const char *STRING1 = "Green Grass";
+constexpr uint16_t VALUE2 = 0x1990;
+constexpr const char *TITLE = "Roses Are Red";
+constexpr uint8_t ATTRX = 4;
+constexpr uint8_t ATTRY = 6;
+constexpr uint8_t ATTRA = 0x99;
 
 struct Size
 {
@@ -53,7 +54,7 @@ struct Attr
 bool test_map()
 {
     CMap map;
-    Size mapSize{10, 15};
+    const Size mapSize{10, 15};
     if (!map.resize(mapSize.w, mapSize.h, true))
     {
         LOGE("failed to resize map\n");
@@ -66,16 +67,16 @@ bool test_map()
         return false;
     }
 
-    mapSize = Size{20, 25};
-    if (!map.resize(mapSize.w, mapSize.h, false))
+    const Size mapSize2 = Size{20, 25};
+    if (!map.resize(mapSize2.w, mapSize2.h, false))
     {
         LOGE("failed to resize map\n");
         return false;
     }
-    if (map.len() != mapSize.w || map.hei() != mapSize.h)
+    if (map.len() != mapSize2.w || map.hei() != mapSize2.h)
     {
         LOGE("map sized (%dx%d) was expected (%dx%d)\n",
-             map.len(), map.hei(), mapSize.w, mapSize.h);
+             map.len(), map.hei(), mapSize2.w, mapSize2.h);
         return false;
     }
 
@@ -301,6 +302,8 @@ bool testSeq(uint16_t len, uint16_t hei)
         LOGE("map sizes are wrong: %dx%d; expecting %dx%d\n", map6.len(), map6.hei(), len, hei);
         return false;
     }
+
+    std::filesystem::remove(OUT_FILE1);
     return true;
 }
 
