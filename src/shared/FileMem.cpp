@@ -71,9 +71,17 @@ CFileMem &CFileMem::operator<<(int n)
 
 int CFileMem::read(void *buf, int size)
 {
-    memcpy(buf, &m_buffer[m_ptr], size);
-    m_ptr += size;
-    return 1;
+    int leftBytes = m_size - m_ptr;
+    if (leftBytes >= size)
+    {
+        memcpy(buf, &m_buffer[m_ptr], size);
+        m_ptr += size;
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 int CFileMem::write(const void *buf, int size)
