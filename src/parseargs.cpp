@@ -170,15 +170,15 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                 switch (list[i].c_str()[j])
                 {
                 case 'v':
-                    printf("verbose\n");
+                    LOGI("verbose\n");
                     params.verbose = true;
                     break;
                 case 'f':
-                    printf("fullscreen\n");
+                    LOGI("fullscreen\n");
                     params.fullscreen = true;
                     break;
                 case 'q':
-                    printf("muted music\n");
+                    LOGI("muted music\n");
                     params.muteMusic = true;
                     break;
                 case 'h':

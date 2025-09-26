@@ -104,7 +104,7 @@ bool getChMap(const char *mapFile, char *chMap)
 
 bool processLevel(CMap &map, const char *fname)
 {
-    printf("reading file: %s\n", fname);
+    LOGI("reading file: %s\n", fname);
     uint8_t *data = readFile(fname);
     if (data == nullptr)
     {
@@ -239,7 +239,7 @@ bool convertCs3Level(CMap &map, const char *fname)
             uint8_t oldTile = *p;
             if (oldTile >= sizeof(convTable) / 2)
             {
-                printf("oldTile: %d", oldTile);
+                LOGI("oldTile: %d\n", oldTile);
                 oldTile = 0;
             }
             const uint16_t data = convTable[oldTile];

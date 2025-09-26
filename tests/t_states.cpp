@@ -33,15 +33,15 @@ static bool checkState(CStates &states, const char *context)
 {
     if (strcmp(states.getS(k1), v1))
     {
-        printf("%s: string not matching\n", context);
+        LOGE("%s: string not matching\n", context);
         return false;
     }
 
     auto a2 = states.getU(k2);
     if (a2 != v2)
     {
-        printf("%s: uint8 not matching %d %d\n", context,
-               a2, v2);
+        LOGE("%s: uint8 not matching %d %d\n", context,
+             a2, v2);
         return false;
     }
     return true;

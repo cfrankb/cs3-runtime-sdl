@@ -15,17 +15,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "t_stateparser"
 #include "stateparser.h"
 #include "../src/states.h"
 #include <cstring>
+#include "../src/logger.h"
 
 bool checkValue(CStateParser &parser, const char *k, const uint16_t v)
 {
     const auto a = parser.get(k);
     if (a != v)
     {
-        fprintf(stderr, "key %s contains wrong value %.2x -- was expecting %.2x\n",
-                k, a, v);
+        LOGE("key %s contains wrong value %.2x -- was expecting %.2x\n",
+             k, a, v);
         return false;
     }
     return true;
@@ -36,8 +38,8 @@ bool checkState(CStates &states, const uint16_t k, const uint16_t v)
     const auto a = states.getU(k);
     if (a != v)
     {
-        fprintf(stderr, "key %u / %.2x contains wrong value %.2x -- was expecting %.2x\n",
-                k, k, a, v);
+        LOGE("key %u / %.2x contains wrong value %.2x -- was expecting %.2x\n",
+             k, k, a, v);
         return false;
     }
     return true;
@@ -48,8 +50,8 @@ bool checkState(CStates &states, const uint16_t k, const std::string v)
     const auto a = states.getS(k);
     if (a != v)
     {
-        fprintf(stderr, "key %u / %.2x contains wrong value `%s` -- was expecting `%s`\n",
-                k, k, a, v.c_str());
+        LOGE("key %u / %.2x contains wrong value `%s` -- was expecting `%s`\n",
+             k, k, a, v.c_str());
         return false;
     }
     return true;

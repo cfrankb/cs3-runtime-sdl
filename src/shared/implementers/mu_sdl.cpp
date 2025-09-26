@@ -16,12 +16,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#define LOG_TAG "mu_sdl"
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
 #include "mu_sdl.h"
 
 #include "../FileWrap.h"
+#include "../../logger.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 static bool endswith(const char *str, const char *end)
@@ -40,7 +42,7 @@ CMusicSDL::CMusicSDL()
 
     if (!SDL_Init(SDL_INIT_AUDIO))
     {
-        fprintf(stderr, "SDL_init failed: %s\n", SDL_GetError());
+        LOGE("SDL_init failed: %s\n", SDL_GetError());
         return;
     }
 
@@ -48,14 +50,14 @@ CMusicSDL::CMusicSDL()
     m_data.audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     if (!m_data.audioDevice)
     {
-        fprintf(stderr, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+        LOGE("SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
         return;
     }
 
     // Initialize SDL_mixer with the audio device
     if (!Mix_OpenAudio(m_data.audioDevice, nullptr))
     {
-        fprintf(stderr, "Mix_OpenAudioDevice failed: %s\n", SDL_GetError());
+        LOGE("Mix_OpenAudioDevice failed: %s\n", SDL_GetError());
         return;
     }
     m_valid = true;
@@ -94,7 +96,7 @@ bool CMusicSDL::open(const char *file)
     else
     {
         m_type = TYPE_NONE;
-        fprintf(stderr, "Failed to load music `%s` : %s\n", file, SDL_GetError());
+        LOGE("Failed to load music `%s` : %s\n", file, SDL_GetError());
     }
     return valid;
 }

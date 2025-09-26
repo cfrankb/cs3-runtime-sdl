@@ -144,10 +144,10 @@ public:
 public:
     ~CFrame();
     bool read(IFile &file, int version);
-    void write(IFile &file);
+    bool write(IFile &file);
 
     void toBmp(uint8_t *&bmp, int &size);
-    void toPng(uint8_t *&png, int &size, uint8_t *obl5data = nullptr, int obl5size = 0);
+    bool toPng(uint8_t *&png, int &size, uint8_t *obl5data = nullptr, int obl5size = 0);
     static uint32_t toNet(const uint32_t a);
     static const uint32_t *dosPal();
     bool draw(CDotArray *dots, int size, int mode = MODE_NORMAL);

@@ -19,6 +19,7 @@
 // Frame.cpp : implementation file
 //
 
+#define LOG_TAG "frame"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,7 @@
 #include "IFile.h"
 #include "helper.h"
 #include <cstdint>
+#include "logger.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CFrame
@@ -53,7 +55,7 @@ CFrame::CFrame(int p_nLen, int p_nHei)
     m_rgb = new uint32_t[m_nLen * m_nHei];
     if (!m_rgb)
     {
-        fprintf(stderr, "failed memory allocation\n");
+        LOGE("failed memory allocation\n");
     }
     memset(m_rgb, 0, m_nLen * m_nHei * 4);
 
@@ -151,7 +153,7 @@ void CFrame::forget()
     m_nHei = 0;
 }
 
-void CFrame::write(IFile &file)
+bool CFrame::write(IFile &file)
 {
     file.write(&m_nLen, 4);
     file.write(&m_nHei, 4);
@@ -167,8 +169,8 @@ void CFrame::write(IFile &file)
         int err = compressData((uint8_t *)m_rgb, 4 * m_nLen * m_nHei, &pDest, nDestLen);
         if (err != Z_OK)
         {
-            printf("CFrame::write error: %d\n", err);
-            return;
+            LOGE("CFrame::write error: %d\n", err);
+            return false;
         }
 
         file.write(&nDestLen, 4);
@@ -180,6 +182,7 @@ void CFrame::write(IFile &file)
             m_map.write(file);
         }
     }
+    return true;
 }
 
 bool CFrame::read(IFile &file, int version)
@@ -227,6 +230,7 @@ bool CFrame::read(IFile &file, int version)
 
             if (err)
             {
+                LOGE("CFrame::read - decompr error: %d", err);
                 return false;
             }
 
@@ -244,7 +248,8 @@ bool CFrame::read(IFile &file, int version)
     }
     else
     {
-        // qDebug("CFrame::read version (=%.4x) not supported\n", version);
+        LOGE("CFrame::read version (=%.4x) not supported\n", version);
+        return false;
     }
 
     return true;
@@ -332,7 +337,7 @@ uint32_t CFrame::toNet(const uint32_t a)
     return b;
 }
 
-void CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5size)
+bool CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5size)
 {
     CCRC crc;
 
@@ -352,8 +357,8 @@ void CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
     int err = compressData(data, dataSize, &cData, cDataSize);
     if (err != Z_OK)
     {
-        printf("CFrame::toPng error: %d\n", err);
-        return;
+        LOGE("CFrame::toPng error: %d\n", err);
+        return true;
     }
 
     delete[] data;
@@ -442,6 +447,7 @@ void CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
     iend.CRC = toNet(crc.crc((uint8_t *)"IEND", 4));
 
     delete[] cData;
+    return true;
 }
 
 void CFrame::resize(int len, int hei)

@@ -15,11 +15,13 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define LOG_TAG "stateparser"
 #include <cstring>
 #include "stateparser.h"
 #include "../src/strhelper.h"
 #include "../src/states.h"
 #include "../src/shared/FileWrap.h"
+#include "../src/logger.h"
 
 CStateParser::CStateParser()
 {
@@ -96,12 +98,12 @@ void CStateParser::parseStates(const char *data, CStates &states)
                 }
                 else
                 {
-                    fprintf(stderr, "key %s on line %d not found.\n", ks, line);
+                    LOGE("key %s on line %d not found.\n", ks, line);
                 }
             }
             else
             {
-                fprintf(stderr, "found %ld args on line %d -- should be 2.\n", list.size(), line);
+                LOGE("found %ld args on line %d -- should be 2.\n", list.size(), line);
             }
         }
         p = next;
@@ -145,13 +147,13 @@ void CStateParser::parse(const char *data)
                 const auto v = parseStringToUShort(list[1], isNum);
                 if (!isNum)
                 {
-                    fprintf(stderr, "invalid expression `%s` on line %d\n", list[0].c_str(), line);
+                    LOGE("invalid expression `%s` on line %d\n", list[0].c_str(), line);
                 }
                 m_defines[k] = v;
             }
             else
             {
-                fprintf(stderr, "found %ld args on line %d -- should be 2.\n", list.size(), line);
+                LOGE("found %ld args on line %d -- should be 2.\n", list.size(), line);
             }
         }
         p = next;
@@ -162,9 +164,9 @@ void CStateParser::parse(const char *data)
 
 void CStateParser::debug()
 {
-    printf("**** defines\n\n");
+    LOGI("**** defines\n\n");
     for (const auto &[k, v] : m_defines)
     {
-        printf("[%s] => [0x%.4x %u]\n", k.c_str(), v, v);
+        LOGI("[%s] => [0x%.4x %u]\n", k.c_str(), v, v);
     }
 }

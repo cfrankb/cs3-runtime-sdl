@@ -18,6 +18,7 @@
 
 // FrameSet.cpp : implementation file
 //
+#define LOG_TAG "frameset"
 #include <cstring>
 #include <cstdio>
 #include <cstdint>
@@ -27,6 +28,7 @@
 #include "IFile.h"
 #include "PngMagic.h"
 #include "helper.h"
+#include "logger.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CFrameSet
@@ -215,7 +217,7 @@ bool CFrameSet::read0x501(IFile &file, int size)
 
     if (err)
     {
-        printf("err: %d\n", err);
+        LOGE("err: %d\n", err);
         return false;
     }
 

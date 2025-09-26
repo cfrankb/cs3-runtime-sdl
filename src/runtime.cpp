@@ -2702,7 +2702,7 @@ void CRuntime::readGamePadJs()
     }
     else if (buttonMask && isTrue(m_config["trace"]))
     {
-        printf("buttons: %.4x\n", buttonMask);
+        LOGI("buttons: %.4x\n", buttonMask);
     }
     for (int i = 0; i < Button_Count; ++i)
     {

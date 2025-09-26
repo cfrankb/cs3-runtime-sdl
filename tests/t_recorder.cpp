@@ -97,7 +97,7 @@ bool test_recorder()
         bool result = rec.get(output);
         if (!result)
         {
-            fprintf(stderr, "premature exit\n");
+            LOGE("premature exit\n");
             return false;
         }
         uint8_t k = NA;
@@ -112,7 +112,7 @@ bool test_recorder()
         //    printf("%-2d %.2x %.2x\n", i, data[i], k);
         if (data[i] != k)
         {
-            fprintf(stderr, "mismatch at %ld [%.2x %.2x]\n", i, data[i], k);
+            LOGE("mismatch at %ld [%.2x %.2x]\n", i, data[i], k);
             return false;
         }
     }
