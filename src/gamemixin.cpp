@@ -1785,7 +1785,7 @@ std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color
     }
     else
     {
-        printf("unhandled event: 0x%.2x\n", m_currentEvent);
+        LOGW("unhandled event: 0x%.2x\n", m_currentEvent);
         return "";
     }
 }
@@ -2166,4 +2166,10 @@ int CGameMixin::whichButton(CGameUI &ui, int x, int y)
         }
     }
     return INVALID;
+}
+
+void CGameMixin::setQuiet(bool state)
+{
+    m_quiet = state;
+    CGame::getGame()->setQuiet(state);
 }

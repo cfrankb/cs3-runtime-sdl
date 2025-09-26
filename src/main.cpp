@@ -124,6 +124,8 @@ const std::string getPrefix()
     return "";
 #elif defined(__ANDROID__)
     return "";
+#elif defined(__EMSCRIPTEN__)
+    return "data";
 #else
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
@@ -176,7 +178,7 @@ int main(int argc, char *args[])
     }
 #endif
 
-    LOGI("Starting Game: Build [%s]\n", BUILD_HASH);
+    LOGI("Starting Game %s: Build [%s]\n", VERSION, BUILD_HASH);
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
     CRuntime runtime;

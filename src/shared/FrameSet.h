@@ -56,7 +56,7 @@ public:
     void insertAt(int n, CFrame *pFrame);
     void clear();
     void removeAll();
-    bool extract(IFile &file, char *format = nullptr);
+    bool extract(IFile &file, std::string *format = nullptr);
 
     static char *ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
@@ -65,7 +65,7 @@ public:
 
     const char *getLastError() const;
     void setLastError(const char *error);
-    void toPng(unsigned char *&data, int &size);
+    bool toPng(unsigned char *&data, int &size);
     std::string &tag(const char *tag);
     void setTag(const char *tag, const char *v);
     void copyTags(CFrameSet &src);
@@ -82,6 +82,13 @@ private:
     enum
     {
         OBL_VERSION = 0x501,
+        FNT_SIZE = 8,
+        GE96_TILE_SIZE = 32,
+        ID_SIG_LEN = 4,
+        PALETTE_SIZE = 256,
+        RGB_BYTES = 3,
+        COLOR_INDEX_OFFSET = -16,
+        COLOR_INDEX_OFFSET_NONE = 0,
     };
 
     bool write0x501(IFile &file);

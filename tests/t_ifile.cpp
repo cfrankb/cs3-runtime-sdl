@@ -16,7 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "t_ifile.h"
-#define LOG_TAG "t_map"
+#define LOG_TAG "t_ifile"
 #include <cstring>
 #include "t_map.h"
 #include "../src/maparch.h"
@@ -27,10 +27,19 @@
 #include "../src/shared/IFile.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
+#include "../src/shared/FrameSet.h"
+#include "thelper.h"
 #include <filesystem>
 
-constexpr const char *OUTFILE = "tests/out/ifile.dat";
-
+/**
+ * @brief create a file. write to it and verify that the data matches the expected lenght.
+ *
+ * @param file
+ * @param outfile
+ * @param context
+ * @return true
+ * @return false
+ */
 bool infuse_create(IFile &file, const std::string outfile, const char *context)
 {
     int filesize = 0;
@@ -124,8 +133,16 @@ bool infuse_create(IFile &file, const std::string outfile, const char *context)
     return true;
 }
 
-bool test_ifile()
+/**
+ * @brief Test the creation of CFileWrap and CFileMem objects
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_create()
 {
+    constexpr const char *OUTFILE = "tests/out/ifile.dat";
+
     CFileWrap fw;
     if (!infuse_create(fw, OUTFILE, "FileWrap"))
         return false;
@@ -140,4 +157,106 @@ bool test_ifile()
     std::filesystem::remove(OUTFILE);
 
     return true;
+}
+
+/**
+ * @brief Test deserialzing an object vis FileMem; serializing this object back to disk
+ *        compares the two files
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_read_write()
+{
+    constexpr const char *IN_FILE = "tests/in/annie.obl";
+    constexpr const char *OUT_FILE1 = "tests/out/annie1.obl";
+    constexpr const char *OUT_FILE2 = "tests/out/annie2.obl";
+    CFileWrap fw;
+    if (!fw.open(IN_FILE, "rb"))
+    {
+        LOGE("can't open for reading %s\n", IN_FILE);
+        return false;
+    }
+
+    CFrameSet fs;
+    if (!fs.extract(fw))
+    {
+        LOGE("failed to extract images from %s [%s]\n", IN_FILE, fs.getLastError());
+        return false;
+    }
+    int imageCount = fs.getSize();
+
+    fw.seek(0);
+    int filesize = fw.getSize();
+    char *buf = new char[filesize];
+    if (fw.read(buf, filesize) != 1)
+    {
+        LOGE("failed to read %s\n", IN_FILE);
+        return false;
+    }
+    fw.close();
+
+    if (!fw.open(OUT_FILE1, "wb"))
+    {
+        LOGE("can't open for writing %s\n", OUT_FILE1);
+        return false;
+    }
+    if (!fs.write(fw))
+    {
+        LOGE("can't serialize CFrameSet Object to %s\n", OUT_FILE1);
+        return false;
+    }
+
+    const std::string uuid = fs.tag("UUID");
+
+    fw.close();
+    fs.clear();
+
+    CFileMem fm;
+    fm.replace(buf, filesize);
+    delete[] buf;
+    if (!fs.extract(fm))
+    {
+        LOGE("failed to extract images from [memfile] size: %d - %s\n", filesize, fs.getLastError());
+        return false;
+    }
+    fs.setTag("UUID", uuid.c_str());
+
+    if (fs.getSize() != imageCount)
+    {
+        LOGE("images from [memfile] %d; expecting %d\n", fs.getSize(), imageCount);
+        return false;
+    }
+
+    fm.close();
+
+    if (!fw.open(OUT_FILE2, "wb"))
+    {
+        LOGE("can't open for writing %s [trace1]\n", OUT_FILE2);
+        return false;
+    }
+    if (!fs.write(fw))
+    {
+        LOGE("can't serialize CFrameSet Object to %s\n", OUT_FILE2);
+        return false;
+    }
+    fw.close();
+
+    if (getFileSize(OUT_FILE1) != getFileSize(OUT_FILE2))
+    {
+        LOGE("file size %ld mismatch; expecting: %ld\n",
+             getFileSize(OUT_FILE2), getFileSize(OUT_FILE1));
+        return false;
+    }
+
+    // clean up
+    std::filesystem::remove(OUT_FILE1);
+    std::filesystem::remove(OUT_FILE2);
+
+    return true;
+}
+
+bool test_ifile()
+{
+    return test_ifile_create() && test_ifile_read_write();
 }

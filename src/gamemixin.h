@@ -69,6 +69,7 @@ protected slots:
     void changeZoom();
     virtual void save() = 0;
     virtual void load() = 0;
+    void setQuiet(bool state);
 
 protected:
     enum : uint32_t
@@ -334,6 +335,7 @@ protected:
     visualStates_t m_visualStates;
     CGameUI m_ui;
     CFileWrap m_recorderFile;
+    bool m_quiet = false;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);

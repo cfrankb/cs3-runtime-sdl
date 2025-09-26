@@ -73,7 +73,7 @@ int CFileMem::read(void *buf, int size)
 {
     memcpy(buf, &m_buffer[m_ptr], size);
     m_ptr += size;
-    return size;
+    return 1;
 }
 
 int CFileMem::write(const void *buf, int size)
@@ -88,7 +88,7 @@ bool CFileMem::open(const char *fileName, const char *mode)
 {
     m_mode = mode;
     m_filename = fileName;
-    // TODO: fox that later
+    // TODO: fix that later
     return true;
 }
 

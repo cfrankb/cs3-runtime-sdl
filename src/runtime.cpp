@@ -74,7 +74,8 @@ CRuntime::~CRuntime()
 {
     if (m_app.window)
     {
-        LOGI("detroying SDL3 objects\n");
+        if (!m_quiet)
+            LOGI("detroying SDL3 objects\n");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
@@ -173,7 +174,8 @@ void CRuntime::paint()
  */
 bool CRuntime::initSDL()
 {
-    LOGI("SDL Init()\n");
+    if (!m_quiet)
+        LOGI("SDL Init()\n");
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         LOGE("SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
@@ -202,14 +204,16 @@ bool CRuntime::createSDLWindow()
     }
     else
     {
-        LOGI("SDL Window created: %d x %d\n", width, height);
+        if (!m_quiet)
+            LOGI("SDL Window created: %d x %d\n", width, height);
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
         {
             LOGE("Failed to create renderer: %s\n", SDL_GetError());
             return false;
         }
-        LOGI("SDL Rendered created\n");
+        if (!m_quiet)
+            LOGI("SDL Rendered created\n");
 
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
@@ -220,7 +224,8 @@ bool CRuntime::createSDLWindow()
             LOGE("Failed to create texture: %s\n", SDL_GetError());
             return false;
         }
-        LOGI("texture created: %dx%d\n", WIDTH, HEIGHT);
+        if (!m_quiet)
+            LOGI("texture created: %dx%d\n", WIDTH, HEIGHT);
 
         // this prevents the pixelart from looking fuzy
         if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
@@ -799,7 +804,7 @@ void CRuntime::handleMouse(int x, int y)
 bool CRuntime::fetchFile(const std::string &path, char **dest, const bool terminator)
 {
     CFileWrap file;
-    if (m_verbose)
+    if (m_verbose && !m_quiet)
         LOGI("loading: %s\n", path.c_str());
     if (file.open(path.c_str(), "rb"))
     {
@@ -811,7 +816,8 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         }
         file.read(data, size);
         file.close();
-        LOGI("-> loaded %s: %d bytes\n", path.c_str(), size);
+        if (!m_quiet)
+            LOGI("-> loaded %s: %d bytes\n", path.c_str(), size);
         *dest = data;
         return true;
     }
@@ -838,11 +844,13 @@ void CRuntime::preloadAssets()
         data_t data;
         if (AssetMan::read(filename, data))
         {
-            LOGI("reading %s\n", filename.c_str());
+            if (!m_quiet)
+                LOGI("reading %s\n", filename.c_str());
             mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
             if ((*frameSets[i])->extract(mem))
             {
-                LOGI("extracted: %d\n", ((*frameSets[i])->getSize()));
+                if (!m_quiet)
+                    LOGI("extracted: %d\n", ((*frameSets[i])->getSize()));
             }
         }
         else
@@ -947,7 +955,8 @@ void CRuntime::initMusic()
 {
     m_music = new CMusicSDL();
     m_music->setVolume(ISound::MAX_VOLUME);
-    LOGI("volume: %d\n", m_music->getVolume());
+    if (!m_quiet)
+        LOGI("volume: %d\n", m_music->getVolume());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -999,7 +1008,8 @@ void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
 bool CRuntime::loadScores()
 {
     std::string path = m_workspace + HISCORE_FILE;
-    LOGI("reading %s\n", path.c_str());
+    if (!m_quiet)
+        LOGI("reading %s\n", path.c_str());
     CFileWrap file;
     if (file.open(path.c_str(), "rb"))
     {
@@ -1097,14 +1107,15 @@ void CRuntime::load()
 
 void CRuntime::initSounds()
 {
-    LOGI("initSound\n");
+    if (!m_quiet)
+        LOGI("initSound\n");
     m_sound = new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
         const auto soundName = AssetMan::getPrefix() + std::string("sounds/") + m_soundFiles[i];
         bool result = m_sound->add(soundName.c_str(), i + 1);
-        if (m_verbose)
+        if (m_verbose && !m_quiet)
             LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
     }
     m_game->attach(m_sound);
@@ -1118,7 +1129,8 @@ void CRuntime::openMusicForLevel(int i)
 
 void CRuntime::openMusic(const std::string &filename)
 {
-    LOGI("open music: %s\n", filename.c_str());
+    if (!m_quiet)
+        LOGI("open music: %s\n", filename.c_str());
     const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
@@ -1464,7 +1476,8 @@ void CRuntime::takeScreenshot()
     {
         file.write(png, size);
         file.close();
-        LOGI("screenshot saved: %s\n", path.c_str());
+        if (!m_quiet)
+            LOGI("screenshot saved: %s\n", path.c_str());
     }
     else
     {
@@ -1515,23 +1528,27 @@ void CRuntime::initOptions()
 
     if (isTrue(m_config["fullscreen"]))
     {
-        LOGI("is full screen?\n");
+        if (!m_quiet)
+            LOGI("is full screen?\n");
         toggleFullscreen();
     }
 
     if (m_config["viewport"] == "static")
     {
         m_cameraMode = CAMERA_MODE_STATIC;
-        LOGI("using viewport static\n");
+        if (!m_quiet)
+            LOGI("using viewport static\n");
     }
     else if (m_config["viewport"] == "dynamic")
     {
         m_cameraMode = CAMERA_MODE_DYNAMIC;
-        LOGI("using viewport dynamic\n");
+        if (!m_quiet)
+            LOGI("using viewport dynamic\n");
     }
     else
     {
-        LOGI("using viewport default\n");
+        if (!m_quiet)
+            LOGI("using viewport default\n");
     }
 
     if (m_config["healthbar"] == "hearts")
@@ -1907,7 +1924,8 @@ void CRuntime::toggleGameMenu()
  */
 bool CRuntime::initControllers()
 {
-    LOGI("initControllers()\n");
+    if (!m_quiet)
+        LOGI("initControllers()\n");
 
     // Initialize SDL's video and game controller subsystems
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
@@ -1927,7 +1945,8 @@ bool CRuntime::initControllers()
             if (controller)
             {
                 m_gameControllers.push_back(controller);
-                LOGI("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
+                if (!m_quiet)
+                    LOGI("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
             }
             else
             {
@@ -2101,12 +2120,14 @@ int CRuntime::findResolutionIndex()
     {
         if (rez.h == h && rez.w == w)
         {
-            LOGI("found resolution %dx%d: %d\n", w, h, i);
+            if (!m_quiet)
+                LOGI("found resolution %dx%d: %d\n", w, h, i);
             return i;
         }
         ++i;
     }
-    LOGI("new resolution %dx%d: %d\n", w, h, i);
+    if (!m_quiet)
+        LOGI("new resolution %dx%d: %d\n", w, h, i);
     m_resolutions.push_back({w, h});
     return i;
 }
@@ -2119,7 +2140,7 @@ int CRuntime::findResolutionIndex()
  */
 void CRuntime::resize(int w, int h)
 {
-    if (m_verbose)
+    if (m_verbose && !m_quiet)
         LOGI("switch to: %dx%d\n", w, h);
     setWidth(w / 2);
     setHeight(h / 2);
@@ -2168,11 +2189,13 @@ void CRuntime::listResolutions(int displayIndex)
         return;
     }
 
-    LOGI("Available display modes:\n");
+    if (!m_quiet)
+        LOGI("Available display modes:\n");
     for (int i = 0; i < numModes; ++i)
     {
         const SDL_DisplayMode &mode = *modes[i];
-        LOGI("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
+        if (!m_quiet)
+            LOGI("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
     }
 }
 
@@ -2274,7 +2297,8 @@ void CRuntime::loadColorMaps(const int userID)
  */
 void CRuntime::enterGame()
 {
-    LOGI("enterGame()\n");
+    if (!m_quiet)
+        LOGI("enterGame()\n");
     initMusic();
     initSounds();
     initControllers();
@@ -2407,7 +2431,7 @@ int CRuntime::menuItemAt(int x, int y)
         int h = menu.scaleY() * FONT_SIZE;
         if (RANGE(y, startY, startY + h))
         {
-            if (m_trace)
+            if (m_trace && !m_quiet)
                 LOGI("menuItem at: %d %d ==> %zu\n", x, y, i);
             return i;
         }
@@ -2499,7 +2523,8 @@ void CRuntime::onOrientationChange()
 {
     Rez rez = getScreenSize();
     bool isLandscape = rez.w > rez.h;
-    LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
+    if (!m_quiet)
+        LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
 }
 
 CRuntime::Rect CRuntime::getSafeAreaWindow()
@@ -2620,7 +2645,8 @@ void CRuntime::onSDLQuit()
         toggleFullscreen();
     }
 #endif
-    LOGI("SQL_QUIT\n");
+    if (!m_quiet)
+        LOGI("SQL_QUIT\n");
     m_isRunning = false;
 }
 
@@ -2701,7 +2727,7 @@ void CRuntime::mountFS()
 
         // Then sync
         FS.syncfs(true, function(err) {
-            console.log(FS.readdir('/offline'));
+            //console.log(FS.readdir('/offline'));
             err ? console.log(err) : null; })
 
     );
@@ -2710,7 +2736,8 @@ void CRuntime::mountFS()
 
 bool CRuntime::saveToFile(const std::string filepath, const std::string name)
 {
-    LOGI("writing: %s\n", filepath.c_str());
+    if (!m_quiet)
+        LOGI("writing: %s\n", filepath.c_str());
     CFileWrap tfile;
     if (tfile.open(filepath.c_str(), "wb"))
     {
@@ -2734,7 +2761,8 @@ bool CRuntime::saveToFile(const std::string filepath, const std::string name)
 
 bool CRuntime::loadFromFile(const std::string filepath, std::string &name)
 {
-    LOGI("reading: %s\n", filepath.c_str());
+    if (!m_quiet)
+        LOGI("reading: %s\n", filepath.c_str());
     CFileWrap sfile;
     if (sfile.open(filepath.c_str(), "rb"))
     {

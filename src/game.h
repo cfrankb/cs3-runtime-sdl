@@ -159,7 +159,7 @@ private:
         CRUSHER_SPEED_MASK = 3,
         AUTOKILL = -1024,
         INVALID = -1,
-        VERSION = (0x0200 << 16) + 0x0005,
+        ENGINE_VERSION = (0x0200 << 16) + 0x0005,
     };
 
     int m_lives = 0;
@@ -181,8 +181,10 @@ private:
     CGameStats *m_gameStats;
     MapReport m_report;
     int m_defaultLives = DEFAULT_LIVES;
+    bool m_quiet = false;
     void resetKeys();
     void clearKeyIndicators();
+    void setQuiet(bool state);
 
     CGame();
     ~CGame();

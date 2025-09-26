@@ -45,7 +45,7 @@ public:
 
     void paint();
     void run();
-    static bool initSDL();
+    bool initSDL();
     void doInput();
     void preRun();
     void enableMusic(bool state);

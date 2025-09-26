@@ -24,11 +24,10 @@
 #include "../src/logger.h"
 #include <filesystem>
 
-const uint8_t k1 = 1;
-const char *v1 = "test1";
-
-const uint8_t k2 = 0x22;
-const uint16_t v2 = 0x44;
+constexpr const uint8_t k1 = 1;
+constexpr const char *v1 = "test1";
+constexpr const uint8_t k2 = 0x22;
+constexpr const uint16_t v2 = 0x44;
 
 static bool checkState(CStates &states, const char *context)
 {

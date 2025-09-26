@@ -86,7 +86,7 @@ const std::set<uint8_t> g_treasures = {
  */
 CGame::CGame()
 {
-    printf("starting up version: 0x%.8x\n", VERSION);
+    LOGI("starting up engine: 0x%.8x\n", ENGINE_VERSION);
     m_health = 0;
     m_level = 0;
     m_lives = defaultLives();
@@ -272,16 +272,18 @@ void CGame::consume()
  */
 bool CGame::loadLevel(const GameMode mode)
 {
-    printf("loading level: %d ...\n", m_level + 1);
+    if (!m_quiet)
+        LOGI("loading level: %d ...\n", m_level + 1);
     setMode(mode);
 
     // extract level from MapArch
     m_map = *(m_mapArch->at(m_level));
 
-    printf("level loaded\n");
+    if (!m_quiet)
+        LOGI("level loaded\n");
     if (m_hints.size() == 0)
     {
-        printf("hints not loaded\n");
+        LOGW("hints not loaded\n");
     }
     m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
     m_events.clear();
@@ -299,7 +301,8 @@ bool CGame::loadLevel(const GameMode mode)
     {
         pos = m_map.findFirst(TILES_ANNIE2);
     }
-    printf("Player at: %d %d\n", pos.x, pos.y);
+    if (!m_quiet)
+        LOGI("Player at: %d %d\n", pos.x, pos.y);
     m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
     m_diamonds = states.hasU(MAP_GOAL) ? states.getU(MAP_GOAL) : m_map.count(TILES_DIAMOND);
     resetKeys();
@@ -475,7 +478,8 @@ bool CGame::findMonsters()
         m_map.setAttr(pos.x, pos.y, 0);
     }
 
-    printf("%zu monsters found.\n", m_monsters.size());
+    if (!m_quiet)
+        LOGI("%zu monsters found.\n", m_monsters.size());
     return true;
 }
 
@@ -1100,7 +1104,7 @@ bool CGame::read(IFile &sfile)
         LOGE("savegame signature mismatched: %s\n", sig);
         return false;
     }
-    if (version != VERSION)
+    if (version != ENGINE_VERSION)
     {
         LOGE("savegame version mismatched: 0x%.8x\n", version);
         return false;
@@ -1161,7 +1165,7 @@ bool CGame::write(IFile &tfile)
 
     // writing signature/version
     writefile(&GAME_SIGNATURE, sizeof(GAME_SIGNATURE));
-    uint32_t version = VERSION;
+    uint32_t version = ENGINE_VERSION;
     writefile(&version, sizeof(version));
 
     // ptr
@@ -1629,4 +1633,9 @@ void CGame::setDefaultLives(int lives)
 {
     m_defaultLives = lives;
     m_lives = lives;
+}
+
+void CGame::setQuiet(bool state)
+{
+    m_quiet = state;
 }

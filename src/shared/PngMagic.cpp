@@ -42,11 +42,29 @@
 #define PNG_COLOR_TYPE_RGBA PNG_COLOR_TYPE_RGB_ALPHA
 #define PNG_COLOR_TYPE_GA PNG_COLOR_TYPE_GRAY_ALPHA
 
-CPngMagic::CPngMagic()
+enum
 {
-}
+    PNG_INITIAL_POS = 8,
+    PALETTE_SIZE = 256,
+    ALPHA = 255,
+    CHUNK_TYPE_LEN = 4,
+};
 
-uint8_t CPngMagic::PaethPredictor(uint8_t a, uint8_t b, uint8_t c)
+std::string m_lastError;
+typedef struct
+{
+    uint32_t Lenght; // 4 UINT8s
+    uint8_t ChunkType[CHUNK_TYPE_LEN];
+    uint32_t Width;      //: 4 uint8_ts
+    uint32_t Height;     //: 4 uint8_ts
+    uint8_t BitDepth;    //: 1 uint8_t
+    uint8_t ColorType;   //: 1 uint8_t
+    uint8_t Compression; //: 1 uint8_t
+    uint8_t Filter;      //: 1 uint8_t
+    uint8_t Interlace;   //: 1 uint8_t
+} png_IHDR;
+
+uint8_t PaethPredictor(uint8_t a, uint8_t b, uint8_t c)
 {
     int p = a + b - c;               // initial estimate
     int pa = std::abs((float)p - a); // distances to a, b, c
@@ -66,30 +84,41 @@ uint8_t CPngMagic::PaethPredictor(uint8_t a, uint8_t b, uint8_t c)
         return c;
 }
 
-bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
-{
-    //    int size = 0;
-    CCRC crc;
-    int pos = 8;
-    int fileSize = file.getSize();
-    // printf("fileSize: %d\n", fileSize);
+bool _4bpp(
+    CFrame *&frame,
+    uint8_t *cData,
+    const int cDataSize,
+    const png_IHDR &ihdr,
+    const uint8_t plte[][3],
+    const bool trns_found,
+    const uint8_t trns[],
+    const int offsetY);
 
-    file.seek(8);
-    int chunkSize;
+bool _8bpp(
+    CFrame *&frame,
+    uint8_t *cData,
+    const int cDataSize,
+    const png_IHDR &ihdr,
+    const uint8_t plte[][3],
+    const bool trns_found,
+    const uint8_t trns[],
+    const int offsetY);
+
+bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
+{
+    CCRC crc;
+    int pos = PNG_INITIAL_POS;
+    int fileSize = file.getSize();
+    file.seek(orgPos + PNG_INITIAL_POS);
 
     png_IHDR ihdr;
     memset(&ihdr, 0, sizeof(png_IHDR));
 
-    uint8_t plte[256][3];
-    uint8_t trns[256];
-    for (int i = 0; i < 256; i++)
-    {
-        trns[i] = 255;
-    }
+    uint8_t plte[PALETTE_SIZE][3];
+    uint8_t trns[PALETTE_SIZE];
+    memset(trns, ALPHA, sizeof(trns));
 
-    char png_chunk_OBL5[4];
-    memcpy(png_chunk_OBL5, CFrame::getChunkType(), 4);
-
+    const char *png_chunk_OBL5 = CFrame::getChunkType();
     bool iend_found = false;
     bool trns_found = false;
 
@@ -101,29 +130,32 @@ bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
 
     while (pos < fileSize)
     {
-        file.read(&chunkSize, 4);
+        // read chunksize
+        int32_t chunkSize;
+        file.read(&chunkSize, sizeof(chunkSize));
         chunkSize = CFrame::toNet(chunkSize);
-        pos += 4;
+        pos += sizeof(chunkSize);
 
-        char chunkType[5];
-        chunkType[4] = 0;
-        file.read(chunkType, 4);
-        pos += 4;
+        // read chunktype
+        char chunkType[CHUNK_TYPE_LEN];
+        // chunkType[4] = 0;
+        file.read(chunkType, sizeof(chunkType));
+        pos += sizeof(chunkType);
 
-        uint8_t *p = new uint8_t[chunkSize + 4];
-        file.read(p + 4, chunkSize);
+        // read chunkdata
+        uint8_t *p = new uint8_t[chunkSize + sizeof(chunkType)];
+        file.read(p + sizeof(chunkType), chunkSize);
         pos += chunkSize;
         // memset(chunkData + chunkSize, 0, 4);
-        memcpy(p, chunkType, 4);
-        uint8_t *chunkData = p + 4;
+        memcpy(p, chunkType, sizeof(chunkType));
+        uint8_t *chunkData = p + sizeof(chunkType);
 
-        int crc32;
-        file.read(&crc32, 4);
-        pos += 4;
+        int32_t crc32;
+        file.read(&crc32, sizeof(crc32));
+        pos += sizeof(crc32);
         crc32 = CFrame::toNet(crc32);
-        // TODO: check crc32 values for each chunk
-        int crc32c = crc.crc(p, chunkSize + 4);
-        // qDebug("crc32: %.8x %.8x", crc32, crc32c);
+        // TODO: Check crc32 values for each chunk
+        int crc32c = crc.crc(p, chunkSize + sizeof(chunkType));
         if (crc32 != crc32c)
         {
             set.setLastError("CRC32 checksum doesn't match");
@@ -131,7 +163,7 @@ bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
             return false;
         }
 
-        if (memcmp(chunkType, "IHDR", 4) == 0)
+        if (memcmp(chunkType, "IHDR", CHUNK_TYPE_LEN) == 0)
         {
             memcpy(((uint8_t *)&ihdr) + 8, chunkData, chunkSize);
             memcpy(ihdr.ChunkType, chunkType, 4);
@@ -147,12 +179,12 @@ bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
             */
         }
 
-        if (memcmp(chunkType, "PLTE", 4) == 0)
+        else if (memcmp(chunkType, "PLTE", CHUNK_TYPE_LEN) == 0)
         {
             memcpy(plte, chunkData, chunkSize);
         }
 
-        if (memcmp(chunkType, "IDAT", 4) == 0)
+        else if (memcmp(chunkType, "IDAT", CHUNK_TYPE_LEN) == 0)
         {
             if (cData)
             {
@@ -170,18 +202,18 @@ bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
             cDataSize += chunkSize;
         }
 
-        if (memcmp(chunkType, "tRNS", 4) == 0)
+        else if (memcmp(chunkType, "tRNS", CHUNK_TYPE_LEN) == 0)
         {
             memcpy(trns, chunkData, chunkSize);
             trns_found = true;
         }
 
-        if (memcmp(chunkType, "IEND", 4) == 0)
+        else if (memcmp(chunkType, "IEND", CHUNK_TYPE_LEN) == 0)
         {
             iend_found = true;
         }
 
-        if (memcmp(chunkType, png_chunk_OBL5, 4) == 0)
+        else if (memcmp(chunkType, png_chunk_OBL5, CHUNK_TYPE_LEN) == 0)
         {
             // oblt_found = true;
             CFrame::png_OBL5 obl5t;
@@ -269,15 +301,15 @@ bool CPngMagic::parsePNG(CFrameSet &set, IFile &file)
     return valid;
 }
 
-bool CPngMagic::_8bpp(
+bool _8bpp(
     CFrame *&frame,
     uint8_t *cData,
-    int cDataSize,
+    const int cDataSize,
     const png_IHDR &ihdr,
     const uint8_t plte[][3],
     const bool trns_found,
     const uint8_t trns[],
-    int offsetY)
+    const int offsetY)
 {
     int pixelWidth = -1;
 
@@ -311,8 +343,7 @@ bool CPngMagic::_8bpp(
 
     if (err)
     {
-        //        set.setLastError("error in decomp");
-        // qDebug("error in decomp");
+        m_lastError = "error in decomp";
         delete[] data;
         return false;
     }
@@ -480,6 +511,10 @@ bool CPngMagic::_8bpp(
         else
         {
             valid = false;
+            char tmp[128];
+            snprintf(tmp, sizeof(tmp), "unsupported filter: %d", filtering);
+            m_lastError = tmp;
+            break;
         }
     }
 
@@ -487,22 +522,22 @@ bool CPngMagic::_8bpp(
     return valid;
 }
 
-bool CPngMagic::_4bpp(
+bool _4bpp(
     CFrame *&frame,
     uint8_t *cData,
-    int cDataSize,
+    const int cDataSize,
     const png_IHDR &ihdr,
     const uint8_t plte[][3],
     const bool trns_found,
     const uint8_t trns[],
-    int offsetY)
+    const int offsetY)
 {
     int height = CFrame::toNet(ihdr.Height);
     int width = CFrame::toNet(ihdr.Width);
 
     if (ihdr.ColorType != PNG_COLOR_TYPE_PALETTE)
     {
-        // qDebug("colorType is not PNG_COLOR_TYPE_PALETTE");
+        m_lastError = "colorType is not PNG_COLOR_TYPE_PALETTE";
         return false;
     }
 
@@ -526,8 +561,7 @@ bool CPngMagic::_4bpp(
 
     if (err)
     {
-        //        set.setLastError("error in decomp");
-        //    qDebug("error in decomp");
+        m_lastError = "error in decomp";
         delete[] data;
         return false;
     }
@@ -551,7 +585,6 @@ bool CPngMagic::_4bpp(
             break;
         default:
             handled = false;
-            //    qDebug("unsupported filter: %d", filtering);
         }
 
         if (handled)
@@ -585,6 +618,10 @@ bool CPngMagic::_4bpp(
         else
         {
             valid = false;
+            char tmp[128];
+            snprintf(tmp, sizeof(tmp), "unsupported filter: %d", filtering);
+            m_lastError = tmp;
+            break;
         }
     }
 

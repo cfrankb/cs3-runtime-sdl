@@ -491,13 +491,8 @@ void CFrameSet::bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int er
     }
 }
 
-bool CFrameSet::extract(IFile &file, char *out_format)
+bool CFrameSet::extract(IFile &file, std::string *out_format)
 {
-    std::string format = "NaN";
-    bool isUnknown = true;
-
-    m_lastError = "";
-
     // IMA_FORMAT
     typedef struct
     {
@@ -507,7 +502,7 @@ bool CFrameSet::extract(IFile &file, char *out_format)
 
     typedef struct
     {
-        char Id[4]; // IMC1
+        char Id[ID_SIG_LEN]; // IMC1
         char len;
         char hei;
         int SizeData;
@@ -520,17 +515,17 @@ bool CFrameSet::extract(IFile &file, char *out_format)
         uint32_t PtrNext;
         char Name[30];
         uint16_t Class;
-        char ImageData[32][32];
+        char ImageData[GE96_TILE_SIZE][GE96_TILE_SIZE];
     } USER_MCX;
 
     typedef struct
     {
-        char Id[4]; // "GE96"
+        char Id[ID_SIG_LEN]; // "GE96"
         uint16_t Class;
         char Name[256];
         int NbrImages;
         int LastViewed;
-        char Palette[256][3];
+        char Palette[PALETTE_SIZE][RGB_BYTES];
         uint32_t PtrFirst;
     } USER_MCXHEADER;
 
@@ -548,7 +543,7 @@ bool CFrameSet::extract(IFile &file, char *out_format)
     // USER_OBL3HEADER..........................................
     typedef struct
     {
-        char Id[4]; // "OBL3"
+        char Id[ID_SIG_LEN]; // "OBL3"
         uint32_t LastViewed;
 
         uint32_t iNbrImages;
@@ -589,14 +584,21 @@ bool CFrameSet::extract(IFile &file, char *out_format)
         char szCopyrights[1024];
     } USER_OBL3HEADER;
 
-    char id[8];
-    file.read(id, 8);
-    int size = 0;
-    if (memcmp(id, "OBL3", 4) == 0)
+    const auto org = file.tell();
+    const uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    char id[sizeof(pngSig)];
+    if (file.read(id, sizeof(id)) != 1)
     {
-        isUnknown = false;
+        m_lastError = "failed to read file header";
+        return false;
+    }
+    int size = 0;
+    std::string format = "NaN";
+    m_lastError = "";
+    if (memcmp(id, "OBL3", ID_SIG_LEN) == 0)
+    {
         format = "OBL3";
-        file.seek(0);
+        file.seek(org);
         USER_OBL3HEADER oblHead;
         file.read(&oblHead, sizeof(USER_OBL3HEADER));
         size = oblHead.iNbrImages;
@@ -607,18 +609,16 @@ bool CFrameSet::extract(IFile &file, char *out_format)
             USER_OBL3 obl;
             file.read(&obl, sizeof(USER_OBL3));
             file.read(bitmap, oblHead.iLen * 16 * oblHead.iHei * 16);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), -16);
+            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
             frame->updateMap();
             add(frame);
             delete[] bitmap;
         }
     }
-
-    if (memcmp(id, "OBL4", 4) == 0)
+    else if (memcmp(id, "OBL4", ID_SIG_LEN) == 0)
     {
-        isUnknown = false;
         format = "OBL4";
-        file.seek(4);
+        file.seek(org + ID_SIG_LEN);
         int mode;
         file >> size;
         file >> mode;
@@ -638,8 +638,8 @@ bool CFrameSet::extract(IFile &file, char *out_format)
             }
             else
             {
-                uLong nSrcLen = 0;
-                file.read(&nSrcLen, 4);
+                uint32_t nSrcLen = 0;
+                file.read(&nSrcLen, sizeof(nSrcLen));
                 uint8_t *pSrc = new uint8_t[nSrcLen];
                 file.read(pSrc, nSrcLen);
                 uLong nDestLen = frame->len() * frame->hei();
@@ -655,18 +655,16 @@ bool CFrameSet::extract(IFile &file, char *out_format)
                 delete[] pSrc;
             }
             frame->setRGB(new uint32_t[frame->len() * frame->hei()]);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), -16);
+            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
             frame->updateMap();
             add(frame);
             delete[] bitmap;
         }
     }
-
-    if (memcmp(id, "OBL5", 4) == 0)
+    else if (memcmp(id, "OBL5", ID_SIG_LEN) == 0)
     {
-        isUnknown = false;
         CFrameSet frameSet;
-        file.seek(0);
+        file.seek(org);
         if (frameSet.read(file))
         {
             size = frameSet.getSize();
@@ -685,44 +683,40 @@ bool CFrameSet::extract(IFile &file, char *out_format)
             return false;
         }
     }
-
-    if (memcmp(id, "GE96", 4) == 0)
+    else if (memcmp(id, "GE96", ID_SIG_LEN) == 0)
     {
-        isUnknown = false;
         format = "GE96";
-        file.seek(0);
+        file.seek(org);
         USER_MCXHEADER mcxHead;
         file.read(&mcxHead, sizeof(USER_MCXHEADER));
         size = mcxHead.NbrImages;
         for (int i = 0; i < mcxHead.NbrImages; ++i)
         {
-            CFrame *frame = new CFrame(32, 32);
-            char *bitmap = new char[32 * 32];
+            CFrame *frame = new CFrame(GE96_TILE_SIZE, GE96_TILE_SIZE);
+            char *bitmap = new char[GE96_TILE_SIZE * GE96_TILE_SIZE];
             USER_MCX mcx;
             file.read(&mcx, sizeof(USER_MCX));
-            memcpy(bitmap, &mcx.ImageData[0][0], 32 * 32);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), -16);
+            memcpy(bitmap, &mcx.ImageData[0][0], GE96_TILE_SIZE * GE96_TILE_SIZE);
+            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
             frame->updateMap();
             add(frame);
             delete[] bitmap;
         }
     }
-
-    if (memcmp(id, "IMC1", 4) == 0)
+    else if (memcmp(id, "IMC1", ID_SIG_LEN) == 0)
     {
-        isUnknown = false;
         format = "IMC1";
         size = 1;
         USER_IMC1HEADER imc1Head;
-        file.seek(0);
+        file.seek(org);
         // this is done in two steps because the
         // IMC1 structure doesn't align properly in 32bits
         file.read(&imc1Head, 6);
-        file.read(&imc1Head.SizeData, 4);
+        file.read(&imc1Head.SizeData, sizeof(imc1Head.SizeData)); // 4
         uint8_t *ptrIMC1 = new uint8_t[imc1Head.SizeData];
         file.read(ptrIMC1, imc1Head.SizeData);
-        uint8_t *ptr = new uint8_t[imc1Head.len * imc1Head.hei * 64];
-        memset(ptr, 0, imc1Head.len * imc1Head.hei * 64);
+        uint8_t *ptr = new uint8_t[imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE];
+        memset(ptr, 0, imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE);
         uint8_t *xptr = ptr;
         uint8_t *xptrIMC1 = ptrIMC1;
         for (int cpt = 0; cpt < imc1Head.SizeData - 1;)
@@ -744,39 +738,36 @@ bool CFrameSet::extract(IFile &file, char *out_format)
                 cpt++;
             }
         }
-        CFrame *frame = new CFrame(imc1Head.len * 8, imc1Head.hei * 8);
+        CFrame *frame = new CFrame(imc1Head.len * FNT_SIZE, imc1Head.hei * FNT_SIZE);
         char *bitmap = ima2bitmap((char *)xptr, imc1Head.len, imc1Head.hei);
-        bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), 0);
+        bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET_NONE);
         frame->updateMap();
         add(frame);
         delete[] xptrIMC1;
         delete[] xptr;
         delete[] bitmap;
     }
-
-    uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
-    if (memcmp(id, pngSig, 8) == 0)
+    else if (memcmp(id, pngSig, sizeof(pngSig)) == 0)
     {
         format = "PNG";
-        CPngMagic png;
-        return png.parsePNG(*this, file);
+        return parsePNG(*this, file, org);
     }
-
-    if (!size && isUnknown)
+    else
     {
         format = "IMA";
         int fileSize = file.getSize();
         USER_IMAHEADER imaHead;
-        file.seek(0);
-        file.read(&imaHead, 2);
-        int dataSize = imaHead.len * imaHead.hei * 64;
-        if ((fileSize - 2) != dataSize)
+        int hdrSize = static_cast<int>(sizeof(USER_IMAHEADER));
+        file.seek(org);
+        file.read(&imaHead, hdrSize);
+        int dataSize = imaHead.len * imaHead.hei * FNT_SIZE * FNT_SIZE;
+        if ((fileSize - hdrSize) != dataSize)
         {
             m_lastError = "this is not a valid .ima file";
             return false;
         }
         size = 1;
-        CFrame *frame = new CFrame(imaHead.len * 8, imaHead.hei * 8);
+        CFrame *frame = new CFrame(imaHead.len * FNT_SIZE, imaHead.hei * FNT_SIZE);
         char *pIMA = new char[dataSize];
         file.read(pIMA, dataSize);
         char *bitmap = ima2bitmap(pIMA, imaHead.len, imaHead.hei);
@@ -789,9 +780,8 @@ bool CFrameSet::extract(IFile &file, char *out_format)
 
     if (out_format)
     {
-        strncpy(out_format, format.c_str(), 4);
+        *out_format = format;
     }
-
     return size != 0;
 }
 
@@ -823,7 +813,7 @@ void CFrameSet::move(int s, int t)
     insertAt(t, f);
 }
 
-void CFrameSet::toPng(unsigned char *&data, int &outSize)
+bool CFrameSet::toPng(unsigned char *&data, int &outSize)
 {
     const size_t size = m_arrFrames.size();
     if (size > 1)
@@ -886,6 +876,7 @@ void CFrameSet::toPng(unsigned char *&data, int &outSize)
         data = nullptr;
         outSize = 0;
     }
+    return true;
 }
 
 void CFrameSet::setLastError(const char *error)

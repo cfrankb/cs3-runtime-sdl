@@ -28,12 +28,12 @@
 #include "thelper.h"
 #include "t_runtime.h"
 
-constexpr const char *IN_FILE = "tests/in/savegame-cs3.dat";
-constexpr const char *OUT_FILE = "tests/out/savegame-cs3.dat";
-
 bool test_runtime()
 {
+    constexpr const char *IN_FILE = "tests/in/savegame-cs3.dat";
+    constexpr const char *OUT_FILE = "tests/out/savegame-cs3.dat";
     CRuntime runtime;
+    runtime.setQuiet(true);
     std::string name;
     if (!runtime.loadFromFile(IN_FILE, name))
     {
