@@ -46,6 +46,14 @@ elif [[ "$1" == "-g" ]] ; then
     cp $TARGET_MAIN/src/colormap.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/strhelper.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/attr.h $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/gameui.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/logger.h $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/recorder.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/shared/FileMem.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/FileWrap.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/FrameSet.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/PngMagic.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/helper.* $TARGET_EDITOR/src/shared
     cp ../chars/out/chars.h $TARGET_EDITOR/src
     cp ../chars/out/chars.cpp $TARGET_EDITOR/src
 elif [[ "$1" == "-m" ]] ; then
@@ -56,7 +64,7 @@ elif [[ "$1" == "-m" ]] ; then
         echo "Backed up $file to $file.bak_$timestamp"
     fi
     cp $TARGET_MAIN/tests/in/levels2.mapz  $TARGET_MAIN/data/levels.mapz
-elif [[ "$1" == "-m" ]] ; then
+elif [[ "$1" == "-h" ]] ; then
     echo "-a        copy metadata to editor"
     echo "-g        copy gamefiles to editor"
     echo "-m        update mapfile in runtime"
