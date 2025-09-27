@@ -1,5 +1,4 @@
-#ifndef ___TILESET_H
-#define ___TILESET_H
+#pragma once
 
 #include <stdint.h>
 
@@ -45,5 +44,3 @@ protected:
     uint16_t m_size = 0;
     uint8_t *m_tiles;
 };
-
-#endif
