@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <unordered_map>
 
-struct AnimzInfo
+struct animzInfo_t
 {
     uint8_t frames;
     uint8_t base;
@@ -36,7 +36,7 @@ public:
     uint16_t at(uint8_t tileID);
     uint16_t offset();
     bool isSpecialCase(uint8_t tileID);
-    AnimzInfo specialInfo(const int tileID);
+    animzInfo_t specialInfo(const int tileID);
 
     using animzSeq_t = struct
     {
@@ -56,5 +56,5 @@ private:
     uint8_t m_tileReplacement[MAX_TILES];
     int32_t *m_seqIndex = nullptr;
     uint16_t m_offset = 0;
-    std::unordered_map<uint16_t, AnimzInfo> m_seqLookUp;
+    std::unordered_map<uint16_t, animzInfo_t> m_seqLookUp;
 };

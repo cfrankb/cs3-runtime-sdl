@@ -1954,7 +1954,7 @@ CFrame *CGameMixin::calcSpecialFrame(const sprite_t &sprite)
         }
     }
     CFrameSet &animz = *m_animz;
-    const AnimzInfo info = m_animator->specialInfo(sprite.tileID);
+    const animzInfo_t info = m_animator->specialInfo(sprite.tileID);
     return animz[saim * info.frames + info.base + info.offset];
 }
 

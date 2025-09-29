@@ -64,7 +64,7 @@ CAnimator::CAnimator()
     memset(m_seqIndex, 0, g_animzSeq.size() * sizeof(m_seqIndex[0]));
     for (const auto &seq : g_animzSeq)
     {
-        m_seqLookUp[seq.srcTile] = AnimzInfo{
+        m_seqLookUp[seq.srcTile] = animzInfo_t{
             .frames = seq.count,
             .base = seq.specialID,
             .offset = 0,
@@ -105,16 +105,16 @@ bool CAnimator::isSpecialCase(uint8_t tileID)
     return g_specialCases.find(tileID) != g_specialCases.end();
 }
 
-AnimzInfo CAnimator::specialInfo(const int tileID)
+animzInfo_t CAnimator::specialInfo(const int tileID)
 {
     const auto &it = m_seqLookUp.find(tileID);
     if (it != m_seqLookUp.end())
     {
-        return AnimzInfo{
+        return animzInfo_t{
             .frames = it->second.frames,
             .base = it->second.base,
             .offset = static_cast<uint8_t>(m_offset % it->second.frames),
         };
     }
-    return AnimzInfo{};
+    return animzInfo_t{};
 }

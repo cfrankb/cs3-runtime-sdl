@@ -14,64 +14,52 @@ def strip_ext(s):
     return s[0:i]
 
 
-def prepare_deps(deps, fname):
+def prepare_deps(deps, fpath):
     lines = []
-    basename = ntpath.basename(fname)
-    ref = fname
-    if fname.endswith(".cpp"):
+    basename = ntpath.basename(fpath)
+    ref = fpath
+    if fpath.endswith(".cpp"):
         name = strip_ext(basename)
-        fname_h = strip_ext(fname) + ".h"
+        fname_h = strip_ext(fpath) + ".h"
         if os.path.isfile(fname_h):
             ref += f" {fname_h}"
         lines.append(f"$(BPATH)/{name}$(EXT): {ref}")
         lines.append(f"\t$(CXX) $(CXXFLAGS) -c $< $(INC) -o $@")
         deps.append(f"{name}$(EXT)")
-    elif fname.endswith(".rc"):
+    elif fpath.endswith(".rc"):
         name = strip_ext(basename) + ".res"
         lines.append(f"$(BPATH)/{name}: {ref}")
         lines.append(f"\t$(WINDRES) $< -O coff -o $@")
         deps.append(f"{name}")
     else:
-        print(f"no receipe for unhandled file: {fname}\n")
+        print(f"no receipe for unhandled file: {fpath}\n")
     return "\n".join(lines)
 
 
-def get_deps_blocks(paths, excluded, run_cmd, libs_steps):
-    deps_blocks = ["all: $(TARGET)"]
+def get_deps_blocks(paths, excluded, run_cmd, app, suffix=""):
+
+    deps_blocks = []
     deps = []
 
     for pattern in paths:
         for f in glob.glob(pattern):
-            if ntpath.basename(f) not in excluded:
-                deps_blocks.append(prepare_deps(deps, f))
+            deps_temp = []
+            deps_blocks.append(prepare_deps(deps_temp, f))
+            if (
+                ntpath.basename(f) not in excluded
+                and os.path.dirname(f) + "/" not in excluded
+            ):
+                deps += deps_temp
 
     objs = " ".join(f"$(BPATH)/{x}" for x in deps)
     lines = []
-    lines.append(f"$(TARGET): $(DEPS)")
+    lines.append(f"$(TARGET{suffix}): $(DEPS{suffix})")
     lines.append(
-        f"\t$(PREBUILD) && $(CXX) $(CXXFLAGS) $(DEPS) $(LDFLAGS) $(LIBS) -o $@"
-        f'&& echo "to run app: {run_cmd}"'
+        f"\t$(PREBUILD{suffix}) && $(CXX) $(CXXFLAGS) $^ $(LDFLAGS) $(LIBS) -o $@"
+        f'&& echo "to run {app}: {run_cmd}"'
     )
-    lines.append("")
-    lines.append("clean:")
-    lines.append("\trm -rf $(BPATH)/*")
-    lines.append("")
-    lines.append("retry:")
-    lines.append("\trm -rf $(TARGET)")
-    lines.append("")
-    lines.append("run:")
-    lines.append(f"\t{run_cmd}")
-    lines.append("")
-    lines.append("count:")
-    lines.append("\tfind src  -type f -print0 | xargs -0 wc -l")
-    lines.append("\tcloc src")
-    lines.append("")
-    if libs_steps:
-        lines.append("build_libs:")
-        lines.append("\t" + "\n\t".join(libs_steps) + "\n")
 
-    deps_blocks.append("\n".join(lines))
-    return deps_blocks, objs
+    return ["\n".join(lines)] + deps_blocks, objs
 
 
 options = ["sdl3", "emsdl3", "mingw32-sdl3"]
@@ -82,7 +70,6 @@ makefile generator
 possible values are:
     {', '.join(options)}
 
-    -t     build the unit tests
     -s     strip debug symbols
 
 examples:
@@ -96,13 +83,10 @@ python bin/gen.py mingw32-sdl3
 
 class Params:
     def __init__(self, argv):
-        self.tests = False
         self.strip = False
         self.action = ""
         self.prefix = ""
         for i in range(1, len(argv)):
-            if argv[i] == "-t":
-                self.tests = True
             if argv[i] == "-s":
                 self.strip = True
             elif self.action == "":
@@ -120,36 +104,80 @@ def strip_padding(strx):
     return strx.replace(" " * 12, "")
 
 
+def make_auxilary_targets(test_cmd, libs_steps, help_info):
+    lines = []
+    lines.append("")
+    lines.append("clean:")
+    lines.append("\trm -rf $(BPATH)/*$(EXT)")
+    lines.append("")
+    lines.append("retry:")
+    lines.append("\trm -rf $(TARGET) && make")
+    lines.append("")
+    lines.append("run:")
+    lines.append(f"\t$(RUN_PREFIX) $(RUN)")
+    lines.append("")
+    lines.append("count:")
+    lines.append("\tfind src  -type f -print0 | xargs -0 wc -l")
+    lines.append("\tcloc src")
+    lines.append("")
+    lines.append("rebuild:")
+    lines.append("\trm -rf $(TARGET) && rm -rf $(BPATH)/*$(EXT) && make")
+    lines.append("")
+    if libs_steps:
+        lines.append("build_libs:")
+        lines.append("\t" + "\n\t".join(libs_steps) + "\n")
+    if test_cmd:
+        lines.append("run_tests:")
+        lines.append(f"\t$(RUN_PREFIX) {test_cmd}\n")
+        lines.append("retry_tests:")
+        lines.append("\trm -rf $(TARGET_TEST) && make tests\n")
+        lines.append("rebuild_tests:")
+        lines.append(
+            "\trm -rf $(TARGET_TEST) && rm -rf $(BPATH)/*$(EXT) && make tests\n"
+        )
+
+    if help_info:
+        lines.append("help:")
+        for line in help_info:
+            lines.append(f'\t@echo "{line}"'.replace("`", "'"))
+
+    return "\n".join(lines) + "\n"
+
+
 def main():
     params = Params(sys.argv)
     paths = ["src/*.cpp", "src/**/*.cpp", "src/**/**/*.cpp"]
+    paths += ["tests/*.cpp"]
     excluded = []
+    excluded += ["tests/"]
     bname = "cs3-runtime"
     strip = ""
     ext = ".o"
+    run_prefix = ""
     run_cmd = "$(TARGET)"
-    if params.tests:
-        excluded += ["main.cpp"]
-        paths += ["tests/*.cpp"]
-        bname = "tests"
+    test_cmd = ""
     if params.strip:
         strip = "-s "
     libs_steps = []
     python_cmd = ntpath.basename(sys.executable)
-    Path("build").mkdir(parents=True, exist_ok=True)
+    build_path = "build"
+    Path(build_path).mkdir(parents=True, exist_ok=True)
 
     #################################################
     ##  SDL3
     if params.action == "sdl3":
         prefix = "local/std"
-        run_cmd = f"LD_LIBRARY_PATH={prefix}/lib:$LD_LIBRARY_PATH " + run_cmd
+        run_prefix = f"LD_LIBRARY_PATH={prefix}/lib:$LD_LIBRARY_PATH "
+        test_cmd = "$(BPATH)/tests"
         vars = [
+            f"RUN_PREFIX={run_prefix}",
+            f"RUN={run_cmd}",
             "CXX=g++",
             f"INC=-I{prefix}/include",
             f"LDFLAGS={strip}",
             f"LIBS=-L{prefix}/lib -lSDL3_mixer -lz -lxmp -lSDL3",
             "CXXFLAGS=-O3 -Wall -Wextra",
-            "BPATH=build",
+            f"BPATH={build_path}",
             f"BNAME={bname}",
             "TARGET=$(BPATH)/$(BNAME)",
             'PREBUILD=echo "building game"',
@@ -165,9 +193,9 @@ def main():
         bname = "cs3v2.html"
         prefix = "local/ems"
         run_cmd = "emrun --hostname 0.0.0.0 $(TARGET)"
-        if params.tests:
-            print("tests unsupported for this config")
         vars = [
+            f"RUN_PREFIX=",
+            f"RUN={run_cmd}",
             "CXX=em++",
             f"INC=-I{prefix}/include",
             f"LIBS=-lopenal -lidbfs.js -L{prefix}/lib -lSDL3 -lSDL3_mixer -lxmp-lite",
@@ -194,7 +222,7 @@ def main():
                 -sEXPORTED_FUNCTIONS=_malloc,_free,_main
             endef"""
             ),
-            "BPATH=build",
+            f"BPATH={build_path}",
             f"BNAME={bname}",
             "TARGET=$(BPATH)/$(BNAME)",
             strip_padding(
@@ -223,6 +251,8 @@ def main():
         paths += ["src/*.rc"]
         prefix = params.prefix if params.has_prefix() else "local/mingw"
         vars = [
+            f"RUN_PREFIX=",
+            f"RUN={run_cmd}",
             f"WINDRES={arch}-mingw32-windres",
             f"CXX={arch}-mingw32-g++",  # -fno-exceptions -fno-rtti
             f"INC=-I{prefix}/include",
@@ -236,7 +266,7 @@ def main():
             "-lgdi32 -lwinmm -limm32 -lole32 -loleaut32 -lshell32 "
             "-lversion -luuid -lws2_32 -lsetupapi -lhid",
             "CXXFLAGS=-O3 -pthread -std=c++17",
-            "BPATH=build",
+            f"BPATH={build_path}",
             f"BNAME={bname}",
             "TARGET=$(BPATH)/$(BNAME)",
             'PREBUILD=echo "building game"',
@@ -261,16 +291,40 @@ def main():
         print(help_text)
         return EXIT_FAILURE
 
-    print("type `make build_libs` to create the libraries.")
-    print("type `make` to generare the executable.")
-    print("type `make clean` to delete the content of the build folder.")
+    help_info = [
+        "type `make build_libs` to create the libraries.",
+        "type `make` to build the executable.",
+        "type `make clean` to delete the content of the build folder.",
+    ]
+    if test_cmd:
+        help_info += [
+            "type `make tests` to build tests.",
+            "type `make run_tests` to run tests.",
+        ]
+    print("\n".join(help_info))
 
-    deps_blocks, objs = get_deps_blocks(paths, excluded, run_cmd, libs_steps)
-    vars.append(f"DEPS={objs}")
-    vars.append(f"EXT={ext}")
-    with open("Makefile", "w") as tfile:
-        tfile.write("\n".join(vars) + "\n\n")
-        tfile.write("\n\n".join(deps_blocks))
+    deps_blocks_main, deps_main = get_deps_blocks(
+        paths, excluded, run_cmd="make run", app="app", suffix=""
+    )
+    deps_blocks = ["all: $(TARGET)"]
+    if deps_blocks_main:
+        deps_blocks += deps_blocks_main[1:] + deps_blocks_main[0:1]
+    vars.append(f"DEPS={deps_main}")
+    if test_cmd:
+        deps_blocks += ["tests: $(TARGET_TEST)"]
+        deps_blocks_test, objs_test = get_deps_blocks(
+            paths, ["main.cpp"], "make run_tests", app="tests", suffix="_TEST"
+        )
+        deps_blocks += deps_blocks_test[0:1]
+        vars.append(f"DEPS_TEST={objs_test}")
+        vars.append(f"TARGET_TEST=$(BPATH)/tests")
+        vars.append("PREBUILD_TEST=echo 'building tests'")
+
+        vars.append(f"EXT={ext}")
+        with open("Makefile", "w") as tfile:
+            tfile.write("\n".join(vars) + "\n\n")
+            tfile.write("\n\n".join(deps_blocks) + "\n")
+            tfile.write(make_auxilary_targets(test_cmd, libs_steps, help_info))
 
     return EXIT_SUCCESS
 
