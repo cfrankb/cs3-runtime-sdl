@@ -17,6 +17,7 @@
 */
 #include <algorithm>
 #include "menu.h"
+#include "logger.h"
 
 CMenu::CMenu(const int menuid, const int scaleX, const int scaleY, const int padding, CMenu *parent)
 {
@@ -44,7 +45,15 @@ size_t CMenu::size() const
 
 CMenuItem &CMenu::at(int i)
 {
-    return m_items[i];
+    if (i >= 0 && i < static_cast<int>(m_items.size()))
+    {
+        return m_items[i]; // Throws if out of bounds
+    }
+    else
+    {
+        LOGW("Invalid Menu::at index: %d\n", i);
+        return m_items[0]; // Throws if out of bounds
+    }
 }
 
 CMenuItem &CMenu::current()
@@ -59,21 +68,23 @@ CMenuItem &CMenu::last()
 
 bool CMenu::up()
 {
-    if (m_currentItem)
+    if (m_currentItem > 0)
     {
         --m_currentItem;
         return true;
     }
+    LOGW("Cannot move up: already at first item\n");
     return false;
 }
 
 bool CMenu::down()
 {
-    if (m_currentItem < static_cast<int>(m_items.size() - 1))
+    if (m_currentItem < static_cast<int>(m_items.size()) - 1)
     {
         ++m_currentItem;
         return true;
     }
+    LOGW("Cannot move down: already at last item\n");
     return false;
 }
 
@@ -85,7 +96,7 @@ int CMenu::index() const
 void CMenu::clear()
 {
     m_items.clear();
-    setCurrent(0);
+    m_currentItem = 0;
 }
 
 int CMenu::id() const
@@ -95,7 +106,15 @@ int CMenu::id() const
 
 void CMenu::setCurrent(const int i)
 {
-    m_currentItem = i;
+    if (i >= 0 && i < static_cast<int>(m_items.size()))
+    {
+        m_currentItem = i;
+    }
+    else
+    {
+        LOGW("Invalid current item index: %d\n", i);
+        m_currentItem = 0;
+    }
 }
 
 int CMenu::height() const

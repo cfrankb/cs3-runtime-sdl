@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "game"
 #include <unordered_map>
 #include <cstring>
 #include <stdarg.h>
@@ -23,6 +22,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <memory>
 #include "game.h"
 #include "map.h"
 #include "actor.h"
@@ -39,6 +39,7 @@
 #include "gamestats.h"
 #include "attr.h"
 #include "logger.h"
+#include "strhelper.h"
 
 CMap CGame::m_map(30, 30);
 CGame::userKeys_t CGame::m_keys;
@@ -91,7 +92,7 @@ CGame::CGame()
     m_level = 0;
     m_lives = defaultLives();
     m_score = 0;
-    m_gameStats = new CGameStats;
+    m_gameStats = std::make_unique<CGameStats>();
     m_gameStats->set(S_SKILL, SKILL_EASY);
 }
 
@@ -101,8 +102,8 @@ CGame::CGame()
  */
 CGame::~CGame()
 {
-    delete m_sound;
-    delete m_gameStats;
+    // delete m_sound;
+    //  delete m_gameStats;
 }
 
 /**
@@ -1247,9 +1248,10 @@ void CGame::playTileSound(int tileID) const
  *
  * @param s
  */
-void CGame::attach(ISound *s)
+void CGame::attach(std::shared_ptr<ISound> &s)
 {
     m_sound = s;
+    LOGI("m_sound useCount: %d\n", s.use_count());
 }
 
 /**
@@ -1312,45 +1314,12 @@ const char *CGame::getHintText()
 void CGame::parseHints(const char *data)
 {
     m_hints.clear();
-    const int bufferSize = strlen(data) + 1;
-    char *t = new char[bufferSize];
-    strncpy(t, data, bufferSize);
-    char *p = t;
-    while (p && *p)
+    const auto lines = split(std::string(data), '\n');
+    for (const auto &line : lines)
     {
-        char *en = strstr(p, "\n");
-        if (en)
-        {
-            *en = 0;
-        }
-        char *er = strstr(p, "\r");
-        if (er)
-        {
-            *er = 0;
-        }
-        char *e = er > en ? er : en;
-        while (*p == ' ' || *p == '\t')
-        {
-            ++p;
-        }
-        char *c = strstr(p, "#");
-        if (c)
-        {
-            *c = '\0';
-        }
-        int i = strlen(p) - 1;
-        while (i >= 0 && (p[i] == ' ' || p[i] == '\t'))
-        {
-            p[i] = '\0';
-            --i;
-        }
-        if (p[0])
-        {
-            m_hints.push_back(p);
-        }
-        p = e ? e + 1 : nullptr;
+        if (!line.empty())
+            m_hints.push_back(line);
     }
-    delete[] t;
 }
 
 /**

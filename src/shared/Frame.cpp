@@ -19,7 +19,6 @@
 // Frame.cpp : implementation file
 //
 
-#define LOG_TAG "frame"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -564,9 +563,9 @@ CFrameSet *CFrame::split(int pxSize, bool whole)
 bool CFrame::draw(CDotArray *dots, int size, int mode)
 {
     bool changed = false;
-    for (int i = 0; i < (*dots).getSize(); ++i)
+    for (size_t i = 0; i < (*dots).getSize(); ++i)
     {
-        Dot &dot = (*dots)[i];
+        const Dot &dot = (*dots)[i];
         for (int y = 0; y < size; ++y)
         {
             for (int x = 0; x < size; ++x)
@@ -612,9 +611,9 @@ bool CFrame::draw(CDotArray *dots, int size, int mode)
 
 void CFrame::save(CDotArray *dots, CDotArray *dotsOrg, int size)
 {
-    for (int i = 0; i < (*dots).getSize(); ++i)
+    for (size_t i = 0; i < (*dots).getSize(); ++i)
     {
-        Dot &dot = (*dots)[i];
+        const Dot &dot = (*dots)[i];
         for (int y = 0; y < size; ++y)
         {
             for (int x = 0; x < size; ++x)

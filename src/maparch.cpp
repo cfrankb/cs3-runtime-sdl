@@ -15,25 +15,25 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "maparch"
 #include <cstring>
 #include "maparch.h"
 #include "map.h"
 #include "level.h"
 #include "shared/IFile.h"
+#include "shared/FileWrap.h"
 #include "logger.h"
 
 constexpr const char MAAZ_SIG[]{'M', 'A', 'A', 'Z'};
 const uint16_t MAAZ_VERSION = 0;
 
-CMapArch::CMapArch()
+// Define header structure
+struct Header
 {
-}
-
-CMapArch::~CMapArch()
-{
-    clear();
-}
+    uint8_t sig[sizeof(MAAZ_SIG)];
+    uint16_t version;
+    uint16_t count;
+    uint32_t offset;
+};
 
 /**
  * @brief get the last error
@@ -61,11 +61,6 @@ size_t CMapArch::size()
  */
 void CMapArch::clear()
 {
-    for (size_t i = 0; i < m_maps.size(); ++i)
-    {
-        if (m_maps[i])
-            delete m_maps[i];
-    }
     m_maps.clear();
 }
 
@@ -75,9 +70,10 @@ void CMapArch::clear()
  * @param map
  * @return size_t mapIndex pos
  */
-size_t CMapArch::add(CMap *map)
+
+size_t CMapArch::add(std::unique_ptr<CMap> map)
 {
-    m_maps.push_back(map);
+    m_maps.push_back(std::move(map));
     return m_maps.size() - 1;
 }
 
@@ -87,9 +83,12 @@ size_t CMapArch::add(CMap *map)
  * @param i
  * @return CMap*
  */
-CMap *CMapArch::removeAt(int i)
+
+std::unique_ptr<CMap> CMapArch::removeAt(int i)
 {
-    CMap *map = m_maps[i];
+    if (i < 0 || i >= static_cast<int>(m_maps.size()))
+        return nullptr;
+    std::unique_ptr<CMap> map = std::move(m_maps[i]);
     m_maps.erase(m_maps.begin() + i);
     return map;
 }
@@ -100,20 +99,12 @@ CMap *CMapArch::removeAt(int i)
  * @param i
  * @param map
  */
-void CMapArch::insertAt(int i, CMap *map)
-{
-    m_maps.insert(m_maps.begin() + i, map);
-}
 
-/**
- * @brief get map at index
- *
- * @param i
- * @return CMap*
- */
-CMap *CMapArch::at(int i)
+void CMapArch::insertAt(int i, std::unique_ptr<CMap> map)
 {
-    return m_maps[i];
+    if (i < 0 || i > static_cast<int>(m_maps.size()))
+        return;
+    m_maps.insert(m_maps.begin() + i, std::move(map));
 }
 
 /**
@@ -137,7 +128,7 @@ bool CMapArch::read(IFile &file)
         return offset;
     };
 
-    auto readmap = [&file](CMap *map) -> bool
+    auto readmap = [&file](std::unique_ptr<CMap> &map) -> bool
     {
         return map->read(file);
     };
@@ -164,7 +155,7 @@ bool CMapArch::read(const char *filename)
         return fseek(sfile, offset, SEEK_SET) == 0;
     };
 
-    auto readmap = [sfile](CMap *map) -> bool
+    auto readmap = [sfile](std::unique_ptr<CMap> &map) -> bool
     {
         return map->read(sfile);
     };
@@ -177,18 +168,10 @@ bool CMapArch::read(const char *filename)
 template <typename ReadFunc, typename SeekFunc, typename ReadMapFunc>
 bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc readmap)
 {
-    typedef struct
-    {
-        uint8_t sig[sizeof(MAAZ_SIG)];
-        uint16_t version;
-        uint16_t count;
-        uint32_t offset;
-    } Header;
-
     Header hdr;
 
     // read header
-    if (!readfile(&hdr, sizeof(Header)))
+    if (readfile(&hdr, sizeof(Header)) != IFILE_OK)
     {
         m_lastError = "Failed to read header";
         LOGE("%s\n", m_lastError.c_str());
@@ -240,16 +223,15 @@ bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc read
             return false;
         }
 
-        CMap *map = new CMap();
+        std::unique_ptr<CMap> map(new CMap);
         if (!readmap(map))
         {
-            delete map;
             delete[] indexPtr;
             m_lastError = "Failed to read map data [ma]";
             LOGE("%s\n", m_lastError.c_str());
             return false;
         }
-        m_maps.push_back(map);
+        m_maps.push_back(std::move(map));
     }
 
     delete[] indexPtr;
@@ -347,7 +329,8 @@ bool CMapArch::extract(const char *filename)
     else
     {
         clear();
-        m_maps.push_back(new CMap());
+        std::unique_ptr<CMap> map;
+        m_maps.push_back(std::move(map));
         return fetchLevel(*m_maps[0], filename, m_lastError);
     }
 }
@@ -370,32 +353,68 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
         uint32_t offset;
     } Header;
 
-    FILE *sfile = fopen(filename, "rb");
-    auto readfile = [sfile](auto ptr, auto size)
+    CFileWrap file;
+    if (!file.open(filename, "rb"))
     {
-        return fread(ptr, size, 1, sfile) == 1;
-    };
-    if (sfile)
+        LOGE("Failed to open file: %s\n", filename);
+        return false;
+    }
+
+    Header hdr;
+
+    // Read header
+    if (file.read(&hdr, sizeof(Header)) != IFILE_OK)
     {
-        Header hdr;
-        readfile(&hdr, sizeof(Header));
-        // check signature
-        if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
+        LOGE("Failed to read header from %s\n", filename);
+        return false;
+    }
+    // check signature
+    if (memcmp(hdr.sig, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
+    {
+        return false;
+    }
+    // check version
+    if (hdr.version != MAAZ_VERSION)
+    {
+        LOGE("Unsupported MAAZ version %d in %s\n", hdr.version, filename);
+        return false;
+    }
+    if (hdr.count > MAX_MAPS)
+    {
+        LOGE("Invalid map count %d in %s\n", hdr.count, filename);
+        return false;
+    }
+    if (hdr.offset == 0)
+    {
+        LOGE("Invalid offset table position in %s\n", filename);
+        return false;
+    }
+    const long filesize = file.getSize();
+
+    // Seek to offset table
+    file.seek(hdr.offset);
+    /* if (!file.seek(hdr.offset))
+    {
+        LOGE("Failed to seek to offset table in %s\n", filename);
+        return false;
+    }*/
+    std::vector<uint32_t> offsets(hdr.count);
+    if (file.read(offsets.data(), sizeof(uint32_t) * hdr.count) != IFILE_OK)
+    {
+        LOGE("Failed to read offsets from %s\n", filename);
+        return false;
+    }
+    index.clear();
+    for (uint32_t off : offsets)
+    {
+        if (off > filesize)
         {
+            LOGE("Invalid offset %u in %s\n", off, filename);
             return false;
         }
-        fseek(sfile, hdr.offset, SEEK_SET);
-        uint32_t *indexPtr = new uint32_t[hdr.count];
-        readfile(indexPtr, sizeof(uint32_t) * hdr.count);
-        index.clear();
-        for (int i = 0; i < hdr.count; ++i)
-        {
-            index.push_back(indexPtr[i]);
-        }
-        delete[] indexPtr;
-        fclose(sfile);
+        index.push_back(static_cast<long>(off));
     }
-    return sfile != nullptr;
+    return true;
 }
 
 /**
@@ -406,24 +425,57 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
  * @return true
  * @return false
  */
+
 bool CMapArch::indexFromMemory(uint8_t *ptr, IndexVector &index)
 {
-    // check signature
-    if (memcmp(ptr, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
+    if (!ptr)
     {
+        LOGE("Null pointer passed to indexFromMemory\n");
         return false;
     }
-    index.clear();
-    uint16_t count = 0;
-    memcpy(&count, ptr + OFFSET_COUNT, sizeof(count));
-    uint32_t indexBase = 0;
-    memcpy(&indexBase, ptr + OFFSET_INDEX, sizeof(indexBase));
-    for (uint16_t i = 0; i < count; ++i)
+
+    constexpr size_t headerSize = sizeof(Header);
+    if (memcmp(ptr, MAAZ_SIG, sizeof(MAAZ_SIG)) != 0)
     {
-        long idx = 0;
-        memcpy(&idx, ptr + indexBase + i * sizeof(uint32_t), sizeof(uint32_t));
-        index.push_back(idx);
+        LOGE("Invalid MAAZ signature in memory buffer\n");
+        return false;
     }
+
+    Header hdr;
+    memcpy(&hdr, ptr, headerSize); // Safe: headerSize is fixed
+    if (hdr.version != MAAZ_VERSION)
+    {
+        LOGE("Unsupported MAAZ version %d in memory buffer\n", hdr.version);
+        return false;
+    }
+    if (hdr.count > MAX_MAPS)
+    {
+        LOGE("Invalid map count %d in memory buffer\n", hdr.count);
+        return false;
+    }
+    if (hdr.offset < headerSize)
+    {
+        LOGE("Invalid offset table position %u in memory buffer\n", hdr.offset);
+        return false;
+    }
+
+    // Read offset table
+    index.clear();
+    index.reserve(hdr.count);
+    ptr += hdr.offset; // Move to offset table
+    for (uint16_t i = 0; i < hdr.count; ++i)
+    {
+        uint32_t offset;
+        memcpy(&offset, ptr, sizeof(uint32_t)); // Safe: fixed size
+        ptr += sizeof(uint32_t);
+        if (offset < headerSize)
+        {
+            LOGE("Invalid map offset %u at index %d\n", offset, i);
+            return false;
+        }
+        index.push_back(static_cast<long>(offset));
+    }
+
     return true;
 }
 
@@ -459,7 +511,7 @@ bool CMapArch::fromMemory(uint8_t *ptr)
         return true;
     };
 
-    auto readmap = [&ptr](CMap *map) -> bool
+    auto readmap = [&ptr](std::unique_ptr<CMap> &map) -> bool
     {
         return map->fromMemory(ptr);
     };

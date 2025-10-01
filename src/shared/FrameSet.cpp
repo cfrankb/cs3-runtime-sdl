@@ -18,7 +18,6 @@
 
 // FrameSet.cpp : implementation file
 //
-#define LOG_TAG "frameset"
 #include <cstring>
 #include <cstdio>
 #include <cstdint>
@@ -576,7 +575,7 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
     const auto org = file.tell();
     const uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
     char id[sizeof(pngSig)];
-    if (file.read(id, sizeof(id)) != 1)
+    if (file.read(id, sizeof(id)) != IFILE_OK)
     {
         m_lastError = "failed to read file header";
         return false;

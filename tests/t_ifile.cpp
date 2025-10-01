@@ -16,7 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "t_ifile.h"
-#define LOG_TAG "t_ifile"
 #include <cstring>
 #include "t_map.h"
 #include "../src/maparch.h"

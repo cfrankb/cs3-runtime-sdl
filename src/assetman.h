@@ -17,21 +17,16 @@
 */
 #include <string>
 #include <cstdint>
+#include <vector>
 
 #pragma once
-
-struct data_t
-{
-    uint8_t *ptr;
-    size_t size;
-};
+using data_t = std::vector<uint8_t>; // Replaces struct with raw ptr
 
 namespace AssetMan
 {
     std::string addTrailSlash(const std::string &path);
     void setPrefix(const std::string &prefix);
     const std::string &getPrefix();
-    bool read(const std::string &filepath, data_t &data, bool terminator = false);
-    void free(const data_t data);
+    data_t read(const std::string &filepath, bool terminator = false);
     std::string defaultPrefix();
 }

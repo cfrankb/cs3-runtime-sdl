@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "tmain"
 #include <cstdio>
 #include <functional>
 #include <vector>
@@ -77,9 +76,15 @@ int main(int argc, char *args[])
         failed += !fct[i].f();
     }
 
-    if (failed)
+    if (failed != 0)
+    {
         LOGE("\n\n###### failed: %d\n", failed);
+    }
     else
+    {
         LOGI("\n\n###### completed\n");
+    }
+
+    LOGI("all done\n");
     return failed != 0;
 }

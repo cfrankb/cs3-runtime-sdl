@@ -19,6 +19,8 @@
 
 #include <cstdint>
 #include <unordered_map>
+#include <vector>
+#include <array>
 
 struct animzInfo_t
 {
@@ -38,12 +40,12 @@ public:
     bool isSpecialCase(uint8_t tileID) const;
     animzInfo_t getSpecialInfo(const int tileID) const;
 
-    using animzSeq_t = struct
+    struct animzSeq_t
     {
-        uint8_t srcTile;
-        uint8_t startSeq;
-        uint8_t count;
-        uint8_t specialID;
+        uint8_t srcTile;   ///< Source tile ID.
+        uint8_t startSeq;  ///< Starting frame ID of animation.
+        uint8_t count;     ///< Number of frames in sequence.
+        uint8_t specialID; ///< Base ID for special animations (0 if none).
     };
 
 private:
@@ -52,9 +54,10 @@ private:
         NO_ANIMZ = 255,
         MAX_TILES = 256,
     };
-
-    uint8_t m_tileReplacement[MAX_TILES];
-    int32_t *m_seqIndex = nullptr;
+    /// Maps tile IDs to current animation frame.
+    std::array<uint8_t, MAX_TILES> m_tileReplacement;
+    /// Global animation tick counter.
+    std::vector<int32_t> m_seqIndex;
     uint16_t m_offset = 0;
     std::unordered_map<uint16_t, animzInfo_t> m_seqLookUp;
 };

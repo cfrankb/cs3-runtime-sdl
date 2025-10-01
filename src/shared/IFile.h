@@ -18,6 +18,9 @@
 
 #pragma once
 
+#define IFILE_OK 1
+#define IFILE_NOT_OK 0
+
 #include <string>
 
 class IFile

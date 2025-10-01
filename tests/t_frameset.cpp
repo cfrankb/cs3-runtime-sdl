@@ -62,7 +62,7 @@ bool write_data_out(CFrameSet &fs, const char *filepath)
         return false;
     }
 
-    if (file.write(data, size) != 1)
+    if (file.write(data, size) != IFILE_OK)
     {
         delete[] data;
         LOGE("fail to write to %s\n", filepath);

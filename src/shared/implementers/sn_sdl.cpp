@@ -16,7 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define LOG_TAG "sn_sdl"
 #include <cstdio>
 #ifndef SDL_MAIN_HANDLED
 #define SDL_MAIN_HANDLED
@@ -41,20 +40,18 @@ CSndSDL::CSndSDL()
 
 CSndSDL::~CSndSDL()
 {
+    LOGI("fdfdfdf3434");
     forget();
-    Mix_CloseAudio();
+    LOGI("fdfdfdf3434xxxxx");
+    // Mix_CloseAudio();
 }
 
 void CSndSDL::forget()
 {
-    for (auto it = m_sounds.begin(); it != m_sounds.end(); ++it)
+    for (const auto &[uid, snd] : m_sounds)
     {
-        unsigned int uid = it->first;
         stop(uid);
-        SND *snd = it->second;
-        // free chunk
         Mix_FreeChunk(snd->chunk);
-        // delete snd object
         delete snd;
     }
     m_sounds.clear();

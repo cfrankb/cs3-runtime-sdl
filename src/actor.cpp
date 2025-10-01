@@ -22,9 +22,10 @@
 #include "attr.h"
 #include <cstdio>
 #include <cmath>
+#include <stdexcept>
 #include "shared/IFile.h"
 
-const JoyAim g_aims[] = {
+constexpr const JoyAim g_aims[] = {
     AIM_DOWN, AIM_RIGHT, AIM_UP, AIM_LEFT,
     AIM_UP, AIM_LEFT, AIM_DOWN, AIM_RIGHT,
     AIM_RIGHT, AIM_UP, AIM_LEFT, AIM_DOWN,
@@ -38,20 +39,27 @@ const JoyAim g_aims[] = {
  */
 JoyAim reverseDir(const JoyAim aim)
 {
-    if (aim == AIM_UP)
+    switch (aim)
+    {
+    case AIM_UP:
         return AIM_DOWN;
-    else if (aim == AIM_DOWN)
+    case AIM_DOWN:
         return AIM_UP;
-    else if (aim == AIM_RIGHT)
+    case AIM_RIGHT:
         return AIM_LEFT;
-    else if (aim == AIM_LEFT)
+    case AIM_LEFT:
         return AIM_RIGHT;
-    else
+    default:
         return aim;
+    }
 }
 
 CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAim aim)
 {
+    if (aim >= TOTAL_AIMS)
+    {
+        throw std::invalid_argument("Invalid aim value");
+    }
     m_x = x;
     m_y = y;
     m_type = type;
@@ -82,7 +90,7 @@ CActor::~CActor()
 
 bool CActor::canMove(const JoyAim aim) const
 {
-    CMap &map = CGame::getMap();
+    const CMap &map = CGame::getMap();
     const Pos &pos = Pos{m_x, m_y};
     const Pos &newPos = CGame::translate(pos, aim);
     if (pos.x == newPos.x && pos.y == newPos.y)
@@ -244,7 +252,7 @@ bool CActor::isPlayerThere(JoyAim aim) const
  */
 uint8_t CActor::tileAt(JoyAim aim) const
 {
-    CMap &map = CGame::getMap();
+    const CMap &map = CGame::getMap();
     const Pos &p = CGame::translate(Pos{m_x, m_y}, aim);
     return map.at(p.x, p.y);
 }
@@ -280,7 +288,7 @@ bool CActor::isWithin(const int x1, const int y1, const int x2, const int y2) co
  */
 void CActor::reverveDir()
 {
-    m_aim ^= 1;
+    m_aim = ::reverseDir(m_aim);
 }
 
 /**
@@ -342,7 +350,7 @@ bool CActor::readCommon(ReadFunc readfile)
 /**
  * @brief Serialize Sprite to disk
  *
- * @param tfile
+ * @param tfile owned by the caller
  * @return true
  * @return false
  */

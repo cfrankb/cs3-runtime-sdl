@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <memory> // For unique_ptr
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
 struct Pos
@@ -48,7 +49,7 @@ public:
     CMap(const CMap &map);
     ~CMap();
     uint8_t at(const int x, const int y) const;
-    uint8_t *row(const int y);
+    // uint8_t *row(const int y);
     void set(const int x, const int y, const uint8_t t);
     uint8_t &get(const int x, const int y);
     bool read(const char *fname);
@@ -60,13 +61,14 @@ public:
     void clear();
     int len() const;
     int hei() const;
-    bool resize(const uint16_t in_len, const uint16_t in_hei, const bool fast);
+    // bool resize(const uint16_t in_len, const uint16_t in_hei, const bool fast);
+    bool resize(uint16_t in_len, uint16_t in_hei, uint8_t t, bool fast);
     const Pos findFirst(const uint8_t tileId) const;
-    int count(const uint8_t tileId) const;
+    size_t count(const uint8_t tileId) const;
     void fill(uint8_t ch = 0);
     uint8_t getAttr(const uint8_t x, const uint8_t y) const;
     void setAttr(const uint8_t x, const uint8_t y, const uint8_t a);
-    int size() const;
+    size_t size() const;
     const char *lastError();
     CMap &operator=(const CMap &map);
     bool fromMemory(uint8_t *mem);
@@ -77,7 +79,7 @@ public:
     static uint16_t toKey(const uint8_t x, const uint8_t y);
     static Pos toPos(const uint16_t key);
 
-    enum : uint16_t
+    enum Direction : uint16_t
     {
         UP,
         DOWN,
@@ -86,7 +88,8 @@ public:
         MAX = RIGHT,
         NOT_FOUND = 0xffff
     };
-    void shift(int aim);
+    // void shift(int aim);
+    void shift(Direction aim);
     void debug();
 
 private:
@@ -101,12 +104,11 @@ private:
         XTR_VER1 = 1,
     };
 
-    CStates *m_states;
     uint16_t m_len;
     uint16_t m_hei;
-    uint8_t *m_map;
-    int m_size;
+    std::vector<uint8_t> m_map;
     AttrMap m_attrs;
     std::string m_lastError;
     std::string m_title;
+    std::unique_ptr<CStates> m_states;
 };

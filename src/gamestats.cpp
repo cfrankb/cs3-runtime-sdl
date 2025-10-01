@@ -27,7 +27,7 @@ CGameStats::~CGameStats()
 }
 
 /**
- * @brief Return value associated with given key
+ * @brief Return a reference to the value associated with given key
  *
  * @param key
  * @return int&
@@ -37,9 +37,16 @@ int &CGameStats::get(const GameStat key)
     return m_stats[key];
 }
 
+/**
+ * @brief Return value associated with given key. value returned cannot be modified
+ *
+ * @param key
+ * @return int
+ */
 int CGameStats::at(const GameStat key) const
 {
-    return m_stats.at(key);
+    auto it = m_stats.find(key);
+    return it != m_stats.end() ? it->second : 0;
 }
 
 /**
@@ -100,6 +107,13 @@ bool CGameStats::read(FILE *sfile)
     return readCommon(readfile);
 }
 
+/**
+ * @brief Deserialize key/value pairs from disk
+ *
+ * @param sfile
+ * @return true
+ * @return false
+ */
 bool CGameStats::read(IFile &sfile)
 {
     auto readfile = [&sfile](auto ptr, auto size) -> bool

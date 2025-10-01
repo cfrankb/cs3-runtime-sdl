@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "parseargs"
 #include <cstdio>
 #include <cstring>
 #include "parseargs.h"

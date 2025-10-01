@@ -15,19 +15,10 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "states"
 #include "states.h"
 #include "shared/IFile.h"
 #include "logger.h"
 #include <cstring>
-
-CStates::CStates()
-{
-}
-
-CStates::~CStates()
-{
-}
 
 void CStates::setU(const uint16_t k, const uint16_t v)
 {
@@ -245,6 +236,7 @@ std::vector<StateValuePair> CStates::getValues() const
     // TODO: C++ 20 not supported yet by appImage
     // std::format("0x{:02x}", v)
     pairs.clear();
+    pairs.reserve(m_stateS.size() + m_stateU.size());
     char tmp1[16];
     char tmp2[16];
     for (const auto &[k, v] : m_stateU)

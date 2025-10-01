@@ -15,11 +15,12 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "runtime"
 #include <ctime>
 #include <chrono>
 #include <cstring>
 #include <unistd.h>
+#include <algorithm>
+#include <memory>
 #include "SDL3/SDL_gamepad.h"
 #include "SDL3/SDL_render.h"
 #include "runtime.h"
@@ -53,11 +54,11 @@ CRuntime::CRuntime() : CGameMixin()
     m_music = nullptr;
     m_app = App();
     m_startLevel = 0;
-    m_mainMenu = new CMenu(MENUID_MAINMENU);
-    m_gameMenu = new CMenu(MENUID_GAMEMENU);
-    m_optionMenu = new CMenu(MENUID_OPTIONMENU);
-    m_userMenu = new CMenu(MENUID_USERS);
-    m_skillMenu = new CMenu(MENUID_SKILLS);
+    m_mainMenu = std::make_unique<CMenu>(MENUID_MAINMENU);     // new CMenu(MENUID_MAINMENU);
+    m_gameMenu = std::make_unique<CMenu>(MENUID_GAMEMENU);     // new CMenu(MENUID_GAMEMENU);
+    m_optionMenu = std::make_unique<CMenu>(MENUID_OPTIONMENU); // new CMenu(MENUID_OPTIONMENU);
+    m_userMenu = std::make_unique<CMenu>(MENUID_USERS);        // new CMenu(MENUID_USERS);
+    m_skillMenu = std::make_unique<CMenu>(MENUID_SKILLS);      // new CMenu(MENUID_SKILLS);
     m_title = nullptr;
     m_skill = 0;
     m_verbose = false;
@@ -80,15 +81,14 @@ CRuntime::~CRuntime()
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
     }
-    delete m_music;
+    // delete m_music;
     delete m_title;
     delete[] m_scroll;
-    delete[] m_credits;
-    delete m_mainMenu;
-    delete m_gameMenu;
-    delete m_optionMenu;
-    delete m_userMenu;
-    delete m_skillMenu;
+    // delete m_mainMenu;
+    // delete m_gameMenu;
+    // delete m_optionMenu;
+    // delete m_userMenu;
+    // delete m_skillMenu;
     delete m_virtualKeyboard;
 }
 
@@ -841,12 +841,12 @@ void CRuntime::preloadAssets()
     {
         const std::string filename = AssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
         *frameSets[i] = new CFrameSet();
-        data_t data;
-        if (AssetMan::read(filename, data))
+        data_t data = AssetMan::read(filename);
+        if (!data.empty())
         {
             if (!m_quiet)
                 LOGI("reading %s\n", filename.c_str());
-            mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
+            mem.replace(reinterpret_cast<char *>(data.data()), data.size());
             if ((*frameSets[i])->extract(mem))
             {
                 if (!m_quiet)
@@ -859,84 +859,55 @@ void CRuntime::preloadAssets()
         }
     }
 
-    data_t data;
     const std::string fontName = AssetMan::getPrefix() + m_config["font"];
-    if (!AssetMan::read(fontName, data))
+    data_t data = AssetMan::read(fontName);
+    if (data.empty())
         return;
-    m_fontData = data.ptr;
+    m_fontData = std::move(data);
 
     const std::string creditsFile = AssetMan::getPrefix() + m_config["credits"];
-    if (AssetMan::read(creditsFile, data, true))
+    data = AssetMan::read(creditsFile, true);
+    if (!data.empty())
     {
-        m_credits = reinterpret_cast<char *>(data.ptr);
-        cleanUpCredits();
+        std::string str = reinterpret_cast<char *>(data.data());
+        std::transform(str.begin(), str.end(), str.begin(), [](char c)
+                       { return isspace(c) ? ' ' : c; });
+        m_credits = str;
     }
 
     const std::string hintsFile = AssetMan::getPrefix() + m_config["hints"];
-    if (AssetMan::read(hintsFile, data, true))
+    data = AssetMan::read(hintsFile, true);
+    if (!data.empty())
     {
-        m_game->parseHints(reinterpret_cast<char *>(data.ptr));
-        AssetMan::free(data);
+        m_game->parseHints(reinterpret_cast<char *>(data.data()));
     }
 
     const std::string helpFile = AssetMan::getPrefix() + m_config["help"];
-    if (AssetMan::read(helpFile, data, true))
+    data = AssetMan::read(helpFile, true);
+    if (!data.empty())
     {
-        parseHelp(reinterpret_cast<char *>(data.ptr));
-        AssetMan::free(data);
+        parseHelp(reinterpret_cast<char *>(data.data()));
     }
 }
 
 void CRuntime::parseHelp(char *text)
 {
+    const auto lines = split(std::string(text), '\n');
     const char marker[] = {'_', '_', 'E', 'M', ' '};
     m_helptext.clear();
-    char *p = text;
-    while (p && *p)
+    for (const auto &line : lines)
     {
-        char *n = strstr(p, "\n");
-        if (n)
-            *n = 0;
-        char *r = strstr(p, "\r");
-        if (r)
-            *r = 0;
-        char *e = std::max(r, n);
-        if (memcmp(p, marker, sizeof(marker)) == 0)
+        if (memcmp(line.data(), marker, sizeof(marker)) == 0)
         {
 #ifndef __EMSCRIPTEN__
-            m_helptext.push_back(p + sizeof(marker));
+            m_helptext.push_back(line.data() + sizeof(marker));
 #endif
         }
         else
         {
-            m_helptext.push_back(p);
+            m_helptext.push_back(line.data());
         }
-        // next line
-        p = e ? e + 1 : nullptr;
     }
-}
-
-void CRuntime::cleanUpCredits()
-{
-    const size_t len = strlen(m_credits);
-    size_t j = 0;
-    for (size_t i = 0; i < len; ++i)
-    {
-        auto c = m_credits[i];
-        if (c == '\n' ||
-            c == '\r')
-            continue;
-        else if (c == '\t')
-        {
-            c = ' ';
-        }
-        if (i != j)
-        {
-            m_credits[j] = c;
-        }
-        ++j;
-    }
-    m_credits[j] = '\0';
 }
 
 void CRuntime::preRun()
@@ -953,7 +924,7 @@ void CRuntime::preRun()
 
 void CRuntime::initMusic()
 {
-    m_music = new CMusicSDL();
+    m_music = std::make_unique<CMusicSDL>(); //  new CMusicSDL();
     m_music->setVolume(ISound::MAX_VOLUME);
     if (!m_quiet)
         LOGI("volume: %d\n", m_music->getVolume());
@@ -1109,7 +1080,7 @@ void CRuntime::initSounds()
 {
     if (!m_quiet)
         LOGI("initSound\n");
-    m_sound = new CSndSDL();
+    m_sound = std::make_shared<CSndSDL>(); //  new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
     {
@@ -1118,7 +1089,9 @@ void CRuntime::initSounds()
         if (m_verbose && !m_quiet)
             LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
     }
+    LOGI("m_sound useCount: %d\n", m_sound.use_count());
     m_game->attach(m_sound);
+    LOGI("m_sound useCount: %d\n", m_sound.use_count());
 }
 
 void CRuntime::openMusicForLevel(int i)
@@ -1356,7 +1329,7 @@ void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 void CRuntime::drawScroller(CFrame &bitmap)
 {
     drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
-    if (m_ticks & 1 && m_credits != nullptr)
+    if (m_ticks & 1 && !m_credits.empty())
     {
         for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
             m_scroll[i] = m_scroll[i + 1];
@@ -2057,7 +2030,6 @@ CMenu &CRuntime::initUserMenu()
     CMenu &menu = *m_userMenu;
     menu.disableCaret();
     menu.clear();
-    menu.setCurrent(0);
     menu.setScaleY(2);
     menu.setScaleX(1);
     for (size_t i = 0; i < m_userNames.size(); ++i)
@@ -2279,11 +2251,10 @@ void CRuntime::loadColorMaps(const int userID)
     std::string name = m_userNames[userID];
     std::string path = AssetMan::getPrefix() + "colormaps/" + name + ".ini";
     CFileWrap file;
-    data_t data;
-    if (AssetMan::read(path, data, true))
+    data_t data = AssetMan::read(path, true);
+    if (!data.empty())
     {
-        parseColorMaps(reinterpret_cast<char *>(data.ptr), m_colormaps);
-        AssetMan::free(data);
+        parseColorMaps(reinterpret_cast<char *>(data.data()), m_colormaps);
     }
     else
     {
@@ -2646,19 +2617,22 @@ void CRuntime::onSDLQuit()
     }
 #endif
     if (!m_quiet)
-        LOGI("SQL_QUIT\n");
+        LOGI("SDL_QUIT\n");
     m_isRunning = false;
+    LOGI("Clearning Sound/Music");
+    m_sound->forget();
+    m_music->close();
 }
 
 bool CRuntime::loadAppIcon()
 {
     const std::string iconFile = AssetMan::getPrefix() + m_config["icon"];
     CFrameSet frames;
-    data_t data{nullptr, 0};
-    if (AssetMan::read(iconFile, data))
+    data_t data = AssetMan::read(iconFile);
+    if (!data.empty())
     {
         CFileMem mem;
-        mem.replace(reinterpret_cast<char *>(data.ptr), data.size);
+        mem.replace(reinterpret_cast<char *>(data.data()), data.size());
         if (frames.extract(mem) && frames.getSize() != 0)
         {
             CFrame &frame = *frames[0];
@@ -2667,7 +2641,6 @@ bool CRuntime::loadAppIcon()
             SDL_SetWindowIcon(m_app.window, surface);
             SDL_DestroySurface(surface);
         }
-        AssetMan::free(data);
         return true;
     }
     return false;

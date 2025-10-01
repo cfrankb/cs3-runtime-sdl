@@ -20,6 +20,7 @@
 #include <list>
 #include <vector>
 #include <list>
+#include <cstdint>
 const char *toUpper(char *s);
 std::string getUUID();
 bool copyFile(const std::string in, const std::string out, std::string &errMsg);
@@ -29,3 +30,4 @@ int upperClean(int c);
 #include <stdlib.h>
 #endif
 int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **out_data, unsigned long &out_size);
+std::vector<uint8_t> readFile(const char *fname);

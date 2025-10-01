@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "assetman"
 #include "assetman.h"
 #include "shared/FileWrap.h"
 #include "logger.h"
@@ -114,39 +113,37 @@ namespace AssetMan
         return g_prefix;
     }
 
-    bool read(const std::string &filepath, data_t &data, bool terminator)
+    data_t read(const std::string &filepath, bool terminator)
     {
+        data_t data;
 #ifdef __ANDROID__
-        data.ptr = readBinary(filepath.c_str(), data.size);
-        if (!data.ptr)
+        size_t size;
+        uint8_t *ptr = readBinary(filepath.c_str(), size);
+        if (!ptr)
         {
             LOGE("can't fetch asset: %s\n", filepath.c_str());
             return false;
         }
+        data.assign(ptr, ptr + size);
+        delete[] ptr;
         return true;
 #else
         CFileWrap file;
-        if (file.open(filepath.c_str(), "rb"))
+        if (!file.open(filepath.c_str(), "rb"))
         {
-            data.size = file.getSize();
-            data.ptr = new uint8_t[terminator ? data.size + 1 : data.size];
-            if (terminator)
-                data.ptr[data.size] = '\0';
-            file.read(data.ptr, data.size);
-            return true;
+            LOGE("can't open for reading: %s\n", filepath.c_str());
+            return {};
         }
-        else
+        size_t size = file.getSize();
+        data.resize(terminator ? size + 1 : size);
+        if (file.read(data.data(), size) != IFILE_OK)
         {
-            LOGE("can't read: %s\n", filepath.c_str());
-            return false;
+            LOGE("Failed to read data from %s\n", filepath.c_str());
+            return {};
         }
+        if (terminator)
+            data[size] = '\0';
 #endif
+        return data;
     }
-
-    void free(const data_t data)
-    {
-        if (data.ptr)
-            delete[] data.ptr;
-    }
-
 }

@@ -16,7 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define LOG_TAG "mu_sdl"
 #include <cstring>
 #include <cstdio>
 #include <unistd.h>
@@ -65,7 +64,9 @@ CMusicSDL::CMusicSDL()
 
 CMusicSDL::~CMusicSDL()
 {
+    LOGI("xzzzxcfrer");
     close();
+    LOGI("xzzzxcfrer332334");
 }
 
 #ifdef __EMSCRIPTEN__

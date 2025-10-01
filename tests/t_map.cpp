@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "t_map"
 #include <cstring>
 #include "t_map.h"
 #include "../src/maparch.h"
@@ -25,6 +24,7 @@
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
 #include <filesystem>
+#include <cassert>
 
 constexpr const char *IN_FILE = "tests/in/levels1.mapz";
 constexpr const char *OUT_FILE1 = "tests/out/map1.mapz";
@@ -55,7 +55,7 @@ bool test_map()
 {
     CMap map;
     const Size mapSize{10, 15};
-    if (!map.resize(mapSize.w, mapSize.h, true))
+    if (!map.resize(mapSize.w, mapSize.h, '\0', true))
     {
         LOGE("failed to resize map\n");
         return false;
@@ -68,7 +68,7 @@ bool test_map()
     }
 
     const Size mapSize2 = Size{20, 25};
-    if (!map.resize(mapSize2.w, mapSize2.h, false))
+    if (!map.resize(mapSize2.w, mapSize2.h, '\0', false))
     {
         LOGE("failed to resize map\n");
         return false;
@@ -277,7 +277,7 @@ bool testSeq(uint16_t len, uint16_t hei)
     }
     int size = file.getSize();
     char *buf = new char[size];
-    if (file.read(buf, size) != 1)
+    if (file.read(buf, size) != IFILE_OK)
     {
         file.close();
         delete[] buf;
@@ -311,4 +311,31 @@ bool test_map_2()
 {
     return testSeq(10, 15) &&
            testSeq(256, 256);
+}
+
+bool test_map_3()
+{
+    LOGI("test3\n");
+    CMap map(3, 3, 0);
+    // Set tiles: [1, 2, 3]
+    //            [4, 5, 6]
+    //            [7, 8, 9]
+    for (int y = 0, v = 1; y < 3; ++y)
+    {
+        for (int x = 0; x < 3; ++x, ++v)
+        {
+            map.set(x, y, v);
+        }
+    }
+    map.setAttr(1, 1, 0xFF); // Attribute at (1,1)
+    map.shift(CMap::Direction::UP);
+    // Expected: [4, 5, 6]
+    //           [7, 8, 9]
+    //           [1, 2, 3]
+    // Attribute at (1,0)
+    assert(map.at(1, 0) == 5);
+    assert(map.at(1, 2) == 2);
+    assert(map.getAttr(1, 0) == 0xFF);
+    map.debug();
+    return true;
 }

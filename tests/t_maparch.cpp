@@ -15,8 +15,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "t_maparch"
 #include <filesystem>
+#include <memory>
+#include <cassert>
 #include "thelper.h"
 #include "t_maparch.h"
 #include "../src/maparch.h"
@@ -25,6 +26,7 @@
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
+#include "../src/strhelper.h"
 
 constexpr uint16_t KEY1 = 0x1990;
 constexpr uint16_t KEY2 = 0x1990;
@@ -119,21 +121,22 @@ bool test_maparch_2()
         return false;
     }
     size_t size_maparch1 = arch1.size();
-
-    CMap *map = new CMap(16, 16);
-    if (arch1.add(map) != size_maparch1)
+    std::unique_ptr<CMap> map(new CMap(16, 16));
+    CMap *tmap = map.get();
+    if (arch1.add(std::move(map)) != size_maparch1)
     {
         LOGE("map not inserted\n");
         return false;
     }
 
-    if (arch1.at(size_maparch1) != map)
+    if (arch1.at(size_maparch1) != tmap)
     {
         LOGE("map not inserted at the end\n");
         return false;
     };
 
-    if (arch1.removeAt(size_maparch1) != map)
+    map = arch1.removeAt(size_maparch1);
+    if (map.get() != tmap)
     {
         LOGE("last map not what is expected\n");
         return false;
@@ -181,7 +184,7 @@ bool test_maparch_2()
 
     int size = file.getSize();
     char *buf = new char[size];
-    if (file.read(buf, size) != 1)
+    if (file.read(buf, size) != IFILE_OK)
     {
         file.close();
         LOGE("read error for %s\n", IN_FILE);
@@ -224,13 +227,15 @@ bool test_maparch_2()
         }
     }
 
-    arch1.insertAt(0, map);
+    std::unique_ptr<CMap> map2(new CMap(16, 16));
+    CMap *tmap2 = map2.get();
+    arch1.insertAt(0, std::move(map2));
     if (arch1.size() != size_maparch1 + 1)
     {
         LOGE("map not inserted sucessfully\n");
         return false;
     }
-    if (arch1.at(0) != map)
+    if (arch1.at(0) != tmap2)
     {
         LOGE("map inserted not found at the start\n");
         return false;
@@ -257,7 +262,7 @@ bool test_maparch_3()
     }
     int size = file.getSize();
     char *buf = new char[size];
-    if (file.read(buf, size) != 1)
+    if (file.read(buf, size) != IFILE_OK)
     {
         file.close();
         LOGE("read error for %s\n", IN_FILE);
@@ -301,4 +306,27 @@ bool test_maparch_3()
     delete map;
     delete[] buf;
     return true;
+}
+
+void testIndexFromMemory()
+{
+    // Create a test MAAZ buffer
+    CMapArch arch;
+    auto map1 = std::make_unique<CMap>(2, 2, 1);
+    auto map2 = std::make_unique<CMap>(3, 3, 2);
+    arch.add(std::move(map1));
+    arch.add(std::move(map2));
+    CFileWrap file;
+    file.open("test.maaz", "wb");
+    // arch.write(file);
+    file.close();
+
+    // Read buffer
+    auto data = readFile("test.maaz"); // From level.cpp
+    IndexVector index;
+    assert(CMapArch::indexFromMemory(data.data(), index));
+    assert(index.size() == 2);
+    // assert(index[0] > sizeof(MAAZ_SIG) + sizeof(uint16_t) * 2 + sizeof(uint32_t));
+    assert(index[1] > index[0]);
+    LOGI("Offsets: %ld, %ld\n", index[0], index[1]);
 }

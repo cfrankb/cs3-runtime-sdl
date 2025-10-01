@@ -128,8 +128,10 @@ private:
     void initLevelSummary() override;
     void changeMoodMusic(CGame::GameMode mode) override;
 
-    IMusic *m_music = nullptr;
-    ISound *m_sound = nullptr;
+    // IMusic *m_music = nullptr;
+    // ISound *m_sound = nullptr;
+    std::unique_ptr<IMusic> m_music;
+    std::shared_ptr<ISound> m_sound;
     bool m_musicEnabled = false;
     App m_app;
     std::unordered_map<std::string, std::string> m_config;
@@ -139,7 +141,7 @@ private:
     std::vector<std::string> m_userNames;
     std::string m_workspace = "";
     CFrameSet *m_title;
-    char *m_credits = nullptr;
+    std::string m_credits;
     char *m_scroll = nullptr;
     uint32_t m_scrollPtr = 0;
     int m_startLevel;
@@ -152,11 +154,16 @@ private:
     int m_yAxisSensitivity = 10;
     bool m_verbose = false;
     bool m_trace = false;
-    CMenu *m_mainMenu = nullptr;
-    CMenu *m_gameMenu = nullptr;
-    CMenu *m_optionMenu = nullptr;
-    CMenu *m_userMenu = nullptr;
-    CMenu *m_skillMenu = nullptr;
+    // CMenu *m_mainMenu = nullptr;
+    // CMenu *m_gameMenu = nullptr;
+    // CMenu *m_optionMenu = nullptr;
+    // CMenu *m_userMenu = nullptr;
+    // CMenu *m_skillMenu = nullptr;
+    std::unique_ptr<CMenu> m_mainMenu;
+    std::unique_ptr<CMenu> m_gameMenu;
+    std::unique_ptr<CMenu> m_optionMenu;
+    std::unique_ptr<CMenu> m_userMenu;
+    std::unique_ptr<CMenu> m_skillMenu;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
     Summary m_summary;
@@ -223,7 +230,6 @@ private:
     void drawTitleScreen(CFrame &bitmap);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
-    void cleanUpCredits();
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
     void drawOptions(CFrame &bitmap);

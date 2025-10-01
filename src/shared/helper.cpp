@@ -22,12 +22,12 @@
 #include "helper.h"
 #ifdef USE_QFILE
 #define FILEWRAP QFileWrap
-#include "../shared/qtgui/qfilewrap.h"
+#include "qtgui/qfilewrap.h"
 #else
 #define FILEWRAP CFileWrap
-#include "../shared/FileWrap.h"
+#include "FileWrap.h"
 #endif
-
+#include "logger.h"
 constexpr const int UUID_BUFFER_SIZE = 40;
 
 const char *toUpper(char *s)
@@ -155,4 +155,22 @@ int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **
         in_data,
         in_size,
         Z_DEFAULT_COMPRESSION);
+}
+
+std::vector<uint8_t> readFile(const char *fname)
+{
+    FILEWRAP file;
+    if (!file.open(fname, "rb"))
+    {
+        LOGE("failed to read:%s\n", fname);
+        return {};
+    }
+    size_t size = file.getSize();
+    std::vector<uint8_t> data(size);
+    if (file.read(data.data(), size) != IFILE_OK)
+    {
+        LOGE("can't read data for %s\n", fname);
+        return {};
+    }
+    return data;
 }

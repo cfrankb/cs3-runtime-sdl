@@ -19,6 +19,7 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 class Dot
 {
@@ -46,16 +47,15 @@ public:
     void add(const Dot &dot);
     bool isEmpty();
     void flush();
-    int getSize();
+    size_t getSize();
     int lineTab(const uint32_t color, const Dot dot1, const Dot dot2, bool clear = true);
     int circle(const uint32_t color, const Dot dot1, const Dot dot2, bool clear = true);
-    Dot &operator[](int i);
+    const Dot &operator[](int i);
     void setLimit(int maxX, int maxY);
 
-protected:
-    Dot *m_dots;
-    int m_size;
-    int m_max;
+private:
+    std::vector<Dot> m_dots;
+    size_t m_max;
     int m_maxX;
     int m_maxY;
 

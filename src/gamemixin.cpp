@@ -15,8 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "gamemixin"
 #include <cstring>
+#include <memory>
 #include "gamemixin.h"
 #include "tilesdata.h"
 #include "animzdata.h"
@@ -59,13 +59,13 @@
 CGameMixin::CGameMixin()
 {
     m_game = CGame::getGame();
-    m_animator = new CAnimator();
+    m_animator = std::make_unique<CAnimator>(); // new CAnimator();
     m_prompt = PROMPT_NONE;
     clearJoyStates();
     clearScores();
     clearKeyStates();
     clearButtonStates();
-    m_recorder = new CRecorder;
+    m_recorder = std::make_unique<CRecorder>(); // new CRecorder;
     m_eventCountdown = 0;
     m_currentEvent = EVENT_NONE;
     initUI();
@@ -73,12 +73,11 @@ CGameMixin::CGameMixin()
 
 CGameMixin::~CGameMixin()
 {
-    delete m_animator;
+    // delete m_animator;
     delete m_tiles;
     delete m_animz;
     delete m_users;
-    delete[] m_fontData;
-    delete m_recorder;
+    // delete m_recorder;
 }
 
 /**
@@ -104,7 +103,7 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
     {
         uint8_t c = static_cast<uint8_t>(text[i]);
         const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
-                                                : m_fontData + (c - ' ') * fontOffset;
+                                                : m_fontData.data() + (c - ' ') * fontOffset;
         for (int yy = 0; yy < fontSize; ++yy)
         {
             for (int xx = 0; xx < fontSize; ++xx)

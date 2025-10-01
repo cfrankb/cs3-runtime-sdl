@@ -16,7 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define LOG_TAG "t_game"
 #include <cstring>
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"

@@ -51,7 +51,9 @@ public:
     int &dec(const GameStat key);
     int &inc(const GameStat key);
 
+    [[deprecated("Use IFile interface instead")]]
     bool read(FILE *sfile);
+    [[deprecated("Use IFile interface instead")]]
     bool write(FILE *tfile) const;
 
     bool read(IFile &sfile);

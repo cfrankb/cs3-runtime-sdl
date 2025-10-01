@@ -16,7 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#define LOG_TAG "t_runtime"
 #include <cstring>
 #include <filesystem>
 #include "../src/shared/FileWrap.h"

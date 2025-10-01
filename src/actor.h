@@ -66,7 +66,9 @@ public:
     uint8_t tileAt(JoyAim aim) const;
     void setType(const uint8_t type);
     bool isWithin(const int x1, const int y1, const int x2, const int y2) const;
+    [[deprecated("Use IFile interface instead")]]
     bool read(FILE *sfile);
+    [[deprecated("Use IFile interface instead")]]
     bool write(FILE *tfile) const;
     bool read(IFile &file);
     bool write(IFile &tfile) const;

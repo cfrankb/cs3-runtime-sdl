@@ -15,7 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "main"
 #if !defined(__ANDROID__) && !defined(SDL_MAIN_HANDLED)
 #define SDL_MAIN_HANDLED
 #endif
@@ -61,10 +60,11 @@ constexpr const char *CONF_FILE = "game.cfg";
 #define PLATFORM_NAME "Non-Apple OS"
 #endif
 
+std::unique_ptr<CRuntime> g_runtime = std::make_unique<CRuntime>();
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
-CRuntime *g_runtime = nullptr;
 
 EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEvent *e, void *userData)
 {
@@ -78,19 +78,19 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 }
 #endif
 
-void loop_handler(void *arg)
+void loop_handler(void *)
 {
     uint32_t currTick = SDL_GetTicks();
     uint32_t meantime = currTick - g_lastTick;
     if (meantime >= g_sleepDelay)
     {
-        CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
-        runtime->doInput();
-        runtime->run();
+        // CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
+        g_runtime->doInput();
+        g_runtime->run();
         uint32_t btime = SDL_GetTicks();
         if (!g_skip)
         {
-            runtime->paint();
+            g_runtime->paint();
         }
         uint32_t atime = SDL_GetTicks();
         uint32_t ptime = atime - btime;
@@ -179,7 +179,7 @@ int main(int argc, char *args[])
     LOGI("Starting Game %s: Build [%s]\n", VERSION, BUILD_HASH);
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
-    CRuntime runtime;
+    //    CRuntime runtime;
     params_t params;
     params.muteMusic = false;
     params.level = 0;
@@ -206,67 +206,64 @@ int main(int argc, char *args[])
         return EXIT_SUCCESS;
 
     LOGI("MapArch: %s\n", params.mapArch.c_str());
-    data_t data;
-    if (!AssetMan::read(params.mapArch, data))
+    data_t data = AssetMan::read(params.mapArch);
+    if (data.empty())
         return EXIT_FAILURE;
-    if (!maparch.fromMemory(data.ptr))
+    if (!maparch.fromMemory(data.data()))
     {
-        AssetMan::free(data);
         LOGE("mapArch error: %s\n", maparch.lastError());
         return EXIT_FAILURE;
     }
-    AssetMan::free(data);
     std::string configFile = AssetMan::addTrailSlash(params.prefix) + CONF_FILE;
-    runtime.setVerbose(params.verbose);
+    g_runtime->setVerbose(params.verbose);
     AssetMan::setPrefix(params.prefix);
-    runtime.setWorkspace(params.workspace.c_str());
+    g_runtime->setWorkspace(params.workspace.c_str());
 
-    if (!AssetMan::read(configFile, data, true))
+    data = AssetMan::read(configFile, true);
+    if (data.empty())
         return EXIT_FAILURE;
-    if (!runtime.parseConfig(data.ptr))
+    if (!g_runtime->parseConfig(data.data()))
     {
-        AssetMan::free(data);
         LOGE("failed to parse config file: %s\n", configFile.c_str());
         return EXIT_FAILURE;
     }
-    AssetMan::free(data);
+    data.clear();
 
-    runtime.setSkill(params.skill);
+    g_runtime->setSkill(params.skill);
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
-    runtime.init(&maparch, startLevel);
-    runtime.setStartLevel(startLevel);
+    g_runtime->init(&maparch, startLevel);
+    g_runtime->setStartLevel(startLevel);
     if (params.fullscreen)
     {
-        runtime.setConfig("fullscreen", "true");
+        g_runtime->setConfig("fullscreen", "true");
     }
     if (params.muteMusic)
     {
         // override options
-        runtime.enableMusic(false);
+        g_runtime->enableMusic(false);
     }
-    if (!runtime.initSDL())
+    if (!g_runtime->initSDL())
         return EXIT_FAILURE;
 
-    runtime.setWidth(params.width);
-    runtime.setHeight(params.height);
-    if (!runtime.createSDLWindow())
+    g_runtime->setWidth(params.width);
+    g_runtime->setHeight(params.height);
+    if (!g_runtime->createSDLWindow())
         return EXIT_FAILURE;
-    runtime.debugSDL();
-    runtime.initOptions();
-    runtime.preRun();
-    runtime.paint();
+    g_runtime->debugSDL();
+    g_runtime->initOptions();
+    g_runtime->preRun();
+    g_runtime->paint();
 
 #if !defined(__ANDROID__) && !defined(__EMSCRIPTEN__)
-    runtime.checkMusicFiles();
+    g_runtime->checkMusicFiles();
 #endif
 #ifdef __EMSCRIPTEN__
-    g_runtime = &runtime;
     emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
-    while (runtime.isRunning())
+    while (g_runtime->isRunning())
     {
-        loop_handler(&runtime);
+        loop_handler(nullptr);
     }
 #endif
     CGame::destroy();

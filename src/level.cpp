@@ -15,13 +15,19 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define LOG_TAG "level"
 #include <cstring>
 #include <stdio.h>
 #include "level.h"
 #include "map.h"
 #include "tilesdata.h"
 #include "logger.h"
+#include "shared/FileWrap.h"
+#include "strhelper.h"
+#include "shared/helper.h"
+
+constexpr const int CS3_MAP_LEN = 64;
+constexpr const int CS3_MAP_HEI = 64;
+constexpr const int CS3_MAP_OFFSET = 7;
 
 void splitString(const std::string str, StringVector &list)
 {
@@ -44,127 +50,70 @@ void splitString(const std::string str, StringVector &list)
     list.push_back(str.substr(i, j - i));
 }
 
-uint8_t *readFile(const char *fname)
-{
-    FILE *sfile = fopen(fname, "rb");
-    auto readfile = [sfile](auto ptr, auto size)
-    {
-        return fread(ptr, size, 1, sfile) == 1;
-    };
-    uint8_t *data = nullptr;
-    if (sfile)
-    {
-        fseek(sfile, 0, SEEK_END);
-        int size = ftell(sfile);
-        fseek(sfile, 0, SEEK_SET);
-        data = new uint8_t[size + 1];
-        data[size] = 0;
-        if (!readfile(data, size))
-        {
-            delete[] data;
-            LOGE("can't read data for %s\n", fname);
-            return nullptr;
-        }
-        fclose(sfile);
-    }
-    else
-    {
-        LOGE("failed to read:%s\n", fname);
-    }
-    return data;
-}
-
 bool getChMap(const char *mapFile, char *chMap)
 {
-    uint8_t *data = readFile(mapFile);
-    if (data == nullptr)
+    auto data = readFile(mapFile);
+    if (data.empty())
     {
         LOGE("cannot read %s\n", mapFile);
         return false;
     }
-
-    char *p = reinterpret_cast<char *>(data);
-    LOGI("parsing tiles.map: %zull\n", strlen(p));
+    std::string p(reinterpret_cast<char *>(data.data()));
+    LOGI("parsing tiles.map: %zu\n", p.length());
     int i = 0;
-
-    while (p && *p)
+    size_t pos = 0;
+    while (pos < p.length())
     {
-        char *n = strstr(p, "\n");
-        if (n)
-        {
-            *n = 0;
-            ++n;
-        }
+        std::string current = processLine(p, pos);
+        if (current.empty())
+            continue;
         StringVector list;
-        splitString(std::string(p), list);
+        splitString2(current, list);
+        if (list.size() < 4)
+            continue;
         uint8_t ch = std::stoi(list[3], 0, 16);
-        p = n;
         chMap[ch] = i;
         ++i;
     }
-
-    delete[] data;
     return true;
 }
 
 bool processLevel(CMap &map, const char *fname)
 {
-    LOGI("reading file: %s\n", fname);
-    uint8_t *data = readFile(fname);
-    if (data == nullptr)
+    auto data = readFile(fname);
+    if (data.empty())
     {
         LOGE("failed read: %s\n", fname);
         return false;
     }
-
-    // get level size
-    char *ps = reinterpret_cast<char *>(data);
+    std::string input(reinterpret_cast<char *>(data.data()));
+    size_t pos = 0;
     int maxRows = 0;
     int maxCols = 0;
-    while (ps)
+    // Calculate dimensions
+    while (pos < input.size())
     {
-        ++maxRows;
-        char *u = strstr(ps, "\n");
-        if (u)
-        {
-            *u = 0;
-            maxCols = std::max(static_cast<int>(strlen(ps) + 1), maxCols);
-            *u = '\n';
-        }
-
-        ps = u ? u + 1 : nullptr;
-        //   printf("maxrows %d\n", maxRows);
-    }
-    LOGI("maxRows: %d, maxCols:%d\n", maxRows, maxCols);
-
-    map.resize(maxCols, maxRows, true);
-    map.clear();
-
-    // convert ascii to map
-    uint8_t *p = data;
-    int x = 0;
-    int y = 0;
-    while (*p)
-    {
-        uint8_t c = *p;
-        ++p;
-        if (c == '\n')
-        {
-            ++y;
-            x = 0;
+        std::string line = processLine(input, pos);
+        if (line.empty())
             continue;
-        }
-
-        uint8_t m = getChTile(c);
-        if (c != ' ' && m == 0)
-        {
-            LOGW("undefined %c found at %d %d.\n", c, x, y);
-        }
-        map.set(x, y, m);
-        ++x;
+        maxCols = std::max(maxCols, static_cast<int>(line.size()));
+        ++maxRows;
     }
-    delete[] data;
-    return true;
+    // Resize map
+    map.clear();
+    map.resize(maxCols, maxRows, '\0', true);
+    // Set tiles
+    pos = 0;
+    int y = 0;
+    while (pos < input.size())
+    {
+        std::string line = processLine(input, pos);
+        if (!line.empty())
+            for (int x = 0; x < static_cast<int>(line.size()) && x < maxCols; ++x)
+                map.set(x, y, getChTile(line[x]));
+        ++y;
+    }
+    return y > 0;
 }
 
 bool convertCs3Level(CMap &map, const char *fname)
@@ -226,21 +175,21 @@ bool convertCs3Level(CMap &map, const char *fname)
         TILES_YAHOO,         // 0x35
     };
 
-    uint8_t *data = readFile(fname);
-    if (data == nullptr)
+    auto data = readFile(fname);
+    if (data.size() == 0)
     {
         LOGE("failed read: %s\n", fname);
         return false;
     }
 
     map.clear();
-    map.resize(64, 64, true);
-    uint8_t *p = data + 7;
-    for (int y = 0; y < 64; ++y)
+    map.resize(CS3_MAP_LEN, CS3_MAP_HEI, '\0', true);
+    auto p = CS3_MAP_OFFSET;
+    for (int y = 0; y < CS3_MAP_LEN; ++y)
     {
-        for (int x = 0; x < 64; ++x)
+        for (int x = 0; x < CS3_MAP_HEI; ++x)
         {
-            uint8_t oldTile = *p;
+            uint8_t oldTile = data[p];
             if (oldTile >= sizeof(convTable) / 2)
             {
                 LOGI("oldTile: %d\n", oldTile);
@@ -254,8 +203,6 @@ bool convertCs3Level(CMap &map, const char *fname)
             ++p;
         }
     }
-
-    delete[] data;
     return true;
 }
 
@@ -291,8 +238,7 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
 
     fseek(sfile, 0, SEEK_END);
     int size = ftell(sfile);
-    const int cs3LevelSize = 64 * 64 + 7;
-    if (size == cs3LevelSize)
+    if (size == CS3_MAP_LEN * CS3_MAP_HEI + CS3_MAP_OFFSET)
     {
         fclose(sfile);
         LOGI("level is cs3\n");

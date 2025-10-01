@@ -1,4 +1,3 @@
-#define LOG_TAG "mapzutil"
 #include <cstdlib>
 #include <time.h>
 #include <unistd.h>
