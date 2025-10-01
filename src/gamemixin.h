@@ -426,7 +426,6 @@ protected:
     virtual void manageLevelSummary() = 0;
     virtual void initLevelSummary() = 0;
     virtual void changeMoodMusic(CGame::GameMode mode) = 0;
-
     virtual void manageSkillMenu() = 0;
 
 private:

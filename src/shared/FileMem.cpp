@@ -51,9 +51,6 @@ void CFileMem::grow(int size)
     m_size += size;
 }
 
-///////////////////////////////////////////////
-// Interface
-
 CFileMem &CFileMem::operator>>(int &n)
 {
     memcpy(&n, &m_buffer[m_ptr], sizeof(n));

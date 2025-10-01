@@ -16,11 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #define LOG_TAG "main"
-#ifndef __ANDROID__
-#ifndef SDL_MAIN_HANDLED
+#if !defined(__ANDROID__) && !defined(SDL_MAIN_HANDLED)
 #define SDL_MAIN_HANDLED
-#endif
-#else
 #endif
 #include <SDL3/SDL_main.h>
 #include <algorithm>
@@ -40,15 +37,15 @@
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
-uint32_t lastTick = 0;
-bool skip = false;
-uint32_t sleepDelay = SLEEP;
+uint32_t g_lastTick = 0;
+bool g_skip = false;
+uint32_t g_sleepDelay = SLEEP;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
-#define DEFAULT_PREFIX "data/"
-#define DEFAULT_MAPARCH "levels.mapz"
-#define CONF_FILE "game.cfg"
+constexpr const char *DEFAULT_PREFIX = "data/";
+constexpr const char *DEFAULT_MAPARCH = "levels.mapz";
+constexpr const char *CONF_FILE = "game.cfg";
 
 // Platform detection
 #if defined(__APPLE__)
@@ -84,14 +81,14 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 void loop_handler(void *arg)
 {
     uint32_t currTick = SDL_GetTicks();
-    uint32_t meantime = currTick - lastTick;
-    if (meantime >= sleepDelay)
+    uint32_t meantime = currTick - g_lastTick;
+    if (meantime >= g_sleepDelay)
     {
         CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
         runtime->doInput();
         runtime->run();
         uint32_t btime = SDL_GetTicks();
-        if (!skip)
+        if (!g_skip)
         {
             runtime->paint();
         }
@@ -99,15 +96,15 @@ void loop_handler(void *arg)
         uint32_t ptime = atime - btime;
         if (ptime < SLEEP)
         {
-            sleepDelay = SLEEP - ptime;
-            skip = false;
+            g_sleepDelay = SLEEP - ptime;
+            g_skip = false;
         }
         else
         {
-            sleepDelay = SLEEP;
-            skip = true;
+            g_sleepDelay = SLEEP;
+            g_skip = true;
         }
-        lastTick = currTick;
+        g_lastTick = currTick;
     }
 }
 
@@ -172,6 +169,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 int main(int argc, char *args[])
 {
     std::vector<std::string> list;
+    list.reserve(argc - 1);
     for (int i = 1; i < argc; ++i)
     {
         list.push_back(args[i]);

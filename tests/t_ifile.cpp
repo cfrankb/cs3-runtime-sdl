@@ -184,7 +184,7 @@ bool test_ifile_read_write()
         LOGE("failed to extract images from %s [%s]\n", IN_FILE, fs.getLastError());
         return false;
     }
-    int imageCount = fs.getSize();
+    size_t imageCount = fs.getSize();
 
     fw.seek(0);
     int filesize = fw.getSize();
@@ -224,7 +224,7 @@ bool test_ifile_read_write()
 
     if (fs.getSize() != imageCount)
     {
-        LOGE("images from [memfile] %d; expecting %d\n", fs.getSize(), imageCount);
+        LOGE("images from [memfile] %ld; expecting %ld\n", fs.getSize(), imageCount);
         return false;
     }
 

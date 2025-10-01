@@ -47,25 +47,26 @@ public:
     CMap(uint16_t len = 0, uint16_t hei = 0, uint8_t t = 0);
     CMap(const CMap &map);
     ~CMap();
-    uint8_t &at(int x, int y);
-    uint8_t *row(int y);
-    void set(int x, int y, uint8_t t);
+    uint8_t at(const int x, const int y) const;
+    uint8_t *row(const int y);
+    void set(const int x, const int y, const uint8_t t);
+    uint8_t &get(const int x, const int y);
     bool read(const char *fname);
-    bool write(const char *fname);
+    bool write(const char *fname) const;
     bool read(FILE *sfile);
     bool read(IFile &file);
-    bool write(FILE *tfile);
-    bool write(IFile &tfile);
+    bool write(FILE *tfile) const;
+    bool write(IFile &tfile) const;
     void clear();
     int len() const;
     int hei() const;
-    bool resize(uint16_t len, uint16_t hei, bool fast);
-    const Pos findFirst(uint8_t tileId);
-    int count(uint8_t tileId);
+    bool resize(const uint16_t in_len, const uint16_t in_hei, const bool fast);
+    const Pos findFirst(const uint8_t tileId) const;
+    int count(const uint8_t tileId) const;
     void fill(uint8_t ch = 0);
     uint8_t getAttr(const uint8_t x, const uint8_t y) const;
     void setAttr(const uint8_t x, const uint8_t y, const uint8_t a);
-    int size();
+    int size() const;
     const char *lastError();
     CMap &operator=(const CMap &map);
     bool fromMemory(uint8_t *mem);
@@ -90,7 +91,7 @@ public:
 
 private:
     template <typename WriteFunc>
-    bool writeCommon(WriteFunc writefile);
+    bool writeCommon(WriteFunc writefile) const;
     template <typename ReadFunc>
     bool readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::function<bool(size_t)> seek, std::function<bool()> readStates);
 

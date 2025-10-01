@@ -221,7 +221,7 @@ bool testSeq(uint16_t len, uint16_t hei)
         return false;
     }
 
-    if (&map2.at(0, 0) == &map.at(0, 0))
+    if (&map2.get(0, 0) == &map.get(0, 0))
     {
         LOGE("shared ptr\n");
         return false;

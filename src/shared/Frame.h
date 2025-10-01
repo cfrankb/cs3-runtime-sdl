@@ -16,9 +16,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/////////////////////////////////////////////////////////////////////////////
-// CFrame
-
 #pragma once
 #include <cstdint>
 
@@ -27,11 +24,6 @@ class CDotArray;
 class CSS3Map;
 class CUndo;
 class IFile;
-
-// Frame.h : header file
-//
-
-// CSS3Map
 
 class CSS3Map
 {
@@ -67,17 +59,13 @@ protected:
     int m_hei;
 };
 
-// CFrame
-
 class CFrame
 {
-    // Construction
 public:
     CFrame(CFrame *src = nullptr);
     CFrame(int p_nLen, int p_nHei);
+    ~CFrame();
 
-    // Attributes
-public:
     inline bool isValid(int x, int y)
     {
         return x >= 0 && x < m_nLen && y >= 0 && y < m_nHei;
@@ -105,8 +93,6 @@ public:
     bool hasTransparency() const;
     bool isEmpty() const;
 
-    // Operations
-public:
     CFrame &operator=(const CFrame &src);
     void forget();
     void detach() { m_rgb = nullptr; }
@@ -140,16 +126,12 @@ public:
     void fill(unsigned int rgba);
     void drawAt(CFrame &frame, int bx, int by, bool tr);
 
-    // Implementation
-public:
-    ~CFrame();
     bool read(IFile &file, int version);
     bool write(IFile &file);
 
     void toBmp(uint8_t *&bmp, int &size);
     bool toPng(uint8_t *&png, int &size, uint8_t *obl5data = nullptr, int obl5size = 0);
     static uint32_t toNet(const uint32_t a);
-    static const uint32_t *dosPal();
     bool draw(CDotArray *dots, int size, int mode = MODE_NORMAL);
     void save(CDotArray *dots, CDotArray *dotsOrg, int size);
     CFrame *clip(int mx, int my, int cx = -1, int cy = -1);
@@ -211,7 +193,7 @@ public:
         // CRC  : size 4
     } png_OBL5;
 
-protected:
+private:
     enum
     {
         MODE_NORMAL,
@@ -230,5 +212,3 @@ protected:
     int m_undoSize;
     void init();
 };
-
-/////////////////////////////////////////////////////////////////////////////

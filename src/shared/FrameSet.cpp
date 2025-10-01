@@ -22,6 +22,7 @@
 #include <cstring>
 #include <cstdio>
 #include <cstdint>
+#include <set>
 #include "FrameSet.h"
 #include "Frame.h"
 #include <zlib.h>
@@ -30,10 +31,44 @@
 #include "helper.h"
 #include "logger.h"
 
-/////////////////////////////////////////////////////////////////////////////
-// CFrameSet
+typedef uint32_t PIXEL;
 
 static CFrame tframe;
+
+// original color palette
+static const PIXEL g_original_palette[] = {
+    0xff000000, 0xffab0303, 0xff03ab03, 0xffabab03, 0xff0303ab, 0xffab03ab, 0xff0357ab, 0xffababab,
+    0xff575757, 0xffff5757, 0xff57ff57, 0xffffff57, 0xff5757ff, 0xffff57ff, 0xff57ffff, 0xffffffff,
+    0xff000000, 0xff171717, 0xff232323, 0xff2f2f2f, 0xff3b3b3b, 0xff474747, 0xff535353, 0xff636363,
+    0xff737373, 0xff838383, 0xff939393, 0xffa3a3a3, 0xffb7b7b7, 0xffcbcbcb, 0xffe3e3e3, 0xffffffff,
+    0xffff0303, 0xffff0343, 0xffff037f, 0xffff03bf, 0xffff03ff, 0xffbf03ff, 0xff7f03ff, 0xff4303ff,
+    0xff0303ff, 0xff0343ff, 0xff037fff, 0xff03bfff, 0xff03ffff, 0xff03ffbf, 0xff03ff7f, 0xff03ff43,
+    0xff03ff03, 0xff43ff03, 0xff7fff03, 0xffbfff03, 0xffffff03, 0xffffbf03, 0xffff7f03, 0xffff4303,
+    0xffff7f7f, 0xffff7f9f, 0xffff7fbf, 0xffff7fdf, 0xffff7fff, 0xffdf7fff, 0xffbf7fff, 0xff9f7fff,
+    0xff7f7fff, 0xff7f9fff, 0xff7fbfff, 0xff7fdfff, 0xff7fffff, 0xff7fffdf, 0xff7fffbf, 0xff7fff9f,
+    0xff7fff7f, 0xff9fff7f, 0xffbfff7f, 0xffdfff7f, 0xffffff7f, 0xffffdf7f, 0xffffbf7f, 0xffff9f7f,
+    0xffffb7b7, 0xffffb7c7, 0xffffb7db, 0xffffb7eb, 0xffffb7ff, 0xffebb7ff, 0xffdbb7ff, 0xffc7b7ff,
+    0xffb7b7ff, 0xffb7c7ff, 0xffb7dbff, 0xffb7ebff, 0xffb7ffff, 0xffb7ffeb, 0xffb7ffdb, 0xffb7ffc7,
+    0xffb7ffb7, 0xffc7ffb7, 0xffdbffb7, 0xffebffb7, 0xffffffb7, 0xffffebb7, 0xffffdbb7, 0xffffc7b7,
+    0xff730303, 0xff73031f, 0xff73033b, 0xff730357, 0xff730373, 0xff570373, 0xff3b0373, 0xff1f0373,
+    0xff030373, 0xff031f73, 0xff033b73, 0xff035773, 0xff037373, 0xff037357, 0xff03733b, 0xff03731f,
+    0xff037303, 0xff1f7303, 0xff3b7303, 0xff577303, 0xff737303, 0xff735703, 0xff733b03, 0xff731f03,
+    0xff733b3b, 0xff733b47, 0xff733b57, 0xff733b63, 0xff733b73, 0xff633b73, 0xff573b73, 0xff473b73,
+    0xff3b3b73, 0xff3b4773, 0xff3b5773, 0xff3b6373, 0xff3b7373, 0xff3b7363, 0xff3b7357, 0xff3b7347,
+    0xff3b733b, 0xff47733b, 0xff57733b, 0xff63733b, 0xff73733b, 0xff73633b, 0xff73573b, 0xff73473b,
+    0xff735353, 0xff73535b, 0xff735363, 0xff73536b, 0xff735373, 0xff6b5373, 0xff635373, 0xff5b5373,
+    0xff535373, 0xff535b73, 0xff536373, 0xff536b73, 0xff537373, 0xff53736b, 0xff537363, 0xff53735b,
+    0xff537353, 0xff5b7353, 0xff637353, 0xff6b7353, 0xff737353, 0xff736b53, 0xff736353, 0xff735b53,
+    0xff430303, 0xff430313, 0xff430323, 0xff430333, 0xff430343, 0xff330343, 0xff230343, 0xff130343,
+    0xff030343, 0xff031343, 0xff032343, 0xff033343, 0xff034343, 0xff034333, 0xff034323, 0xff034313,
+    0xff034303, 0xff134303, 0xff234303, 0xff334303, 0xff434303, 0xff433303, 0xff432303, 0xff431303,
+    0xff432323, 0xff43232b, 0xff432333, 0xff43233b, 0xff432343, 0xff3b2343, 0xff332343, 0xff2b2343,
+    0xff232343, 0xff232b43, 0xff233343, 0xff233b43, 0xff234343, 0xff23433b, 0xff234333, 0xff23432b,
+    0xff234323, 0xff2b4323, 0xff334323, 0xff3b4323, 0xff434323, 0xff433b23, 0xff433323, 0xff432b23,
+    0xff432f2f, 0xff432f33, 0xff432f37, 0xff432f3f, 0xff432f43, 0xff3f2f43, 0xff372f43, 0xff332f43,
+    0xff2f2f43, 0xff2f3343, 0xff2f3743, 0xff2f3f43, 0xff2f4343, 0xff2f433f, 0xff2f4337, 0xff2f4333,
+    0xff2f432f, 0xff33432f, 0xff37432f, 0xff3f432f, 0xff43432f, 0xff433f2f, 0xff43372f, 0xff43332f,
+    0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000};
 
 CFrameSet::CFrameSet()
 {
@@ -43,19 +78,14 @@ CFrameSet::CFrameSet()
 
 CFrameSet::CFrameSet(CFrameSet *s)
 {
-    for (int i = 0; i < s->getSize(); i++)
-    {
-        CFrame *frame = new CFrame((*s)[i]);
-        add(frame);
-    }
+    m_arrFrames.reserve(s->getSize());
+    for (size_t i = 0; i < s->getSize(); i++)
+        add(new CFrame((*s)[i]));
 
     m_name = s->getName();
     copyTags(*s);
-    std::string uuid = m_tags["UUID"];
-    if (uuid.empty())
-    {
+    if (m_tags["UUID"].empty())
         assignNewUUID();
-    }
 }
 
 void CFrameSet::assignNewUUID()
@@ -68,16 +98,13 @@ CFrameSet::~CFrameSet()
     clear();
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// CFrameSet serialization
-
 bool CFrameSet::write0x501(IFile &file)
 {
     long totalSize = 0;
-    for (int n = 0; n < getSize(); ++n)
+    for (size_t i = 0; i < getSize(); ++i)
     {
-        CFrame *frame = m_arrFrames[n];
-        totalSize += 4 * frame->len() * frame->hei();
+        const CFrame *frame = m_arrFrames[i];
+        totalSize += sizeof(PIXEL) * frame->len() * frame->hei();
     }
 
     // OBL5 IMAGESET HEADER
@@ -86,19 +113,22 @@ bool CFrameSet::write0x501(IFile &file)
     char *ptr = buffer;
 
     // prepare OBL5Data
-    for (int n = 0; n < getSize(); ++n)
+    // pack into a single pixmap
+    for (size_t i = 0; i < getSize(); ++i)
     {
-        CFrame *frame = m_arrFrames[n];
-        memcpy(ptr, frame->getRGB(), 4 * frame->len() * frame->hei());
-        ptr += 4 * frame->len() * frame->hei();
+        CFrame *frame = m_arrFrames[i];
+        int pixelBytes = sizeof(PIXEL) * frame->len() * frame->hei();
+        memcpy(ptr, frame->getRGB(), pixelBytes);
+        ptr += pixelBytes;
     }
 
     uLong destSize;
     uint8_t *dest;
-    int err = compressData((uint8_t *)buffer, (uLong)totalSize, &dest, destSize);
+    const int err = compressData((uint8_t *)buffer, (uLong)totalSize, &dest, destSize);
     if (err != Z_OK)
     {
-        char tmp[128];
+        delete[] buffer;
+        char tmp[64];
         snprintf(tmp, sizeof(tmp), "CFrameSet::write0x501 error: %d", err);
         m_lastError = tmp;
         return false;
@@ -108,7 +138,7 @@ bool CFrameSet::write0x501(IFile &file)
     file.write(&destSize, sizeof(uint32_t));
 
     // IMAGE HEADER [0..n]
-    for (int n = 0; n < getSize(); ++n)
+    for (size_t n = 0; n < getSize(); ++n)
     {
         CFrame *frame = m_arrFrames[n];
         int len = frame->len();
@@ -122,24 +152,19 @@ bool CFrameSet::write0x501(IFile &file)
 
     // TAG COUNT
     int count = 0;
-    for (auto const &kv : m_tags)
+    for (auto const &[k, v] : m_tags)
     {
-        const std::string val = kv.second;
-        if (!val.empty())
-        {
+        if (!v.empty())
             ++count;
-        }
     }
 
     file.write(&count, sizeof(uint32_t));
-    for (auto const &kv : m_tags)
+    for (auto const &[k, v] : m_tags)
     {
-        const std::string key = kv.first;
-        const std::string val = kv.second;
-        if (!val.empty())
+        if (!v.empty())
         {
-            file << key;
-            file << val;
+            file << k;
+            file << v;
         }
     }
 
@@ -161,9 +186,9 @@ bool CFrameSet::write(IFile &file)
 
     case 0x500:
         // original version
-        for (int n = 0; n < getSize(); ++n)
+        for (size_t i = 0; i < getSize(); ++i)
         {
-            m_arrFrames[n]->write(file);
+            m_arrFrames[i]->write(file);
         }
         break;
 
@@ -172,7 +197,7 @@ bool CFrameSet::write(IFile &file)
         return write0x501(file);
 
     default:
-        char tmp[256];
+        char tmp[64];
         snprintf(tmp, sizeof(tmp), "unknown OBL5 version: %x", version);
         m_lastError = tmp;
         return false;
@@ -199,7 +224,7 @@ bool CFrameSet::read0x501(IFile &file, int size)
         hei[n] = 0;
         file.read(&len[n], sizeof(uint16_t));
         file.read(&hei[n], sizeof(uint16_t));
-        totalSize += 4 * len[n] * hei[n];
+        totalSize += sizeof(PIXEL) * len[n] * hei[n];
     }
 
     char *buffer = new char[totalSize];
@@ -209,13 +234,12 @@ bool CFrameSet::read0x501(IFile &file, int size)
     uint8_t *srcBuffer = new uint8_t[srcSize];
     file.read(srcBuffer, srcSize);
 
-    int err = uncompress(
+    const int err = uncompress(
         (uint8_t *)buffer,
         (uLong *)&totalSize,
         (uint8_t *)srcBuffer,
         (uLong)srcSize);
-
-    if (err)
+    if (err != Z_OK)
     {
         LOGE("err: %d\n", err);
         return false;
@@ -224,20 +248,23 @@ bool CFrameSet::read0x501(IFile &file, int size)
     delete[] srcBuffer;
 
     // add frames to frameSet
+    m_arrFrames.reserve(size);
     for (int n = 0; n < size; ++n)
     {
         CFrame *frame = new CFrame(len[n], hei[n]);
-        memcpy(frame->getRGB(), ptr, 4 * frame->len() * frame->hei());
+        const size_t dataSize = sizeof(PIXEL) * frame->len() * frame->hei();
+        memcpy(frame->getRGB(), ptr, dataSize);
         frame->updateMap();
-        add(frame);
-        ptr += 4 * frame->len() * frame->hei();
+        // m_arrFrames[n] = frame;
+        m_arrFrames.push_back(frame);
+        ptr += dataSize;
     }
 
     // TAG COUNT
-    int count = 0;
+    size_t count = 0;
     file.read(&count, sizeof(uint32_t));
     m_tags.clear();
-    for (int i = 0; i < count; ++i)
+    for (size_t i = 0; i < count; ++i)
     {
         std::string key;
         std::string val;
@@ -250,7 +277,7 @@ bool CFrameSet::read0x501(IFile &file, int size)
     delete[] len;
     delete[] hei;
 
-    return !err;
+    return true;
 }
 
 bool CFrameSet::read(IFile &file)
@@ -278,7 +305,6 @@ bool CFrameSet::read(IFile &file)
     {
 
     case 0x500:
-
         for (uint32_t n = 0; n < size; ++n)
         {
             CFrame *temp = new CFrame;
@@ -336,10 +362,12 @@ void CFrameSet::copyTags(CFrameSet &src)
 CFrameSet &CFrameSet::operator=(CFrameSet &s)
 {
     clear();
-    for (int i = 0; i < s.getSize(); i++)
+    m_arrFrames.reserve(s.getSize());
+    for (size_t i = 0; i < s.getSize(); i++)
     {
         CFrame *frame = new CFrame(s[i]);
-        add(frame);
+        // m_arrFrames[i] = frame;
+        m_arrFrames.push_back(frame);
     }
     copyTags(s);
     m_name = s.getName();
@@ -355,7 +383,7 @@ void CFrameSet::clear()
     m_tags.clear();
 }
 
-int CFrameSet::getSize()
+size_t CFrameSet::getSize()
 {
     return m_arrFrames.size();
 }
@@ -408,9 +436,6 @@ void CFrameSet::removeAll()
     m_arrFrames.clear();
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// import filter
-
 char *CFrameSet::ima2bitmap(char *ImaData, int len, int hei)
 {
     int x;
@@ -445,46 +470,11 @@ char *CFrameSet::ima2bitmap(char *ImaData, int len, int hei)
 
 void CFrameSet::bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err)
 {
-    // original color palette
-    const uint32_t colors[] = {
-        0xff000000, 0xffab0303, 0xff03ab03, 0xffabab03, 0xff0303ab, 0xffab03ab, 0xff0357ab, 0xffababab,
-        0xff575757, 0xffff5757, 0xff57ff57, 0xffffff57, 0xff5757ff, 0xffff57ff, 0xff57ffff, 0xffffffff,
-        0xff000000, 0xff171717, 0xff232323, 0xff2f2f2f, 0xff3b3b3b, 0xff474747, 0xff535353, 0xff636363,
-        0xff737373, 0xff838383, 0xff939393, 0xffa3a3a3, 0xffb7b7b7, 0xffcbcbcb, 0xffe3e3e3, 0xffffffff,
-        0xffff0303, 0xffff0343, 0xffff037f, 0xffff03bf, 0xffff03ff, 0xffbf03ff, 0xff7f03ff, 0xff4303ff,
-        0xff0303ff, 0xff0343ff, 0xff037fff, 0xff03bfff, 0xff03ffff, 0xff03ffbf, 0xff03ff7f, 0xff03ff43,
-        0xff03ff03, 0xff43ff03, 0xff7fff03, 0xffbfff03, 0xffffff03, 0xffffbf03, 0xffff7f03, 0xffff4303,
-        0xffff7f7f, 0xffff7f9f, 0xffff7fbf, 0xffff7fdf, 0xffff7fff, 0xffdf7fff, 0xffbf7fff, 0xff9f7fff,
-        0xff7f7fff, 0xff7f9fff, 0xff7fbfff, 0xff7fdfff, 0xff7fffff, 0xff7fffdf, 0xff7fffbf, 0xff7fff9f,
-        0xff7fff7f, 0xff9fff7f, 0xffbfff7f, 0xffdfff7f, 0xffffff7f, 0xffffdf7f, 0xffffbf7f, 0xffff9f7f,
-        0xffffb7b7, 0xffffb7c7, 0xffffb7db, 0xffffb7eb, 0xffffb7ff, 0xffebb7ff, 0xffdbb7ff, 0xffc7b7ff,
-        0xffb7b7ff, 0xffb7c7ff, 0xffb7dbff, 0xffb7ebff, 0xffb7ffff, 0xffb7ffeb, 0xffb7ffdb, 0xffb7ffc7,
-        0xffb7ffb7, 0xffc7ffb7, 0xffdbffb7, 0xffebffb7, 0xffffffb7, 0xffffebb7, 0xffffdbb7, 0xffffc7b7,
-        0xff730303, 0xff73031f, 0xff73033b, 0xff730357, 0xff730373, 0xff570373, 0xff3b0373, 0xff1f0373,
-        0xff030373, 0xff031f73, 0xff033b73, 0xff035773, 0xff037373, 0xff037357, 0xff03733b, 0xff03731f,
-        0xff037303, 0xff1f7303, 0xff3b7303, 0xff577303, 0xff737303, 0xff735703, 0xff733b03, 0xff731f03,
-        0xff733b3b, 0xff733b47, 0xff733b57, 0xff733b63, 0xff733b73, 0xff633b73, 0xff573b73, 0xff473b73,
-        0xff3b3b73, 0xff3b4773, 0xff3b5773, 0xff3b6373, 0xff3b7373, 0xff3b7363, 0xff3b7357, 0xff3b7347,
-        0xff3b733b, 0xff47733b, 0xff57733b, 0xff63733b, 0xff73733b, 0xff73633b, 0xff73573b, 0xff73473b,
-        0xff735353, 0xff73535b, 0xff735363, 0xff73536b, 0xff735373, 0xff6b5373, 0xff635373, 0xff5b5373,
-        0xff535373, 0xff535b73, 0xff536373, 0xff536b73, 0xff537373, 0xff53736b, 0xff537363, 0xff53735b,
-        0xff537353, 0xff5b7353, 0xff637353, 0xff6b7353, 0xff737353, 0xff736b53, 0xff736353, 0xff735b53,
-        0xff430303, 0xff430313, 0xff430323, 0xff430333, 0xff430343, 0xff330343, 0xff230343, 0xff130343,
-        0xff030343, 0xff031343, 0xff032343, 0xff033343, 0xff034343, 0xff034333, 0xff034323, 0xff034313,
-        0xff034303, 0xff134303, 0xff234303, 0xff334303, 0xff434303, 0xff433303, 0xff432303, 0xff431303,
-        0xff432323, 0xff43232b, 0xff432333, 0xff43233b, 0xff432343, 0xff3b2343, 0xff332343, 0xff2b2343,
-        0xff232343, 0xff232b43, 0xff233343, 0xff233b43, 0xff234343, 0xff23433b, 0xff234333, 0xff23432b,
-        0xff234323, 0xff2b4323, 0xff334323, 0xff3b4323, 0xff434323, 0xff433b23, 0xff433323, 0xff432b23,
-        0xff432f2f, 0xff432f33, 0xff432f37, 0xff432f3f, 0xff432f43, 0xff3f2f43, 0xff372f43, 0xff332f43,
-        0xff2f2f43, 0xff2f3343, 0xff2f3743, 0xff2f3f43, 0xff2f4343, 0xff2f433f, 0xff2f4337, 0xff2f4333,
-        0xff2f432f, 0xff33432f, 0xff37432f, 0xff3f432f, 0xff43432f, 0xff433f2f, 0xff43372f, 0xff43332f,
-        0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000};
-
     for (int i = 0; i < len * hei; i++)
     {
         if (bitmap[i])
         {
-            rgb[i] = colors[(bitmap[i] + err) & 255];
+            rgb[i] = g_original_palette[(bitmap[i] + err) & 255];
         }
         else
         {
@@ -496,31 +486,30 @@ void CFrameSet::bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int er
 bool CFrameSet::extract(IFile &file, std::string *out_format)
 {
     // IMA_FORMAT
-    typedef struct
+    struct USER_IMAHEADER
     {
         char len;
         char hei;
-    } USER_IMAHEADER;
+    };
 
-    typedef struct
+    struct USER_IMC1HEADER
     {
         char Id[ID_SIG_LEN]; // IMC1
         char len;
         char hei;
         int SizeData;
-    } USER_IMC1HEADER;
+    };
 
-    // MCX_FORMAT
-    typedef struct
+    struct USER_MCX
     {
         uint32_t PtrPrev;
         uint32_t PtrNext;
         char Name[30];
         uint16_t Class;
         char ImageData[GE96_TILE_SIZE][GE96_TILE_SIZE];
-    } USER_MCX;
+    };
 
-    typedef struct
+    struct USER_MCXHEADER
     {
         char Id[ID_SIG_LEN]; // "GE96"
         uint16_t Class;
@@ -529,9 +518,8 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         int LastViewed;
         char Palette[PALETTE_SIZE][RGB_BYTES];
         uint32_t PtrFirst;
-    } USER_MCXHEADER;
+    };
 
-    // USER_OBL3...............................................
     typedef struct
     {
         uint32_t PtrPrev;
@@ -542,8 +530,7 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         char ExtraInfo[4];
     } USER_OBL3;
 
-    // USER_OBL3HEADER..........................................
-    typedef struct
+    struct USER_OBL3HEADER
     {
         char Id[ID_SIG_LEN]; // "OBL3"
         uint32_t LastViewed;
@@ -584,7 +571,7 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         char szFilename[256];
         char szName[256];
         char szCopyrights[1024];
-    } USER_OBL3HEADER;
+    };
 
     const auto org = file.tell();
     const uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
@@ -624,6 +611,7 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         int mode;
         file >> size;
         file >> mode;
+        m_arrFrames.reserve(size);
         for (int i = 0; i < size; ++i)
         {
             int len;
@@ -670,10 +658,11 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         if (frameSet.read(file))
         {
             size = frameSet.getSize();
+            m_arrFrames.reserve(size);
             for (int i = 0; i < size; ++i)
             {
                 frameSet[i]->updateMap();
-                add(frameSet[i]);
+                m_arrFrames.push_back(frameSet[i]);
                 // TODO: add map if this is ever implemented
             }
             frameSet.removeAll();
@@ -794,19 +783,10 @@ const char *CFrameSet::getLastError() const
 
 bool CFrameSet::isFriendFormat(const char *format)
 {
-    const char *friends[] = {
+    std::set<std::string> friends = {
         "IMC1", "IMA", "GE96",
         "OBL3", "OBL4", "OBL5"};
-
-    for (unsigned int i = 0; i < sizeof(friends) / sizeof(char *); ++i)
-    {
-        if (strcmp(friends[i], format) == 0)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return friends.find(format) != friends.end();
 }
 
 void CFrameSet::move(int s, int t)
@@ -818,7 +798,11 @@ void CFrameSet::move(int s, int t)
 bool CFrameSet::toPng(unsigned char *&data, int &outSize)
 {
     const size_t size = m_arrFrames.size();
-    if (size > 1)
+    if (size == 1)
+    {
+        return m_arrFrames[0]->toPng(data, outSize);
+    }
+    else if (size > 1)
     {
         uint16_t *xx = new uint16_t[size];
         uint16_t *yy = new uint16_t[size];
@@ -869,10 +853,6 @@ bool CFrameSet::toPng(unsigned char *&data, int &outSize)
         delete[] xx;
         delete[] yy;
     }
-    else if (size)
-    {
-        m_arrFrames[0]->toPng(data, outSize);
-    }
     else
     {
         data = nullptr;
@@ -898,10 +878,28 @@ void CFrameSet::setTag(const char *tag, const char *v)
 
 void CFrameSet::toSubset(CFrameSet &dest, int start, int end)
 {
-    int last = end == -1 ? getSize() - 1 : end;
+    const int last = end == -1 ? getSize() - 1 : end;
+    dest.reserve(last - start);
     for (int i = start; i <= last; ++i)
-    {
-        CFrame *p = new CFrame(m_arrFrames[i]);
-        dest.add(p);
-    }
+        dest.add(new CFrame(m_arrFrames[i]));
+}
+
+void CFrameSet::reserve(int n)
+{
+    m_arrFrames.reserve(n + m_arrFrames.size());
+}
+
+void CFrameSet::set(const int i, CFrame *frame)
+{
+    m_arrFrames[i] = frame;
+}
+
+int CFrameSet::currFrame()
+{
+    return m_nCurrFrame;
+}
+
+void CFrameSet::setCurrFrame(int curr)
+{
+    m_nCurrFrame = curr;
 }

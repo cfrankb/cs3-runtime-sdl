@@ -216,17 +216,17 @@ void CRecorder::stop()
     m_file = nullptr;
 }
 
-bool CRecorder::isRecording()
+bool CRecorder::isRecording() const
 {
     return m_mode == MODE_WRITE;
 }
 
-bool CRecorder::isReading()
+bool CRecorder::isReading() const
 {
     return m_mode == MODE_READ;
 }
 
-bool CRecorder::isStopped()
+bool CRecorder::isStopped() const
 {
     return m_mode == MODE_CLOSED;
 }

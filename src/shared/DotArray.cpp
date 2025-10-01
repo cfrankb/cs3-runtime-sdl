@@ -16,13 +16,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "../shared/DotArray.h"
+#include "DotArray.h"
 #include <cmath>
 
 ///////////////////////////////////////////////////////////////////
 // CDotArray
 
-CDotArray::CDotArray() {
+CDotArray::CDotArray()
+{
     m_max = GROWBY;
     m_size = 0;
     m_dots = new Dot[m_max];
@@ -30,9 +31,11 @@ CDotArray::CDotArray() {
     m_maxY = -1;
 }
 
-CDotArray::~CDotArray() {
-    if (m_dots) {
-        delete [] m_dots;
+CDotArray::~CDotArray()
+{
+    if (m_dots)
+    {
+        delete[] m_dots;
     }
 }
 
@@ -43,25 +46,27 @@ void CDotArray::add(const Dot &dot)
 
 void CDotArray::add(uint32_t color, int x, int y)
 {
-    if (x >= 0 && y >= 0 && (x < m_maxX || m_maxX ==-1)
-            && (y < m_maxY || m_maxY ==-1)) {
+    if (x >= 0 && y >= 0 && (x < m_maxX || m_maxX == -1) && (y < m_maxY || m_maxY == -1))
+    {
 
-        if (m_size==m_max) {
+        if (m_size == m_max)
+        {
             m_max += GROWBY;
-            Dot *t =  new Dot[m_max];
-            for (int i=0; i < m_size; ++i) {
+            Dot *t = new Dot[m_max];
+            for (int i = 0; i < m_size; ++i)
+            {
                 t[i] = m_dots[i];
             }
 
-            delete [] m_dots;
+            delete[] m_dots;
             m_dots = t;
         }
 
-        Dot & dot = m_dots[m_size];
+        Dot &dot = m_dots[m_size];
         dot.color = color;
         dot.x = x;
         dot.y = y;
-        ++ m_size;
+        ++m_size;
     }
 }
 
@@ -75,7 +80,7 @@ bool CDotArray::isEmpty()
     return !m_size;
 }
 
-Dot & CDotArray::operator[] (int i)
+Dot &CDotArray::operator[](int i)
 {
     return m_dots[i];
 }
@@ -87,7 +92,8 @@ int CDotArray::getSize()
 
 int CDotArray::lineTab(const uint32_t color, const Dot dot1, const Dot dot2, bool clear)
 {
-    if (clear) {
+    if (clear)
+    {
         flush();
     }
 
@@ -105,41 +111,54 @@ int CDotArray::lineTab(const uint32_t color, const Dot dot1, const Dot dot2, boo
 
     Ydiff = dot2.y - dot1.y;
 
-    if (Ydiff < 0) {
+    if (Ydiff < 0)
+    {
         Ydiff = -Ydiff;
         Yunit = -1;
-    }  else   {
+    }
+    else
+    {
         Yunit = 1;
     }
 
     Xdiff = dot2.x - dot1.x;
 
-    if (Xdiff < 0) {
+    if (Xdiff < 0)
+    {
         Xdiff = -Xdiff;
         Xunit = -1;
-    }  else   {
+    }
+    else
+    {
         Xunit = 1;
     }
 
     error = 0;
-    if (Xdiff > Ydiff)  {
-        int len = Xdiff;// + 1;
-        for (int i=0; i<=len; i++) {
-            add(color, XX,YY);
+    if (Xdiff > Ydiff)
+    {
+        int len = Xdiff; // + 1;
+        for (int i = 0; i <= len; i++)
+        {
+            add(color, XX, YY);
             XX = XX + Xunit;
             error = error + Ydiff;
-            if (error > Xdiff)   {
+            if (error > Xdiff)
+            {
                 error = error - Xdiff;
                 YY = YY + Yunit;
             }
         }
-    } else {
-        int len = Ydiff;// + 1;
-        for (int i=0; i<=len; i++) {
-            add(color, XX,YY);
+    }
+    else
+    {
+        int len = Ydiff; // + 1;
+        for (int i = 0; i <= len; i++)
+        {
+            add(color, XX, YY);
             YY = YY + Yunit;
             error = error + Xdiff;
-            if (error > 0)     {
+            if (error > 0)
+            {
                 error = error - Ydiff;
                 XX = XX + Xunit;
             }
@@ -151,16 +170,18 @@ int CDotArray::lineTab(const uint32_t color, const Dot dot1, const Dot dot2, boo
 
 int CDotArray::circle(const uint32_t color, const Dot dot1, const Dot dot2, bool clear)
 {
-    if (clear){
+    if (clear)
+    {
         flush();
     }
 
-    float radius = std::abs( (float) dot1.y - dot2.y) / 2.0f;
+    float radius = std::abs((float)dot1.y - dot2.y) / 2.0f;
     int x0 = dot1.x;
     int y0 = dot1.y - (dot1.y - dot2.y) / 2;
     float tmp = radius * radius;
     float x = -radius;
-    do {
+    do
+    {
         float y = sqrt(tmp - (x * x));
         add(color, x0 + x, y0 - y); // 4.th quadrant
         add(color, x0 + x, y0 + y); // 3.rd quadrant

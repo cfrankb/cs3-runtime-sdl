@@ -80,7 +80,7 @@ CActor::~CActor()
  * @return false
  */
 
-bool CActor::canMove(const JoyAim aim)
+bool CActor::canMove(const JoyAim aim) const
 {
     CMap &map = CGame::getMap();
     const Pos &pos = Pos{m_x, m_y};
@@ -128,11 +128,10 @@ bool CActor::canMove(const JoyAim aim)
 void CActor::move(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
-    uint8_t c = map.at(m_x, m_y);
+    const uint8_t c = map.at(m_x, m_y);
     map.set(m_x, m_y, m_pu);
 
-    Pos pos{m_x, m_y};
-    pos = CGame::translate(pos, aim);
+    const Pos pos = CGame::translate(Pos{m_x, m_y}, aim);
     m_x = pos.x;
     m_y = pos.y;
 
@@ -181,7 +180,7 @@ void CActor::setPos(const Pos &pos)
  * @param reverse, flip search order
  * @return JoyAim
  */
-JoyAim CActor::findNextDir(const bool reverse)
+JoyAim CActor::findNextDir(const bool reverse) const
 {
     const int aim = m_aim;
     int i = TOTAL_AIMS - 1;
@@ -347,7 +346,7 @@ bool CActor::readCommon(ReadFunc readfile)
  * @return true
  * @return false
  */
-bool CActor::write(FILE *tfile)
+bool CActor::write(FILE *tfile) const
 {
     if (!tfile)
         return false;
@@ -359,7 +358,7 @@ bool CActor::write(FILE *tfile)
     return writeCommon(writefile);
 }
 
-bool CActor::write(IFile &tfile)
+bool CActor::write(IFile &tfile) const
 {
     auto writefile = [&tfile](auto ptr, auto size)
     {
@@ -377,7 +376,7 @@ bool CActor::write(IFile &tfile)
  * @return false
  */
 template <typename WriteFunc>
-bool CActor::writeCommon(WriteFunc writefile)
+bool CActor::writeCommon(WriteFunc writefile) const
 {
     if (!writefile(&m_x, sizeof(m_x)))
         return false;
@@ -421,7 +420,7 @@ const Pos CActor::pos() const
  * @param actor
  * @return int
  */
-int CActor::distance(const CActor &actor)
+int CActor::distance(const CActor &actor) const
 {
     int dx = std::abs(actor.m_x - m_x);
     int dy = std::abs(actor.m_y - m_y);

@@ -28,7 +28,7 @@
 #include "../shared/FileWrap.h"
 #endif
 
-#define UUID_BUFFER_SIZE 40
+constexpr const int UUID_BUFFER_SIZE = 40;
 
 const char *toUpper(char *s)
 {
@@ -50,7 +50,7 @@ int upperClean(int c)
 std::string getUUID()
 {
     char uuid[UUID_BUFFER_SIZE];
-    snprintf(uuid, UUID_BUFFER_SIZE, "%.4x%.4x-%.4x-%.4x-%.4x-%.4x%.4x%.4x",
+    snprintf(uuid, sizeof(uuid), "%.4x%.4x-%.4x-%.4x-%.4x-%.4x%.4x%.4x",
              rand() & 0xffff,
              rand() & 0xffff,
              rand() & 0xffff,

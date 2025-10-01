@@ -33,10 +33,10 @@ public:
     CAnimator();
     ~CAnimator();
     void animate();
-    uint16_t at(uint8_t tileID);
-    uint16_t offset();
-    bool isSpecialCase(uint8_t tileID);
-    animzInfo_t specialInfo(const int tileID);
+    uint16_t at(uint8_t tileID) const;
+    uint16_t offset() const;
+    bool isSpecialCase(uint8_t tileID) const;
+    animzInfo_t getSpecialInfo(const int tileID) const;
 
     using animzSeq_t = struct
     {

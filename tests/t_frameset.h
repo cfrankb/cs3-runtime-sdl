@@ -15,43 +15,6 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "statedata.h"
-#include <list>
+#pragma once
 
-#define DEF(x) {#x, x}
-
-const std::list<KeyOption> g_keyOptions = {
-    DEF(TIMEOUT),
-    DEF(POS_ORIGIN),
-    DEF(POS_EXIT),
-    DEF(MAP_GOAL),
-    DEF(PAR_TIME),
-    DEF(AUTHOR),
-    DEF(YEAR),
-    DEF(MSG0),
-    DEF(MSG1),
-    DEF(MSG2),
-    DEF(MSG3),
-    DEF(MSG4),
-    DEF(MSG5),
-    DEF(MSG6),
-    DEF(MSG7),
-    DEF(MSG8),
-    DEF(MSG9),
-    DEF(MSGA),
-    DEF(MSGB),
-    DEF(MSGC),
-    DEF(MSGD),
-    DEF(MSGE),
-    DEF(MSGF),
-    DEF(USERDEF1),
-    DEF(USERDEF2),
-    DEF(USERDEF3),
-    DEF(USERDEF4),
-    DEF(PRIVATE),
-};
-
-const std::list<KeyOption> &getKeyOptions()
-{
-    return g_keyOptions;
-}
+bool test_frameset();

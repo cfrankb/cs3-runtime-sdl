@@ -30,6 +30,7 @@
 #include "t_stateparser.h"
 #include "t_strhelper.h"
 #include "t_ifile.h"
+#include "t_frameset.h"
 #include "t_pngmagic.h"
 #include "../src/logger.h"
 #include <filesystem>
@@ -66,6 +67,7 @@ int main(int argc, char *args[])
         FCT(test_game),
         FCT(test_ifile),
         FCT(test_png_magic),
+        FCT(test_frameset),
     };
 
     int failed = 0;

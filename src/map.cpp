@@ -72,7 +72,7 @@ CMap::~CMap()
     delete m_states;
 };
 
-uint8_t &CMap::at(int x, int y)
+uint8_t &CMap::get(const int x, const int y)
 {
     if (x >= m_len)
     {
@@ -85,14 +85,27 @@ uint8_t &CMap::at(int x, int y)
     return *(m_map + x + y * m_len);
 }
 
-uint8_t *CMap::row(int y)
+uint8_t CMap::at(const int x, const int y) const
+{
+    if (x >= m_len)
+    {
+        LOGW("x [%d] greater than m_len\n", x);
+    }
+    if (y >= m_hei)
+    {
+        LOGW("y [%d] greater than m_hei\n", y);
+    }
+    return *(m_map + x + y * m_len);
+}
+
+uint8_t *CMap::row(const int y)
 {
     return m_map + y * m_len;
 }
 
-void CMap::set(int x, int y, uint8_t t)
+void CMap::set(const int x, const int y, const uint8_t t)
 {
-    at(x, y) = t;
+    get(x, y) = t;
 }
 
 void CMap::clear()
@@ -122,7 +135,7 @@ bool CMap::read(const char *fname)
     return sfile != nullptr && result;
 }
 
-bool CMap::write(const char *fname)
+bool CMap::write(const char *fname) const
 {
     bool result = false;
     FILE *tfile = fopen(fname, "wb");
@@ -337,7 +350,7 @@ bool CMap::fromMemory(uint8_t *mem)
     return readImpl(readfile, tell, seek, readStates);
 }
 
-bool CMap::write(FILE *tfile)
+bool CMap::write(FILE *tfile) const
 {
     if (!tfile)
         return false;
@@ -352,7 +365,7 @@ bool CMap::write(FILE *tfile)
     return m_states->write(tfile);
 }
 
-bool CMap::write(IFile &tfile)
+bool CMap::write(IFile &tfile) const
 {
     auto writefile = [&tfile](const void *ptr, size_t size) -> bool
     {
@@ -365,7 +378,7 @@ bool CMap::write(IFile &tfile)
 }
 
 template <typename WriteFunc>
-bool CMap::writeCommon(WriteFunc writefile)
+bool CMap::writeCommon(WriteFunc writefile) const
 {
     // Write header
     if (!writefile(SIG, sizeof(SIG)))
@@ -425,10 +438,10 @@ int CMap::hei() const
     return m_hei;
 }
 
-bool CMap::resize(uint16_t len, uint16_t hei, bool fast)
+bool CMap::resize(const uint16_t in_len, const uint16_t in_hei, const bool fast)
 {
-    len = std::min(len, MAX_SIZE);
-    hei = std::min(hei, MAX_SIZE);
+    const uint16_t len = std::min(in_len, MAX_SIZE);
+    const uint16_t hei = std::min(in_hei, MAX_SIZE);
     if (fast)
     {
         if (len * hei > m_size)
@@ -463,7 +476,7 @@ bool CMap::resize(uint16_t len, uint16_t hei, bool fast)
     return true;
 }
 
-const Pos CMap::findFirst(uint8_t tileId)
+const Pos CMap::findFirst(const uint8_t tileId) const
 {
     for (uint16_t y = 0; y < m_hei; ++y)
     {
@@ -478,7 +491,7 @@ const Pos CMap::findFirst(uint8_t tileId)
     return Pos{NOT_FOUND, NOT_FOUND};
 }
 
-int CMap::count(uint8_t tileId)
+int CMap::count(const uint8_t tileId) const
 {
     int count = 0;
     for (uint16_t y = 0; y < m_hei; ++y)
@@ -538,7 +551,7 @@ const char *CMap::lastError()
     return m_lastError.c_str();
 }
 
-int CMap::size()
+int CMap::size() const
 {
     return m_size;
 }

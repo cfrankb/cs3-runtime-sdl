@@ -850,7 +850,7 @@ void CRuntime::preloadAssets()
             if ((*frameSets[i])->extract(mem))
             {
                 if (!m_quiet)
-                    LOGI("extracted: %d\n", ((*frameSets[i])->getSize()));
+                    LOGI("extracted: %ld\n", ((*frameSets[i])->getSize()));
             }
         }
         else

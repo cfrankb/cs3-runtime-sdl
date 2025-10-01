@@ -37,6 +37,11 @@ int &CGameStats::get(const GameStat key)
     return m_stats[key];
 }
 
+int CGameStats::at(const GameStat key) const
+{
+    return m_stats.at(key);
+}
+
 /**
  * @brief Set value associated with given key
  *
@@ -136,7 +141,7 @@ bool CGameStats::readCommon(ReadFunc readfile)
  * @return false
  */
 
-bool CGameStats::write(FILE *tfile)
+bool CGameStats::write(FILE *tfile) const
 {
     if (!tfile)
         return false;
@@ -149,7 +154,7 @@ bool CGameStats::write(FILE *tfile)
     return writeCommon(writefile);
 }
 
-bool CGameStats::write(IFile &tfile)
+bool CGameStats::write(IFile &tfile) const
 {
     auto writefile = [&tfile](auto ptr, auto size) -> bool
     {
@@ -160,7 +165,7 @@ bool CGameStats::write(IFile &tfile)
 }
 
 template <typename WriteFunc>
-bool CGameStats::writeCommon(WriteFunc writefile)
+bool CGameStats::writeCommon(WriteFunc writefile) const
 {
     uint16_t count = 0;
     for (const auto &[key, value] : m_stats)

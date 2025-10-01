@@ -90,22 +90,22 @@ void CAnimator::animate()
     ++m_offset;
 }
 
-uint16_t CAnimator::at(uint8_t tileID)
+uint16_t CAnimator::at(uint8_t tileID) const
 {
     return m_tileReplacement[tileID];
 }
 
-uint16_t CAnimator::offset()
+uint16_t CAnimator::offset() const
 {
     return m_offset;
 }
 
-bool CAnimator::isSpecialCase(uint8_t tileID)
+bool CAnimator::isSpecialCase(uint8_t tileID) const
 {
     return g_specialCases.find(tileID) != g_specialCases.end();
 }
 
-animzInfo_t CAnimator::specialInfo(const int tileID)
+animzInfo_t CAnimator::getSpecialInfo(const int tileID) const
 {
     const auto &it = m_seqLookUp.find(tileID);
     if (it != m_seqLookUp.end())

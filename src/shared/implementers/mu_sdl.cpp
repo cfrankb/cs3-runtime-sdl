@@ -24,7 +24,7 @@
 
 #include "../FileWrap.h"
 #include "../../logger.h"
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 #include <emscripten.h>
 static bool endswith(const char *str, const char *end)
 {
@@ -79,7 +79,7 @@ bool CMusicSDL::open(const char *file)
     }
     bool valid = false;
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     if (!endswith(file, ".xm"))
     {
         m_filepath = file;
@@ -90,7 +90,7 @@ bool CMusicSDL::open(const char *file)
     m_data.mixData = Mix_LoadMUS(file);
     if (m_data.mixData)
     {
-        m_type = TYPE_OGG;
+        m_type = TYPE_PRELOAD;
         valid = true;
     }
     else
@@ -107,7 +107,7 @@ EMSCRIPTEN_KEEPALIVE
 bool CMusicSDL::play(int loop)
 {
     m_playing = true;
-    if (m_type == TYPE_OGG)
+    if (m_type == TYPE_PRELOAD)
     {
         Mix_PlayMusic(m_data.mixData, loop);
         return true;
@@ -126,7 +126,7 @@ bool CMusicSDL::play(int loop)
 
 void CMusicSDL::stop()
 {
-    if (m_type == TYPE_OGG)
+    if (m_type == TYPE_PRELOAD)
     {
         Mix_HaltMusic();
     }
@@ -145,7 +145,7 @@ void CMusicSDL::close()
 {
     stop();
     SDL_Delay(100);
-    if (m_type == TYPE_OGG)
+    if (m_type == TYPE_PRELOAD)
     {
         Mix_FreeMusic(m_data.mixData);
         m_data.mixData = nullptr;

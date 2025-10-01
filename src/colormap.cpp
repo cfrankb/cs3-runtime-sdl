@@ -38,20 +38,28 @@ bool parseColorMaps(IFile &file, ColorMaps &colorMaps)
 {
     size_t size = file.getSize();
     char *tmp = new char[size + 1];
-    file.read(tmp, size);
+    if (file.read(tmp, size) != 1)
+    {
+        delete[] tmp;
+        return false;
+    }
     tmp[size] = '\0';
     bool result = parseColorMaps(tmp, colorMaps);
     delete[] tmp;
     return result;
 }
 
-bool parseColorMaps(char *tmp, ColorMaps &colorMaps)
+void clearColorMaps(ColorMaps &colorMaps)
 {
     // clear maps
     colorMaps.godMode.clear();
     colorMaps.rage.clear();
     colorMaps.sugarRush.clear();
+}
 
+bool parseColorMaps(char *tmp, ColorMaps &colorMaps)
+{
+    clearColorMaps(colorMaps);
     std::string section;
     char *p = tmp;
     int line = 1;

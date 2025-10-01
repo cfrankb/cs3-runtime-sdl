@@ -44,7 +44,7 @@ public:
     enum
     {
         TYPE_NONE,
-        TYPE_OGG,
+        TYPE_PRELOAD,
         TYPE_STREAM
     };
 

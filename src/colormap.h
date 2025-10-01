@@ -30,5 +30,6 @@ struct ColorMaps
     colorMap_t rage;
 };
 
+void clearColorMaps(ColorMaps &colorMaps);
 bool parseColorMaps(IFile &file, ColorMaps &colorMaps);
 bool parseColorMaps(char *tmp, ColorMaps &colorMaps);

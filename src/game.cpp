@@ -233,7 +233,6 @@ void CGame::consume()
     int x = m_player.getX();
     int y = m_player.getY();
     uint8_t attr = m_map.getAttr(x, y);
-
     m_map.setAttr(x, y, 0);
     if (attr == ATTR_FREEZE_TRAP)
     {
@@ -372,7 +371,7 @@ void CGame::resetSugar()
  */
 void CGame::decTimers()
 {
-    std::vector<GameStat> stats = {
+    constexpr const GameStat stats[] = {
         S_GOD_MODE_TIMER,
         S_EXTRA_SPEED_TIMER,
         S_RAGE_TIMER,
@@ -390,7 +389,7 @@ void CGame::decTimers()
  */
 void CGame::resetStats()
 {
-    std::vector<GameStat> stats = {
+    constexpr const GameStat stats[] = {
         S_GOD_MODE_TIMER,
         S_EXTRA_SPEED_TIMER,
         S_RAGE_TIMER,

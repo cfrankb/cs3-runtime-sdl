@@ -59,7 +59,12 @@ uint8_t *readFile(const char *fname)
         fseek(sfile, 0, SEEK_SET);
         data = new uint8_t[size + 1];
         data[size] = 0;
-        readfile(data, size);
+        if (!readfile(data, size))
+        {
+            delete[] data;
+            LOGE("can't read data for %s\n", fname);
+            return nullptr;
+        }
         fclose(sfile);
     }
     else
@@ -108,7 +113,6 @@ bool processLevel(CMap &map, const char *fname)
     uint8_t *data = readFile(fname);
     if (data == nullptr)
     {
-        // delete[] data;
         LOGE("failed read: %s\n", fname);
         return false;
     }

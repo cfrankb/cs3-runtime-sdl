@@ -27,25 +27,16 @@
 class CFrame;
 class IFile;
 
-// FrameSet.h : header file
-//
-
-/////////////////////////////////////////////////////////////////////////////
-// CFrameSet
-
 class CFrameSet : public ISerial
 {
 public:
     CFrameSet();
+    ~CFrameSet();
     CFrameSet(CFrameSet *s);
 
-public:
-    int getSize();
-
-public:
+    size_t getSize();
     int operator++();
     int operator--();
-
     CFrame *operator[](int) const;
     CFrameSet &operator=(CFrameSet &s);
     int add(CFrame *pFrame);
@@ -58,8 +49,6 @@ public:
     void removeAll();
     bool extract(IFile &file, std::string *format = nullptr);
 
-    static char *ima2bitmap(char *ImaData, int len, int hei);
-    static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
     static bool isFriendFormat(const char *format);
     void move(int s, int t);
 
@@ -72,13 +61,16 @@ public:
     void assignNewUUID();
     void toSubset(CFrameSet &dest, int start, int end = -1);
 
-public:
-    ~CFrameSet();
-    virtual bool write(IFile &file);
-    virtual bool read(IFile &file);
-    int m_nCurrFrame;
+    bool write(IFile &file) override;
+    bool read(IFile &file) override;
+
+    void set(const int i, CFrame *frame);
+    void reserve(int n);
+    int currFrame();
+    void setCurrFrame(int curr);
 
 private:
+    int m_nCurrFrame;
     enum
     {
         OBL_VERSION = 0x501,
@@ -93,6 +85,8 @@ private:
 
     bool write0x501(IFile &file);
     bool read0x501(IFile &file, int size);
+    static char *ima2bitmap(char *ImaData, int len, int hei);
+    static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
 
     std::string m_lastError;
     std::vector<CFrame *> m_arrFrames;
