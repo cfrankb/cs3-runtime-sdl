@@ -46,7 +46,7 @@ bool read_data_in(CFrameSet &fs, const char *filepath)
 
     if (!fs.extract(file))
     {
-        LOGE("can't extract from %s\n", filepath);
+        LOGE("can't extract from %s: %s\n", filepath, fs.getLastError());
         return false;
     }
     file.close();

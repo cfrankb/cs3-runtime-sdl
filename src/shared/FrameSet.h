@@ -56,8 +56,6 @@ public:
     void clear();
     void removeAll();
     bool extract(IFile &file);
-
-    static bool isFriendFormat(const char *format);
     void move(int s, int t);
 
     const char *getLastError() const;
@@ -90,18 +88,22 @@ private:
         COLOR_INDEX_OFFSET = -16,
         COLOR_INDEX_OFFSET_NONE = 0,
         OBL3_GRANULAR = 16,
+        MAX_IMAGES = 1024,
+        MAX_IMAGE_SIZE = 256,
+        TAG_KEY_MAX = 32,
+        TAG_VAL_MAX = 1024,
     };
 
     bool writeSolid(IFile &file);
     bool readSolid(IFile &file, int size);
     static std::unique_ptr<char[]> ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
-    bool importIMA(IFile &file, const long org);
-    bool importIMC1(IFile &file, const long org);
-    bool importGE96(IFile &file, const long org);
-    bool importOBL3(IFile &file, const long org);
-    bool importOBL4(IFile &file, const long org);
-    bool importOBL5(IFile &file, const long org);
+    bool importIMA(IFile &file, const long org = 0);
+    bool importIMC1(IFile &file, const long org = 0);
+    bool importGE96(IFile &file, const long org = 0);
+    bool importOBL3(IFile &file, const long org = 0);
+    bool importOBL4(IFile &file, const long org = 0);
+    bool importOBL5(IFile &file, const long org = 0);
 
     std::string m_lastError;
     std::vector<CFrame *> m_arrFrames;

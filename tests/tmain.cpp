@@ -84,7 +84,5 @@ int main(int argc, char *args[])
     {
         LOGI("###### completed\n");
     }
-
-    LOGI("all done\n");
     return failed != 0;
 }
