@@ -40,10 +40,8 @@ CSndSDL::CSndSDL()
 
 CSndSDL::~CSndSDL()
 {
-    LOGI("fdfdfdf3434");
     forget();
-    LOGI("fdfdfdf3434xxxxx");
-    // Mix_CloseAudio();
+    Mix_CloseAudio();
 }
 
 void CSndSDL::forget()

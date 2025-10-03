@@ -34,52 +34,6 @@
 constexpr const char *INPUT_FILE = "tests/in/annie.obl";
 constexpr const char *OUTPUT_FILE = "tests/out/annie.obl";
 
-bool compareFiles(const char *f1, const char *f2)
-{
-    auto size1 = getFileSize(f1);
-    auto size2 = getFileSize(f2);
-
-    if (size1 != size2)
-    {
-        LOGE("file size mismatch: %ld, %ld\n",
-             size1, size2);
-        return false;
-    }
-
-    FILE *sfile1 = fopen(f1, "rb");
-    if (!sfile1)
-    {
-        LOGE("can't read: %s\n", f1);
-        return false;
-    }
-
-    FILE *sfile2 = fopen(f2, "rb");
-    if (!sfile2)
-    {
-        fclose(sfile1);
-        LOGE("can't read: %s\n", f2);
-        return false;
-    }
-
-    char *buf1 = new char[size1];
-    char *buf2 = new char[size2];
-    fread(buf1, size1, 1, sfile1);
-    fread(buf2, size2, 1, sfile2);
-
-    for (size_t i = 0; i < size1; ++i)
-    {
-        if (buf1[i] != buf2[i])
-        {
-            LOGE("file mismatch at offset: %ld, %.2x %.2x", i, buf1[i], buf2[i]);
-            delete[] buf1;
-            delete[] buf2;
-            return false;
-        }
-    }
-
-    return true;
-}
-
 bool test_png_magic()
 {
     CFrameSet fs;
@@ -99,9 +53,8 @@ bool test_png_magic()
 
     file.close();
 
-    uint8_t *data;
-    int size;
-    if (!fs.toPng(data, size))
+    std::vector<uint8_t> png;
+    if (!fs.toPng(png))
     {
         LOGE("cannot convert to png\n");
         return false;
@@ -113,20 +66,13 @@ bool test_png_magic()
         return false;
     }
 
-    if (file.write(data, size) != 1)
+    if (file.write(png.data(), png.size()) != 1)
     {
         LOGE("failed to write file: %s\n", OUTPUT_FILE);
         return false;
     }
 
     file.close();
-
-    if (getFileSize(INPUT_FILE) != getFileSize(OUTPUT_FILE))
-    {
-        LOGE("file size mismatch: %ld; expecting  %ld\n",
-             getFileSize(INPUT_FILE), getFileSize(OUTPUT_FILE));
-        return false;
-    }
 
     if (!compareFiles(INPUT_FILE, OUTPUT_FILE))
     {

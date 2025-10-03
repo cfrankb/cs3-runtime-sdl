@@ -116,7 +116,7 @@ namespace AssetMan
     data_t read(const std::string &filepath, bool terminator)
     {
         data_t data;
-#ifdef __ANDROID__
+#if defined(__ANDROID__)
         size_t size;
         uint8_t *ptr = readBinary(filepath.c_str(), size);
         if (!ptr)

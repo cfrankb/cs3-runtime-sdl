@@ -16,12 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-// FrameSet.cpp : implementation file
-//
 #include <cstring>
 #include <cstdio>
 #include <cstdint>
 #include <set>
+#include <memory>
 #include "FrameSet.h"
 #include "Frame.h"
 #include <zlib.h>
@@ -69,6 +68,14 @@ static const PIXEL g_original_palette[] = {
     0xff2f432f, 0xff33432f, 0xff37432f, 0xff3f432f, 0xff43432f, 0xff433f2f, 0xff43372f, 0xff43332f,
     0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000, 0xff000000};
 
+constexpr const char FORMAT_OBL3[] = "OBL3";
+constexpr const char FORMAT_OBL4[] = "OBL4";
+constexpr const char FORMAT_OBL5[] = "OBL5";
+constexpr const char FORMAT_GE96[] = "GE96";
+constexpr const char FORMAT_IMC1[] = "IMC1";
+constexpr const char FORMAT_PNG[] = "PNG";
+constexpr const char FORMAT_IMA[] = "IMA";
+
 CFrameSet::CFrameSet()
 {
     m_name = "";
@@ -97,7 +104,7 @@ CFrameSet::~CFrameSet()
     clear();
 }
 
-bool CFrameSet::write0x501(IFile &file)
+bool CFrameSet::writeSolid(IFile &file)
 {
     long totalSize = 0;
     for (size_t i = 0; i < getSize(); ++i)
@@ -107,9 +114,8 @@ bool CFrameSet::write0x501(IFile &file)
     }
 
     // OBL5 IMAGESET HEADER
-
-    char *buffer = new char[totalSize];
-    char *ptr = buffer;
+    std::vector<uint8_t> buffer(totalSize);
+    uint8_t *ptr = buffer.data();
 
     // prepare OBL5Data
     // pack into a single pixmap
@@ -121,12 +127,10 @@ bool CFrameSet::write0x501(IFile &file)
         ptr += pixelBytes;
     }
 
-    uLong destSize;
-    uint8_t *dest;
-    const int err = compressData((uint8_t *)buffer, (uLong)totalSize, &dest, destSize);
+    std::vector<uint8_t> dest;
+    const int err = compressData(buffer, dest);
     if (err != Z_OK)
     {
-        delete[] buffer;
         char tmp[64];
         snprintf(tmp, sizeof(tmp), "CFrameSet::write0x501 error: %d", err);
         m_lastError = tmp;
@@ -134,6 +138,7 @@ bool CFrameSet::write0x501(IFile &file)
     }
 
     // OBL5 IMAGESET HEADER
+    const uLong destSize = dest.size();
     file.write(&destSize, sizeof(uint32_t));
 
     // IMAGE HEADER [0..n]
@@ -147,7 +152,7 @@ bool CFrameSet::write0x501(IFile &file)
     }
 
     // OBL5 DATA
-    file.write(dest, destSize);
+    file.write(dest.data(), destSize);
 
     // TAG COUNT
     int count = 0;
@@ -167,37 +172,55 @@ bool CFrameSet::write0x501(IFile &file)
         }
     }
 
-    delete[] buffer;
-    delete[] dest;
     return true;
 }
 
 bool CFrameSet::write(IFile &file)
 {
-    const int version = OBL_VERSION;
-    const size_t size = m_arrFrames.size();
-    file.write("OBL5", 4);
-    file.write(&size, 4);
-    file.write(&version, 4);
+    return write(file, DEFAULT_OBL5_FORMAT);
+}
 
-    switch (version)
+bool CFrameSet::write(IFile &file, const Format format)
+{
+    const size_t size = m_arrFrames.size();
+    if (file.write("OBL5", ID_SIG_LEN) != IFILE_OK)
+    {
+        LOGE("failed to write OBL5 id to file");
+        return false;
+    }
+    if (file.write(&size, sizeof(uint32_t)) != IFILE_OK)
+    {
+        LOGE("failed to write OBL5 size to file");
+        return false;
+    }
+    if (file.write(&format, sizeof(uint32_t)) != IFILE_OK)
+    {
+        LOGE("failed to write OBL5 format to file");
+        return false;
+    }
+
+    switch (format)
     {
 
-    case 0x500:
+    case OBL5_UNPACKED:
         // original version
         for (size_t i = 0; i < getSize(); ++i)
         {
-            m_arrFrames[i]->write(file);
+            if (!m_arrFrames[i]->write(file))
+            {
+                LOGE("failed to write OBL5 frame %d to file", i);
+                return false;
+            }
         }
         break;
 
-    case 0x501:
-        // packed
-        return write0x501(file);
+    case OBL5_SOLID:
+        // packed (solid compression)
+        return writeSolid(file);
 
     default:
         char tmp[64];
-        snprintf(tmp, sizeof(tmp), "unknown OBL5 version: %x", version);
+        snprintf(tmp, sizeof(tmp), "unknown OBL5 format: %x", format);
         m_lastError = tmp;
         return false;
     }
@@ -205,15 +228,15 @@ bool CFrameSet::write(IFile &file)
     return true;
 }
 
-bool CFrameSet::read0x501(IFile &file, int size)
+bool CFrameSet::readSolid(IFile &file, int size)
 {
     // OBL5 IMAGESET HEADER
     long srcSize = 0;
     file.read(&srcSize, sizeof(uint32_t));
 
     long totalSize = 0;
-    int *len = new int[size];
-    int *hei = new int[size];
+    std::vector<int> len(size);
+    std::vector<int> hei(size);
 
     // IMAGE HEADER [0..n]
     // read image sizes
@@ -226,25 +249,23 @@ bool CFrameSet::read0x501(IFile &file, int size)
         totalSize += sizeof(PIXEL) * len[n] * hei[n];
     }
 
-    char *buffer = new char[totalSize];
-    char *ptr = buffer;
+    std::vector<char> buffer(totalSize);
+    char *ptr = buffer.data();
 
     // read OBL5Data (compressed)
-    uint8_t *srcBuffer = new uint8_t[srcSize];
-    file.read(srcBuffer, srcSize);
+    std::vector<uint8_t> srcBuffer(srcSize);
+    file.read(srcBuffer.data(), srcSize);
 
     const int err = uncompress(
-        (uint8_t *)buffer,
+        (uint8_t *)buffer.data(),
         (uLong *)&totalSize,
-        (uint8_t *)srcBuffer,
+        (uint8_t *)srcBuffer.data(),
         (uLong)srcSize);
     if (err != Z_OK)
     {
         LOGE("err: %d\n", err);
         return false;
     }
-
-    delete[] srcBuffer;
 
     // add frames to frameSet
     m_arrFrames.reserve(size);
@@ -254,7 +275,6 @@ bool CFrameSet::read0x501(IFile &file, int size)
         const size_t dataSize = sizeof(PIXEL) * frame->len() * frame->hei();
         memcpy(frame->getRGB(), ptr, dataSize);
         frame->updateMap();
-        // m_arrFrames[n] = frame;
         m_arrFrames.push_back(frame);
         ptr += dataSize;
     }
@@ -272,20 +292,16 @@ bool CFrameSet::read0x501(IFile &file, int size)
         m_tags[key] = val;
     }
 
-    delete[] buffer;
-    delete[] len;
-    delete[] hei;
-
     return true;
 }
 
 bool CFrameSet::read(IFile &file)
 {
     bool result;
-    char signature[5];
-    signature[4] = 0;
-    file.read(signature, 4);
-    if (memcmp(signature, "OBL5", 4) != 0)
+    char signature[ID_SIG_LEN + 1];
+    signature[ID_SIG_LEN] = 0;
+    file.read(signature, ID_SIG_LEN);
+    if (memcmp(signature, FORMAT_OBL5, ID_SIG_LEN) != 0)
     {
         char tmp[128];
         snprintf(tmp, sizeof(tmp), "bad signature: %s", signature);
@@ -303,22 +319,19 @@ bool CFrameSet::read(IFile &file)
     switch (version)
     {
 
-    case 0x500:
+    case OBL5_UNPACKED:
         for (uint32_t n = 0; n < size; ++n)
         {
-            CFrame *temp = new CFrame;
-            if (!temp->read(file, version))
-            {
+            CFrame *frame = new CFrame;
+            if (!frame->read(file))
                 return false;
-            }
-            temp->updateMap();
-            add(temp);
+            add(frame);
         }
         result = true;
         break;
 
-    case 0x501:
-        result = read0x501(file, size);
+    case OBL5_SOLID:
+        result = readSolid(file, size);
         break;
 
     default:
@@ -435,7 +448,7 @@ void CFrameSet::removeAll()
     m_arrFrames.clear();
 }
 
-char *CFrameSet::ima2bitmap(char *ImaData, int len, int hei)
+std::unique_ptr<char[]> CFrameSet::ima2bitmap(char *ImaData, int len, int hei)
 {
     int x;
     int y;
@@ -443,22 +456,28 @@ char *CFrameSet::ima2bitmap(char *ImaData, int len, int hei)
     int y2;
 
     if (ImaData == nullptr)
+    {
+        LOGE("ImaData == nullptr");
         return nullptr;
+    }
 
-    char *dest = new char[len * hei * 64];
+    std::unique_ptr<char[]> dest(new char[len * hei * FNT_SIZE * FNT_SIZE]);
     if (dest == nullptr)
+    {
+        LOGE("dest == nullptr");
         return nullptr;
+    }
 
     for (y = 0; y < hei; y++)
     {
         for (x = 0; x < len; x++)
         {
-            for (y2 = 0; y2 < 8; y2++)
+            for (y2 = 0; y2 < FNT_SIZE; y2++)
             {
-                for (x2 = 0; x2 < 8; x2++)
+                for (x2 = 0; x2 < FNT_SIZE; x2++)
                 {
-                    *(dest + x * 8 + x2 + (y * 8 + y2) * len * 8) =
-                        *(ImaData + (x + y * len) * 64 + x2 + y2 * 8);
+                    dest[x * FNT_SIZE + x2 + (y * FNT_SIZE + y2) * len * FNT_SIZE] =
+                        *(ImaData + (x + y * len) * FNT_SIZE * FNT_SIZE + x2 + y2 * FNT_SIZE);
                 }
             }
         }
@@ -482,7 +501,49 @@ void CFrameSet::bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int er
     }
 }
 
-bool CFrameSet::extract(IFile &file, std::string *out_format)
+bool CFrameSet::extract(IFile &file)
+{
+    const auto org = file.tell(); // save stream origin
+    const uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    char id[sizeof(pngSig)];
+    if (file.read(id, sizeof(id)) != IFILE_OK)
+    {
+        m_lastError = "failed to read file header";
+        return false;
+    }
+    m_lastError = "";
+
+    if (memcmp(id, FORMAT_OBL3, ID_SIG_LEN) == 0)
+    {
+        return importOBL3(file, org);
+    }
+    else if (memcmp(id, FORMAT_OBL4, ID_SIG_LEN) == 0)
+    {
+        return importOBL4(file, org);
+    }
+    else if (memcmp(id, FORMAT_OBL5, ID_SIG_LEN) == 0)
+    {
+        return importOBL5(file, org);
+    }
+    else if (memcmp(id, FORMAT_GE96, ID_SIG_LEN) == 0)
+    {
+        return importGE96(file, org);
+    }
+    else if (memcmp(id, FORMAT_IMC1, ID_SIG_LEN) == 0)
+    {
+        return importIMC1(file, org);
+    }
+    else if (memcmp(id, pngSig, sizeof(pngSig)) == 0)
+    {
+        return parsePNG(*this, file, org);
+    }
+    else
+    {
+        return importIMA(file, org);
+    }
+}
+
+bool CFrameSet::importIMA(IFile &file, const long org)
 {
     // IMA_FORMAT
     struct USER_IMAHEADER
@@ -490,7 +551,30 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         char len;
         char hei;
     };
+    //    uint32_t size = 1;
+    int fileSize = file.getSize();
+    USER_IMAHEADER imaHead;
+    int hdrSize = static_cast<int>(sizeof(USER_IMAHEADER));
+    file.seek(org);
+    file.read(&imaHead, hdrSize);
+    int dataSize = imaHead.len * imaHead.hei * FNT_SIZE * FNT_SIZE;
+    if ((fileSize - hdrSize) != dataSize)
+    {
+        m_lastError = "this is not a valid .ima file";
+        return false;
+    }
+    CFrame *frame = new CFrame(imaHead.len * FNT_SIZE, imaHead.hei * FNT_SIZE);
+    std::vector<char> pIMA(dataSize);
+    file.read(pIMA.data(), dataSize);
+    std::unique_ptr<char[]> bitmap = ima2bitmap(pIMA.data(), imaHead.len, imaHead.hei);
+    bitmap2rgb(bitmap.get(), frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET_NONE);
+    frame->updateMap();
+    add(frame);
+    return true;
+}
 
+bool CFrameSet::importIMC1(IFile &file, const long org)
+{
     struct USER_IMC1HEADER
     {
         char Id[ID_SIG_LEN]; // IMC1
@@ -499,6 +583,49 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         int SizeData;
     };
 
+    USER_IMC1HEADER imc1Head;
+    file.seek(org);
+    // this is done in two steps because the
+    // IMC1 structure doesn't align properly in 32bits
+    file.read(&imc1Head, 6);
+    file.read(&imc1Head.SizeData, sizeof(imc1Head.SizeData)); // 4
+    uint8_t *ptrIMC1 = new uint8_t[imc1Head.SizeData];
+    file.read(ptrIMC1, imc1Head.SizeData);
+    uint8_t *ptr = new uint8_t[imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE];
+    memset(ptr, 0, imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE);
+    uint8_t *xptr = ptr;
+    uint8_t *xptrIMC1 = ptrIMC1;
+    for (int cpt = 0; cpt < imc1Head.SizeData - 1;)
+    {
+        if (*ptrIMC1 == 0xff)
+        {
+            for (int loop = ptrIMC1[2] + ptrIMC1[3] * 256; loop; loop--, ptr++)
+            {
+                *ptr = ptrIMC1[1];
+            }
+            ptrIMC1 += 4;
+            cpt += 4;
+        }
+        else
+        {
+            *ptr = *ptrIMC1;
+            ptr++;
+            ptrIMC1++;
+            cpt++;
+        }
+    }
+    CFrame *frame = new CFrame(imc1Head.len * FNT_SIZE, imc1Head.hei * FNT_SIZE);
+    std::unique_ptr<char[]> bitmap = ima2bitmap((char *)xptr, imc1Head.len, imc1Head.hei);
+    bitmap2rgb(bitmap.get(), frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET_NONE);
+    frame->updateMap();
+    add(frame);
+    delete[] xptrIMC1;
+    delete[] xptr;
+    return true;
+}
+
+bool CFrameSet::importGE96(IFile &file, const long org)
+{
     struct USER_MCX
     {
         uint32_t PtrPrev;
@@ -519,6 +646,101 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         uint32_t PtrFirst;
     };
 
+    file.seek(org);
+    USER_MCXHEADER mcxHead;
+    file.read(&mcxHead, sizeof(USER_MCXHEADER));
+    // uint32_t size = mcxHead.NbrImages;
+    for (int i = 0; i < mcxHead.NbrImages; ++i)
+    {
+        const int byteSize = GE96_TILE_SIZE * GE96_TILE_SIZE;
+        CFrame *frame = new CFrame(GE96_TILE_SIZE, GE96_TILE_SIZE);
+        std::vector<char> bitmap(byteSize);
+        USER_MCX mcx;
+        file.read(&mcx, sizeof(USER_MCX));
+        memcpy(bitmap.data(), &mcx.ImageData[0][0], byteSize);
+        bitmap2rgb(bitmap.data(), frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
+        frame->updateMap();
+        add(frame);
+    }
+    return true;
+}
+
+bool CFrameSet::importOBL5(IFile &file, const long org)
+{
+    CFrameSet frameSet;
+    file.seek(org);
+    if (frameSet.read(file))
+    {
+        size_t size = frameSet.getSize();
+        m_arrFrames.reserve(size);
+        for (size_t i = 0; i < size; ++i)
+        {
+            frameSet[i]->updateMap();
+            m_arrFrames.push_back(frameSet[i]);
+        }
+        frameSet.removeAll();
+    }
+    else
+    {
+        m_lastError = "unsupported OBL5 version";
+        return false;
+    }
+    return true;
+}
+
+bool CFrameSet::importOBL4(IFile &file, const long org)
+{
+    int32_t size = 0;
+    file.seek(org + ID_SIG_LEN);
+    int mode;
+    file >> size;
+    file >> mode;
+    m_arrFrames.reserve(size);
+    for (int i = 0; i < size; ++i)
+    {
+        int len;
+        int hei;
+        file >> len;
+        file >> hei;
+        CFrame *frame = new CFrame(len, hei);
+        int mapped;
+        file >> mapped;
+        std::vector<char> bitmap(len * hei);
+        if (mode != CFrame::MODE_ZLIB_ALPHA)
+        {
+            if (file.read(bitmap.data(), frame->len() * frame->hei()) != IFILE_OK)
+            {
+                m_lastError = "read error for OBL4";
+                return false;
+            }
+        }
+        else
+        {
+            uint32_t nSrcLen = 0;
+            file.read(&nSrcLen, sizeof(nSrcLen));
+            std::vector<uint8_t> pSrc(nSrcLen);
+            file.read(pSrc.data(), nSrcLen);
+            uLong nDestLen = frame->len() * frame->hei();
+            int err = uncompress(
+                (uint8_t *)bitmap.data(),
+                (uLong *)&nDestLen,
+                (uint8_t *)pSrc.data(),
+                (uLong)nSrcLen);
+            if (err != Z_OK)
+            {
+                m_lastError = "CFrameSet::extract zlib error";
+            }
+        }
+        frame->setRGB(new uint32_t[frame->len() * frame->hei()]);
+        bitmap2rgb(bitmap.data(), frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
+        frame->updateMap();
+        add(frame);
+    }
+    return true;
+}
+
+bool CFrameSet::importOBL3(IFile &file, const long org)
+{
     typedef struct
     {
         uint32_t PtrPrev;
@@ -572,207 +794,25 @@ bool CFrameSet::extract(IFile &file, std::string *out_format)
         char szCopyrights[1024];
     };
 
-    const auto org = file.tell();
-    const uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
-    char id[sizeof(pngSig)];
-    if (file.read(id, sizeof(id)) != IFILE_OK)
+    file.seek(org);
+    USER_OBL3HEADER oblHead;
+    file.read(&oblHead, sizeof(USER_OBL3HEADER));
+    // uint32_t size = oblHead.iNbrImages;
+    for (int i = 0; i < (int)oblHead.iNbrImages; ++i)
     {
-        m_lastError = "failed to read file header";
-        return false;
-    }
-    int size = 0;
-    std::string format = "NaN";
-    m_lastError = "";
-    if (memcmp(id, "OBL3", ID_SIG_LEN) == 0)
-    {
-        format = "OBL3";
-        file.seek(org);
-        USER_OBL3HEADER oblHead;
-        file.read(&oblHead, sizeof(USER_OBL3HEADER));
-        size = oblHead.iNbrImages;
-        for (int i = 0; i < (int)oblHead.iNbrImages; ++i)
-        {
-            CFrame *frame = new CFrame(oblHead.iLen * 16, oblHead.iHei * 16);
-            char *bitmap = new char[oblHead.iLen * 16 * oblHead.iHei * 16];
-            USER_OBL3 obl;
-            file.read(&obl, sizeof(USER_OBL3));
-            file.read(bitmap, oblHead.iLen * 16 * oblHead.iHei * 16);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
-            frame->updateMap();
-            add(frame);
-            delete[] bitmap;
-        }
-    }
-    else if (memcmp(id, "OBL4", ID_SIG_LEN) == 0)
-    {
-        format = "OBL4";
-        file.seek(org + ID_SIG_LEN);
-        int mode;
-        file >> size;
-        file >> mode;
-        m_arrFrames.reserve(size);
-        for (int i = 0; i < size; ++i)
-        {
-            int len;
-            int hei;
-            file >> len;
-            file >> hei;
-            CFrame *frame = new CFrame(len, hei);
-            int mapped;
-            file >> mapped;
-            char *bitmap = new char[len * hei];
-            if (mode != CFrame::MODE_ZLIB_ALPHA)
-            {
-                file.read(bitmap, frame->len() * frame->hei());
-            }
-            else
-            {
-                uint32_t nSrcLen = 0;
-                file.read(&nSrcLen, sizeof(nSrcLen));
-                uint8_t *pSrc = new uint8_t[nSrcLen];
-                file.read(pSrc, nSrcLen);
-                uLong nDestLen = frame->len() * frame->hei();
-                int err = uncompress(
-                    (uint8_t *)bitmap,
-                    (uLong *)&nDestLen,
-                    (uint8_t *)pSrc,
-                    (uLong)nSrcLen);
-                if (err)
-                {
-                    m_lastError = "CFrameSet::extract zlib error";
-                }
-                delete[] pSrc;
-            }
-            frame->setRGB(new uint32_t[frame->len() * frame->hei()]);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
-            frame->updateMap();
-            add(frame);
-            delete[] bitmap;
-        }
-    }
-    else if (memcmp(id, "OBL5", ID_SIG_LEN) == 0)
-    {
-        CFrameSet frameSet;
-        file.seek(org);
-        if (frameSet.read(file))
-        {
-            size = frameSet.getSize();
-            m_arrFrames.reserve(size);
-            for (int i = 0; i < size; ++i)
-            {
-                frameSet[i]->updateMap();
-                m_arrFrames.push_back(frameSet[i]);
-                // TODO: add map if this is ever implemented
-            }
-            frameSet.removeAll();
-            format = "OBL5";
-        }
-        else
-        {
-            m_lastError = "unsupported OBL5 version";
-            return false;
-        }
-    }
-    else if (memcmp(id, "GE96", ID_SIG_LEN) == 0)
-    {
-        format = "GE96";
-        file.seek(org);
-        USER_MCXHEADER mcxHead;
-        file.read(&mcxHead, sizeof(USER_MCXHEADER));
-        size = mcxHead.NbrImages;
-        for (int i = 0; i < mcxHead.NbrImages; ++i)
-        {
-            CFrame *frame = new CFrame(GE96_TILE_SIZE, GE96_TILE_SIZE);
-            char *bitmap = new char[GE96_TILE_SIZE * GE96_TILE_SIZE];
-            USER_MCX mcx;
-            file.read(&mcx, sizeof(USER_MCX));
-            memcpy(bitmap, &mcx.ImageData[0][0], GE96_TILE_SIZE * GE96_TILE_SIZE);
-            bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
-            frame->updateMap();
-            add(frame);
-            delete[] bitmap;
-        }
-    }
-    else if (memcmp(id, "IMC1", ID_SIG_LEN) == 0)
-    {
-        format = "IMC1";
-        size = 1;
-        USER_IMC1HEADER imc1Head;
-        file.seek(org);
-        // this is done in two steps because the
-        // IMC1 structure doesn't align properly in 32bits
-        file.read(&imc1Head, 6);
-        file.read(&imc1Head.SizeData, sizeof(imc1Head.SizeData)); // 4
-        uint8_t *ptrIMC1 = new uint8_t[imc1Head.SizeData];
-        file.read(ptrIMC1, imc1Head.SizeData);
-        uint8_t *ptr = new uint8_t[imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE];
-        memset(ptr, 0, imc1Head.len * imc1Head.hei * FNT_SIZE * FNT_SIZE);
-        uint8_t *xptr = ptr;
-        uint8_t *xptrIMC1 = ptrIMC1;
-        for (int cpt = 0; cpt < imc1Head.SizeData - 1;)
-        {
-            if (*ptrIMC1 == 0xff)
-            {
-                for (int loop = ptrIMC1[2] + ptrIMC1[3] * 256; loop; loop--, ptr++)
-                {
-                    *ptr = ptrIMC1[1];
-                }
-                ptrIMC1 += 4;
-                cpt += 4;
-            }
-            else
-            {
-                *ptr = *ptrIMC1;
-                ptr++;
-                ptrIMC1++;
-                cpt++;
-            }
-        }
-        CFrame *frame = new CFrame(imc1Head.len * FNT_SIZE, imc1Head.hei * FNT_SIZE);
-        char *bitmap = ima2bitmap((char *)xptr, imc1Head.len, imc1Head.hei);
-        bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET_NONE);
+        const int pixelLen = oblHead.iLen * OBL3_GRANULAR;
+        const int pixelHei = oblHead.iHei * OBL3_GRANULAR;
+        const int byteSize = pixelLen * pixelHei;
+        CFrame *frame = new CFrame(pixelLen, pixelHei);
+        std::vector<char> bitmap(byteSize);
+        USER_OBL3 obl;
+        file.read(&obl, sizeof(USER_OBL3));
+        file.read(bitmap.data(), byteSize);
+        bitmap2rgb(bitmap.data(), frame->getRGB(), frame->len(), frame->hei(), COLOR_INDEX_OFFSET);
         frame->updateMap();
         add(frame);
-        delete[] xptrIMC1;
-        delete[] xptr;
-        delete[] bitmap;
     }
-    else if (memcmp(id, pngSig, sizeof(pngSig)) == 0)
-    {
-        format = "PNG";
-        return parsePNG(*this, file, org);
-    }
-    else
-    {
-        format = "IMA";
-        int fileSize = file.getSize();
-        USER_IMAHEADER imaHead;
-        int hdrSize = static_cast<int>(sizeof(USER_IMAHEADER));
-        file.seek(org);
-        file.read(&imaHead, hdrSize);
-        int dataSize = imaHead.len * imaHead.hei * FNT_SIZE * FNT_SIZE;
-        if ((fileSize - hdrSize) != dataSize)
-        {
-            m_lastError = "this is not a valid .ima file";
-            return false;
-        }
-        size = 1;
-        CFrame *frame = new CFrame(imaHead.len * FNT_SIZE, imaHead.hei * FNT_SIZE);
-        char *pIMA = new char[dataSize];
-        file.read(pIMA, dataSize);
-        char *bitmap = ima2bitmap(pIMA, imaHead.len, imaHead.hei);
-        bitmap2rgb(bitmap, frame->getRGB(), frame->len(), frame->hei(), 0);
-        frame->updateMap();
-        add(frame);
-        delete[] pIMA;
-        delete[] bitmap;
-    }
-
-    if (out_format)
-    {
-        *out_format = format;
-    }
-    return size != 0;
+    return true;
 }
 
 const char *CFrameSet::getLastError() const
@@ -783,8 +823,8 @@ const char *CFrameSet::getLastError() const
 bool CFrameSet::isFriendFormat(const char *format)
 {
     std::set<std::string> friends = {
-        "IMC1", "IMA", "GE96",
-        "OBL3", "OBL4", "OBL5"};
+        FORMAT_IMC1, FORMAT_IMA, FORMAT_GE96,
+        FORMAT_OBL3, FORMAT_OBL4, FORMAT_OBL5};
     return friends.find(format) != friends.end();
 }
 
@@ -794,17 +834,18 @@ void CFrameSet::move(int s, int t)
     insertAt(t, f);
 }
 
-bool CFrameSet::toPng(unsigned char *&data, int &outSize)
+bool CFrameSet::toPng(std::vector<uint8_t> &png)
 {
+    png.clear();
     const size_t size = m_arrFrames.size();
     if (size == 1)
     {
-        return m_arrFrames[0]->toPng(data, outSize);
+        return m_arrFrames[0]->toPng(png);
     }
     else if (size > 1)
     {
-        uint16_t *xx = new uint16_t[size];
-        uint16_t *yy = new uint16_t[size];
+        std::vector<uint16_t> xx(size);
+        std::vector<uint16_t> yy(size);
         int width = 0;
         int height = 0;
         for (size_t i = 0; i < size; ++i)
@@ -815,7 +856,7 @@ bool CFrameSet::toPng(unsigned char *&data, int &outSize)
             yy[i] = m_arrFrames[i]->hei();
         }
 
-        CFrame *frame = new CFrame(width, height);
+        std::unique_ptr<CFrame> frame = std::make_unique<CFrame>(width, height);
         CFrame &t = *frame;
         int mx = 0;
         for (size_t i = 0; i < size; ++i)
@@ -833,29 +874,19 @@ bool CFrameSet::toPng(unsigned char *&data, int &outSize)
 
         // prepare custom data to be injected
         int t_size = sizeof(CFrame::png_OBL5) + size * 2 * sizeof(uint16_t) + sizeof(uint32_t);
-        uint8_t *buf = new uint8_t[t_size];
-        memset(buf, '\0', t_size);
-        CFrame::png_OBL5 *obl5data = (CFrame::png_OBL5 *)buf;
+        std::vector<uint8_t> obl5t(t_size, '\0');
+        CFrame::png_OBL5 *obl5data = (CFrame::png_OBL5 *)obl5t.data();
         obl5data->Length = CFrame::toNet(t_size - 12);
         memcpy(obl5data->ChunkType, CFrame::getChunkType(), 4);
         obl5data->Version = 0;
         obl5data->Count = size;
-        memcpy(buf + sizeof(CFrame::png_OBL5),
-               xx, size * sizeof(uint16_t));
-        memcpy(buf + sizeof(CFrame::png_OBL5) + size * sizeof(uint16_t),
-               yy, size * sizeof(uint16_t));
+        memcpy(obl5t.data() + sizeof(CFrame::png_OBL5),
+               xx.data(), size * sizeof(uint16_t));
+        memcpy(obl5t.data() + sizeof(CFrame::png_OBL5) + size * sizeof(uint16_t),
+               yy.data(), size * sizeof(uint16_t));
 
         // inject obldata into png
-        frame->toPng(data, outSize, buf, t_size);
-        delete frame;
-        delete[] buf;
-        delete[] xx;
-        delete[] yy;
-    }
-    else
-    {
-        data = nullptr;
-        outSize = 0;
+        frame->toPng(png, obl5t);
     }
     return true;
 }

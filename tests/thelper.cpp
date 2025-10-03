@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <filesystem>
+#include "../src/logger.h"
 
 namespace fs = std::filesystem;
 
@@ -29,4 +30,51 @@ uint64_t getFileSize(const std::string &filename)
     {
         throw std::runtime_error("Error accessing file: " + std::string(e.what()));
     }
+}
+
+bool compareFiles(const char *f1, const char *f2)
+{
+    auto size1 = getFileSize(f1);
+    auto size2 = getFileSize(f2);
+
+    if (size1 != size2)
+    {
+        LOGE("file size mismatch: %ld, %ld [%s, %s]\n",
+             size1, size2, f1, f2);
+        return false;
+    }
+
+    FILE *sfile1 = fopen(f1, "rb");
+    if (!sfile1)
+    {
+        LOGE("can't read: %s\n", f1);
+        return false;
+    }
+
+    FILE *sfile2 = fopen(f2, "rb");
+    if (!sfile2)
+    {
+        fclose(sfile1);
+        LOGE("can't read: %s\n", f2);
+        return false;
+    }
+
+    char *buf1 = new char[size1];
+    char *buf2 = new char[size2];
+    fread(buf1, size1, 1, sfile1);
+    fread(buf2, size2, 1, sfile2);
+
+    for (size_t i = 0; i < size1; ++i)
+    {
+        if (buf1[i] != buf2[i])
+        {
+            LOGE("file mismatch at offset: %ld, %.2x %.2x [%s. %s]",
+                 i, buf1[i], buf2[i], f1, f2);
+            delete[] buf1;
+            delete[] buf2;
+            return false;
+        }
+    }
+
+    return true;
 }

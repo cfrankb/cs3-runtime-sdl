@@ -297,15 +297,13 @@ protected:
     uint8_t m_vjoyState[JOY_AIMS];
     uint8_t m_buttonState[Button_Count];
     uint32_t m_ticks = 0;
-    // CAnimator *m_animator;
     std::unique_ptr<CAnimator> m_animator;
-    CFrameSet *m_tiles = nullptr;
-    CFrameSet *m_animz = nullptr;
-    CFrameSet *m_users = nullptr;
+    std::unique_ptr<CFrameSet> m_tiles;
+    std::unique_ptr<CFrameSet> m_animz;
+    std::unique_ptr<CFrameSet> m_users;
     std::vector<uint8_t> m_fontData;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
-    // CRecorder *m_recorder = nullptr;
     std::unique_ptr<CRecorder> m_recorder;
     std::vector<std::string> m_helptext;
     int m_playerFrameOffset = 0;

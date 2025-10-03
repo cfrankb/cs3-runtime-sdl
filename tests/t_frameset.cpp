@@ -19,13 +19,21 @@
 #include "../src/shared/FrameSet.h"
 #include "../src/shared/FileWrap.h"
 #include "../src/logger.h"
+#include "thelper.h"
+#include <vector>
+#include <filesystem>
 
 constexpr const char *IN_HEADY_MCX = "tests/in/mcx/heady.mcx";
 constexpr const char *IN_HEADY_OBL4 = "tests/in/obl4/heady.obl";
 constexpr const char *IN_HEADY_OBL5 = "tests/in/obl5/heady.obl";
-constexpr const char *OUT_HEADY_PNG1 = "tests/out/heady1.png";
-constexpr const char *OUT_HEADY_PNG2 = "tests/out/heady2.png";
-constexpr const char *OUT_HEADY_PNG3 = "tests/out/heady3.png";
+constexpr const char *OUT_PATH = "tests/out/heady%s%s";
+
+enum Format
+{
+    PNG,
+    OBL5_UNPACKED,
+    OBL5_SOLID,
+};
 
 bool read_data_in(CFrameSet &fs, const char *filepath)
 {
@@ -36,7 +44,7 @@ bool read_data_in(CFrameSet &fs, const char *filepath)
         return false;
     }
 
-    if (!fs.extract(file, nullptr))
+    if (!fs.extract(file))
     {
         LOGE("can't extract from %s\n", filepath);
         return false;
@@ -45,7 +53,7 @@ bool read_data_in(CFrameSet &fs, const char *filepath)
     return true;
 }
 
-bool write_data_out(CFrameSet &fs, const char *filepath)
+bool write_data_out(CFrameSet &fs, const char *filepath, Format format)
 {
     CFileWrap file;
     if (!file.open(filepath, "wb"))
@@ -54,46 +62,138 @@ bool write_data_out(CFrameSet &fs, const char *filepath)
         return false;
     }
 
-    uint8_t *data;
-    int size;
-    if (!fs.toPng(data, size))
+    if (format == PNG)
     {
-        LOGE("can't convert to png\n");
-        return false;
+        std::vector<uint8_t> png;
+        if (!fs.toPng(png))
+        {
+            LOGE("can't convert to png\n");
+            return false;
+        }
+
+        if (file.write(png.data(), png.size()) != IFILE_OK)
+        {
+            LOGE("fail to write to %s\n", filepath);
+            return false;
+        }
+    }
+    else if (format == OBL5_SOLID)
+    {
+        if (!fs.write(file, CFrameSet::OBL5_SOLID))
+        {
+            LOGE("fail to write to %s\n", filepath);
+            return false;
+        }
+    }
+    else if (format == OBL5_UNPACKED)
+    {
+        if (!fs.write(file, CFrameSet::OBL5_UNPACKED))
+        {
+            LOGE("fail to write to %s\n", filepath);
+            return false;
+        }
+    }
+    else
+    {
+        LOGE("unknown format: %d\n", format);
+        return true;
     }
 
-    if (file.write(data, size) != IFILE_OK)
-    {
-        delete[] data;
-        LOGE("fail to write to %s\n", filepath);
-        return false;
-    }
-    delete[] data;
     file.close();
 
     return true;
 }
 
-bool do_pair(const char *source, const char *target)
+bool performDoubleBlind(CFrameSet &fs, const Format format, const char *out_path, const char *out_path2)
 {
+    // write out file
+    if (!write_data_out(fs, out_path, format))
+    {
+        LOGE("failed to write %s\n", out_path);
+        return false;
+    }
+
+    // read back file
+    CFrameSet fs2;
+    if (!read_data_in(fs2, out_path))
+    {
+        LOGE("failed to read %s\n", out_path);
+        return false;
+    }
+
+    // writeback file
+    if (!write_data_out(fs2, out_path2, PNG))
+    {
+        LOGE("failed to write %s\n", out_path2);
+        return false;
+    }
+
+    return true;
+}
+
+bool test_frameset_seq(const char *source, const char *name)
+{
+    std::vector<std::string> listOutFiles;
+    std::vector<std::string> refFiles;
+
     CFrameSet fs;
     if (!read_data_in(fs, source))
     {
         LOGE("failed to read %s\n", source);
         return false;
     }
-    if (!write_data_out(fs, target))
+
+    // plain reference png
+    char out_path[256];
+    char out_path2[256];
+    snprintf(out_path, sizeof(out_path), OUT_PATH, name, ".png");
+    if (!write_data_out(fs, out_path, PNG))
     {
-        LOGE("failed to write %s\n", target);
+        LOGE("failed to write %s\n", out_path);
         return false;
     }
+    refFiles.push_back(out_path);
+    listOutFiles.push_back(out_path);
+
+    snprintf(out_path, sizeof(out_path), OUT_PATH, name, "-obl5.obl");
+    snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5.png");
+
+    if (!performDoubleBlind(fs, OBL5_UNPACKED, out_path, out_path2))
+        return false;
+    listOutFiles.push_back(out_path);
+    listOutFiles.push_back(out_path2);
+    refFiles.push_back(out_path2);
+
+    snprintf(out_path, sizeof(out_path), OUT_PATH, name, "-obl5s.obl");
+    snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5s.png");
+    if (!performDoubleBlind(fs, OBL5_SOLID, out_path, out_path2))
+        return false;
+    listOutFiles.push_back(out_path);
+    listOutFiles.push_back(out_path2);
+    refFiles.push_back(out_path2);
+
+    if (!compareFiles(refFiles[0].c_str(), refFiles[1].c_str()))
+        return false;
+
+    if (!compareFiles(refFiles[0].c_str(), refFiles[2].c_str()))
+        return false;
+
+    // clean up
+    // for (const auto &path : listOutFiles)
+    //    std::filesystem::remove(path);
+
+    return true;
+}
+
+bool test_frameset_serializer()
+{
+    return test_frameset_seq(IN_HEADY_MCX, "mcx") &&
+           test_frameset_seq(IN_HEADY_OBL4, "obl4") &&
+           test_frameset_seq(IN_HEADY_OBL5, "obl5");
     return true;
 }
 
 bool test_frameset()
 {
-    return do_pair(IN_HEADY_MCX, OUT_HEADY_PNG1) &&
-           do_pair(IN_HEADY_OBL4, OUT_HEADY_PNG2) &&
-           do_pair(IN_HEADY_OBL5, OUT_HEADY_PNG3);
-    return true;
+    return test_frameset_serializer();
 }

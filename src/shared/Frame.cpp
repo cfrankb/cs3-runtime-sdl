@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <cstring>
 #include <algorithm>
 #include <zlib.h>
 #include "Frame.h"
@@ -33,25 +33,42 @@
 #include <cstdint>
 #include "logger.h"
 
-/////////////////////////////////////////////////////////////////////////////
-// CFrame
-
 CFrame::~CFrame()
 {
-    forget();
+    clear();
 }
 
+/// @brief check frame dimensions
+/// @return false if not a multiple of 8 pixels
+bool CFrame::checkSizes()
+{
+    if ((m_nLen & 7) != 0)
+    {
+        LOGW("len: %d is not a multiple of 8", m_nLen);
+    }
+    if ((m_nHei & 7) != 0)
+    {
+        LOGW("hei: %d is not a multiple of 8", m_nHei);
+    }
+    return ((m_nLen * m_nHei) & 7) != 0;
+}
+
+/// @brief Constructor
+/// @param p_nLen pixel lenght (must be multiple of 8)
+/// @param p_nHei pixel height (must be multiple of 8)
 CFrame::CFrame(int p_nLen, int p_nHei)
 {
     m_bCustomMap = false;
     m_nLen = p_nLen;
     m_nHei = p_nHei;
+    checkSizes();
 
     // generate blank bitmap
     m_rgb = new uint32_t[m_nLen * m_nHei];
     if (!m_rgb)
     {
         LOGE("failed memory allocation\n");
+        return;
     }
     memset(m_rgb, 0, m_nLen * m_nHei * 4);
 
@@ -59,41 +76,32 @@ CFrame::CFrame(int p_nLen, int p_nHei)
     m_map.resize(m_nLen, m_nHei);
     m_bCustomMap = false;
 
-    m_undoFrames = nullptr;
     m_undoSize = 0;
     m_undoPtr = 0;
 }
 
 CFrame::CFrame(CFrame *src)
 {
-    if (src)
-    {
-        m_nHei = src->m_nHei;
-        m_nLen = src->m_nLen;
-        m_rgb = new uint32_t[m_nLen * m_nHei];
-        m_map.resize(src->m_nLen, src->m_nHei);
-        m_bCustomMap = src->m_bCustomMap;
+    // Initialize
+    init();
 
-        if (src->m_rgb)
-        {
-            memcpy(m_rgb, src->m_rgb, m_nLen * m_nHei * sizeof(uint32_t));
-        }
-        else
-        {
-            // generate blank bitmap
-            memset(m_rgb, 0, m_nLen * m_nHei * sizeof(uint32_t));
-        }
+    if (src == nullptr)
+        return;
 
-        m_map = src->getMap();
-    }
+    m_nHei = src->m_nHei;
+    m_nLen = src->m_nLen;
+    checkSizes();
+    m_rgb = new uint32_t[m_nLen * m_nHei];
+    m_map.resize(src->m_nLen, src->m_nHei);
+    m_bCustomMap = src->m_bCustomMap;
+
+    if (src->m_rgb)
+        memcpy(m_rgb, src->m_rgb, m_nLen * m_nHei * sizeof(uint32_t));
     else
-    {
-        init();
-    }
-    // create undo buffer
-    m_undoFrames = nullptr;
-    m_undoSize = 0;
-    m_undoPtr = 0;
+        // generate blank bitmap
+        memset(m_rgb, 0, m_nLen * m_nHei * sizeof(uint32_t));
+
+    m_map = src->getMap();
 }
 
 CFrame &CFrame::operator=(const CFrame &src)
@@ -103,13 +111,9 @@ CFrame &CFrame::operator=(const CFrame &src)
     m_rgb = new uint32_t[m_nLen * m_nHei];
     m_map = src.getMap();
     if (src.getRGB())
-    {
         memcpy(m_rgb, src.getRGB(), m_nLen * m_nHei * sizeof(uint32_t));
-    }
     else
-    {
         memset(m_rgb, 0, m_nLen * m_nHei * sizeof(uint32_t));
-    }
 
     m_bCustomMap = src.m_bCustomMap;
     m_map = src.getMap();
@@ -123,55 +127,81 @@ void CFrame::init()
     m_nLen = 0;
     m_bCustomMap = false;
     m_rgb = nullptr;
+
+    // create undo buffer
+    m_undoSize = 0;
+    m_undoPtr = 0;
 }
 
-void CFrame::forget()
+void CFrame::clear()
 {
-    if (m_rgb != nullptr)
-    {
-        delete[] m_rgb;
-        m_rgb = nullptr;
-    }
+    delete[] m_rgb;
+    m_rgb = nullptr;
 
-    if (m_undoFrames)
+    for (int i = 0; i < m_undoSize; ++i)
     {
-        for (int i = 0; i < m_undoSize; ++i)
-        {
-            delete m_undoFrames[i];
-        }
-        delete[] m_undoFrames;
-        m_undoFrames = nullptr;
-        m_undoSize = 0;
-        m_undoPtr = 0;
+        delete m_undoFrames[i];
     }
+    m_undoFrames.clear();
+    m_undoSize = 0;
+    m_undoPtr = 0;
 
     m_nLen = 0;
     m_nHei = 0;
 }
 
+/// @brief serializes OBL5 0x500 only
+/// @param file
+/// @return
 bool CFrame::write(IFile &file)
 {
-    file.write(&m_nLen, 4);
-    file.write(&m_nHei, 4);
+    // this serializer creates format 0x500 only
+    // use CFrameSet serializer to create solid archive
+    constexpr const char errTmpl[] = "%s failed on file: %s";
+    if (file.write(&m_nLen, sizeof(uint32_t)) != IFILE_OK)
+    {
+        LOGE(errTmpl, __func__, "len");
+        return false;
+    }
+    if (file.write(&m_nHei, sizeof(uint32_t)) != IFILE_OK)
+    {
+        LOGE(errTmpl, __func__, "hei");
+        return false;
+    }
     // OBL5 0x500 expects this field to be 0
     // as it is reserved for future use.
     // int filler = 0;
-    file.write(&m_bCustomMap, 4);
-
-    if ((m_nLen > 0) && (m_nHei > 0))
+    if (file.write(&m_bCustomMap, sizeof(uint32_t)) != IFILE_OK)
     {
-        uLong nDestLen;
-        uint8_t *pDest;
-        int err = compressData((uint8_t *)m_rgb, 4 * m_nLen * m_nHei, &pDest, nDestLen);
+        LOGE(errTmpl, __func__, "filler");
+        return false;
+    }
+
+    if (m_nLen * m_nHei != 0)
+    {
+        std::vector<uint8_t> rData;
+        std::vector<uint8_t> cData;
+        const int rDataSize = sizeof(uint32_t) * m_nLen * m_nHei;
+        uint8_t *pixels = reinterpret_cast<uint8_t *>(m_rgb);
+        rData.assign(pixels, pixels + rDataSize);
+        const int err = compressData(rData, cData);
         if (err != Z_OK)
         {
             LOGE("CFrame::write error: %d\n", err);
             return false;
         }
 
-        file.write(&nDestLen, 4);
-        file.write(pDest, nDestLen);
-        delete[] pDest;
+        const uLong nDestLen = cData.size();
+        if (file.write(&nDestLen, sizeof(uint32_t)) != IFILE_OK)
+        {
+            LOGE(errTmpl, __func__, "destLen");
+            return false;
+        }
+        if (file.write(cData.data(), cData.size()) != IFILE_OK)
+        {
+            LOGE(errTmpl, __func__, "cData");
+            return false;
+        }
 
         if (m_bCustomMap)
         {
@@ -181,72 +211,70 @@ bool CFrame::write(IFile &file)
     return true;
 }
 
-bool CFrame::read(IFile &file, int version)
+/// @brief deserializes OBL5 0x500 only
+/// @param file
+/// @return
+bool CFrame::read(IFile &file)
 {
     // clear existing bitmap and map
-    if (m_rgb)
+    clear();
+
+    // read image size and customMap settings
+    if (file.read(&m_nLen, sizeof(uint32_t)) != IFILE_OK)
     {
-        delete[] m_rgb;
-        m_rgb = nullptr;
-    }
-
-    m_nLen = 0;
-    m_nHei = 0;
-
-    if (version == 0x500)
-    {
-        // read image size and customMap settings
-        file.read(&m_nLen, sizeof(m_nLen));
-        file.read(&m_nHei, sizeof(m_nHei));
-        //    int filler; // OBL5 0x500 expects this field to be 0
-        file.read(&m_bCustomMap, sizeof(m_bCustomMap));
-
-        if ((m_nLen > 0) && (m_nHei > 0))
-        {
-            // this image is not zero-length
-
-            uint32_t nSrcLen;
-            file.read(&nSrcLen, 4);
-
-            uint8_t *pSrc = new uint8_t[nSrcLen];
-            file.read(pSrc, nSrcLen);
-
-            uLong nDestLen = m_nLen * m_nHei * 4;
-
-            // create a new bitmap
-            m_rgb = new uint32_t[m_nLen * m_nHei];
-
-            int err = uncompress(
-                (uint8_t *)m_rgb,
-                (uLong *)&nDestLen,
-                (uint8_t *)pSrc,
-                (uLong)nSrcLen);
-
-            delete[] pSrc;
-
-            if (err)
-            {
-                LOGE("CFrame::read - decompr error: %d", err);
-                return false;
-            }
-
-            // create a new map
-            m_map.resize(m_nLen, m_nHei);
-            if (m_bCustomMap)
-            {
-                m_map.read(file);
-            }
-            else
-            {
-                updateMap();
-            }
-        }
-    }
-    else
-    {
-        LOGE("CFrame::read version (=%.4x) not supported\n", version);
         return false;
     }
+    if (file.read(&m_nHei, sizeof(uint32_t)) != IFILE_OK)
+    {
+        return false;
+    }
+    // OBL5 0x500 expects this field to be 0
+    if (file.read(&m_bCustomMap, sizeof(uint32_t)) != IFILE_OK)
+    {
+        return false;
+    }
+    if (m_bCustomMap != 0)
+    {
+        LOGE("OBL5 0x500 expects this field to be 0");
+        return false;
+    }
+
+    if (m_nLen * m_nHei != 0)
+    {
+        // this image is not zero-length
+        uint32_t nSrcLen;
+        if (file.read(&nSrcLen, sizeof(uint32_t)) != IFILE_OK)
+        {
+            return false;
+        }
+
+        // read compressed data from disk
+        std::vector<uint8_t> pSrc(nSrcLen);
+        if (file.read(pSrc.data(), nSrcLen) != IFILE_OK)
+        {
+            return false;
+        }
+
+        // create a new bitmap
+        uLong nDestLen = m_nLen * m_nHei * sizeof(uint32_t);
+        m_rgb = new uint32_t[m_nLen * m_nHei];
+
+        // decompress data
+        int err = uncompress(
+            (uint8_t *)m_rgb,
+            (uLong *)&nDestLen,
+            (uint8_t *)pSrc.data(),
+            (uLong)nSrcLen);
+
+        if (err != Z_OK)
+        {
+            LOGE("CFrame::read - decompr error: %d", err);
+            return false;
+        }
+    }
+    // create a new map
+    m_map.resize(m_nLen, m_nHei);
+    updateMap();
 
     return true;
 }
@@ -333,42 +361,39 @@ uint32_t CFrame::toNet(const uint32_t a)
     return b;
 }
 
-bool CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5size)
+bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data)
 {
     CCRC crc;
 
     // compress the data ....................................
     int scanLine = m_nLen * 4;
     uLong dataSize = (scanLine + 1) * m_nHei;
-    uint8_t *data = new uint8_t[dataSize];
+    std::vector<uint8_t> rdata(dataSize);
     for (int y = 0; y < m_nHei; ++y)
     {
-        uint8_t *d = data + y * (scanLine + 1);
+        uint8_t *d = rdata.data() + y * (scanLine + 1);
         *d = 0;
         memcpy(d + 1, m_rgb + y * m_nLen, scanLine);
     }
 
-    uint8_t *cData;
-    uLong cDataSize;
-    int err = compressData(data, dataSize, &cData, cDataSize);
+    std::vector<uint8_t> cData;
+    int err = compressData(rdata, cData);
     if (err != Z_OK)
     {
         LOGE("CFrame::toPng error: %d\n", err);
         return true;
     }
 
-    delete[] data;
-
+    const uLong cDataSize = cData.size();
     int cDataBlocks = cDataSize / pngChunkLimit;
     if (cDataSize % pngChunkLimit)
     {
         cDataBlocks++;
     }
 
-    totalSize = pngHeaderSize + png_IHDR_Size + 4 + cDataSize + 12 * cDataBlocks + sizeof(png_IEND) + obl5size;
-
-    png = new uint8_t[totalSize];
-    uint8_t *t = png;
+    const int totalSize = pngHeaderSize + png_IHDR_Size + 4 + cDataSize + 12 * cDataBlocks + sizeof(png_IEND) + obl5data.size();
+    png.resize(totalSize);
+    uint8_t *t = png.data();
 
     // png signature ---------------------------------------
     uint8_t sig[] = {137, 80, 78, 71, 13, 10, 26, 10};
@@ -415,7 +440,7 @@ bool CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
         uint8_t *chunkData = t;
         memcpy(t, "IDAT", 4);
         t += 4;
-        memcpy(t, cData + cDataOffset, chunkSize);
+        memcpy(t, cData.data() + cDataOffset, chunkSize);
         t += chunkSize;
         crc32 = toNet(crc.crc(chunkData, chunkSize + 4));
         memcpy(t, &crc32, 4);
@@ -426,9 +451,10 @@ bool CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
     } while (cDataLeft);
 
     // png_obLT
-    if (obl5size)
+    if (obl5data.size())
     {
-        memcpy(t, obl5data, obl5size);
+        const size_t obl5size = obl5data.size();
+        memcpy(t, obl5data.data(), obl5data.size());
         png_OBL5 &obl5 = *((png_OBL5 *)t);
         obl5.Length = toNet(obl5size - 12);
         uint32_t iCrc = toNet(crc.crc(t + 4, obl5size - 8));
@@ -442,7 +468,6 @@ bool CFrame::toPng(uint8_t *&png, int &totalSize, uint8_t *obl5data, int obl5siz
     memcpy(iend.ChunkType, "IEND", 4);
     iend.CRC = toNet(crc.crc((uint8_t *)"IEND", 4));
 
-    delete[] cData;
     return true;
 }
 
@@ -491,17 +516,17 @@ void CFrame::setTopPixelAsTranparency()
 void CFrame::updateMap()
 {
     m_map.resize(m_nLen, m_nHei);
-    int threhold = CSS3Map::GRID * CSS3Map::GRID / 4;
+    int threhold = CSS3Map::GRID_SIZE * CSS3Map::GRID_SIZE / 4;
     for (int y = 0; y < m_map.height(); ++y)
     {
         for (int x = 0; x < m_map.length(); ++x)
         {
             int data = 0;
-            for (int i = 0; i < CSS3Map::GRID; ++i)
+            for (int i = 0; i < CSS3Map::GRID_SIZE; ++i)
             {
-                for (int j = 0; j < CSS3Map::GRID; ++j)
+                for (int j = 0; j < CSS3Map::GRID_SIZE; ++j)
                 {
-                    data += ((point(x * CSS3Map::GRID + i, y * CSS3Map::GRID + j)) & ALPHA_MASK) != 0;
+                    data += ((point(x * CSS3Map::GRID_SIZE + i, y * CSS3Map::GRID_SIZE + j)) & ALPHA_MASK) != 0;
                 }
             }
             if (data >= threhold)
@@ -750,19 +775,6 @@ CFrame *CFrame::clip(int mx, int my, int cx, int cy)
 
     // return new frame
     return t;
-}
-
-void CFrame::clear()
-{
-    for (int y = 0; y < m_nHei; ++y)
-    {
-        for (int x = 0; x < m_nLen; ++x)
-        {
-            at(x, y) = 0;
-        }
-    }
-
-    // TODO: updatemap
 }
 
 void CFrame::flipV()
@@ -1056,9 +1068,9 @@ void CFrame::redo()
 
 void CFrame::push()
 {
-    if (!m_undoFrames)
+    if (m_undoFrames.size() == 0)
     {
-        m_undoFrames = new CFrame *[MAX_UNDO];
+        m_undoFrames.resize(MAX_UNDO); // = new CFrame *[MAX_UNDO];
         m_undoPtr = 0;
         m_undoSize = 0;
     }
@@ -1099,12 +1111,14 @@ void CFrame::push()
 
 bool CFrame::canUndo()
 {
-    return m_undoFrames != nullptr && m_undoPtr < m_undoSize;
+    // return m_undoFrames != nullptr && m_undoPtr < m_undoSize;
+    return m_undoPtr < m_undoSize;
 }
 
 bool CFrame::canRedo()
 {
-    return m_undoFrames != nullptr && m_undoPtr > 0 && m_undoSize;
+    //    return m_undoFrames != nullptr && m_undoPtr > 0 && m_undoSize;
+    return m_undoPtr > 0 && m_undoSize;
 }
 
 void CFrame::shadow(int factor)
@@ -1246,36 +1260,24 @@ uint32_t *CFrame::swapBuffer(uint32_t *newBuffer)
 
 CSS3Map::CSS3Map()
 {
-    m_map = nullptr;
     m_len = 0;
     m_hei = 0;
 }
 
 CSS3Map::CSS3Map(const int px, const int py)
 {
-    m_map = nullptr;
     resize(px, py);
 }
 
 CSS3Map::~CSS3Map()
 {
-    if (m_map)
-    {
-        delete[] m_map;
-    }
 }
 
 void CSS3Map::resize(const int px, const int py)
 {
-    if (m_map)
-    {
-        delete[] m_map;
-    }
-
-    m_len = px / GRID;
-    m_hei = py / GRID;
-    m_map = new char[m_len * m_hei];
-    memset(m_map, 0, m_len * m_hei);
+    m_len = px / GRID_SIZE;
+    m_hei = py / GRID_SIZE;
+    m_map.resize(m_len * m_hei);
 }
 
 int CSS3Map::length() const
@@ -1288,34 +1290,33 @@ int CSS3Map::height() const
     return m_hei;
 }
 
-void CSS3Map::read(IFile &file)
+/**
+ * @brief  read map from disk
+ *
+ * @param file
+ */
+
+bool CSS3Map::read(IFile &file)
 {
-    // TODO: read map from disk
-    file.read(m_map, m_len * m_hei);
+    return file.read(m_map.data(), m_len * m_hei) == IFILE_OK;
 }
 
-void CSS3Map::write(IFile &file) const
+/**
+ * @brief  write map to disk
+ *
+ * @param file
+ */
+bool CSS3Map::write(IFile &file) const
 {
-    // TODO: write map to disk
-    file.write(m_map, m_len * m_hei);
+    return file.write(m_map.data(), m_len * m_hei) == IFILE_OK;
 }
 
 bool CSS3Map::isNULL() const
 {
-    return !m_map;
+    return m_map.data();
 }
 
-CSS3Map &CSS3Map::operator=(const CSS3Map &src)
+char *CSS3Map::getMap()
 {
-    resize(src.length(), src.height());
-    if (!src.isNULL())
-    {
-        memcpy(m_map, src.getMap(), m_len * m_hei);
-    }
-    return *this;
-}
-
-char *CSS3Map::getMap() const
-{
-    return m_map;
+    return m_map.data();
 }

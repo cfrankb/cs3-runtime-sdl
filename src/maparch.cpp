@@ -202,10 +202,9 @@ bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc read
         return false;
     }
 
-    uint32_t *indexPtr = new uint32_t[hdr.count];
-    if (!readfile(indexPtr, sizeof(uint32_t) * hdr.count))
+    std::vector<uint32_t> indexPtr(hdr.count);
+    if (!readfile(indexPtr.data(), sizeof(uint32_t) * hdr.count))
     {
-        delete[] indexPtr;
         m_lastError = "Failed to read index";
         LOGE("%s\n", m_lastError.c_str());
         return false;
@@ -217,7 +216,6 @@ bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc read
     {
         if (!seekfile(indexPtr[i]))
         {
-            delete[] indexPtr;
             m_lastError = "Failed to seek to map data";
             LOGE("%s\n", m_lastError.c_str());
             return false;
@@ -226,15 +224,12 @@ bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc read
         std::unique_ptr<CMap> map(new CMap);
         if (!readmap(map))
         {
-            delete[] indexPtr;
             m_lastError = "Failed to read map data [ma]";
             LOGE("%s\n", m_lastError.c_str());
             return false;
         }
         m_maps.push_back(std::move(map));
     }
-
-    delete[] indexPtr;
     return true;
 }
 

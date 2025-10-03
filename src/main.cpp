@@ -60,7 +60,7 @@ constexpr const char *CONF_FILE = "game.cfg";
 #define PLATFORM_NAME "Non-Apple OS"
 #endif
 
-std::unique_ptr<CRuntime> g_runtime = std::make_unique<CRuntime>();
+CRuntime *g_runtime = nullptr;
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -179,7 +179,6 @@ int main(int argc, char *args[])
     LOGI("Starting Game %s: Build [%s]\n", VERSION, BUILD_HASH);
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
-    //    CRuntime runtime;
     params_t params;
     params.muteMusic = false;
     params.level = 0;
@@ -215,6 +214,8 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     std::string configFile = AssetMan::addTrailSlash(params.prefix) + CONF_FILE;
+    std::unique_ptr<CRuntime> runtime = std::make_unique<CRuntime>();
+    g_runtime = runtime.get();
     g_runtime->setVerbose(params.verbose);
     AssetMan::setPrefix(params.prefix);
     g_runtime->setWorkspace(params.workspace.c_str());

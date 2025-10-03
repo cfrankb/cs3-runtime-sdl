@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <cstdint>
 #include <vector>
+#include <memory>
 #include "ISerial.h"
 
 class CFrame;
@@ -33,6 +34,13 @@ public:
     CFrameSet();
     ~CFrameSet();
     CFrameSet(CFrameSet *s);
+
+    enum Format : uint32_t
+    {
+        OBL5_UNPACKED = 0x500,
+        OBL5_SOLID = 0x501,
+        DEFAULT_OBL5_FORMAT = OBL5_SOLID,
+    };
 
     size_t getSize();
     int operator++();
@@ -47,20 +55,21 @@ public:
     void insertAt(int n, CFrame *pFrame);
     void clear();
     void removeAll();
-    bool extract(IFile &file, std::string *format = nullptr);
+    bool extract(IFile &file);
 
     static bool isFriendFormat(const char *format);
     void move(int s, int t);
 
     const char *getLastError() const;
     void setLastError(const char *error);
-    bool toPng(unsigned char *&data, int &size);
+    bool toPng(std::vector<uint8_t> &png);
     std::string &tag(const char *tag);
     void setTag(const char *tag, const char *v);
     void copyTags(CFrameSet &src);
     void assignNewUUID();
     void toSubset(CFrameSet &dest, int start, int end = -1);
 
+    bool write(IFile &file, const Format format);
     bool write(IFile &file) override;
     bool read(IFile &file) override;
 
@@ -73,7 +82,6 @@ private:
     int m_nCurrFrame;
     enum
     {
-        OBL_VERSION = 0x501,
         FNT_SIZE = 8,
         GE96_TILE_SIZE = 32,
         ID_SIG_LEN = 4,
@@ -81,12 +89,19 @@ private:
         RGB_BYTES = 3,
         COLOR_INDEX_OFFSET = -16,
         COLOR_INDEX_OFFSET_NONE = 0,
+        OBL3_GRANULAR = 16,
     };
 
-    bool write0x501(IFile &file);
-    bool read0x501(IFile &file, int size);
-    static char *ima2bitmap(char *ImaData, int len, int hei);
+    bool writeSolid(IFile &file);
+    bool readSolid(IFile &file, int size);
+    static std::unique_ptr<char[]> ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
+    bool importIMA(IFile &file, const long org);
+    bool importIMC1(IFile &file, const long org);
+    bool importGE96(IFile &file, const long org);
+    bool importOBL3(IFile &file, const long org);
+    bool importOBL4(IFile &file, const long org);
+    bool importOBL5(IFile &file, const long org);
 
     std::string m_lastError;
     std::vector<CFrame *> m_arrFrames;

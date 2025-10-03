@@ -54,12 +54,11 @@ CRuntime::CRuntime() : CGameMixin()
     m_music = nullptr;
     m_app = App();
     m_startLevel = 0;
-    m_mainMenu = std::make_unique<CMenu>(MENUID_MAINMENU);     // new CMenu(MENUID_MAINMENU);
-    m_gameMenu = std::make_unique<CMenu>(MENUID_GAMEMENU);     // new CMenu(MENUID_GAMEMENU);
-    m_optionMenu = std::make_unique<CMenu>(MENUID_OPTIONMENU); // new CMenu(MENUID_OPTIONMENU);
-    m_userMenu = std::make_unique<CMenu>(MENUID_USERS);        // new CMenu(MENUID_USERS);
-    m_skillMenu = std::make_unique<CMenu>(MENUID_SKILLS);      // new CMenu(MENUID_SKILLS);
-    m_title = nullptr;
+    m_mainMenu = std::make_unique<CMenu>(MENUID_MAINMENU);
+    m_gameMenu = std::make_unique<CMenu>(MENUID_GAMEMENU);
+    m_optionMenu = std::make_unique<CMenu>(MENUID_OPTIONMENU);
+    m_userMenu = std::make_unique<CMenu>(MENUID_USERS);
+    m_skillMenu = std::make_unique<CMenu>(MENUID_SKILLS);
     m_skill = 0;
     m_verbose = false;
     m_summary = Summary{0, 0, 0, 0};
@@ -73,6 +72,8 @@ CRuntime::CRuntime() : CGameMixin()
 
 CRuntime::~CRuntime()
 {
+    if (m_music != nullptr)
+        m_music->close();
     if (m_app.window)
     {
         if (!m_quiet)
@@ -81,14 +82,7 @@ CRuntime::~CRuntime()
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
     }
-    // delete m_music;
-    delete m_title;
     delete[] m_scroll;
-    // delete m_mainMenu;
-    // delete m_gameMenu;
-    // delete m_optionMenu;
-    // delete m_userMenu;
-    // delete m_skillMenu;
     delete m_virtualKeyboard;
 }
 
@@ -830,17 +824,17 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
 
 void CRuntime::preloadAssets()
 {
-    CFrameSet **frameSets[] = {
+    std::unique_ptr<CFrameSet> *frameSets[] = {
         &m_tiles,
         &m_animz,
         &m_users,
-        &m_title,
+        &m_titlePix,
     };
     CFileMem mem;
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
         const std::string filename = AssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
-        *frameSets[i] = new CFrameSet();
+        *frameSets[i] = std::make_unique<CFrameSet>();
         data_t data = AssetMan::read(filename);
         if (!data.empty())
         {
@@ -1279,10 +1273,10 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
 void CRuntime::drawTitleScreen(CFrame &bitmap)
 {
     bitmap.fill(BLACK);
-    if (m_title->getSize() == 0)
+    if (m_titlePix == nullptr || m_titlePix->getSize() == 0)
         return;
 
-    auto &title = *(*m_title)[0];
+    auto &title = *(*m_titlePix)[0];
     const int offsetY = 12;
     drawTitlePix(bitmap, offsetY);
 
@@ -1308,7 +1302,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
  */
 void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 {
-    auto &title = *(*m_title)[0];
+    auto &title = *(*m_titlePix)[0];
     int baseX = (bitmap.len() - title.len()) / 2;
     for (int y = 0; y < title.hei(); ++y)
     {
@@ -1429,9 +1423,8 @@ void CRuntime::takeScreenshot()
             rgba[i] = BLACK;
     }
     bitmap.enlarge();
-    uint8_t *png;
-    int size;
-    bitmap.toPng(png, size);
+    std::vector<uint8_t> png;
+    bitmap.toPng(png);
     CFileWrap file;
     char filename[64];
     auto now = std::chrono::system_clock::now();
@@ -1447,7 +1440,7 @@ void CRuntime::takeScreenshot()
     std::string path = m_workspace + filename;
     if (file.open(path.c_str(), "wb"))
     {
-        file.write(png, size);
+        file.write(png.data(), png.size());
         file.close();
         if (!m_quiet)
             LOGI("screenshot saved: %s\n", path.c_str());
@@ -1456,7 +1449,6 @@ void CRuntime::takeScreenshot()
     {
         LOGE("can't write png: %s\n", path.c_str());
     }
-    delete[] png;
 }
 
 /**
@@ -2619,9 +2611,8 @@ void CRuntime::onSDLQuit()
     if (!m_quiet)
         LOGI("SDL_QUIT\n");
     m_isRunning = false;
-    LOGI("Clearning Sound/Music");
-    m_sound->forget();
-    m_music->close();
+    // m_sound->forget();
+    // m_music->close();
 }
 
 bool CRuntime::loadAppIcon()

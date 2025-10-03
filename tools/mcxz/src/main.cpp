@@ -1187,12 +1187,9 @@ bool processSection(
     }
     else if (appSettings.outputPNG)
     {
-        // output to png
-        unsigned char *data;
-        int size;
-        imagesTiny.toPng(data, size);
-        tfileTiny.write(data, size);
-        delete[] data;
+        std::vector<uint8_t> png;
+        imagesTiny.toPng(png);
+        tfileTiny.write(png.data(), png.size());
     }
     else
     {
@@ -1332,13 +1329,12 @@ bool writePalette(const std::string &lastTileSet,
         fwrite(palette, sizeof(palette), 1, tfile);
         fclose(tfile);
 
-        uint8_t *png;
-        int size;
-        frame.toPng(png, size);
+        std::vector<uint8_t> png;
+        frame.toPng(png);
         CFileWrap file;
         if (file.open(palettePngPath.c_str(), "wb"))
         {
-            file.write(png, size);
+            file.write(png.data(), png.size());
         }
         file.close();
     }

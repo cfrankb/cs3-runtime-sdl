@@ -16,18 +16,19 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cstring>
-#include <ctype.h>
+#include <cstdint>
 #include <cstdio>
 #include <zlib.h>
 #include "helper.h"
-#ifdef USE_QFILE
+#include "logger.h"
+
+#if defined(USE_QFILE)
 #define FILEWRAP QFileWrap
 #include "qtgui/qfilewrap.h"
 #else
 #define FILEWRAP CFileWrap
 #include "FileWrap.h"
 #endif
-#include "logger.h"
 constexpr const int UUID_BUFFER_SIZE = 40;
 
 const char *toUpper(char *s)
@@ -70,33 +71,30 @@ bool copyFile(const std::string in, const std::string out, std::string &errMsg)
     if (sfile.open(in.c_str()))
     {
         int size = sfile.getSize();
-        char *buf = new char[size];
-        sfile.read(buf, size);
+        std::vector<char> buf(size);
+        sfile.read(buf.data(), size);
         sfile.close();
         if (tfile.open(out.c_str(), "wb"))
         {
-            tfile.write(buf, size);
+            tfile.write(buf.data(), size);
             tfile.close();
         }
         else
         {
             const int bufferSize = out.length() + 128;
-            char *tmp = new char[bufferSize];
-            snprintf(tmp, bufferSize, "couldn't write: %s", out.c_str());
-            errMsg = tmp;
+            std::vector<char> tmp(bufferSize);
+            snprintf(tmp.data(), bufferSize, "couldn't write: %s", out.c_str());
+            errMsg = tmp.data();
             result = false;
-            delete[] tmp;
         }
-        delete[] buf;
     }
     else
     {
         const int bufferSize = in.length() + 128;
-        char *tmp = new char[bufferSize];
-        snprintf(tmp, bufferSize, "couldn't read: %s", in.c_str());
-        errMsg = tmp;
+        std::vector<char> tmp(bufferSize);
+        snprintf(tmp.data(), bufferSize, "couldn't read: %s", in.c_str());
+        errMsg = tmp.data();
         result = false;
-        delete[] tmp;
     }
     return result;
 }
@@ -114,20 +112,18 @@ bool concat(const std::list<std::string> files, std::string out, std::string &ms
             if (sfile.open(in.c_str()))
             {
                 int size = sfile.getSize();
-                char *buf = new char[size];
-                sfile.read(buf, size);
+                std::vector<char> buf(size);
+                sfile.read(buf.data(), size);
                 sfile.close();
-                tfile.write(buf, size);
-                delete[] buf;
+                tfile.write(buf.data(), size);
             }
             else
             {
                 const int bufferSize = in.length() + 128;
-                char *tmp = new char[bufferSize];
-                snprintf(tmp, bufferSize, "couldn't read: %s", in.c_str());
-                msg = tmp;
+                std::vector<char> tmp(bufferSize);
+                snprintf(tmp.data(), bufferSize, "couldn't read: %s", in.c_str());
+                msg = tmp.data();
                 result = false;
-                delete[] tmp;
                 break;
             }
         }
@@ -136,11 +132,10 @@ bool concat(const std::list<std::string> files, std::string out, std::string &ms
     else
     {
         const int bufferSize = out.length() + 128;
-        char *tmp = new char[bufferSize];
-        snprintf(tmp, bufferSize, "couldn't write: %s", out.c_str());
-        msg = tmp;
+        std::vector<char> tmp(bufferSize);
+        snprintf(tmp.data(), bufferSize, "couldn't write: %s", out.c_str());
+        msg = tmp.data();
         result = false;
-        delete[] tmp;
     }
     return result;
 }
@@ -155,6 +150,21 @@ int compressData(unsigned char *in_data, unsigned long in_size, unsigned char **
         in_data,
         in_size,
         Z_DEFAULT_COMPRESSION);
+}
+
+int compressData(const std::vector<uint8_t> &in_data, std::vector<uint8_t> &out_data)
+{
+    size_t out_size = ::compressBound(in_data.size());
+    out_data.resize(out_size);
+    int result = ::compress2(
+        out_data.data(),
+        &out_size,
+        in_data.data(),
+        in_data.size(),
+        Z_DEFAULT_COMPRESSION);
+    if (out_size != out_data.size())
+        out_data.resize(out_size);
+    return result;
 }
 
 std::vector<uint8_t> readFile(const char *fname)

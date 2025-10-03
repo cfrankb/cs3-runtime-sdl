@@ -18,6 +18,7 @@
 
 #pragma once
 #include <cstdint>
+#include <vector>
 
 class CFrameSet;
 class CDotArray;
@@ -41,20 +42,18 @@ public:
     int length() const;
     int height() const;
 
-    void read(IFile &file);
-    void write(IFile &file) const;
+    bool read(IFile &file);
+    bool write(IFile &file) const;
     bool isNULL() const;
-
-    CSS3Map &operator=(const CSS3Map &src);
-    char *getMap() const;
+    char *getMap();
 
     enum
     {
-        GRID = 8
+        GRID_SIZE = 8
     };
 
 protected:
-    char *m_map;
+    std::vector<char> m_map;
     int m_len;
     int m_hei;
 };
@@ -94,7 +93,7 @@ public:
     bool isEmpty() const;
 
     CFrame &operator=(const CFrame &src);
-    void forget();
+    void clear();
     void detach() { m_rgb = nullptr; }
     void updateMap();
     void resize(int len, int hei);
@@ -107,7 +106,6 @@ public:
     CFrameSet *split(int pxSize, bool whole = true);
     void spreadH();
     void spreadV();
-    void clear();
     void shrink();
     const CSS3Map &getMap() const;
     void shiftUP(const bool wrap = true);
@@ -126,11 +124,12 @@ public:
     void fill(unsigned int rgba);
     void drawAt(CFrame &frame, int bx, int by, bool tr);
 
-    bool read(IFile &file, int version);
+    bool read(IFile &file);
     bool write(IFile &file);
 
     void toBmp(uint8_t *&bmp, int &size);
-    bool toPng(uint8_t *&png, int &size, uint8_t *obl5data = nullptr, int obl5size = 0);
+    bool toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data = {});
+
     static uint32_t toNet(const uint32_t a);
     bool draw(CDotArray *dots, int size, int mode = MODE_NORMAL);
     void save(CDotArray *dots, CDotArray *dotsOrg, int size);
@@ -157,7 +156,8 @@ public:
         pngHeaderSize = 8,
         png_IHDR_Size = 21,
         pngChunkLimit = 32767,
-        MAX_UNDO = 20
+        MAX_UNDO = 20,
+        OBL5_UNPACKED = 0x500,
     };
 
     typedef struct
@@ -203,12 +203,13 @@ private:
 
     int m_nLen;
     int m_nHei;
-
     int m_bCustomMap;
     uint32_t *m_rgb;
     CSS3Map m_map;
-    CFrame **m_undoFrames;
+    std::vector<CFrame *> m_undoFrames;
     int m_undoPtr;
     int m_undoSize;
+
     void init();
+    bool checkSizes();
 };

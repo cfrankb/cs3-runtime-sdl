@@ -209,7 +209,7 @@ bool convertCs3Level(CMap &map, const char *fname)
 bool fetchLevel(CMap &map, const char *fname, std::string &error)
 {
     const int bufferSize = strlen(fname) + 128;
-    char *tmp = new char[bufferSize];
+    std::vector<char> tmp(bufferSize);
     LOGI("fetching: %s\n", fname);
 
     FILE *sfile = fopen(fname, "rb");
@@ -219,12 +219,10 @@ bool fetchLevel(CMap &map, const char *fname, std::string &error)
     };
     if (!sfile)
     {
-        snprintf(tmp, bufferSize, "can't open file: %s", fname);
-        error = tmp;
-        delete[] tmp;
+        snprintf(tmp.data(), bufferSize, "can't open file: %s", fname);
+        error = tmp.data();
         return false;
     }
-    delete[] tmp;
 
     const char MAPZ_SIGNATURE[] = {'M', 'A', 'P', 'Z'};
     char sig[sizeof(MAPZ_SIGNATURE)] = {0, 0, 0, 0};

@@ -135,12 +135,13 @@ CFileMem &CFileMem::operator>>(std::string &str)
     }
     if (x != 0)
     {
-        char *sz = new char[x + 1];
+        // char *sz = new char[x + 1];
+        std::vector<char> sz(x + 1);
         sz[x] = 0;
-        memcpy(sz, &m_buffer[m_ptr], x);
+        memcpy(sz.data(), &m_buffer[m_ptr], x);
         m_ptr += x;
-        str = sz;
-        delete[] sz;
+        str = sz.data();
+        // delete[] sz;
     }
     else
     {

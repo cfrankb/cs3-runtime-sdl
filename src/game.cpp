@@ -103,7 +103,8 @@ CGame::CGame()
 CGame::~CGame()
 {
     // delete m_sound;
-    //  delete m_gameStats;
+    if (m_sound != nullptr)
+        m_sound->forget();
 }
 
 /**

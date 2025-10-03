@@ -19,6 +19,7 @@
 #include <functional>
 #include <vector>
 #include <typeinfo>
+#include <filesystem>
 #include "t_game.h"
 #include "t_gamestats.h"
 #include "t_maparch.h"
@@ -32,7 +33,6 @@
 #include "t_frameset.h"
 #include "t_pngmagic.h"
 #include "../src/logger.h"
-#include <filesystem>
 
 #define FCT(x) {x, #x}
 using Function = std::function<bool(void)>;
@@ -48,8 +48,8 @@ int main(int argc, char *args[])
     (void)args;
 
     std::filesystem::create_directories("tests/out");
-    LOGI("running tests\n");
-    LOGI("==============\n\n");
+    LOGI("running tests");
+    LOGI("==============");
 
     std::vector<Test> fct = {
         FCT(test_recorder),
@@ -78,11 +78,11 @@ int main(int argc, char *args[])
 
     if (failed != 0)
     {
-        LOGE("\n\n###### failed: %d\n", failed);
+        LOGE("###### failed: %d\n", failed);
     }
     else
     {
-        LOGI("\n\n###### completed\n");
+        LOGI("###### completed\n");
     }
 
     LOGI("all done\n");

@@ -20,3 +20,4 @@
 #include <cstdint>
 
 uint64_t getFileSize(const std::string &filename);
+bool compareFiles(const char *f1, const char *f2);

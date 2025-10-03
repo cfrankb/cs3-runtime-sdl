@@ -64,9 +64,7 @@ CMusicSDL::CMusicSDL()
 
 CMusicSDL::~CMusicSDL()
 {
-    LOGI("xzzzxcfrer");
     close();
-    LOGI("xzzzxcfrer332334");
 }
 
 #ifdef __EMSCRIPTEN__
@@ -148,7 +146,8 @@ void CMusicSDL::close()
     SDL_Delay(100);
     if (m_type == TYPE_PRELOAD)
     {
-        Mix_FreeMusic(m_data.mixData);
+        if (m_data.mixData)
+            Mix_FreeMusic(m_data.mixData);
         m_data.mixData = nullptr;
     }
     else if (m_type == TYPE_STREAM)

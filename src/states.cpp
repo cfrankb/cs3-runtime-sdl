@@ -96,13 +96,15 @@ bool CStates::readCommon(ReadFunc readfile)
         m_stateU[k] = v;
     }
 
-    char *v = new char[MAX_STRING];
-    if (!v)
+    std::vector<char> v(MAX_STRING);
+    if (!v.data())
+    {
+        LOGE("allocation of v failed");
         return false;
+    }
 
     if (!readfile(&count, COUNT_BYTES))
     {
-        delete[] v;
         return false;
     }
 
@@ -113,31 +115,25 @@ bool CStates::readCommon(ReadFunc readfile)
         uint16_t len = 0;
         if (!readfile(&k, sizeof(k)))
         {
-            delete[] v;
             return false;
         }
         if (!readfile(&len, sizeof(len)))
         {
-            delete[] v;
             return false;
         }
 
         if (len >= MAX_STRING)
         {
-            delete[] v;
             return false;
         }
 
         v[len] = '\0';
-        if (!readfile(v, len))
+        if (!readfile(v.data(), len))
         {
-            delete[] v;
             return false;
         }
-        m_stateS[k] = v;
+        m_stateS[k] = v.data();
     }
-
-    delete[] v;
     return true;
 }
 

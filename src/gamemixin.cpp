@@ -59,13 +59,13 @@
 CGameMixin::CGameMixin()
 {
     m_game = CGame::getGame();
-    m_animator = std::make_unique<CAnimator>(); // new CAnimator();
+    m_animator = std::make_unique<CAnimator>();
     m_prompt = PROMPT_NONE;
     clearJoyStates();
     clearScores();
     clearKeyStates();
     clearButtonStates();
-    m_recorder = std::make_unique<CRecorder>(); // new CRecorder;
+    m_recorder = std::make_unique<CRecorder>();
     m_eventCountdown = 0;
     m_currentEvent = EVENT_NONE;
     initUI();
@@ -73,11 +73,6 @@ CGameMixin::CGameMixin()
 
 CGameMixin::~CGameMixin()
 {
-    // delete m_animator;
-    delete m_tiles;
-    delete m_animz;
-    delete m_users;
-    // delete m_recorder;
 }
 
 /**
@@ -1549,10 +1544,9 @@ bool CGameMixin::read(IFile &sfile, std::string &name)
     // fseek(sfile, ptr, SEEK_SET);
     size_t size = 0;
     readfile(&size, sizeof(uint16_t));
-    char *tmp = new char[size];
-    readfile(tmp, size);
-    name = tmp;
-    delete[] tmp;
+    std::vector<char> tmp(size);
+    readfile(tmp.data(), size);
+    name = tmp.data();
     return true;
 }
 

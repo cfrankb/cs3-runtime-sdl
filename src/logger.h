@@ -24,13 +24,6 @@
 #include <mutex>
 #include <string>
 
-#ifdef LOG_TAG
-#undef LOG_TAG
-#endif
-#ifndef LOG_TAG
-#define LOG_TAG __FILE_NAME__
-#endif
-
 class Logger
 {
 public:
@@ -62,14 +55,14 @@ private:
 #else
 #define LOGI(...)                        \
     if (Logger::level() <= Logger::INFO) \
-    Logger::log(Logger::INFO, LOG_TAG, __VA_ARGS__)
+    Logger::log(Logger::INFO, __FILE_NAME__, __VA_ARGS__)
 #define LOGW(...)                        \
     if (Logger::level() <= Logger::WARN) \
-    Logger::log(Logger::WARN, LOG_TAG, __VA_ARGS__)
+    Logger::log(Logger::WARN, __FILE_NAME__, __VA_ARGS__)
 #define LOGE(...)                         \
     if (Logger::level() <= Logger::ERROR) \
-    Logger::log(Logger::ERROR, LOG_TAG, __VA_ARGS__)
-#define LOGF(...)                                     \
-    Logger::log(Logger::FATAL, LOG_TAG, __VA_ARGS__); \
+    Logger::log(Logger::ERROR, __FILE_NAME__, __VA_ARGS__)
+#define LOGF(...)                                           \
+    Logger::log(Logger::FATAL, __FILE_NAME__, __VA_ARGS__); \
     exit(1)
 #endif
