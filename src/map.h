@@ -49,7 +49,6 @@ public:
     CMap(const CMap &map);
     ~CMap();
     uint8_t at(const int x, const int y) const;
-    // uint8_t *row(const int y);
     void set(const int x, const int y, const uint8_t t);
     uint8_t &get(const int x, const int y);
     bool read(const char *fname);
@@ -61,7 +60,6 @@ public:
     void clear();
     int len() const;
     int hei() const;
-    // bool resize(const uint16_t in_len, const uint16_t in_hei, const bool fast);
     bool resize(uint16_t in_len, uint16_t in_hei, uint8_t t, bool fast);
     const Pos findFirst(const uint8_t tileId) const;
     size_t count(const uint8_t tileId) const;

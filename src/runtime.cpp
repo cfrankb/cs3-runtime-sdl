@@ -146,7 +146,7 @@ void CRuntime::paint()
         drawVirtualKeyboard(bitmap, "ENTER YOUR NAME", m_input);
     };
 
-    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB(), WIDTH * sizeof(uint32_t));
+    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), WIDTH * sizeof(uint32_t));
 #if defined(__ANDROID__)
     Rect safeArea = getSafeAreaWindow();
     SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
@@ -1280,7 +1280,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     const int offsetY = 12;
     drawTitlePix(bitmap, offsetY);
 
-    const int baseY = 2 * offsetY + title.hei();
+    const int baseY = 2 * offsetY + title.height();
     const Rect rect{
         .x = 8,
         .y = baseY,
@@ -1303,13 +1303,13 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
 {
     auto &title = *(*m_titlePix)[0];
-    int baseX = (bitmap.len() - title.len()) / 2;
-    for (int y = 0; y < title.hei(); ++y)
+    int baseX = (bitmap.width() - title.width()) / 2;
+    for (int y = 0; y < title.height(); ++y)
     {
-        for (int x = 0; x < title.len(); ++x)
+        for (int x = 0; x < title.width(); ++x)
         {
             const int xx = baseX + x;
-            if (xx < bitmap.len() && xx >= 0)
+            if (xx < bitmap.width() && xx >= 0)
                 bitmap.at(baseX + x, y + offsetY) = title.at(x, y);
         }
     }
@@ -1413,11 +1413,11 @@ void CRuntime::takeScreenshot()
 {
     CFrame bitmap(WIDTH, HEIGHT);
     if (m_bitmap)
-        bitmap = *m_bitmap;
+        bitmap.copy(m_bitmap);
     else
         bitmap.fill(BLACK);
     auto rgba = bitmap.getRGB();
-    for (int i = 0; i < bitmap.len() * bitmap.hei(); ++i)
+    for (int i = 0; i < bitmap.width() * bitmap.height(); ++i)
     {
         if (rgba[i] == CLEAR)
             rgba[i] = BLACK;
@@ -2628,7 +2628,7 @@ bool CRuntime::loadAppIcon()
         {
             CFrame &frame = *frames[0];
             SDL_Surface *surface = SDL_CreateSurfaceFrom(
-                frame.len(), frame.hei(), SDL_PIXELFORMAT_RGBA32, frame.getRGB(), frame.len() * sizeof(uint32_t));
+                frame.width(), frame.height(), SDL_PIXELFORMAT_RGBA32, frame.getRGB().data(), frame.width() * sizeof(uint32_t));
             SDL_SetWindowIcon(m_app.window, surface);
             SDL_DestroySurface(surface);
         }

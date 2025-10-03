@@ -33,121 +33,57 @@
 #include <cstdint>
 #include "logger.h"
 
-CFrame::~CFrame()
-{
-    clear();
-}
-
-/// @brief check frame dimensions
-/// @return false if not a multiple of 8 pixels
-bool CFrame::checkSizes()
-{
-    if ((m_nLen & 7) != 0)
-    {
-        LOGW("len: %d is not a multiple of 8", m_nLen);
-    }
-    if ((m_nHei & 7) != 0)
-    {
-        LOGW("hei: %d is not a multiple of 8", m_nHei);
-    }
-    return ((m_nLen * m_nHei) & 7) != 0;
-}
-
 /// @brief Constructor
 /// @param p_nLen pixel lenght (must be multiple of 8)
 /// @param p_nHei pixel height (must be multiple of 8)
-CFrame::CFrame(int p_nLen, int p_nHei)
-{
-    m_bCustomMap = false;
-    m_nLen = p_nLen;
-    m_nHei = p_nHei;
-    checkSizes();
 
-    // generate blank bitmap
-    m_rgb = new uint32_t[m_nLen * m_nHei];
-    if (!m_rgb)
+CFrame::CFrame(int width, int height) : m_width(width), m_height(height)
+{
+    if (width < 0 || height < 0 || width > 4096 || height > 4096)
     {
-        LOGE("failed memory allocation\n");
-        return;
+        std::string lastError = "Invalid dimensions: " + std::to_string(width) + "x" + std::to_string(height);
+        throw std::invalid_argument(lastError);
     }
-    memset(m_rgb, 0, m_nLen * m_nHei * 4);
-
-    // generate blank map
-    m_map.resize(m_nLen, m_nHei);
-    m_bCustomMap = false;
-
-    m_undoSize = 0;
-    m_undoPtr = 0;
+    if ((width & 7) || (height & 7))
+    {
+        LOGW("Dimensions %dx%d not multiples of 8", width, height);
+    }
+    m_rgb.resize(width * height);
+    std::fill(m_rgb.begin(), m_rgb.end(), 0);
+    m_map.resize(width, height);
 }
 
-CFrame::CFrame(CFrame *src)
+CFrame::CFrame(CFrame &&src) noexcept : m_rgb(std::move(src.m_rgb)),
+                                        m_map(std::move(src.m_map)),
+                                        m_width(src.m_width),
+                                        m_height(src.m_height)
+
 {
-    // Initialize
-    init();
-
-    if (src == nullptr)
-        return;
-
-    m_nHei = src->m_nHei;
-    m_nLen = src->m_nLen;
-    checkSizes();
-    m_rgb = new uint32_t[m_nLen * m_nHei];
-    m_map.resize(src->m_nLen, src->m_nHei);
-    m_bCustomMap = src->m_bCustomMap;
-
-    if (src->m_rgb)
-        memcpy(m_rgb, src->m_rgb, m_nLen * m_nHei * sizeof(uint32_t));
-    else
-        // generate blank bitmap
-        memset(m_rgb, 0, m_nLen * m_nHei * sizeof(uint32_t));
-
-    m_map = src->getMap();
+    src.m_width = 0;
+    src.m_height = 0;
 }
 
-CFrame &CFrame::operator=(const CFrame &src)
+CFrame &CFrame::operator=(CFrame src)
 {
-    m_nHei = src.m_nHei;
-    m_nLen = src.m_nLen;
-    m_rgb = new uint32_t[m_nLen * m_nHei];
-    m_map = src.getMap();
-    if (src.getRGB())
-        memcpy(m_rgb, src.getRGB(), m_nLen * m_nHei * sizeof(uint32_t));
-    else
-        memset(m_rgb, 0, m_nLen * m_nHei * sizeof(uint32_t));
-
-    m_bCustomMap = src.m_bCustomMap;
-    m_map = src.getMap();
-
+    swap(*this, src);
     return *this;
 }
 
-void CFrame::init()
+void swap(CFrame &a, CFrame &b) noexcept
 {
-    m_nHei = 0;
-    m_nLen = 0;
-    m_bCustomMap = false;
-    m_rgb = nullptr;
-
-    // create undo buffer
-    m_undoSize = 0;
-    m_undoPtr = 0;
+    using std::swap;
+    swap(a.m_rgb, b.m_rgb);
+    swap(a.m_map, b.m_map);
+    swap(a.m_width, b.m_width);
+    swap(a.m_height, b.m_height);
 }
 
 void CFrame::clear()
 {
-    delete[] m_rgb;
-    m_rgb = nullptr;
-
-    for (int i = 0; i < m_undoSize; ++i)
-    {
-        delete m_undoFrames[i];
-    }
-    m_undoFrames.clear();
-    m_undoSize = 0;
-    m_undoPtr = 0;
-
-    m_nLen = 0;
-    m_nHei = 0;
+    m_rgb.clear();
+    m_map.resize(0, 0);
+    m_width = 0;
+    m_height = 0;
 }
 
 /// @brief serializes OBL5 0x500 only
@@ -157,56 +93,51 @@ bool CFrame::write(IFile &file)
 {
     // this serializer creates format 0x500 only
     // use CFrameSet serializer to create solid archive
-    constexpr const char errTmpl[] = "%s failed on file: %s";
-    if (file.write(&m_nLen, sizeof(uint32_t)) != IFILE_OK)
+
+    if (m_width > IMAGE_MAX_SIZE || m_height > IMAGE_MAX_SIZE)
     {
-        LOGE(errTmpl, __func__, "len");
-        return false;
-    }
-    if (file.write(&m_nHei, sizeof(uint32_t)) != IFILE_OK)
-    {
-        LOGE(errTmpl, __func__, "hei");
-        return false;
-    }
-    // OBL5 0x500 expects this field to be 0
-    // as it is reserved for future use.
-    // int filler = 0;
-    if (file.write(&m_bCustomMap, sizeof(uint32_t)) != IFILE_OK)
-    {
-        LOGE(errTmpl, __func__, "filler");
+        m_lastError = "Dimensions exceed maximum: " + std::to_string(m_width) + "x" + std::to_string(m_height);
         return false;
     }
 
-    if (m_nLen * m_nHei != 0)
+    uint16_t width = static_cast<uint16_t>(m_width); // Align with writeSolid
+    uint16_t height = static_cast<uint16_t>(m_height);
+    uint32_t filler = 0;
+    if (file.write(&width, sizeof(width)) != IFILE_OK ||
+        file.write(&height, sizeof(height)) != IFILE_OK ||
+        file.write(&filler, sizeof(filler)) != IFILE_OK)
     {
-        std::vector<uint8_t> rData;
-        std::vector<uint8_t> cData;
-        const int rDataSize = sizeof(uint32_t) * m_nLen * m_nHei;
-        uint8_t *pixels = reinterpret_cast<uint8_t *>(m_rgb);
-        rData.assign(pixels, pixels + rDataSize);
-        const int err = compressData(rData, cData);
-        if (err != Z_OK)
-        {
-            LOGE("CFrame::write error: %d\n", err);
-            return false;
-        }
+        m_lastError = "Failed to write OBL5 header";
+        return false;
+    }
 
-        const uLong nDestLen = cData.size();
-        if (file.write(&nDestLen, sizeof(uint32_t)) != IFILE_OK)
-        {
-            LOGE(errTmpl, __func__, "destLen");
-            return false;
-        }
-        if (file.write(cData.data(), cData.size()) != IFILE_OK)
-        {
-            LOGE(errTmpl, __func__, "cData");
-            return false;
-        }
+    if (m_width * m_height == 0)
+    {
+        m_lastError = "frame size is 0";
+        return false; // Empty frame
+    }
 
-        if (m_bCustomMap)
-        {
-            m_map.write(file);
-        }
+    std::vector<uint8_t> rData(reinterpret_cast<uint8_t *>(m_rgb.data()),
+                               reinterpret_cast<uint8_t *>(m_rgb.data() + m_rgb.size()));
+
+    std::vector<uint8_t> cData;
+    int err = compressData(rData, cData);
+    if (err != Z_OK)
+    {
+        m_lastError = "Zlib compression error " + std::to_string(err) + ": " + zError(err);
+        return false;
+    }
+
+    uint32_t compressedSize = static_cast<uint32_t>(cData.size());
+    if (file.write(&compressedSize, sizeof(compressedSize)) != IFILE_OK)
+    {
+        m_lastError = "Failed to write compressed size";
+        return false;
+    }
+    if (file.write(cData.data(), compressedSize) != IFILE_OK)
+    {
+        m_lastError = "Failed to write compressed data";
+        return false;
     }
     return true;
 }
@@ -216,64 +147,74 @@ bool CFrame::write(IFile &file)
 /// @return
 bool CFrame::read(IFile &file)
 {
-    // clear existing bitmap and map
+    uint16_t width, height; // Align with readSolid
+    uint32_t filler;
+    if (file.read(&width, sizeof(width)) != IFILE_OK ||
+        file.read(&height, sizeof(height)) != IFILE_OK ||
+        file.read(&filler, sizeof(filler)) != IFILE_OK)
+    {
+        m_lastError = "Failed to read OBL5 header";
+        return false;
+    }
+    if (width > IMAGE_MAX_SIZE || height > IMAGE_MAX_SIZE)
+    {
+        m_lastError = "Invalid dimensions: " + std::to_string(width) + "x" + std::to_string(height);
+        return false;
+    }
+    if (filler != 0)
+    {
+        m_lastError = "Invalid filler value: " + std::to_string(filler);
+        return false;
+    }
+
     clear();
+    m_width = width;
+    m_height = height;
+    m_rgb.resize(width * height);
+    m_map.resize(width, height);
 
-    // read image size and customMap settings
-    if (file.read(&m_nLen, sizeof(uint32_t)) != IFILE_OK)
+    if (width * height == 0)
     {
-        return false;
+        m_lastError = "empty frame not allowed";
+        return false; // Empty frame
     }
-    if (file.read(&m_nHei, sizeof(uint32_t)) != IFILE_OK)
+
+    uint32_t compressedSize;
+    if (file.read(&compressedSize, sizeof(compressedSize)) != IFILE_OK)
     {
-        return false;
-    }
-    // OBL5 0x500 expects this field to be 0
-    if (file.read(&m_bCustomMap, sizeof(uint32_t)) != IFILE_OK)
-    {
-        return false;
-    }
-    if (m_bCustomMap != 0)
-    {
-        LOGE("OBL5 0x500 expects this field to be 0");
+        m_lastError = "Failed to read compressed size";
         return false;
     }
 
-    if (m_nLen * m_nHei != 0)
+    long fileSize = file.getSize();
+    if (file.tell() + compressedSize > fileSize)
     {
-        // this image is not zero-length
-        uint32_t nSrcLen;
-        if (file.read(&nSrcLen, sizeof(uint32_t)) != IFILE_OK)
-        {
-            return false;
-        }
-
-        // read compressed data from disk
-        std::vector<uint8_t> pSrc(nSrcLen);
-        if (file.read(pSrc.data(), nSrcLen) != IFILE_OK)
-        {
-            return false;
-        }
-
-        // create a new bitmap
-        uLong nDestLen = m_nLen * m_nHei * sizeof(uint32_t);
-        m_rgb = new uint32_t[m_nLen * m_nHei];
-
-        // decompress data
-        int err = uncompress(
-            (uint8_t *)m_rgb,
-            (uLong *)&nDestLen,
-            (uint8_t *)pSrc.data(),
-            (uLong)nSrcLen);
-
-        if (err != Z_OK)
-        {
-            LOGE("CFrame::read - decompr error: %d", err);
-            return false;
-        }
+        char tmp[128];
+        snprintf(tmp, sizeof(tmp),
+                 "File too small for compressed data: %u; filesize: %ld tell: %ld",
+                 compressedSize,
+                 fileSize, file.tell());
+        m_lastError = tmp;
+        return false;
     }
+
+    // read compressed data from disk
+    std::vector<uint8_t> cData(compressedSize);
+    if (file.read(cData.data(), compressedSize) != IFILE_OK)
+    {
+        m_lastError = "Failed to read compressed data";
+        return false;
+    }
+
+    uLong destLen = m_rgb.size() * sizeof(m_rgb[0]);
+    int err = uncompress((uint8_t *)m_rgb.data(), &destLen, cData.data(), compressedSize);
+    if (err != Z_OK || destLen != m_rgb.size() * sizeof(m_rgb[0]))
+    {
+        m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
+        return false;
+    }
+
     // create a new map
-    m_map.resize(m_nLen, m_nHei);
     updateMap();
 
     return true;
@@ -304,13 +245,13 @@ void CFrame::toBmp(uint8_t *&bmp, int &totalSize)
         uint32_t m_nClrImpt; // 00 00 00 00 ClrImportant
     } USER_BMPHEADER;
 
-    int pitch = m_nLen * 3;
+    int pitch = m_width * 3;
     if (pitch % 4)
     {
         pitch = pitch - (pitch % 4) + 4;
     }
 
-    totalSize = bmpDataOffset + pitch * m_nHei;
+    totalSize = bmpDataOffset + pitch * m_height;
 
     bmp = new uint8_t[totalSize];
     bmp[0] = 'B';
@@ -322,23 +263,23 @@ void CFrame::toBmp(uint8_t *&bmp, int &totalSize)
     bmpHeader.m_nDiff = bmpDataOffset;
     bmpHeader.m_n28 = bmpHeaderSize;
 
-    bmpHeader.m_nLen = m_nLen;
-    bmpHeader.m_nHei = m_nHei;
+    bmpHeader.m_nLen = m_width;
+    bmpHeader.m_nHei = m_height;
     bmpHeader.m_nPlanes = 1; // always 1
     bmpHeader.m_nBitCount = 24;
     bmpHeader.m_nCompress = 0; // 00 00 00 00
 
-    bmpHeader.m_nImageSize = pitch * m_nHei;
+    bmpHeader.m_nImageSize = pitch * m_height;
     bmpHeader.m_nXPix = 0;    // 00 00 00 00 X pix/m
     bmpHeader.m_nYPix = 0;    // 00 00 00 00 Y pix/m
     bmpHeader.m_nClrUsed = 0; // 00 00 00 00 ClrUsed
     bmpHeader.m_nClrImpt = 0; // 00 00 00 00 ClrImportant
 
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
-            uint8_t *s = (uint8_t *)&point(x, m_nHei - y - 1);
+            uint8_t *s = (uint8_t *)&at(x, m_height - y - 1);
             uint8_t *d = bmp + bmpDataOffset + x * 3 + y * pitch;
             d[0] = s[2];
             d[1] = s[1];
@@ -366,14 +307,14 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     CCRC crc;
 
     // compress the data ....................................
-    int scanLine = m_nLen * 4;
-    uLong dataSize = (scanLine + 1) * m_nHei;
+    int scanLine = m_width * 4;
+    uLong dataSize = (scanLine + 1) * m_height;
     std::vector<uint8_t> rdata(dataSize);
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
         uint8_t *d = rdata.data() + y * (scanLine + 1);
         *d = 0;
-        memcpy(d + 1, m_rgb + y * m_nLen, scanLine);
+        memcpy(d + 1, m_rgb.data() + y * m_width, scanLine);
     }
 
     std::vector<uint8_t> cData;
@@ -406,8 +347,8 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     png_IHDR &ihdr = *((png_IHDR *)t);
     ihdr.Lenght = toNet(png_IHDR_Size - 8);
     memcpy(ihdr.ChunkType, "IHDR", 4);
-    ihdr.Width = toNet(m_nLen);
-    ihdr.Height = toNet(m_nHei);
+    ihdr.Width = toNet(m_width);
+    ihdr.Height = toNet(m_height);
     ihdr.BitDepth = 8;
     ihdr.ColorType = 6;
     ihdr.Compression = 0; // deflated
@@ -473,33 +414,33 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
 
 void CFrame::resize(int len, int hei)
 {
-    CFrame *newFrame = new CFrame(len, hei);
+    CFrame newFrame(len, hei);
 
     // Copy the original frame
-    for (int y = 0; y < std::min(hei, m_nHei); ++y)
+    for (int y = 0; y < std::min(hei, m_height); ++y)
     {
-        for (int x = 0; x < std::min(len, m_nLen); ++x)
+        for (int x = 0; x < std::min(len, m_width); ++x)
         {
-            newFrame->at(x, y) = at(x, y);
+            newFrame.at(x, y) = at(x, y);
         }
     }
 
-    delete[] m_rgb;
-    m_rgb = newFrame->getRGB();
-    newFrame->detach();
-    delete newFrame;
+    //    delete[] m_rgb;
+    m_rgb = newFrame.getRGB();
+    // newFrame->detach();
+    // delete newFrame;
 
-    m_nLen = len;
-    m_nHei = hei;
+    m_width = len;
+    m_height = hei;
 
     // TODO: actually resize the map
-    m_map.resize(m_nLen, m_nHei);
+    m_map.resize(len, hei);
 }
 
 void CFrame::setTransparency(uint32_t color)
 {
     color &= COLOR_MASK;
-    for (int i = 0; i < m_nLen * m_nHei; ++i)
+    for (int i = 0; i < m_width * m_height; ++i)
     {
         if ((m_rgb[i] & COLOR_MASK) == color)
         {
@@ -515,7 +456,7 @@ void CFrame::setTopPixelAsTranparency()
 
 void CFrame::updateMap()
 {
-    m_map.resize(m_nLen, m_nHei);
+    m_map.resize(m_width, m_height);
     int threhold = CSS3Map::GRID_SIZE * CSS3Map::GRID_SIZE / 4;
     for (int y = 0; y < m_map.height(); ++y)
     {
@@ -526,7 +467,7 @@ void CFrame::updateMap()
             {
                 for (int j = 0; j < CSS3Map::GRID_SIZE; ++j)
                 {
-                    data += ((point(x * CSS3Map::GRID_SIZE + i, y * CSS3Map::GRID_SIZE + j)) & ALPHA_MASK) != 0;
+                    data += ((at(x * CSS3Map::GRID_SIZE + i, y * CSS3Map::GRID_SIZE + j)) & ALPHA_MASK) != 0;
                 }
             }
             if (data >= threhold)
@@ -543,7 +484,7 @@ void CFrame::updateMap()
 
 bool CFrame::hasTransparency() const
 {
-    for (int i = 0; i < m_nLen * m_nHei; ++i)
+    for (int i = 0; i < m_width * m_height; ++i)
     {
         if (!(m_rgb[i] & ALPHA_MASK))
         {
@@ -556,33 +497,45 @@ bool CFrame::hasTransparency() const
 
 CFrameSet *CFrame::split(int pxSize, bool whole)
 {
-    CFrameSet *frameSet = new CFrameSet();
-    for (int y = 0; y < m_nHei; y += pxSize)
+    // std::string m_lastError;
+
+    if (pxSize <= 0 || m_width <= 0 || m_height <= 0)
     {
-        for (int x = 0; x < m_nLen; x += pxSize)
-        {
-            CFrame *frame;
-            if (whole)
-            {
-                frame = new CFrame(pxSize, pxSize);
-            }
-            else
-            {
-                frame = new CFrame(std::min(pxSize, m_nLen - x), std::min(pxSize, m_nHei - y));
-            }
-            uint32_t *ni_rgb = frame->getRGB();
-            for (int z = 0; z < std::min(pxSize, m_nHei - y); ++z)
-            {
-                memcpy(&ni_rgb[z * frame->m_nLen], // pxSize],
-                       &m_rgb[x + (y + z) * m_nLen],
-                       std::min(pxSize, m_nLen - x) * sizeof(uint32_t));
-            }
-            frameSet->add(frame);
-            // TODO: copy the actual map
-            frame->updateMap();
-        }
+        m_lastError = "Invalid split parameters: pxSize=" + std::to_string(pxSize) +
+                      ", width=" + std::to_string(m_width) + ", height=" + std::to_string(m_height);
+        return nullptr;
     }
-    return frameSet;
+    if (whole && (m_width % pxSize != 0))
+    {
+        m_lastError = "pxSize=" + std::to_string(pxSize) + " does not evenly divide width=" + std::to_string(m_width);
+        return nullptr;
+    }
+
+    auto set = std::make_unique<CFrameSet>();
+    int count = whole ? m_width / pxSize : 1;
+    if (count > 10000)
+    {
+        m_lastError = "Too many sub-frames: " + std::to_string(count);
+        return nullptr;
+    }
+
+    set->reserve(count); // Pre-allocate frames
+    int mx = 0;
+    for (int i = 0; i < count; ++i)
+    {
+        auto frame = std::unique_ptr<CFrame>(clip(mx, 0, pxSize, m_height));
+        if (!frame)
+        {
+            m_lastError = "Failed to clip frame at x=" + std::to_string(mx);
+            return nullptr;
+        }
+        frame->updateMap(); // Regenerate map for non-custom maps
+        // set->add(std::move(frame));
+        set->add(frame.release());
+        mx += pxSize;
+    }
+
+    return set.release();
 }
 
 bool CFrame::draw(CDotArray *dots, int size, int mode)
@@ -595,7 +548,7 @@ bool CFrame::draw(CDotArray *dots, int size, int mode)
         {
             for (int x = 0; x < size; ++x)
             {
-                if (dot.x + x < m_nLen && dot.y + y < m_nHei)
+                if (dot.x + x < m_width && dot.y + y < m_height)
                 {
                     switch (mode)
                     {
@@ -643,7 +596,7 @@ void CFrame::save(CDotArray *dots, CDotArray *dotsOrg, int size)
         {
             for (int x = 0; x < size; ++x)
             {
-                if (dot.x + x < m_nLen && dot.y + y < m_nHei)
+                if (dot.x + x < m_width && dot.y + y < m_height)
                 {
                     dotsOrg->add(at(dot.x + x, dot.y + y), dot.x + x, dot.y + y);
                 }
@@ -668,7 +621,7 @@ void CFrame::floodFill(int x, int y, uint32_t bOldColor, uint32_t bNewColor)
             floodFill(x, y - 1, bOldColor, bNewColor);
         }
 
-        if ((y < m_nHei - 1) && (at(x, y + 1) == bOldColor))
+        if ((y < m_height - 1) && (at(x, y + 1) == bOldColor))
         {
             floodFill(x, y + 1, bOldColor, bNewColor);
         }
@@ -680,7 +633,7 @@ void CFrame::floodFill(int x, int y, uint32_t bOldColor, uint32_t bNewColor)
         return;
     }
 
-    for (; (x < m_nLen) && at(x, y) == bOldColor; ++x)
+    for (; (x < m_width) && at(x, y) == bOldColor; ++x)
     {
         at(x, y) = bNewColor;
         if ((y > 0) && (at(x, y - 1) == bOldColor))
@@ -688,7 +641,7 @@ void CFrame::floodFill(int x, int y, uint32_t bOldColor, uint32_t bNewColor)
             floodFill(x, y - 1, bOldColor, bNewColor);
         }
 
-        if ((y < m_nHei - 1) && (at(x, y + 1) == bOldColor))
+        if ((y < m_height - 1) && (at(x, y + 1) == bOldColor))
         {
             floodFill(x, y + 1, bOldColor, bNewColor);
         }
@@ -705,14 +658,14 @@ void CFrame::floodFillAlpha(int x, int y, uint8_t oldAlpha, uint8_t newAlpha)
     int ex = x;
     for (; (x >= 0) && alphaAt(x, y) == oldAlpha; --x)
     {
-        uint8_t *p = (uint8_t *)&point(x, y);
+        uint8_t *p = (uint8_t *)&at(x, y);
         p[3] = newAlpha;
         if ((y > 0) && (alphaAt(x, y - 1) == oldAlpha))
         {
             floodFillAlpha(x, y - 1, oldAlpha, newAlpha);
         }
 
-        if ((y < m_nHei - 1) && (alphaAt(x, y + 1) == oldAlpha))
+        if ((y < m_height - 1) && (alphaAt(x, y + 1) == oldAlpha))
         {
             floodFillAlpha(x, y + 1, oldAlpha, newAlpha);
         }
@@ -724,16 +677,16 @@ void CFrame::floodFillAlpha(int x, int y, uint8_t oldAlpha, uint8_t newAlpha)
         return;
     }
 
-    for (; (x < m_nLen) && alphaAt(x, y) == oldAlpha; ++x)
+    for (; (x < m_width) && alphaAt(x, y) == oldAlpha; ++x)
     {
-        uint8_t *p = (uint8_t *)&point(x, y);
+        uint8_t *p = (uint8_t *)&at(x, y);
         p[3] = newAlpha;
         if ((y > 0) && (alphaAt(x, y - 1) == oldAlpha))
         {
             floodFillAlpha(x, y - 1, oldAlpha, newAlpha);
         }
 
-        if ((y < m_nHei - 1) && (alphaAt(x, y + 1) == oldAlpha))
+        if ((y < m_height - 1) && (alphaAt(x, y + 1) == oldAlpha))
         {
             floodFillAlpha(x, y + 1, oldAlpha, newAlpha);
         }
@@ -742,8 +695,8 @@ void CFrame::floodFillAlpha(int x, int y, uint8_t oldAlpha, uint8_t newAlpha)
 
 CFrame *CFrame::clip(int mx, int my, int cx, int cy)
 {
-    int maxLen = m_nLen - mx;
-    int maxHei = m_nHei - my;
+    int maxLen = m_width - mx;
+    int maxHei = m_height - my;
 
     if (cx == -1)
     {
@@ -779,13 +732,13 @@ CFrame *CFrame::clip(int mx, int my, int cx, int cy)
 
 void CFrame::flipV()
 {
-    for (int y = 0; y < m_nHei / 2; ++y)
+    for (int y = 0; y < m_height / 2; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
             uint32_t c = at(x, y);
-            at(x, y) = at(x, m_nHei - y - 1);
-            at(x, m_nHei - y - 1) = c;
+            at(x, y) = at(x, m_height - y - 1);
+            at(x, m_height - y - 1) = c;
         }
     }
     // TODO: updatemap
@@ -793,13 +746,13 @@ void CFrame::flipV()
 
 void CFrame::flipH()
 {
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen / 2; ++x)
+        for (int x = 0; x < m_width / 2; ++x)
         {
             uint32_t c = at(x, y);
-            at(x, y) = at(m_nLen - x - 1, y);
-            at(m_nLen - x - 1, y) = c;
+            at(x, y) = at(m_width - x - 1, y);
+            at(m_width - x - 1, y) = c;
         }
     }
     // TODO: updatemap
@@ -807,95 +760,47 @@ void CFrame::flipH()
 
 void CFrame::rotate()
 {
-    CFrame *newFrame = new CFrame(m_nHei, m_nLen);
-    for (int y = 0; y < m_nHei; ++y)
+    // CFrame *newFrame = new CFrame(m_height, m_width);
+    CFrame newFrame(m_height, m_width);
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
-            newFrame->at(newFrame->m_nLen - y - 1, x) = at(x, y);
+            newFrame.at(newFrame.m_width - y - 1, x) = at(x, y);
         }
     }
 
-    m_nLen = newFrame->m_nLen;
-    m_nHei = newFrame->m_nHei;
-    delete[] m_rgb;
-    m_rgb = newFrame->getRGB();
+    m_width = newFrame.m_width;
+    m_height = newFrame.m_height;
+    // delete[] m_rgb;
+    m_rgb = newFrame.getRGB();
 
-    newFrame->detach();
-    delete newFrame;
-
-    // TODO: updatemap
-}
-
-void CFrame::spreadH()
-{
-    uint32_t *rgb = new uint32_t[m_nLen * m_nHei * 2];
-
-    for (int y = 0; y < m_nHei; ++y)
-    {
-        memcpy(rgb + y * m_nLen * 2,
-               &at(0, y),
-               m_nLen * sizeof(uint32_t));
-
-        memcpy(rgb + y * m_nLen * 2 + m_nLen,
-               &at(0, y),
-               m_nLen * sizeof(uint32_t));
-    }
-
-    m_nLen *= 2;
-    delete[] m_rgb;
-    m_rgb = rgb;
-
-    // TODO: updatemap
-}
-
-void CFrame::spreadV()
-{
-    uint32_t *rgb = new uint32_t[m_nLen * m_nHei * 2];
-
-    for (int y = 0; y < m_nHei; ++y)
-    {
-        memcpy(rgb + y * m_nLen,
-               &at(0, y),
-               m_nLen * sizeof(uint32_t));
-
-        memcpy(rgb + y * m_nLen + m_nHei * m_nLen,
-               &at(0, y),
-               m_nLen * sizeof(uint32_t));
-    }
-
-    m_nHei *= 2;
-    delete[] m_rgb;
-    m_rgb = rgb;
+    // newFrame->detach();
+    // delete newFrame;
 
     // TODO: updatemap
 }
 
 void CFrame::shrink()
 {
-    CFrame *newFrame = new CFrame(m_nLen / 2, m_nHei / 2);
-    for (int y = 0; y < m_nHei / 2; ++y)
+    CFrame newFrame(m_width / 2, m_height / 2);
+    for (int y = 0; y < m_height / 2; ++y)
     {
-        for (int x = 0; x < m_nLen / 2; ++x)
+        for (int x = 0; x < m_width / 2; ++x)
         {
-            newFrame->at(x, y) = at(x * 2, y * 2);
+            newFrame.at(x, y) = at(x * 2, y * 2);
         }
     }
 
     // why wasn't the old rgb deleted?
-    if (m_rgb)
-    {
-        delete m_rgb;
-    }
-    m_rgb = newFrame->getRGB();
-    newFrame->detach();
-    delete newFrame;
 
-    m_nLen /= 2;
-    m_nHei /= 2;
+    m_rgb = newFrame.getRGB();
+
+    m_width /= 2;
+    m_height /= 2;
 
     // TODO: actually resize the map
-    m_map.resize(m_nLen, m_nHei);
+    m_map.resize(m_width, m_height);
 
     // TODO: fix this temp updateMap
     updateMap();
@@ -908,100 +813,120 @@ const CSS3Map &CFrame::getMap() const
 
 void CFrame::enlarge()
 {
-    CFrame *newFrame = new CFrame(m_nLen * 2, m_nHei * 2);
-    for (int y = 0; y < m_nHei; ++y)
+    CFrame newFrame(m_width * 2, m_height * 2);
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
             uint32_t c = at(x, y);
-            newFrame->at(x * 2, y * 2) = c;
-            newFrame->at(x * 2 + 1, y * 2) = c;
-            newFrame->at(x * 2, y * 2 + 1) = c;
-            newFrame->at(x * 2 + 1, y * 2 + 1) = c;
+            newFrame.at(x * 2, y * 2) = c;
+            newFrame.at(x * 2 + 1, y * 2) = c;
+            newFrame.at(x * 2, y * 2 + 1) = c;
+            newFrame.at(x * 2 + 1, y * 2 + 1) = c;
         }
     }
 
-    m_rgb = newFrame->getRGB();
-    newFrame->detach();
-    delete newFrame;
+    m_rgb = newFrame.getRGB();
 
-    m_nLen *= 2;
-    m_nHei *= 2;
+    m_width *= 2;
+    m_height *= 2;
 
     // TODO: actually resize the map
-    m_map.resize(m_nLen, m_nHei);
+    m_map.resize(m_width, m_height);
 
     // TODO: fix this temp updateMap
     updateMap();
 }
 
-void CFrame::shiftUP(const bool wrap)
+void CFrame::shiftUP(bool wrap)
 {
-    uint32_t *t = new uint32_t[m_nLen];
-
-    // copy first line to buffer
-    memcpy(t, m_rgb, sizeof(uint32_t) * m_nLen);
-
-    // shift
-    for (int y = 0; y < m_nHei - 1; ++y)
+    if (m_height <= 1 || m_width <= 0)
     {
-        memcpy(&at(0, y), &at(0, y + 1), m_nLen * sizeof(uint32_t));
+        m_lastError = "Invalid dimensions for shiftUP: " + std::to_string(m_width) + "x" + std::to_string(m_height);
+        return;
     }
 
-    // copy first line to last
-    if (wrap)
-        memcpy(&at(0, m_nHei - 1), t, sizeof(uint32_t) * m_nLen);
-    else
-        memset(&at(0, m_nHei - 1), 0, sizeof(uint32_t) * m_nLen);
+    // Save top row
+    std::vector<uint32_t> topRow(m_rgb.begin(), m_rgb.begin() + m_width);
 
-    delete[] t;
+    // Shift pixels up
+    std::copy(m_rgb.begin() + m_width, m_rgb.end(), m_rgb.begin());
+
+    // Handle bottom row
+    if (wrap)
+    {
+        std::copy(topRow.begin(), topRow.end(), m_rgb.end() - m_width);
+    }
+    else
+    {
+        std::fill(m_rgb.end() - m_width, m_rgb.end(), 0);
+    }
+
+    // Regenerate map if custom map is disabled
+    updateMap();
 }
 
-void CFrame::shiftDOWN(const bool wrap)
+void CFrame::shiftDOWN(bool wrap)
 {
-    uint32_t *t = new uint32_t[m_nLen];
-
-    // copy first line to buffer
-    memcpy(t, &at(0, m_nHei - 1), sizeof(uint32_t) * m_nLen);
-
-    // shift
-    for (int y = 0; y < m_nHei - 1; ++y)
+    if (m_height <= 1 || m_width <= 0)
     {
-        memcpy(&at(0, m_nHei - y - 1), &at(0, m_nHei - y - 2), m_nLen * sizeof(uint32_t));
+        m_lastError = "Invalid dimensions for shiftDOWN: " + std::to_string(m_width) + "x" + std::to_string(m_height);
+        return;
     }
 
-    // copy first line to last
+    // Save bottom row
+    std::vector<uint32_t> bottomRow(m_rgb.end() - m_width, m_rgb.end());
+
+    // Shift pixels down
+    std::copy_backward(m_rgb.begin(), m_rgb.end() - m_width, m_rgb.end());
+
+    // Handle top row
     if (wrap)
-        memcpy(m_rgb, t, sizeof(uint32_t) * m_nLen);
+    {
+        std::copy(bottomRow.begin(), bottomRow.end(), m_rgb.begin());
+    }
     else
-        memset(m_rgb, 0, sizeof(uint32_t) * m_nLen);
-    delete[] t;
+    {
+        std::fill(m_rgb.begin(), m_rgb.begin() + m_width, 0);
+    }
+
+    updateMap();
 }
 
 void CFrame::shiftLEFT(const bool wrap)
 {
-    for (int y = 0; y < m_nHei; ++y)
+    if (m_height <= 1 || m_width <= 0)
+    {
+        m_lastError = "Invalid dimensions for shiftLEFT: " + std::to_string(m_width) + "x" + std::to_string(m_height);
+        return;
+    }
+    for (int y = 0; y < m_height; ++y)
     {
         const uint32_t c = at(0, y);
-        for (int x = 0; x < m_nLen - 1; ++x)
+        for (int x = 0; x < m_width - 1; ++x)
         {
             at(x, y) = at(x + 1, y);
         }
         if (wrap)
-            at(m_nLen - 1, y) = c;
+            at(m_width - 1, y) = c;
         else
-            at(m_nLen - 1, y) = 0;
+            at(m_width - 1, y) = 0;
     }
 }
 
 void CFrame::shiftRIGHT(const bool wrap)
 {
-    for (int y = 0; y < m_nHei; ++y)
+    if (m_height <= 1 || m_width <= 0)
     {
-        const uint32_t c = at(m_nLen - 1, y);
-        for (int x = 0; x < m_nLen - 1; ++x)
+        m_lastError = "Invalid dimensions for shiftRIGHT: " + std::to_string(m_width) + "x" + std::to_string(m_height);
+        return;
+    }
+    for (int y = 0; y < m_height; ++y)
+    {
+        const uint32_t c = at(m_width - 1, y);
+        for (int x = 0; x < m_width - 1; ++x)
         {
-            at(m_nLen - 1 - x, y) = at(m_nLen - 2 - x, y);
+            at(m_width - 1 - x, y) = at(m_width - 2 - x, y);
         }
         if (wrap)
             at(0, y) = c;
@@ -1012,11 +937,11 @@ void CFrame::shiftRIGHT(const bool wrap)
 
 bool CFrame::isEmpty() const
 {
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
-            if ((m_rgb[x + y * m_nLen] & 0xff000000))
+            if ((m_rgb[x + y * m_width] & 0xff000000))
             {
                 return false;
             }
@@ -1027,9 +952,9 @@ bool CFrame::isEmpty() const
 
 void CFrame::inverse()
 {
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
             unsigned int &rgb = at(x, y);
             rgb = (~rgb & 0xffffff) + (rgb & 0xff000000);
@@ -1037,95 +962,24 @@ void CFrame::inverse()
     }
 }
 
-void CFrame::copy(CFrame *frame)
+void CFrame::copy(const CFrame *src)
 {
-    *this = *frame;
-}
-
-void CFrame::undo()
-{
-    if (m_undoPtr < m_undoSize)
+    if (!src)
     {
-        CFrame *tmp = m_undoFrames[m_undoPtr];
-        m_undoFrames[m_undoPtr] = new CFrame(this);
-        copy(tmp);
-        delete tmp;
-        m_undoPtr++;
+        clear();
+        return;
     }
-}
-
-void CFrame::redo()
-{
-    if (m_undoPtr && m_undoSize)
-    {
-        CFrame *tmp = m_undoFrames[m_undoPtr - 1];
-        m_undoFrames[m_undoPtr - 1] = new CFrame(this);
-        copy(tmp);
-        delete tmp;
-        m_undoPtr--;
-    }
-}
-
-void CFrame::push()
-{
-    if (m_undoFrames.size() == 0)
-    {
-        m_undoFrames.resize(MAX_UNDO); // = new CFrame *[MAX_UNDO];
-        m_undoPtr = 0;
-        m_undoSize = 0;
-    }
-
-    if (m_undoPtr != 0)
-    {
-        for (int i = 0; i < m_undoPtr; ++i)
-        {
-            delete m_undoFrames[i];
-        }
-
-        for (int i = 0; i + m_undoPtr < m_undoSize; ++i)
-        {
-            m_undoFrames[i] = m_undoFrames[m_undoPtr + i];
-        }
-        m_undoSize -= m_undoPtr;
-        m_undoPtr = 0;
-    }
-
-    if (m_undoSize == MAX_UNDO)
-    {
-        delete m_undoFrames[m_undoSize - 1];
-    }
-
-    // push everything back
-    for (int i = std::min(m_undoSize, (int)MAX_UNDO - 1); i > 0; --i)
-    {
-        m_undoFrames[i] = m_undoFrames[i - 1];
-    }
-
-    if (m_undoSize < MAX_UNDO)
-    {
-        ++m_undoSize;
-    }
-
-    m_undoFrames[0] = new CFrame(this);
-}
-
-bool CFrame::canUndo()
-{
-    // return m_undoFrames != nullptr && m_undoPtr < m_undoSize;
-    return m_undoPtr < m_undoSize;
-}
-
-bool CFrame::canRedo()
-{
-    //    return m_undoFrames != nullptr && m_undoPtr > 0 && m_undoSize;
-    return m_undoPtr > 0 && m_undoSize;
+    m_rgb = src->m_rgb;
+    m_map = src->m_map;
+    m_width = src->m_width;
+    m_height = src->m_height;
 }
 
 void CFrame::shadow(int factor)
 {
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
             unsigned int &rgb = at(x, y);
             rgb = (rgb & 0xffffff) + (rgb & 0xff000000) / factor;
@@ -1135,9 +989,9 @@ void CFrame::shadow(int factor)
 
 void CFrame::fade(int factor)
 {
-    for (int y = 0; y < m_nHei; ++y)
+    for (int y = 0; y < m_height; ++y)
     {
-        for (int x = 0; x < m_nLen; ++x)
+        for (int x = 0; x < m_width; ++x)
         {
             unsigned int &rgb = at(x, y);
             rgb = (rgb & 0xffffff) + ((((rgb & 0xff000000) >> 24) * factor / 255) << 24);
@@ -1166,7 +1020,7 @@ CFrameSet *CFrame::explode(int count, short *xx, short *yy, CFrameSet *set)
 void CFrame::abgr2argb()
 {
     // swap blue/red
-    for (int i = 0; i < m_nLen * m_nHei; ++i)
+    for (int i = 0; i < m_width * m_height; ++i)
     {
         uint32_t t = (m_rgb[i] & 0xff00ff00);
         if (t & 0xff000000)
@@ -1180,7 +1034,7 @@ void CFrame::abgr2argb()
 void CFrame::argb2arbg()
 {
     // swap green/blue
-    for (int i = 0; i < m_nLen * m_nHei; ++i)
+    for (int i = 0; i < m_width * m_height; ++i)
     {
         uint32_t t = (m_rgb[i] & 0xff0000ff);
         if (t & 0xff000000)
@@ -1191,30 +1045,6 @@ void CFrame::argb2arbg()
     }
 }
 
-CFrame *CFrame::toAlphaGray(int mx, int my, int cx, int cy)
-{
-    CFrame *frame;
-
-    if (mx != 0 || my != 0 || cx != -1 || cy != -1)
-    {
-        frame = this->clip(mx, my, cx, cy);
-    }
-    else
-    {
-        frame = new CFrame(this);
-    }
-
-    for (int i = 0; i < frame->m_nLen * frame->m_nHei; ++i)
-    {
-        unsigned char *p = (unsigned char *)(frame->m_rgb + i);
-        p[0] = p[3];
-        p[1] = p[3];
-        p[2] = p[3];
-        p[3] = 0xff;
-    }
-    return frame;
-}
-
 const char *CFrame::getChunkType()
 {
     return "obLT";
@@ -1222,7 +1052,7 @@ const char *CFrame::getChunkType()
 
 void CFrame::fill(unsigned int rgba)
 {
-    for (int i = 0; i < m_nLen * m_nHei; ++i)
+    for (int i = 0; i < m_width * m_height; ++i)
     {
         m_rgb[i] = rgba;
     }
@@ -1230,15 +1060,15 @@ void CFrame::fill(unsigned int rgba)
 
 void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
 {
-    for (int y = 0; y < frame.m_nHei; ++y)
+    for (int y = 0; y < frame.m_height; ++y)
     {
-        if (by + y >= m_nHei)
+        if (by + y >= m_height)
         {
             break;
         }
-        for (int x = 0; x < frame.m_nLen; ++x)
+        for (int x = 0; x < frame.m_width; ++x)
         {
-            if (bx + x >= m_nLen)
+            if (bx + x >= m_width)
             {
                 break;
             }
@@ -1246,13 +1076,6 @@ void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
                 at(bx + x, by + y) = frame.at(x, y);
         }
     }
-}
-
-uint32_t *CFrame::swapBuffer(uint32_t *newBuffer)
-{
-    uint32_t *tmp = m_rgb;
-    m_rgb = newBuffer;
-    return tmp;
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -1269,25 +1092,11 @@ CSS3Map::CSS3Map(const int px, const int py)
     resize(px, py);
 }
 
-CSS3Map::~CSS3Map()
-{
-}
-
 void CSS3Map::resize(const int px, const int py)
 {
     m_len = px / GRID_SIZE;
     m_hei = py / GRID_SIZE;
     m_map.resize(m_len * m_hei);
-}
-
-int CSS3Map::length() const
-{
-    return m_len;
-}
-
-int CSS3Map::height() const
-{
-    return m_hei;
 }
 
 /**
@@ -1312,11 +1121,6 @@ bool CSS3Map::write(IFile &file) const
 }
 
 bool CSS3Map::isNULL() const
-{
-    return m_map.data();
-}
-
-char *CSS3Map::getMap()
 {
     return m_map.data();
 }

@@ -89,8 +89,8 @@ CGameMixin::~CGameMixin()
  */
 void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const Color color, const Color bgcolor, const int scaleX, const int scaleY)
 {
-    uint32_t *rgba = frame.getRGB();
-    const int rowPixels = frame.len();
+    uint32_t *rgba = frame.getRGB().data();
+    const int rowPixels = frame.width();
     const int fontSize = FONT_SIZE;
     const int fontOffset = fontSize;
     const int textSize = strlen(text);
@@ -129,8 +129,8 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
  */
 void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const Color color, bool fill)
 {
-    uint32_t *rgba = frame.getRGB();
-    const int rowPixels = frame.len();
+    uint32_t *rgba = frame.getRGB().data();
+    const int rowPixels = frame.width();
     if (fill)
     {
         for (int y = 0; y < rect.height; y++)
@@ -170,8 +170,8 @@ void CGameMixin::drawRect(CFrame &frame, const Rect &rect, const Color color, bo
 
 void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const Rect &rect, const ColorMask colorMask, std::unordered_map<uint32_t, uint32_t> *colorMap)
 {
-    const int width = bitmap.len();
-    uint32_t *dest = bitmap.getRGB() + x + y * width;
+    const int width = bitmap.width();
+    uint32_t *dest = bitmap.getRGB().data() + x + y * width;
     if (!colorMask && !colorMap)
     {
         for (int row = 0; row < rect.height; ++row)
@@ -236,9 +236,9 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
 
 void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const bool alpha, const ColorMask colorMask, std::unordered_map<uint32_t, uint32_t> *colorMap)
 {
-    const int width = bitmap.len();
-    const uint32_t *tileData = tile.getRGB();
-    uint32_t *dest = bitmap.getRGB() + x + y * width;
+    const int width = bitmap.width();
+    const uint32_t *tileData = tile.getRGB().data();
+    uint32_t *dest = bitmap.getRGB().data() + x + y * width;
     if (alpha || colorMask || colorMap)
     {
         const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
@@ -329,9 +329,9 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
 
 void CGameMixin::drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &tile, int fazBitShift, const ColorMask colorMask)
 {
-    const int width = bitmap.len();
-    const uint32_t *tileData = tile.getRGB();
-    uint32_t *dest = bitmap.getRGB() + x + y * width;
+    const int width = bitmap.width();
+    const uint32_t *tileData = tile.getRGB().data();
+    uint32_t *dest = bitmap.getRGB().data() + x + y * width;
     const uint32_t colorFilter = fazBitShift ? fazFilter(fazBitShift) : 0;
     for (uint32_t row = 0; row < TILE_SIZE; ++row)
     {
@@ -420,8 +420,8 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     const Color rectBorder = isPlayerHurt              ? PINK
                              : visualcues.livesShimmer ? GREEN
                                                        : LIGHTGRAY;
-    drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, rectBG, true);
-    drawRect(bitmap, Rect{0, bitmap.hei() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
+    drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
+    drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
 
     // draw current event text
     drawEventText(bitmap);
@@ -1598,9 +1598,9 @@ void CGameMixin::clearButtonStates()
 void CGameMixin::fazeScreen(CFrame &bitmap, const int bitShift)
 {
     const uint32_t colorFilter = fazFilter(bitShift);
-    for (int y = 0; y < bitmap.hei(); ++y)
+    for (int y = 0; y < bitmap.height(); ++y)
     {
-        for (int x = 0; x < bitmap.len(); ++x)
+        for (int x = 0; x < bitmap.width(); ++x)
         {
             bitmap.at(x, y) =
                 ((bitmap.at(x, y) >> bitShift) & colorFilter) | ALPHA;
@@ -1692,7 +1692,7 @@ void CGameMixin::drawEventText(CFrame &bitmap)
         Color color = CYAN;
         int scaleX = 1;
         int scaleY = 1;
-        int baseY = bitmap.hei() - 4;
+        int baseY = bitmap.height() - 4;
         const std::string &s = getEventText(scaleX, scaleY, baseY, color);
         const int x = (WIDTH - s.size() * FONT_SIZE * scaleX) / 2;
         const int y = baseY - FONT_SIZE * scaleY;
@@ -2003,7 +2003,7 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
         const int maxHealth = game.maxHealth() / 2 / FONT_SIZE;
         int health = game.health() / 2;
         int bx = 2;
-        int by = bitmap.hei() - 12;
+        int by = bitmap.height() - 12;
         for (int i = 0; i < maxHealth; ++i)
         {
             drawHearth(bx, by, health > 0 ? health : 0);
@@ -2015,10 +2015,10 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
     {
         const Color hpColor = game.isGodMode() ? WHITE : isPlayerHurt ? PINK
                                                                       : LIME;
-        const int hpWidth = std::min(game.health() / 2, bitmap.len() - 4);
-        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+        const int hpWidth = std::min(game.health() / 2, bitmap.width() - 4);
+        drawRect(bitmap, Rect{4, bitmap.height() - 12, hpWidth, 8},
                  hpColor, true);
-        drawRect(bitmap, Rect{4, bitmap.hei() - 12, hpWidth, 8},
+        drawRect(bitmap, Rect{4, bitmap.height() - 12, hpWidth, 8},
                  WHITE, false);
     }
 }
