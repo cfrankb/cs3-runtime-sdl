@@ -23,6 +23,7 @@ def get_deps_blocks():
         "src/main.cpp",
         #'../../map.cpp',
         "src/tileset.cpp",
+        "../../src/logger.cpp",
         "../../src/shared/FileWrap.cpp",
         "../../src/shared/Frame.cpp",
         "../../src/shared/FrameSet.cpp",

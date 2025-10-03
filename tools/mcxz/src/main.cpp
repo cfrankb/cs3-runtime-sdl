@@ -15,6 +15,7 @@
 #include "../../../src/shared/FileWrap.h"
 #include "../../../src/shared/FrameSet.h"
 #include "../../../src/shared/Frame.h"
+#include "../../../src/logger.h"
 #include "tileset.h"
 
 constexpr const char DEFAULT_APP_NAME[] = "cs3-runtime-sdl";
@@ -235,7 +236,7 @@ int test()
         CFrameSet images;
         if (images.extract(sfile))
         {
-            printf("images:%d\n", images.getSize());
+            LOGI("images:%lu\n", images.getSize());
         }
         int count = images.getSize();
         CFrameSet imagesTiny;
@@ -245,12 +246,12 @@ int test()
             CFrame *t = new CFrame;
             t->copy(s);
             t->resize(32, 32);
-            int shiftRight = (32 - s->len()) / 2;
+            int shiftRight = (32 - s->width()) / 2;
             for (int j = 0; j < shiftRight; ++j)
             {
                 t->shiftRIGHT();
             }
-            int shiftDown = (32 - s->hei()) / 2;
+            int shiftDown = (32 - s->height()) / 2;
             for (int j = 0; j < shiftDown; ++j)
             {
                 t->shiftDOWN();
@@ -262,10 +263,10 @@ int test()
         CTileSet tiles(16, 16, count);
         for (int i = 0; i < count; ++i)
         {
-            printf("image:%d\n", i);
+            LOGI("image:%d\n", i);
             CFrame *frame = imagesTiny[i];
-            u_int32_t *rgb888 = frame->getRGB();
-            int pixels = frame->len() * frame->hei();
+            uint32_t *rgb888 = frame->getRGB().data();
+            int pixels = frame->width() * frame->height();
             uint16_t rgb565[pixels];
 
             for (int j = 0; j < pixels; ++j)
@@ -314,7 +315,7 @@ bool parseConfig(Config &conf,
     }
     else
     {
-        fprintf(stderr, "can't open %s\n", src);
+        LOGE("can't open %s\n", src);
         return false;
     }
     char *s = ptr;
@@ -373,7 +374,7 @@ bool parseConfig(Config &conf,
                 }
                 else
                 {
-                    printf("section head `%s` on line %d missing right bracket.\n", s, line);
+                    LOGW("section head `%s` on line %d missing right bracket.\n", s, line);
                 }
             }
             else
@@ -384,7 +385,7 @@ bool parseConfig(Config &conf,
                 }
                 else
                 {
-                    printf("file def on line %d without section.\n", line);
+                    LOGW("file def on line %d without section.\n", line);
                 }
             }
         }
@@ -417,7 +418,7 @@ bool processConst(StringVector &rows,
         std::string key = str2upper(list[0]);
         if (list.size() < 2)
         {
-            printf("missing second value for: %s\n", key.c_str());
+            LOGW("missing second value for: %s\n", key.c_str());
             continue;
         }
         u_int8_t val = list[1].substr(0, 2) == "0x" ? std::stoi(list[1], 0, 16) : std::stoi(list[1], 0, 10);
@@ -463,7 +464,7 @@ bool writeConstFile(const AppSettings &appSettings, Config &constLists)
     }
     else
     {
-        printf("cannot create %s\n", fname);
+        LOGE("cannot create %s\n", fname);
         return false;
     }
 }
@@ -530,7 +531,7 @@ bool generateHeader(const AppSettings &appSettings,
     CFileWrap tfileHdr;
     if (!tfileHdr.open(fnameHdr.c_str(), "wb"))
     {
-        fprintf(stderr, "can't create %s\n", fnameHdr.c_str());
+        LOGE("can't create %s\n", fnameHdr.c_str());
         return false;
     }
 
@@ -601,7 +602,7 @@ bool generateData(const AppSettings &appSettings,
     CFileWrap tfileData;
     if (!tfileData.open(fnameData.c_str(), "wb"))
     {
-        fprintf(stderr, "failed to create %s\n", fnameData.c_str());
+        LOGE("failed to create %s\n", fnameData.c_str());
         return false;
     }
 
@@ -637,8 +638,8 @@ bool generateData(const AppSettings &appSettings,
             if (chMap[tile.ch] != '\0')
             {
                 Tile &tileOld = tileDefs[chMap[tile.ch]];
-                fprintf(stderr, "conflict warning: char `%c` already assigned to %s. \n",
-                        tile.ch, tileOld.name.c_str());
+                LOGE("conflict warning: char `%c` already assigned to %s. \n",
+                     tile.ch, tileOld.name.c_str());
                 ++warnings;
             }
             chMap[tile.ch] = i;
@@ -685,7 +686,7 @@ bool generateData(const AppSettings &appSettings,
                  "}\n"
                  "\n";
     if (warnings)
-        printf(">>>>%d warnings\n", warnings);
+        LOGW(">>>>%d warnings\n", warnings);
     tfileData.close();
     return true;
 }
@@ -718,7 +719,7 @@ bool generateDebug(const AppSettings &appSettings,
     CFileWrap tfile;
     if (!tfile.open(fnameData.c_str(), "wb"))
     {
-        fprintf(stderr, "failed to create %s\n", fnameData.c_str());
+        LOGE("failed to create %s\n", fnameData.c_str());
         return false;
     }
 
@@ -786,7 +787,7 @@ bool generateDebug(const AppSettings &appSettings,
     const std::string fnameHdr = section + "debug.h";
     if (!tfile.open(fnameHdr.c_str(), "wb"))
     {
-        fprintf(stderr, "failed to create %s\n", fnameHdr.c_str());
+        LOGE("failed to create %s\n", fnameHdr.c_str());
         return false;
     }
 
@@ -908,7 +909,7 @@ Tile parseFileParams(const StringVector &list,
                 }
                 else
                 {
-                    printf("unknown directive: %s\n", ref.c_str());
+                    LOGE("unknown directive: %s\n", ref.c_str());
                 }
             }
             else if (item[0] == '!')
@@ -931,7 +932,7 @@ Tile parseFileParams(const StringVector &list,
                 }
                 else
                 {
-                    printf("can't find %s: %s\n", params.name.c_str(), ref.c_str());
+                    LOGE("can't find %s: %s\n", params.name.c_str(), ref.c_str());
                 }
             }
             else
@@ -940,7 +941,7 @@ Tile parseFileParams(const StringVector &list,
                 tile.typeName = item;
                 if (constConfig["types"].count(item) == 0)
                 {
-                    printf("unknown type: %s\n", ref.c_str());
+                    LOGE("unknown type: %s\n", ref.c_str());
                 }
                 else
                 {
@@ -1072,14 +1073,14 @@ bool extractImages(const std::string &fname, CFrameSet &images)
     CFileWrap sfile;
     if (fname.ends_with(".zip") && readZipFile(fname, images))
     {
-        printf("%s images:%d (insize zip)\n", fname.c_str(), images.getSize());
+        LOGI("%s images:%lu (insize zip)\n", fname.c_str(), images.getSize());
         return true;
     }
     else if (sfile.open(fname.c_str(), "rb"))
     {
         if (images.extract(sfile))
         {
-            printf("%s images:%d\n", fname.c_str(), images.getSize());
+            LOGI("%s images:%lu\n", fname.c_str(), images.getSize());
             return true;
         }
     }
@@ -1147,22 +1148,22 @@ bool processSection(
                 CFrame *t = new CFrame;
                 t->copy(s);
 
-                if (t->hei() > 16 || t->len() > 16)
+                if (t->height() > 16 || t->width() > 16)
                 {
                     t->resize(32, 32);
-                    int shiftRight = (32 - s->len()) / 2;
+                    int shiftRight = (32 - s->width()) / 2;
                     for (int j = 0; j < shiftRight; ++j)
                     {
                         t->shiftRIGHT();
                     }
-                    int shiftDown = (32 - s->hei()) / 2;
+                    int shiftDown = (32 - s->height()) / 2;
                     for (int j = 0; j < shiftDown; ++j)
                     {
                         t->shiftDOWN();
                     }
                     t->shrink();
                 }
-                else if (t->hei() < 16 || t->len() < 16)
+                else if (t->height() < 16 || t->width() < 16)
                 {
                     t->resize(16, 16);
                 }
@@ -1175,7 +1176,7 @@ bool processSection(
         }
         else
         {
-            fprintf(stderr, "failed to open: %s\n", fname);
+            LOGE("failed to open: %s\n", fname);
             ++errors;
         }
     }
@@ -1183,7 +1184,7 @@ bool processSection(
     CFileWrap tfileTiny;
     if (!tfileTiny.open(fnameTiny.c_str(), "wb"))
     {
-        printf("can't open %s\n", fnameTiny.c_str());
+        LOGE("can't open %s\n", fnameTiny.c_str());
     }
     else if (appSettings.outputPNG)
     {
@@ -1197,15 +1198,15 @@ bool processSection(
         imagesTiny.write(tfileTiny);
     }
 
-    printf("tiles: %d\n", imagesTiny.getSize());
+    LOGI("tiles: %lu\n", imagesTiny.getSize());
 
     // generate tileset
     CTileSet tiles(16, 16, imagesTiny.getSize(), appSettings.pixelWidth); // create tileset
-    for (int i = 0; i < imagesTiny.getSize(); ++i)
+    for (size_t i = 0; i < imagesTiny.getSize(); ++i)
     {
         CFrame *frame = imagesTiny[i];
-        uint32_t *rgbX888 = frame->getRGB();
-        int pixels = frame->len() * frame->hei();
+        uint32_t *rgbX888 = frame->getRGB().data();
+        int pixels = frame->width() * frame->height();
         int j;
         uint8_t rgb332[pixels];
         uint16_t rgb565[pixels];
@@ -1280,13 +1281,14 @@ bool processSection(
 
     if (colors.size())
     {
-        printf("palette: %lu\n", colors.size());
+        LOGI("palette: %lu\n", colors.size());
     }
 
     if (errors)
-        fprintf(stderr, "\n===>>>>> %d errors\n\n", errors);
+    {
+        LOGE("\n===>>>>> %d errors\n\n", errors);
+    }
 
-    printf("\n");
     return true;
 }
 
@@ -1311,7 +1313,7 @@ bool writePalette(const std::string &lastTileSet,
         std::string palettePath = lastTileSet + ".pal";
         std::string palettePngPath = lastTileSet + "-pal.png";
         uint32_t palette[colorCount];
-        printf("writing palette: %s\n", palettePath.c_str());
+        LOGI("writing palette: %s\n", palettePath.c_str());
         for (const auto &[color, idx] : colors)
         {
             palette[idx] = color;
@@ -1385,7 +1387,7 @@ bool runJob(const char *src,
             else
             {
                 lastTileSet = sectionName;
-                printf("[%s]\n", sectionName.c_str());
+                LOGI("[%s]\n", sectionName.c_str());
                 processSection(
                     sectionName,
                     files,
@@ -1400,9 +1402,13 @@ bool runJob(const char *src,
     }
     writePalette(lastTileSet, colors);
     if (total_errors)
-        fprintf(stderr, "\n****>>>> total errors: %d\n", total_errors);
+    {
+        LOGE("\n****>>>> total errors: %d\n", total_errors);
+    }
     else
-        printf("****>>>> no error found\n");
+    {
+        LOGI("****>>>> no error found\n");
+    }
 
     return result && total_errors == 0;
 }
@@ -1471,7 +1477,7 @@ int main(int argc, char *argv[], char *envp[])
                 }
                 else
                 {
-                    fprintf(stderr, "switch: %s, missing appName\n", src);
+                    LOGE("switch: %s, missing appName\n", src);
                     return EXIT_FAILURE;
                 }
             }
@@ -1493,18 +1499,18 @@ int main(int argc, char *argv[], char *envp[])
                     continue;
                 else if (src[2] == '\0')
                 {
-                    fprintf(stderr, "missing encoding value: %s\n", src);
+                    LOGE("missing encoding value: %s\n", src);
                     return EXIT_FAILURE;
                 }
                 else
                 {
-                    fprintf(stderr, "invalid encoding: %s\n", src + 2);
+                    LOGE("invalid encoding: %s\n", src + 2);
                     return EXIT_FAILURE;
                 }
             }
             if (strlen(src) != 2)
             {
-                fprintf(stderr, "invalid switch: %s\n", src);
+                LOGE("invalid switch: %s\n", src);
                 return EXIT_FAILURE;
             }
             else if (src[1] == 't')
@@ -1532,20 +1538,20 @@ int main(int argc, char *argv[], char *envp[])
                 appSettings.outputPNG = true;
                 continue;
             }
-            fprintf(stderr, "invalid switch: %s\n", src);
+            LOGE("invalid switch: %s\n", src);
             return EXIT_FAILURE;
         }
 
         if (appSettings.flipPixels && appSettings.pixelWidth != CTileSet::pixel16)
         {
-            fprintf(stderr, "invalid flag combination. cannot flip bytes if not 16bits.\n");
+            LOGE("invalid flag combination. cannot flip bytes if not 16bits.\n");
             return EXIT_FAILURE;
         }
 
         const std::string t{src};
         if (!t.ends_with(".ini"))
         {
-            fprintf(stderr, "source %s doesn't end with .ini\n", src);
+            LOGE("source %s doesn't end with .ini\n", src);
             return EXIT_FAILURE;
         }
         files.push_back(src);

@@ -21,6 +21,7 @@ def get_deps_blocks():
     deps_blocks = ["all: $(TARGET)"]
     files = [
         "src/main.cpp",
+        "../../src/logger.cpp",
         "../../src/shared/FileWrap.cpp",
         "../../src/shared/Frame.cpp",
         "../../src/shared/FrameSet.cpp",

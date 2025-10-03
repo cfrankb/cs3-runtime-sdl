@@ -40,6 +40,10 @@ elif [[ "$1" == "-g" ]] ; then
     cp $TARGET_MAIN/src/chars.h $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/chars.cpp $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/attr.h $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/level.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/shared/Frame.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/FrameSet.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/IFile.h $TARGET_EDITOR/src/shared
 elif [[ "$1" == "-m" ]] ; then
     echo "updating map in runtime"
     file=data/levels.mapz
