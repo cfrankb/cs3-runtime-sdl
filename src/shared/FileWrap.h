@@ -25,29 +25,29 @@ class CFileWrap : public IFile
 {
 public:
     CFileWrap();
-    virtual ~CFileWrap();
+    ~CFileWrap() override;
 
-    virtual CFileWrap &operator>>(std::string &str);
-    virtual CFileWrap &operator<<(const std::string &str);
-    virtual CFileWrap &operator+=(const std::string &str);
+    CFileWrap &operator>>(std::string &str) override;
+    CFileWrap &operator<<(const std::string &str) override;
+    CFileWrap &operator+=(const std::string &str) override;
 
-    virtual CFileWrap &operator>>(int &n);
-    virtual CFileWrap &operator<<(int n);
+    CFileWrap &operator>>(int &n) override;
+    CFileWrap &operator<<(const int n) override;
 
-    virtual CFileWrap &operator>>(bool &b);
-    virtual CFileWrap &operator<<(bool b);
-    virtual CFileWrap &operator+=(const char *);
+    CFileWrap &operator>>(bool &b) override;
+    CFileWrap &operator<<(const bool b) override;
+    CFileWrap &operator+=(const char *) override;
 
-    virtual bool open(const char *filename, const char *mode = "rb");
-    virtual int read(void *buf, int size);
-    virtual int write(const void *buf, int size);
+    bool open(const char *filename, const char *mode = "rb") override;
+    int read(void *buf, const int size) override;
+    int write(const void *buf, int size);
     static void addFile(const char *fileName, const char *data, const int size);
     static void freeFiles();
 
-    virtual void close();
-    virtual long getSize();
-    virtual void seek(long i);
-    virtual long tell();
+    bool close() override;
+    long getSize() override;
+    bool seek(const long i) override;
+    long tell() override;
 
 protected:
     FILE *m_file;

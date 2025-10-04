@@ -152,25 +152,25 @@ bool test_frameset_seq(const char *source, const char *name)
         LOGE("failed to write %s\n", out_path);
         return false;
     }
-    refFiles.push_back(out_path);
-    listOutFiles.push_back(out_path);
+    refFiles.emplace_back(out_path);
+    listOutFiles.emplace_back(out_path);
 
     snprintf(out_path, sizeof(out_path), OUT_PATH, name, "-obl5.obl");
     snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5.png");
 
     if (!performDoubleBlind(fs, OBL5_UNPACKED, out_path, out_path2))
         return false;
-    listOutFiles.push_back(out_path);
-    listOutFiles.push_back(out_path2);
-    refFiles.push_back(out_path2);
+    listOutFiles.emplace_back(out_path);
+    listOutFiles.emplace_back(out_path2);
+    refFiles.emplace_back(out_path2);
 
     snprintf(out_path, sizeof(out_path), OUT_PATH, name, "-obl5s.obl");
     snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5s.png");
     if (!performDoubleBlind(fs, OBL5_SOLID, out_path, out_path2))
         return false;
-    listOutFiles.push_back(out_path);
-    listOutFiles.push_back(out_path2);
-    refFiles.push_back(out_path2);
+    listOutFiles.emplace_back(out_path);
+    listOutFiles.emplace_back(out_path2);
+    refFiles.emplace_back(out_path2);
 
     if (!compareFiles(refFiles[0].c_str(), refFiles[1].c_str()))
         return false;
@@ -179,8 +179,8 @@ bool test_frameset_seq(const char *source, const char *name)
         return false;
 
     // clean up
-    // for (const auto &path : listOutFiles)
-    //    std::filesystem::remove(path);
+    for (const auto &path : listOutFiles)
+        std::filesystem::remove(path);
 
     return true;
 }

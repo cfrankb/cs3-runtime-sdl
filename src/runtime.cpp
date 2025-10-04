@@ -579,7 +579,7 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             SDL_Gamepad *controller = SDL_OpenGamepad(joystick_index);
             if (controller)
             {
-                m_gameControllers.push_back(controller);
+                m_gameControllers.emplace_back(controller);
                 LOGI("Controller ADDED: %s (Index:%d)\n",
                      SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
             }
@@ -894,12 +894,12 @@ void CRuntime::parseHelp(char *text)
         if (memcmp(line.data(), marker, sizeof(marker)) == 0)
         {
 #ifndef __EMSCRIPTEN__
-            m_helptext.push_back(line.data() + sizeof(marker));
+            m_helptext.emplace_back(line.data() + sizeof(marker));
 #endif
         }
         else
         {
-            m_helptext.push_back(line.data());
+            m_helptext.emplace_back(line.data());
         }
     }
 }
@@ -1136,19 +1136,19 @@ bool CRuntime::parseConfig(uint8_t *buf)
         {
             if (section == "musics")
             {
-                m_musicFiles.push_back(p);
+                m_musicFiles.emplace_back(p);
             }
             else if (section == "sounds")
             {
-                m_soundFiles.push_back(p);
+                m_soundFiles.emplace_back(p);
             }
             else if (section == "assets")
             {
-                m_assetFiles.push_back(p);
+                m_assetFiles.emplace_back(p);
             }
             else if (section == "users")
             {
-                m_userNames.push_back(p);
+                m_userNames.emplace_back(p);
             }
             else if (section == "config")
             {
@@ -1909,7 +1909,7 @@ bool CRuntime::initControllers()
             SDL_Gamepad *controller = SDL_OpenGamepad(i);
             if (controller)
             {
-                m_gameControllers.push_back(controller);
+                m_gameControllers.emplace_back(controller);
                 if (!m_quiet)
                     LOGI("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
             }
@@ -1989,7 +1989,7 @@ CMenu &CRuntime::initOptionMenu()
     for (const auto &rez : m_resolutions)
     {
         snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
-        resolutions.push_back(tmp);
+        resolutions.emplace_back(tmp);
     }
     menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
         .setRole(MENU_ITEM_RESOLUTION);
@@ -2064,7 +2064,7 @@ void CRuntime::createResolutionList()
         if (mode.w > 1280 || mode.h > 800)
             continue;
         if (mode.w != pw || mode.h != ph)
-            m_resolutions.push_back({mode.w, mode.h});
+            m_resolutions.emplace_back(Rez{mode.w, mode.h});
         pw = mode.w;
         ph = mode.h;
     }
@@ -2092,7 +2092,7 @@ int CRuntime::findResolutionIndex()
     }
     if (!m_quiet)
         LOGI("new resolution %dx%d: %d\n", w, h, i);
-    m_resolutions.push_back({w, h});
+    m_resolutions.emplace_back(Rez{w, h});
     return i;
 }
 
@@ -2286,27 +2286,27 @@ void CRuntime::drawLevelSummary(CFrame &bitmap)
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "LEVEL %.2d COMPLETED", m_game->level() + 1);
     if (_WIDTH < MIN_WIDTH_FULL)
-        listStr.push_back({tmp, YELLOW, 1, 2});
+        listStr.emplace_back(Text{tmp, YELLOW, 1, 2});
     else
-        listStr.push_back({tmp, YELLOW, 2, 2});
+        listStr.emplace_back(Text{tmp, YELLOW, 2, 2});
     snprintf(tmp, sizeof(tmp), "Fruits Collected: %d %%", m_summary.ppFruits);
-    listStr.push_back({tmp, PINK, 1, 2});
+    listStr.emplace_back(Text{tmp, PINK, 1, 2});
     snprintf(tmp, sizeof(tmp), "Treasures Collected: %d %%", m_summary.ppBonuses);
-    listStr.push_back({tmp, ORANGE, 1, 2});
+    listStr.emplace_back(Text{tmp, ORANGE, 1, 2});
     snprintf(tmp, sizeof(tmp), "Secrets: %d %%", m_summary.ppSecrets);
-    listStr.push_back({tmp, GREEN, 1, 2});
+    listStr.emplace_back(Text{tmp, GREEN, 1, 2});
     snprintf(tmp, sizeof(tmp), "Time Taken: %.2d:%.2d", m_summary.timeTaken / 60, m_summary.timeTaken % 60);
-    listStr.push_back({tmp, CYAN, 1, 2});
+    listStr.emplace_back(Text{tmp, CYAN, 1, 2});
 
     if (m_countdown == 0 && ((m_ticks >> 3) & 1))
     {
-        listStr.push_back({"", BLACK, 1, 2});
-        listStr.push_back({"PRESS SPACE TO CONTINUE", LIGHTGRAY, 1, 2});
+        listStr.emplace_back(Text{"", BLACK, 1, 2});
+        listStr.emplace_back(Text{"PRESS SPACE TO CONTINUE", LIGHTGRAY, 1, 2});
     }
     else
     {
-        listStr.push_back({"", BLACK, 1, 2});
-        listStr.push_back({"", BLACK, 1, 2});
+        listStr.emplace_back(Text{"", BLACK, 1, 2});
+        listStr.emplace_back(Text{"", BLACK, 1, 2});
     }
 
     int height = 0;

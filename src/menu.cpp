@@ -34,7 +34,7 @@ CMenu::~CMenu()
 
 CMenuItem &CMenu::addItem(const CMenuItem &menuItem)
 {
-    m_items.push_back(menuItem);
+    m_items.emplace_back(menuItem);
     return last();
 }
 

@@ -172,7 +172,7 @@ int main(int argc, char *args[])
     list.reserve(argc - 1);
     for (int i = 1; i < argc; ++i)
     {
-        list.push_back(args[i]);
+        list.emplace_back(args[i]);
     }
 #endif
 

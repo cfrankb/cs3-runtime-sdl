@@ -68,7 +68,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
             LOGE("invalid switch: %s\n", src);
             return EXIT_FAILURE;
         }
-        appSettings.files.push_back(src);
+        appSettings.files.emplace_back(src);
     }
     return EXIT_SUCCESS;
 }

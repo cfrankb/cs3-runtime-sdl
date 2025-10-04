@@ -26,39 +26,39 @@ class CFileMem : public IFile
 {
 public:
     CFileMem();
-    virtual ~CFileMem();
+    ~CFileMem();
 
-    virtual CFileMem &operator>>(std::string &str);
-    virtual CFileMem &operator<<(const std::string &str);
-    virtual CFileMem &operator+=(const std::string &str);
+    CFileMem &operator>>(std::string &str) override;
+    CFileMem &operator<<(const std::string &str) override;
+    CFileMem &operator+=(const std::string &str) override;
 
-    virtual CFileMem &operator>>(int &n);
-    virtual CFileMem &operator<<(int n);
+    CFileMem &operator>>(int &n) override;
+    CFileMem &operator<<(int n) override;
 
-    virtual CFileMem &operator>>(bool &b);
-    virtual CFileMem &operator<<(bool b);
-    virtual CFileMem &operator+=(const char *);
+    CFileMem &operator>>(bool &b) override;
+    CFileMem &operator<<(bool b) override;
+    CFileMem &operator+=(const char *) override;
 
-    virtual bool open(const char *filename = "", const char *mode = "");
-    virtual int read(void *buf, int size);
-    virtual int write(const void *buf, int size);
+    bool open(const char *filename = "", const char *mode = "") override;
+    int read(void *buf, int size) override;
+    int write(const void *buf, int size) override;
 
-    virtual void close();
-    virtual long getSize();
-    virtual void seek(long i);
-    virtual long tell();
+    bool close() override;
+    long getSize() override;
+    bool seek(long i) override;
+    long tell() override;
 
     const char *buffer();
-    void replace(const char *buffer, int size);
+    void replace(const char *buffer, size_t size);
 
-protected:
-    void grow(int size, bool resize);
+private:
+    void grow(int size);
     void append(const void *data, int size);
 
     std::string m_filename;
     std::vector<char> m_buffer;
-    int m_max;
-    int m_ptr;
+    size_t m_max;
+    size_t m_ptr;
     std::string m_mode;
 
     enum

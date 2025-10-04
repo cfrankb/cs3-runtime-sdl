@@ -26,17 +26,17 @@
 #include <filesystem>
 #include <cassert>
 
-constexpr const char *IN_FILE = "tests/in/levels1.mapz";
-constexpr const char *OUT_FILE1 = "tests/out/map1.mapz";
-constexpr uint16_t KEY1 = 0x1234;
-constexpr uint16_t KEY2 = 0x1455;
-constexpr uint16_t MISSING_KEY = 0x5511;
-constexpr const char *STRING1 = "Green Grass";
-constexpr uint16_t VALUE2 = 0x1990;
-constexpr const char *TITLE = "Roses Are Red";
-constexpr uint8_t ATTRX = 4;
-constexpr uint8_t ATTRY = 6;
-constexpr uint8_t ATTRA = 0x99;
+static constexpr const char *IN_FILE = "tests/in/levels1.mapz";
+static constexpr const char *OUT_FILE1 = "tests/out/map1.mapz";
+static constexpr uint16_t KEY1 = 0x1234;
+static constexpr uint16_t KEY2 = 0x1455;
+static constexpr uint16_t MISSING_KEY = 0x5511;
+static constexpr const char *STRING1 = "Green Grass";
+static constexpr uint16_t VALUE2 = 0x1990;
+static constexpr const char *TITLE = "Roses Are Red";
+static constexpr uint8_t ATTRX = 4;
+static constexpr uint8_t ATTRY = 6;
+static constexpr uint8_t ATTRA = 0x99;
 
 struct Size
 {
@@ -144,7 +144,7 @@ bool test_map()
     return true;
 }
 
-bool checkMap(CMap &map)
+static bool checkMap(CMap &map)
 {
     CStates &states = map.states();
     if (!states.hasS(KEY1))
@@ -313,10 +313,8 @@ bool test_map_2()
            testSeq(256, 256);
 }
 
-bool test_map_3()
+static void fillMap(CMap &map)
 {
-    LOGI("test3\n");
-    CMap map(3, 3, 0);
     // Set tiles: [1, 2, 3]
     //            [4, 5, 6]
     //            [7, 8, 9]
@@ -327,6 +325,15 @@ bool test_map_3()
             map.set(x, y, v);
         }
     }
+}
+
+bool test_map_up()
+{
+    CMap map(3, 3, 0);
+    // Set tiles: [1, 2, 3]
+    //            [4, 5, 6]
+    //            [7, 8, 9]
+    fillMap(map);
     map.setAttr(1, 1, 0xFF); // Attribute at (1,1)
     map.shift(CMap::Direction::UP);
     // Expected: [4, 5, 6]
@@ -336,6 +343,92 @@ bool test_map_3()
     assert(map.at(1, 0) == 5);
     assert(map.at(1, 2) == 2);
     assert(map.getAttr(1, 0) == 0xFF);
-    map.debug();
+    return true;
+}
+
+bool test_map_left()
+{
+    CMap map(3, 3, 0);
+    // Set tiles: [1, 2, 3]
+    //            [4, 5, 6]
+    //            [7, 8, 9]
+    fillMap(map);
+    map.setAttr(0, 0, 0xff);
+    map.shift(CMap::Direction::LEFT);
+
+    // Expected : [2, 3, 1]
+    //            [5, 6, 4]
+    //            [8, 9, 7]
+
+    if (map.getAttr(2, 0) != 0xff)
+        return false;
+
+    if (map.at(0, 0) != 2)
+        return false;
+
+    if (map.at(1, 1) != 6)
+        return false;
+
+    if (map.at(2, 2) != 7)
+        return false;
+
+    return true;
+}
+
+bool test_map_right()
+{
+    CMap map(3, 3, 0);
+    // Set tiles: [1, 2, 3]
+    //            [4, 5, 6]
+    //            [7, 8, 9]
+    fillMap(map);
+    map.setAttr(2, 2, 0xff);
+    map.shift(CMap::Direction::RIGHT);
+
+    // Expected : [3, 1, 2]
+    //            [6, 4, 5]
+    //            [9, 7, 8]
+
+    if (map.getAttr(0, 2) != 0xff)
+        return false;
+
+    if (map.at(0, 0) != 3)
+        return false;
+
+    if (map.at(1, 1) != 4)
+        return false;
+
+    if (map.at(2, 2) != 8)
+        return false;
+
+    return true;
+}
+
+bool test_map_down()
+{
+    CMap map(3, 3, 0);
+    // Set tiles: [1, 2, 3]
+    //            [4, 5, 6]
+    //            [7, 8, 9]
+    fillMap(map);
+    map.setAttr(2, 2, 0xff);
+    map.shift(CMap::Direction::DOWN);
+
+    // Expected : [7, 8, 9]
+    //            [1, 2, 3]
+    //            [4, 5, 6]
+
+    if (map.getAttr(2, 0) != 0xff)
+        return false;
+
+    if (map.at(0, 0) != 7)
+        return false;
+
+    if (map.at(1, 1) != 2)
+        return false;
+
+    if (map.at(2, 2) != 6)
+        return false;
+
     return true;
 }

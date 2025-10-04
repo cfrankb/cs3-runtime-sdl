@@ -384,7 +384,7 @@ bool CFrameSet::readSolid(IFile &file, int size)
         // const size_t dataSize = sizeof(PIXEL) * frame->len() * frame->hei();
         memcpy(frame->getRGB().data(), ptr, dataSize);
         frame->updateMap();
-        m_arrFrames.push_back(frame.release());
+        m_arrFrames.emplace_back(frame.release());
         ptr += dataSize;
     }
 
@@ -582,7 +582,7 @@ int CFrameSet::operator--()
 
 int CFrameSet::add(CFrame *pFrame)
 {
-    m_arrFrames.push_back(pFrame);
+    m_arrFrames.emplace_back(pFrame);
     return m_arrFrames.size() - 1;
 }
 
@@ -993,7 +993,7 @@ bool CFrameSet::importOBL5(IFile &file, const long org)
     for (size_t i = 0; i < size; ++i)
     {
         frameSet[i]->updateMap();
-        m_arrFrames.push_back(frameSet[i]);
+        m_arrFrames.emplace_back(frameSet[i]);
     }
     frameSet.removeAll();
     return true;
@@ -1345,7 +1345,7 @@ void CFrameSet::toSubset(CFrameSet &dest, int start, int end)
     {
         CFrame *frame = new CFrame;
         frame->copy(m_arrFrames[i]);
-        add(frame);
+        dest.add(frame);
         // dest.add(new CFrame(m_arrFrames[i]));
     }
 }

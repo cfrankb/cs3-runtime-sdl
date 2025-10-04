@@ -23,6 +23,7 @@
 #ifdef USE_QFILE
 #include <QFile>
 #endif
+#include "logger.h"
 
 CFileWrap::CFileWrap()
 {
@@ -137,13 +138,15 @@ bool CFileWrap::open(const char *fileName, const char *mode)
     }
 }
 
-void CFileWrap::close()
+bool CFileWrap::close()
 {
+    bool result = false;
     if (m_file)
     {
-        fclose(m_file);
+        result = fclose(m_file) == 0;
         m_file = nullptr;
     }
+    return result;
 }
 
 long CFileWrap::getSize()
@@ -162,7 +165,7 @@ long CFileWrap::getSize()
     }
 }
 
-void CFileWrap::seek(long p)
+bool CFileWrap::seek(long p)
 {
     if (m_memFile)
     {
@@ -170,8 +173,10 @@ void CFileWrap::seek(long p)
     }
     else
     {
-        fseek(m_file, p, SEEK_SET);
+        if (fseek(m_file, p, SEEK_SET) != 0)
+            return false;
     }
+    return true;
 }
 
 long CFileWrap::tell()
@@ -199,7 +204,6 @@ CFileWrap &CFileWrap::operator>>(std::string &str)
             _ptr += 2;
             // TODO: implement 32 bits version
         }
-
         if (x != 0)
         {
             // char *sz = new char[x + 1];
@@ -250,7 +254,7 @@ CFileWrap &CFileWrap::operator>>(std::string &str)
 CFileWrap &CFileWrap::operator<<(const std::string &str)
 {
     int x = str.length();
-    if (x <= 0xfe)
+    if (x < 0xff)
     {
         fwrite(&x, 1, 1, m_file);
     }

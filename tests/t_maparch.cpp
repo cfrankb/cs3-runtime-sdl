@@ -218,7 +218,7 @@ bool test_maparch_2()
             LOGE("can't open %s", fpath);
             return false;
         }
-        archFileSizes.push_back(file.getSize());
+        archFileSizes.emplace_back(file.getSize());
         file.close();
         if (i > 0 && archFileSizes[i] != archFileSizes[i - 1])
         {

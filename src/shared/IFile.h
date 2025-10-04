@@ -33,18 +33,18 @@ public:
     virtual IFile &operator+=(const std::string &str) = 0;
 
     virtual IFile &operator>>(int &n) = 0;
-    virtual IFile &operator<<(int n) = 0;
+    virtual IFile &operator<<(const int n) = 0;
 
     virtual IFile &operator>>(bool &b) = 0;
-    virtual IFile &operator<<(bool b) = 0;
+    virtual IFile &operator<<(const bool b) = 0;
     virtual IFile &operator+=(const char *) = 0;
 
     virtual bool open(const char *filename, const char *mode = "rb") = 0;
-    virtual int read(void *buf, int size) = 0;
-    virtual int write(const void *buf, int size) = 0;
+    virtual int read(void *buf, const int size) = 0;
+    virtual int write(const void *buf, const int size) = 0;
 
-    virtual void close() = 0;
+    virtual bool close() = 0;
     virtual long getSize() = 0;
-    virtual void seek(long i) = 0;
+    virtual bool seek(const long i) = 0;
     virtual long tell() = 0;
 };

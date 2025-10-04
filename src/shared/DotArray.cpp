@@ -45,7 +45,7 @@ void CDotArray::add(uint32_t color, int x, int y)
             m_max += GROWBY;
             m_dots.reserve(m_max);
         }
-        m_dots.push_back(Dot{x, y, color});
+        m_dots.emplace_back(Dot{x, y, color});
     }
 }
 

@@ -341,7 +341,7 @@ bool _8bpp(
         (uint8_t *)cData,
         (uLong)cDataSize);
 
-    if (err)
+    if (err != Z_OK)
     {
         m_lastError = "error in decomp";
         delete[] data;
@@ -559,7 +559,7 @@ bool _4bpp(
         (uint8_t *)cData,
         (uLong)cDataSize);
 
-    if (err)
+    if (err != Z_OK)
     {
         m_lastError = "error in decomp";
         delete[] data;
@@ -579,15 +579,7 @@ bool _4bpp(
         uint8_t filtering = data[pitch * y];
         bool handled = true;
 
-        switch (filtering)
-        {
-        case 0:
-            break;
-        default:
-            handled = false;
-        }
-
-        if (handled)
+        if (filtering == 0)
         {
             for (int x = 0; x < width; x++)
             {

@@ -19,3 +19,7 @@
 
 bool test_map();
 bool test_map_2();
+bool test_map_up();
+bool test_map_down();
+bool test_map_left();
+bool test_map_right();

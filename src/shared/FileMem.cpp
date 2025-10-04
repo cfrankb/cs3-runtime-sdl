@@ -33,23 +33,23 @@ CFileMem::~CFileMem()
     close();
 }
 
-void CFileMem::grow(int size, bool resize)
+void CFileMem::grow(int size)
 {
-    const int newSize = m_buffer.size() + size;
+    const size_t newSize = m_ptr + size;
     if (newSize >= m_max)
     {
         m_max += GROWBY;
         m_buffer.reserve(m_max);
     }
-    if (resize)
+
+    if (newSize > m_buffer.size())
         m_buffer.resize(newSize);
 }
 
 void CFileMem::append(const void *data, int size)
 {
-    grow(size, false);
-    const char *cdata = reinterpret_cast<const char *>(data);
-    m_buffer.insert(m_buffer.begin() + m_ptr, cdata, cdata + size);
+    grow(size);
+    memcpy(m_buffer.data() + m_ptr, data, size);
     m_ptr += size;
 }
 
@@ -62,9 +62,6 @@ CFileMem &CFileMem::operator>>(int &n)
 
 CFileMem &CFileMem::operator<<(int n)
 {
-    // grow(sizeof(n));
-    // memcpy(&m_buffer[m_ptr], &n, sizeof(n));
-    // m_ptr += sizeof(n);
     append(&n, sizeof(n));
     return *this;
 }
@@ -86,9 +83,6 @@ int CFileMem::read(void *buf, int size)
 
 int CFileMem::write(const void *buf, int size)
 {
-    // grow(size);
-    // memcpy(&m_buffer[m_ptr], buf, size);
-    // m_ptr += size;
     append(buf, size);
     return IFILE_OK;
 }
@@ -101,10 +95,11 @@ bool CFileMem::open(const char *fileName, const char *mode)
     return true;
 }
 
-void CFileMem::close()
+bool CFileMem::close()
 {
     // TODO:
     m_ptr = 0;
+    return true;
 }
 
 long CFileMem::getSize()
@@ -112,9 +107,10 @@ long CFileMem::getSize()
     return m_buffer.size();
 }
 
-void CFileMem::seek(long p)
+bool CFileMem::seek(long p)
 {
     m_ptr = p;
+    return true;
 }
 
 long CFileMem::tell()
@@ -194,26 +190,17 @@ CFileMem &CFileMem::operator>>(bool &b)
 CFileMem &CFileMem::operator<<(bool b)
 {
     append(&b, 1);
-
-    // grow(1);
-    // m_buffer[m_ptr] = static_cast<char>(b);
-    //++m_ptr;
     return *this;
 }
 
 CFileMem &CFileMem::operator+=(const std::string &str)
 {
-    grow(str.length(), true);
-    memcpy(&m_buffer[m_ptr], str.c_str(), str.length());
-    m_ptr += str.length();
+    append(str.c_str(), str.size());
     return *this;
 }
 
 CFileMem &CFileMem::operator+=(const char *s)
 {
-    // grow(strlen(s));
-    // memcpy(&m_buffer[m_ptr], s, strlen(s));
-    // m_ptr += strlen(s);
     append(s, strlen(s));
     return *this;
 }
@@ -223,7 +210,7 @@ const char *CFileMem::buffer()
     return m_buffer.data();
 }
 
-void CFileMem::replace(const char *buffer, int size)
+void CFileMem::replace(const char *buffer, size_t size)
 {
     if (m_max < size)
     {

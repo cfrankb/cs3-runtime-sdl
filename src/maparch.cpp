@@ -73,7 +73,7 @@ void CMapArch::clear()
 
 size_t CMapArch::add(std::unique_ptr<CMap> map)
 {
-    m_maps.push_back(std::move(map));
+    m_maps.emplace_back(std::move(map));
     return m_maps.size() - 1;
 }
 
@@ -228,7 +228,7 @@ bool CMapArch::readCommon(ReadFunc readfile, SeekFunc seekfile, ReadMapFunc read
             LOGE("%s\n", m_lastError.c_str());
             return false;
         }
-        m_maps.push_back(std::move(map));
+        m_maps.emplace_back(std::move(map));
     }
     return true;
 }
@@ -255,7 +255,7 @@ bool CMapArch::write(const char *filename)
         for (size_t i = 0; i < m_maps.size(); ++i)
         {
             // write maps
-            index.push_back(ftell(tfile));
+            index.emplace_back(ftell(tfile));
             m_maps[i]->write(tfile);
         }
         // write index
@@ -325,7 +325,7 @@ bool CMapArch::extract(const char *filename)
     {
         clear();
         std::unique_ptr<CMap> map;
-        m_maps.push_back(std::move(map));
+        m_maps.emplace_back(std::move(map));
         return fetchLevel(*m_maps[0], filename, m_lastError);
     }
 }
@@ -407,7 +407,7 @@ bool CMapArch::indexFromFile(const char *filename, IndexVector &index)
             LOGE("Invalid offset %u in %s\n", off, filename);
             return false;
         }
-        index.push_back(static_cast<long>(off));
+        index.emplace_back(static_cast<long>(off));
     }
     return true;
 }
@@ -468,7 +468,7 @@ bool CMapArch::indexFromMemory(uint8_t *ptr, IndexVector &index)
             LOGE("Invalid map offset %u at index %d\n", offset, i);
             return false;
         }
-        index.push_back(static_cast<long>(offset));
+        index.emplace_back(static_cast<long>(offset));
     }
 
     return true;

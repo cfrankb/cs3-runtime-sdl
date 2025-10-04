@@ -39,7 +39,7 @@
  * @return true
  * @return false
  */
-bool infuse_create(IFile &file, const std::string outfile, const char *context)
+static bool infuse_create(IFile &file, const std::string outfile, const char *context)
 {
     int filesize = 0;
     auto testPtr = [&file, &filesize, context](const char *now)
@@ -255,7 +255,169 @@ bool test_ifile_read_write()
     return true;
 }
 
+bool test_ifile_serializer(IFile &file, const char *context)
+{
+    size_t expectedSize = 0;
+    size_t expectedPos = 0;
+    auto testPtr = [&file, &expectedSize, &expectedPos, context](const char *now)
+    {
+        auto size = file.getSize();
+        if (size != (long)expectedSize)
+        {
+            LOGE("[%s][%s] filesize is %ld; expecting %u ", context, now, size, expectedSize);
+            return false;
+        }
+        auto pos = file.tell();
+        if (file.tell() != (long)expectedPos)
+        {
+            LOGE("[%s][%s] filepos is %ld; expecting %u ", context, now, pos, expectedPos);
+            return false;
+        }
+
+        return true;
+    };
+
+    const std::string STR1("This is a test string.");
+    const std::string STR2("Unit Tests are a pain.");
+    const std::string STR3("KIWI");
+    const char *ALLO = "ALLO";
+    const char *TOTO = "TOTO";
+
+    // Write String <<
+    file << STR1;
+    expectedSize += STR1.length() + 1;
+    expectedPos += STR1.length() + 1;
+    if (!testPtr("<< STR1"))
+        return false;
+    if (!file.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    expectedPos = 0;
+    if (!testPtr("seek(0)"))
+        return false;
+
+    // Write binary
+    if (file.write(ALLO, strlen(ALLO)) != IFILE_OK)
+    {
+        LOGE("failed to write('ALLO')");
+        return false;
+    }
+    expectedPos += strlen(ALLO);
+    if (!testPtr("write('ALLO')"))
+        return false;
+
+    // seek(end)
+    if (!file.seek(expectedSize))
+    {
+        LOGE("failed to seek(end)");
+        return false;
+    }
+    expectedPos = expectedSize;
+    if (!testPtr("seek(end)"))
+        return false;
+
+    // concat string
+    const auto here = expectedPos;
+    expectedSize += STR2.length();
+    expectedPos += STR2.length();
+    file += STR2;
+    if (!testPtr("+= STR2"))
+        return false;
+
+    // rewind fileptr
+    if (!file.seek(here))
+    {
+        LOGE("failed seek(here)");
+        return false;
+    }
+    expectedPos = here + STR3.length();
+    file.write(STR3.c_str(), STR3.length()); // write KIWI
+    if (!testPtr("+= STR3"))
+        return false;
+
+    // seek expectedSize + 10
+    // expected to fail
+    size_t leap = 10;
+    if (!file.seek(expectedSize + leap))
+    {
+        LOGE("seek(expectedSize + %u) failed", leap);
+        return false;
+    }
+    expectedPos = expectedSize + leap;
+    if (!testPtr("seek(expectedSize + 10)"))
+        return false;
+
+    if (file.write(TOTO, strlen(TOTO)) != IFILE_OK)
+    {
+        LOGE("failed to write TOTO");
+        return false;
+    }
+    expectedPos += strlen(TOTO);
+    expectedSize = expectedPos;
+    if (!testPtr("write TOTO"))
+        return false;
+
+    return true;
+}
+
 bool test_ifile()
 {
-    return test_ifile_create() && test_ifile_read_write();
+    constexpr const char OUT_FILE1[] = "tests/out/fileout1.dat";
+    constexpr const char OUT_FILE2[] = "tests/out/fileout2.dat";
+
+    LOGI(">>FileWrap");
+
+    CFileWrap file;
+    if (file.open(OUT_FILE1, "wb"))
+    {
+        if (!test_ifile_serializer(file, "CFileWrap"))
+        {
+            LOGE("serializer test for CFileWrap failed");
+            file.close();
+            return false;
+        }
+    }
+    file.close();
+
+    LOGI(">>FileMem");
+
+    CFileMem mem;
+    if (mem.open(OUT_FILE1, "wb"))
+    {
+        if (!test_ifile_serializer(mem, "CFileMem"))
+        {
+            LOGE("serializer test for CFileMem failed");
+            mem.close();
+            return false;
+        }
+    }
+
+    FILE *tfile2 = fopen(OUT_FILE2, "wb");
+    if (!tfile2)
+    {
+        LOGE("failed to create %s", OUT_FILE2);
+        return false;
+    }
+
+    if (fwrite(mem.buffer(), mem.getSize(), 1, tfile2) != 1)
+    {
+        LOGE("failed to write %s", OUT_FILE2);
+        return false;
+    }
+    if (fclose(tfile2) != 0)
+    {
+        LOGE("failed to close %s", OUT_FILE2);
+        return false;
+    }
+    mem.close();
+
+    if (!compareFiles(OUT_FILE1, OUT_FILE2))
+        return false;
+
+    // clean up
+    std::filesystem::remove(OUT_FILE1);
+    std::filesystem::remove(OUT_FILE2);
+    return true;
 }
