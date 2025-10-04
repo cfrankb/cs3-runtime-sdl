@@ -1,6 +1,6 @@
 /*
     LGCK Builder Runtime
-    Copyright (C) 1999, 2011  Francois Blanchette
+    Copyright (C) 1999, 2011, 2025  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include "IFile.h"
 
 class CFileWrap : public IFile
@@ -28,8 +29,9 @@ public:
     ~CFileWrap() override;
 
     CFileWrap &operator>>(std::string &str) override;
-    CFileWrap &operator<<(const std::string &str) override;
-    CFileWrap &operator+=(const std::string &str) override;
+    CFileWrap &operator<<(const std::string_view &str) override;
+    CFileWrap &operator<<(const char *s) override;
+    CFileWrap &operator+=(const std::string_view &str) override;
 
     CFileWrap &operator>>(int &n) override;
     CFileWrap &operator<<(const int n) override;
@@ -48,6 +50,7 @@ public:
     long getSize() override;
     bool seek(const long i) override;
     long tell() override;
+    bool flush() override;
 
 protected:
     FILE *m_file;

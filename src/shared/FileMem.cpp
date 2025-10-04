@@ -1,6 +1,6 @@
 /*
     LGCK Builder Runtime
-    Copyright (C) 1999, 2016  Francois Blanchette
+    Copyright (C) 1999, 2016, 2025  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ CFileMem::~CFileMem()
     close();
 }
 
-void CFileMem::grow(int size)
+void CFileMem::append(const void *data, int size)
 {
     const size_t newSize = m_ptr + size;
     if (newSize >= m_max)
@@ -44,11 +44,7 @@ void CFileMem::grow(int size)
 
     if (newSize > m_buffer.size())
         m_buffer.resize(newSize);
-}
 
-void CFileMem::append(const void *data, int size)
-{
-    grow(size);
     memcpy(m_buffer.data() + m_ptr, data, size);
     m_ptr += size;
 }
@@ -98,6 +94,8 @@ bool CFileMem::open(const char *fileName, const char *mode)
 bool CFileMem::close()
 {
     // TODO:
+    m_max = 0;
+    m_buffer.clear();
     m_ptr = 0;
     return true;
 }
@@ -146,7 +144,7 @@ CFileMem &CFileMem::operator>>(std::string &str)
     return *this;
 }
 
-CFileMem &CFileMem::operator<<(const std::string &str)
+CFileMem &CFileMem::operator<<(const std::string_view &str)
 {
     unsigned int x = str.length();
     if (x <= 0xfe)
@@ -174,7 +172,7 @@ CFileMem &CFileMem::operator<<(const std::string &str)
         // grow(x);
         // memcpy(&m_buffer[m_ptr], str.c_str(), x);
         // m_ptr += x;
-        append(str.c_str(), x);
+        append(str.data(), x);
     }
     return *this;
 }
@@ -187,15 +185,15 @@ CFileMem &CFileMem::operator>>(bool &b)
     return *this;
 }
 
-CFileMem &CFileMem::operator<<(bool b)
+CFileMem &CFileMem::operator<<(const bool b)
 {
     append(&b, 1);
     return *this;
 }
 
-CFileMem &CFileMem::operator+=(const std::string &str)
+CFileMem &CFileMem::operator+=(const std::string_view &str)
 {
-    append(str.c_str(), str.size());
+    append(str.data(), str.size());
     return *this;
 }
 
@@ -219,4 +217,15 @@ void CFileMem::replace(const char *buffer, size_t size)
     }
     m_buffer.assign(buffer, buffer + size);
     m_ptr = 0;
+}
+
+bool CFileMem::flush()
+{
+    return true;
+}
+
+CFileMem &CFileMem::operator<<(const char *s)
+{
+    std::string_view sv(s);
+    return *this << sv; // Delegate to string_view overload
 }

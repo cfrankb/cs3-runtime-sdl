@@ -1,6 +1,6 @@
 /*
     LGCK Builder Runtime
-    Copyright (C) 1999, 2016  Francois Blanchette
+    Copyright (C) 1999, 2016, 2025  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 #pragma once
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include "IFile.h"
 
@@ -29,14 +30,15 @@ public:
     ~CFileMem();
 
     CFileMem &operator>>(std::string &str) override;
-    CFileMem &operator<<(const std::string &str) override;
-    CFileMem &operator+=(const std::string &str) override;
+    CFileMem &operator<<(const std::string_view &str) override;
+    CFileMem &operator<<(const char *s) override;
+    CFileMem &operator+=(const std::string_view &str) override;
 
     CFileMem &operator>>(int &n) override;
     CFileMem &operator<<(int n) override;
 
     CFileMem &operator>>(bool &b) override;
-    CFileMem &operator<<(bool b) override;
+    CFileMem &operator<<(const bool b) override;
     CFileMem &operator+=(const char *) override;
 
     bool open(const char *filename = "", const char *mode = "") override;
@@ -50,9 +52,9 @@ public:
 
     const char *buffer();
     void replace(const char *buffer, size_t size);
+    bool flush() override;
 
 private:
-    void grow(int size);
     void append(const void *data, int size);
 
     std::string m_filename;

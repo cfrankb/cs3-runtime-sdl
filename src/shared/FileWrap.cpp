@@ -1,6 +1,6 @@
 /*
     LGCK Builder Runtime
-    Copyright (C) 1999, 2011  Francois Blanchette
+    Copyright (C) 1999, 2011, 2025  Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,9 +20,6 @@
 #include <cstring>
 #include <cstdio>
 #include <vector>
-#ifdef USE_QFILE
-#include <QFile>
-#endif
 #include "logger.h"
 
 CFileWrap::CFileWrap()
@@ -89,9 +86,6 @@ CFileWrap::MEMFILE *CFileWrap::findFile(const char *fileName)
 
     return nullptr;
 }
-
-///////////////////////////////////////////////
-// GCC
 
 CFileWrap &CFileWrap::operator>>(int &n)
 {
@@ -251,7 +245,7 @@ CFileWrap &CFileWrap::operator>>(std::string &str)
     return *this;
 }
 
-CFileWrap &CFileWrap::operator<<(const std::string &str)
+CFileWrap &CFileWrap::operator<<(const std::string_view &str)
 {
     int x = str.length();
     if (x < 0xff)
@@ -270,7 +264,7 @@ CFileWrap &CFileWrap::operator<<(const std::string &str)
 
     if (x != 0)
     {
-        fwrite(str.c_str(), x, 1, m_file);
+        fwrite(str.data(), x, 1, m_file);
     }
 
     return *this;
@@ -298,9 +292,9 @@ CFileWrap &CFileWrap::operator<<(bool b)
     return *this;
 }
 
-CFileWrap &CFileWrap::operator+=(const std::string &str)
+CFileWrap &CFileWrap::operator+=(const std::string_view &str)
 {
-    fwrite(str.c_str(), str.length(), 1, m_file);
+    fwrite(str.data(), str.length(), 1, m_file);
     return *this;
 }
 
@@ -308,4 +302,15 @@ CFileWrap &CFileWrap::operator+=(const char *s)
 {
     fwrite(s, strlen(s), 1, m_file);
     return *this;
+}
+
+bool CFileWrap::flush()
+{
+    return fflush(m_file) == 0;
+}
+
+CFileWrap &CFileWrap::operator<<(const char *s)
+{
+    std::string_view sv(s);
+    return *this << sv; // Delegate to string_view overload
 }

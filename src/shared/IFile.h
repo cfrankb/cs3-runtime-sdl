@@ -22,6 +22,7 @@
 #define IFILE_NOT_OK 0
 
 #include <string>
+#include <string_view>
 
 class IFile
 {
@@ -29,8 +30,9 @@ public:
     virtual ~IFile() {};
 
     virtual IFile &operator>>(std::string &str) = 0;
-    virtual IFile &operator<<(const std::string &str) = 0;
-    virtual IFile &operator+=(const std::string &str) = 0;
+    virtual IFile &operator<<(const std::string_view &str) = 0;
+    virtual IFile &operator<<(const char *s) = 0;
+    virtual IFile &operator+=(const std::string_view &str) = 0;
 
     virtual IFile &operator>>(int &n) = 0;
     virtual IFile &operator<<(const int n) = 0;
@@ -47,4 +49,5 @@ public:
     virtual long getSize() = 0;
     virtual bool seek(const long i) = 0;
     virtual long tell() = 0;
+    virtual bool flush() = 0;
 };

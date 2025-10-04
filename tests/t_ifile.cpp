@@ -261,6 +261,11 @@ bool test_ifile_serializer(IFile &file, const char *context)
     size_t expectedPos = 0;
     auto testPtr = [&file, &expectedSize, &expectedPos, context](const char *now)
     {
+        if (!file.flush())
+        {
+            LOGE("flush failed for %s", context);
+            return false;
+        }
         auto size = file.getSize();
         if (size != (long)expectedSize)
         {
@@ -282,8 +287,16 @@ bool test_ifile_serializer(IFile &file, const char *context)
     const std::string STR3("KIWI");
     const char *ALLO = "ALLO";
     const char *TOTO = "TOTO";
+    const char *WORLD = "WORLD";
 
-    // Write String <<
+    // write string
+    file << WORLD;
+    expectedSize += strlen(WORLD) + 1;
+    expectedPos += strlen(WORLD) + 1;
+    if (!testPtr("<< WORLD"))
+        return false;
+
+    // Write std::string <<
     file << STR1;
     expectedSize += STR1.length() + 1;
     expectedPos += STR1.length() + 1;
