@@ -32,6 +32,7 @@
 #include "helper.h"
 #include <cstdint>
 #include "logger.h"
+#include "ss_limits.h"
 
 /// @brief Constructor
 /// @param p_nLen pixel lenght (must be multiple of 8)
@@ -46,15 +47,13 @@ CFrame::CFrame(int width, int height) : m_width(width), m_height(height)
     }
     if ((width & 7) || (height & 7))
     {
-        LOGW("Dimensions %dx%d not multiples of 8", width, height);
+        // LOGW("Dimensions %dx%d not multiples of 8", width, height);
     }
     m_rgb.resize(width * height);
     std::fill(m_rgb.begin(), m_rgb.end(), 0);
-    m_map.resize(width, height);
 }
 
 CFrame::CFrame(CFrame &&src) noexcept : m_rgb(std::move(src.m_rgb)),
-                                        m_map(std::move(src.m_map)),
                                         m_width(src.m_width),
                                         m_height(src.m_height)
 
@@ -73,7 +72,6 @@ void swap(CFrame &a, CFrame &b) noexcept
 {
     using std::swap;
     swap(a.m_rgb, b.m_rgb);
-    swap(a.m_map, b.m_map);
     swap(a.m_width, b.m_width);
     swap(a.m_height, b.m_height);
 }
@@ -81,7 +79,6 @@ void swap(CFrame &a, CFrame &b) noexcept
 void CFrame::clear()
 {
     m_rgb.clear();
-    m_map.resize(0, 0);
     m_width = 0;
     m_height = 0;
 }
@@ -94,7 +91,7 @@ bool CFrame::write(IFile &file)
     // this serializer creates format 0x500 only
     // use CFrameSet serializer to create solid archive
 
-    if (m_width > IMAGE_MAX_SIZE || m_height > IMAGE_MAX_SIZE)
+    if (m_width > MAX_IMAGE_SIZE || m_height > MAX_IMAGE_SIZE)
     {
         m_lastError = "Dimensions exceed maximum: " + std::to_string(m_width) + "x" + std::to_string(m_height);
         return false;
@@ -156,7 +153,7 @@ bool CFrame::read(IFile &file)
         m_lastError = "Failed to read OBL5 header";
         return false;
     }
-    if (width > IMAGE_MAX_SIZE || height > IMAGE_MAX_SIZE)
+    if (width > MAX_IMAGE_SIZE || height > MAX_IMAGE_SIZE)
     {
         m_lastError = "Invalid dimensions: " + std::to_string(width) + "x" + std::to_string(height);
         return false;
@@ -171,7 +168,6 @@ bool CFrame::read(IFile &file)
     m_width = width;
     m_height = height;
     m_rgb.resize(width * height);
-    m_map.resize(width, height);
 
     if (width * height == 0)
     {
@@ -213,9 +209,6 @@ bool CFrame::read(IFile &file)
         m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
         return false;
     }
-
-    // create a new map
-    updateMap();
 
     return true;
 }
@@ -304,6 +297,7 @@ uint32_t CFrame::toNet(const uint32_t a)
 
 bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data)
 {
+    png.clear();
     CCRC crc;
 
     // compress the data ....................................
@@ -321,6 +315,7 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     int err = compressData(rdata, cData);
     if (err != Z_OK)
     {
+        m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
         LOGE("CFrame::toPng error: %d\n", err);
         return true;
     }
@@ -432,9 +427,6 @@ void CFrame::resize(int len, int hei)
 
     m_width = len;
     m_height = hei;
-
-    // TODO: actually resize the map
-    m_map.resize(len, hei);
 }
 
 void CFrame::setTransparency(uint32_t color)
@@ -452,34 +444,6 @@ void CFrame::setTransparency(uint32_t color)
 void CFrame::setTopPixelAsTranparency()
 {
     setTransparency(m_rgb[0]);
-}
-
-void CFrame::updateMap()
-{
-    m_map.resize(m_width, m_height);
-    int threhold = CSS3Map::GRID_SIZE * CSS3Map::GRID_SIZE / 4;
-    for (int y = 0; y < m_map.height(); ++y)
-    {
-        for (int x = 0; x < m_map.length(); ++x)
-        {
-            int data = 0;
-            for (int i = 0; i < CSS3Map::GRID_SIZE; ++i)
-            {
-                for (int j = 0; j < CSS3Map::GRID_SIZE; ++j)
-                {
-                    data += ((at(x * CSS3Map::GRID_SIZE + i, y * CSS3Map::GRID_SIZE + j)) & ALPHA_MASK) != 0;
-                }
-            }
-            if (data >= threhold)
-            {
-                m_map.at(x, y) = 0xff;
-            }
-            else
-            {
-                m_map.at(x, y) = 0;
-            }
-        }
-    }
 }
 
 bool CFrame::hasTransparency() const
@@ -529,7 +493,6 @@ CFrameSet *CFrame::split(int pxSize, bool whole)
             m_lastError = "Failed to clip frame at x=" + std::to_string(mx);
             return nullptr;
         }
-        frame->updateMap(); // Regenerate map for non-custom maps
         // set->add(std::move(frame));
         set->add(frame.release());
         mx += pxSize;
@@ -538,15 +501,15 @@ CFrameSet *CFrame::split(int pxSize, bool whole)
     return set.release();
 }
 
-bool CFrame::draw(CDotArray *dots, int size, int mode)
+bool CFrame::draw(const std::vector<Dot> &dots, const int penSize, const int mode)
 {
     bool changed = false;
-    for (size_t i = 0; i < (*dots).getSize(); ++i)
+    for (size_t i = 0; i < dots.size(); ++i)
     {
-        const Dot &dot = (*dots)[i];
-        for (int y = 0; y < size; ++y)
+        const Dot &dot = dots[i];
+        for (int y = 0; y < penSize; ++y)
         {
-            for (int x = 0; x < size; ++x)
+            for (int x = 0; x < penSize; ++x)
             {
                 if (dot.x + x < m_width && dot.y + y < m_height)
                 {
@@ -587,18 +550,22 @@ bool CFrame::draw(CDotArray *dots, int size, int mode)
     return changed;
 }
 
-void CFrame::save(CDotArray *dots, CDotArray *dotsOrg, int size)
+void CFrame::save(const std::vector<Dot> &dots, std::vector<Dot> &dotsD, const int penSize)
 {
-    for (size_t i = 0; i < (*dots).getSize(); ++i)
+    for (size_t i = 0; i < dots.size(); ++i)
     {
-        const Dot &dot = (*dots)[i];
-        for (int y = 0; y < size; ++y)
+        const Dot &dot = dots[i];
+        for (int y = 0; y < penSize; ++y)
         {
-            for (int x = 0; x < size; ++x)
+            for (int x = 0; x < penSize; ++x)
             {
                 if (dot.x + x < m_width && dot.y + y < m_height)
                 {
-                    dotsOrg->add(at(dot.x + x, dot.y + y), dot.x + x, dot.y + y);
+                    dotsD.emplace_back(Dot{
+                        dot.x + x,
+                        dot.y + y,
+                        at(dot.x + x, dot.y + y),
+                    });
                 }
             }
         }
@@ -741,7 +708,6 @@ void CFrame::flipV()
             at(x, m_height - y - 1) = c;
         }
     }
-    // TODO: updatemap
 }
 
 void CFrame::flipH()
@@ -755,12 +721,10 @@ void CFrame::flipH()
             at(m_width - x - 1, y) = c;
         }
     }
-    // TODO: updatemap
 }
 
 void CFrame::rotate()
 {
-    // CFrame *newFrame = new CFrame(m_height, m_width);
     CFrame newFrame(m_height, m_width);
     for (int y = 0; y < m_height; ++y)
     {
@@ -772,13 +736,7 @@ void CFrame::rotate()
 
     m_width = newFrame.m_width;
     m_height = newFrame.m_height;
-    // delete[] m_rgb;
     m_rgb = newFrame.getRGB();
-
-    // newFrame->detach();
-    // delete newFrame;
-
-    // TODO: updatemap
 }
 
 void CFrame::shrink()
@@ -792,23 +750,9 @@ void CFrame::shrink()
         }
     }
 
-    // why wasn't the old rgb deleted?
-
     m_rgb = newFrame.getRGB();
-
     m_width /= 2;
     m_height /= 2;
-
-    // TODO: actually resize the map
-    m_map.resize(m_width, m_height);
-
-    // TODO: fix this temp updateMap
-    updateMap();
-}
-
-const CSS3Map &CFrame::getMap() const
-{
-    return m_map;
 }
 
 void CFrame::enlarge()
@@ -830,12 +774,6 @@ void CFrame::enlarge()
 
     m_width *= 2;
     m_height *= 2;
-
-    // TODO: actually resize the map
-    m_map.resize(m_width, m_height);
-
-    // TODO: fix this temp updateMap
-    updateMap();
 }
 
 void CFrame::shiftUP(bool wrap)
@@ -861,9 +799,6 @@ void CFrame::shiftUP(bool wrap)
     {
         std::fill(m_rgb.end() - m_width, m_rgb.end(), 0);
     }
-
-    // Regenerate map if custom map is disabled
-    updateMap();
 }
 
 void CFrame::shiftDOWN(bool wrap)
@@ -889,8 +824,6 @@ void CFrame::shiftDOWN(bool wrap)
     {
         std::fill(m_rgb.begin(), m_rgb.begin() + m_width, 0);
     }
-
-    updateMap();
 }
 
 void CFrame::shiftLEFT(const bool wrap)
@@ -970,7 +903,6 @@ void CFrame::copy(const CFrame *src)
         return;
     }
     m_rgb = src->m_rgb;
-    m_map = src->m_map;
     m_width = src->m_width;
     m_height = src->m_height;
 }
@@ -999,7 +931,7 @@ void CFrame::fade(int factor)
     }
 }
 
-CFrameSet *CFrame::explode(int count, short *xx, short *yy, CFrameSet *set)
+CFrameSet *CFrame::explode(int count, uint16_t *sx, uint16_t *sy, CFrameSet *set)
 {
     if (!set)
     {
@@ -1009,10 +941,24 @@ CFrameSet *CFrame::explode(int count, short *xx, short *yy, CFrameSet *set)
     int mx = 0;
     for (int i = 0; i < count; ++i)
     {
-        CFrame *frame = clip(mx, 0, xx[i], yy[i]);
-        frame->updateMap();
+        CFrame *frame = clip(mx, 0, sx[i], sy[i]);
         set->add(frame);
-        mx += xx[i];
+        mx += sx[i];
+    }
+    return set;
+}
+
+CFrameSet *CFrame::explode(std::vector<CFrame::oblv2DataUnit_t> &metadata, CFrameSet *set)
+{
+    if (!set)
+    {
+        set = new CFrameSet();
+    }
+
+    for (const auto &unit : metadata)
+    {
+        CFrame *frame = clip(unit.x, unit.y, unit.sx, unit.sy);
+        set->add(frame);
     }
     return set;
 }
@@ -1076,51 +1022,4 @@ void CFrame::drawAt(CFrame &frame, int bx, int by, bool tr)
                 at(bx + x, by + y) = frame.at(x, y);
         }
     }
-}
-
-/////////////////////////////////////////////////////////////////////
-// CSS3Map
-
-CSS3Map::CSS3Map()
-{
-    m_len = 0;
-    m_hei = 0;
-}
-
-CSS3Map::CSS3Map(const int px, const int py)
-{
-    resize(px, py);
-}
-
-void CSS3Map::resize(const int px, const int py)
-{
-    m_len = px / GRID_SIZE;
-    m_hei = py / GRID_SIZE;
-    m_map.resize(m_len * m_hei);
-}
-
-/**
- * @brief  read map from disk
- *
- * @param file
- */
-
-bool CSS3Map::read(IFile &file)
-{
-    return file.read(m_map.data(), m_len * m_hei) == IFILE_OK;
-}
-
-/**
- * @brief  write map to disk
- *
- * @param file
- */
-bool CSS3Map::write(IFile &file) const
-{
-    return file.write(m_map.data(), m_len * m_hei) == IFILE_OK;
-}
-
-bool CSS3Map::isNULL() const
-{
-    return m_map.data();
 }

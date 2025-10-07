@@ -20,44 +20,13 @@
 #include <cstdint>
 #include <vector>
 #include <stdexcept>
+#include "DotArray.h"
 
 class CFrameSet;
 class CDotArray;
 class CSS3Map;
 class CUndo;
 class IFile;
-
-class CSS3Map
-{
-public:
-    CSS3Map();
-    CSS3Map(int px, int py);
-    ~CSS3Map() = default;
-
-    void resize(int px, int py);
-    inline char &at(int x, int y)
-    {
-        return m_map[x + y * m_len];
-    }
-
-    int length() const { return m_len; }
-    int height() const { return m_hei; }
-
-    bool read(IFile &file);
-    bool write(IFile &file) const;
-    bool isNULL() const;
-    char *getMap() { return m_map.data(); }
-
-    enum
-    {
-        GRID_SIZE = 8
-    };
-
-protected:
-    std::vector<char> m_map;
-    int m_len;
-    int m_hei;
-};
 
 class CFrame
 {
@@ -90,16 +59,12 @@ public:
     }
 
     inline std::vector<uint32_t> &getRGB() { return m_rgb; }
-    void setRGB(std::vector<uint32_t> rgb) { m_rgb = std::move(rgb); }
-    // inline char map(int x, int y) const { return m_map.at(x, y); }
-
-    inline char map(int x, int y) { return m_map.at(x, y); }
+    void setRGB(std::vector<uint32_t> &rgb) { m_rgb = std::move(rgb); }
     bool hasTransparency() const;
     bool isEmpty() const;
 
     CFrame &operator=(const CFrame &src);
     void clear();
-    void updateMap();
     void resize(int len, int hei);
     void setTransparency(uint32_t rgba);
     void setTopPixelAsTranparency();
@@ -108,8 +73,6 @@ public:
     void flipH();
     void rotate();
     CFrameSet *split(int pxSize, bool whole = true);
-    void spreadH();
-    void spreadV();
     void shrink();
     const CSS3Map &getMap() const;
     void shiftUP(const bool wrap = true);
@@ -135,10 +98,9 @@ public:
     bool toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data = {});
 
     static uint32_t toNet(const uint32_t a);
-    bool draw(CDotArray *dots, int size, int mode = MODE_NORMAL);
-    void save(CDotArray *dots, CDotArray *dotsOrg, int size);
+    bool draw(const std::vector<Dot> &dots, const int penSize, const int mode = MODE_NORMAL);
+    void save(const std::vector<Dot> &dots, std::vector<Dot> &dotsD, const int penSize);
     CFrame *clip(int mx, int my, int cx = -1, int cy = -1);
-    CFrameSet *explode(int count, short *xx, short *yy, CFrameSet *set = nullptr);
 
     void copy(const CFrame *);
     inline int width() const { return m_width; }
@@ -159,9 +121,7 @@ public:
         pngHeaderSize = 8,
         png_IHDR_Size = 21,
         pngChunkLimit = 32767,
-        MAX_UNDO = 20,
         OBL5_UNPACKED = 0x500,
-        IMAGE_MAX_SIZE = 4096,
     };
 
     typedef struct
@@ -197,6 +157,17 @@ public:
         // CRC  : size 4
     } png_OBL5;
 
+    struct oblv2DataUnit_t
+    {
+        uint16_t x;  //                   data = 4 * 2 (uint16_t) * frameCount
+        uint16_t y;  //
+        uint16_t sx; //
+        uint16_t sy; //
+    };
+
+    CFrameSet *explode(int count, uint16_t *sx, uint16_t *sy, CFrameSet *set = nullptr);
+    CFrameSet *explode(std::vector<oblv2DataUnit_t> &metadata, CFrameSet *set = nullptr);
+
 private:
     enum
     {
@@ -206,7 +177,6 @@ private:
     };
 
     std::vector<uint32_t> m_rgb;
-    CSS3Map m_map;
     int m_width;
     int m_height;
     std::string m_lastError;

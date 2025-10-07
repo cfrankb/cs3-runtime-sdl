@@ -1252,7 +1252,6 @@ void CGame::playTileSound(int tileID) const
 void CGame::attach(std::shared_ptr<ISound> &s)
 {
     m_sound = s;
-    LOGI("m_sound useCount: %d\n", s.use_count());
 }
 
 /**

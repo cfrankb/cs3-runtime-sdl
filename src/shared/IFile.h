@@ -29,19 +29,19 @@ class IFile
 public:
     virtual ~IFile() {};
 
-    virtual IFile &operator>>(std::string &str) = 0;
-    virtual IFile &operator<<(const std::string_view &str) = 0;
-    virtual IFile &operator<<(const char *s) = 0;
-    virtual IFile &operator+=(const std::string_view &str) = 0;
+    virtual bool operator>>(std::string &str) = 0;
+    virtual bool operator<<(const std::string_view &str) = 0;
+    virtual bool operator<<(const char *s) = 0;
+    virtual bool operator+=(const std::string_view &str) = 0;
 
-    virtual IFile &operator>>(int &n) = 0;
-    virtual IFile &operator<<(const int n) = 0;
+    virtual bool operator>>(int &n) = 0;
+    virtual bool operator<<(const int n) = 0;
 
-    virtual IFile &operator>>(bool &b) = 0;
-    virtual IFile &operator<<(const bool b) = 0;
-    virtual IFile &operator+=(const char *) = 0;
+    virtual bool operator>>(bool &b) = 0;
+    virtual bool operator<<(const bool b) = 0;
+    virtual bool operator+=(const char *) = 0;
 
-    virtual bool open(const char *filename, const char *mode = "rb") = 0;
+    virtual bool open(const std::string_view &filename, const std::string_view &mode = "rb") = 0;
     virtual int read(void *buf, const int size) = 0;
     virtual int write(const void *buf, const int size) = 0;
 
@@ -50,4 +50,5 @@ public:
     virtual bool seek(const long i) = 0;
     virtual long tell() = 0;
     virtual bool flush() = 0;
+    virtual const std::string_view mode() = 0;
 };

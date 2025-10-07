@@ -24,6 +24,7 @@
 #include <vector>
 #include <memory>
 #include "ISerial.h"
+#include "ss_limits.h"
 
 class CFrame;
 class IFile;
@@ -75,6 +76,8 @@ public:
     void reserve(int n);
     int currFrame();
     void setCurrFrame(int curr);
+    const std::vector<CFrame *> &frames();
+    void resize(int size);
 
 private:
     int m_nCurrFrame;
@@ -88,15 +91,11 @@ private:
         COLOR_INDEX_OFFSET = -16,
         COLOR_INDEX_OFFSET_NONE = 0,
         OBL3_GRANULAR = 16,
-        MAX_IMAGES = 1024,
-        MAX_IMAGE_SIZE = 256,
-        TAG_KEY_MAX = 32,
-        TAG_VAL_MAX = 1024,
     };
 
     bool writeSolid(IFile &file);
     bool readSolid(IFile &file, int size);
-    static std::unique_ptr<char[]> ima2bitmap(char *ImaData, int len, int hei);
+    std::unique_ptr<char[]> ima2bitmap(char *ImaData, int len, int hei);
     static void bitmap2rgb(char *bitmap, uint32_t *rgb, int len, int hei, int err);
     bool importIMA(IFile &file, const long org = 0);
     bool importIMC1(IFile &file, const long org = 0);

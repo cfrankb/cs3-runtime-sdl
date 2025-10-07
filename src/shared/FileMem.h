@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -29,19 +30,19 @@ public:
     CFileMem();
     ~CFileMem();
 
-    CFileMem &operator>>(std::string &str) override;
-    CFileMem &operator<<(const std::string_view &str) override;
-    CFileMem &operator<<(const char *s) override;
-    CFileMem &operator+=(const std::string_view &str) override;
+    bool operator>>(std::string &str) override;
+    bool operator<<(const std::string_view &str) override;
+    bool operator<<(const char *s) override;
+    bool operator+=(const std::string_view &str) override;
 
-    CFileMem &operator>>(int &n) override;
-    CFileMem &operator<<(int n) override;
+    bool operator>>(int &n) override;
+    bool operator<<(int n) override;
 
-    CFileMem &operator>>(bool &b) override;
-    CFileMem &operator<<(const bool b) override;
-    CFileMem &operator+=(const char *) override;
+    bool operator>>(bool &b) override;
+    bool operator<<(const bool b) override;
+    bool operator+=(const char *) override;
 
-    bool open(const char *filename = "", const char *mode = "") override;
+    bool open(const std::string_view &filename = "", const std::string_view &mode = "rb") override;
     int read(void *buf, int size) override;
     int write(const void *buf, int size) override;
 
@@ -49,22 +50,16 @@ public:
     long getSize() override;
     bool seek(long i) override;
     long tell() override;
+    const std::string_view mode() override;
 
-    const char *buffer();
-    void replace(const char *buffer, size_t size);
+    const std::vector<uint8_t> &buffer();
+    void replace(const uint8_t *buffer, size_t size);
     bool flush() override;
 
 private:
     void append(const void *data, int size);
-
     std::string m_filename;
-    std::vector<char> m_buffer;
-    size_t m_max;
+    std::vector<uint8_t> m_buffer;
     size_t m_ptr;
     std::string m_mode;
-
-    enum
-    {
-        GROWBY = 8192
-    };
 };

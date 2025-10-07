@@ -840,7 +840,7 @@ void CRuntime::preloadAssets()
         {
             if (!m_quiet)
                 LOGI("reading %s\n", filename.c_str());
-            mem.replace(reinterpret_cast<char *>(data.data()), data.size());
+            mem.replace(data.data(), data.size());
             if ((*frameSets[i])->extract(mem))
             {
                 if (!m_quiet)
@@ -1083,9 +1083,7 @@ void CRuntime::initSounds()
         if (m_verbose && !m_quiet)
             LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
     }
-    LOGI("m_sound useCount: %d\n", m_sound.use_count());
     m_game->attach(m_sound);
-    LOGI("m_sound useCount: %d\n", m_sound.use_count());
 }
 
 void CRuntime::openMusicForLevel(int i)
@@ -2623,7 +2621,7 @@ bool CRuntime::loadAppIcon()
     if (!data.empty())
     {
         CFileMem mem;
-        mem.replace(reinterpret_cast<char *>(data.data()), data.size());
+        mem.replace(data.data(), data.size());
         if (frames.extract(mem) && frames.getSize() != 0)
         {
             CFrame &frame = *frames[0];

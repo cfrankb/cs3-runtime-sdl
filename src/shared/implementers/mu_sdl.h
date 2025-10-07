@@ -53,12 +53,9 @@ protected:
     {
         SDL_AudioDeviceID audioDevice;
         Mix_Music *mixData;
-        uint8_t *xmData;
     } MusicData;
 
     MusicData m_data; // Background Music
-    char *m_name;
-    std::string m_filepath;
     uint8_t m_type = TYPE_NONE;
     bool m_playing = false;
 };

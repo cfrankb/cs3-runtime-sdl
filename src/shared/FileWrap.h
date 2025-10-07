@@ -18,9 +18,15 @@
 
 #pragma once
 
+#include <vector>
+#include <cstdint>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <memory>
 #include "IFile.h"
+
+class CFileMem;
 
 class CFileWrap : public IFile
 {
@@ -28,46 +34,39 @@ public:
     CFileWrap();
     ~CFileWrap() override;
 
-    CFileWrap &operator>>(std::string &str) override;
-    CFileWrap &operator<<(const std::string_view &str) override;
-    CFileWrap &operator<<(const char *s) override;
-    CFileWrap &operator+=(const std::string_view &str) override;
+    bool operator>>(std::string &str) override;
+    // Writes a string with a length prefix (1 or 3 bytes) for structured serialization.
+    bool operator<<(const std::string_view &str) override;
+    bool operator<<(const char *s) override;
+    bool operator+=(const std::string_view &str) override;
 
-    CFileWrap &operator>>(int &n) override;
-    CFileWrap &operator<<(const int n) override;
+    bool operator>>(int &n) override;
+    bool operator<<(const int n) override;
 
-    CFileWrap &operator>>(bool &b) override;
-    CFileWrap &operator<<(const bool b) override;
-    CFileWrap &operator+=(const char *) override;
+    bool operator>>(bool &b) override;
+    bool operator<<(const bool b) override;
+    // Appends a string without a length prefix for raw text output.
+    bool operator+=(const char *) override;
 
-    bool open(const char *filename, const char *mode = "rb") override;
+    bool open(const std::string_view &filename, const std::string_view &mode = "rb") override;
     int read(void *buf, const int size) override;
-    int write(const void *buf, int size);
-    static void addFile(const char *fileName, const char *data, const int size);
-    static void freeFiles();
+    int write(const void *buf, int size) override;
 
     bool close() override;
     long getSize() override;
     bool seek(const long i) override;
     long tell() override;
     bool flush() override;
+    const std::string_view mode() override;
+
+    static void addFile(const std::string_view &fileName, const std::vector<uint8_t> &data);
+    static void freeFiles();
 
 protected:
+    std::string m_mode;
     FILE *m_file;
+    static std::unordered_map<std::string, std::unique_ptr<CFileMem>> m_files;
 
-    typedef struct
-    {
-        char *fileName;
-        unsigned char *data;
-        int size;
-        void *next;
-        int ptr;
-    } MEMFILE;
-
-    MEMFILE *m_memFile;
-
-    static MEMFILE *m_head;
-    static MEMFILE *m_tail;
-
-    MEMFILE *findFile(const char *fileName);
+    CFileMem *m_memFile;
+    CFileMem *findFile(const std::string_view &fileName);
 };

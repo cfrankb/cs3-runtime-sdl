@@ -43,7 +43,13 @@ elif [[ "$1" == "-g" ]] ; then
     cp $TARGET_MAIN/src/level.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/shared/Frame.* $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/FrameSet.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/FileWrap.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/FileMem.* $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/IFile.h $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/ss_limits.h $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/PngMagic.* $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/DotArray.* $TARGET_EDITOR/src/shared
+
 elif [[ "$1" == "-m" ]] ; then
     echo "updating map in runtime"
     file=data/levels.mapz

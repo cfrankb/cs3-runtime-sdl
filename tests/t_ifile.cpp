@@ -187,7 +187,7 @@ bool test_ifile_read_write()
 
     fw.seek(0);
     int filesize = fw.getSize();
-    char *buf = new char[filesize];
+    uint8_t *buf = new uint8_t[filesize];
     if (fw.read(buf, filesize) != 1)
     {
         LOGE("failed to read %s\n", IN_FILE);
@@ -414,7 +414,7 @@ bool test_ifile()
         return false;
     }
 
-    if (fwrite(mem.buffer(), mem.getSize(), 1, tfile2) != 1)
+    if (fwrite(mem.buffer().data(), mem.getSize(), 1, tfile2) != 1)
     {
         LOGE("failed to write %s", OUT_FILE2);
         return false;

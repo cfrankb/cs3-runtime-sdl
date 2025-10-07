@@ -36,7 +36,6 @@ CMusicSDL::CMusicSDL()
 {
     m_type = TYPE_NONE;
     m_data.mixData = nullptr;
-    m_data.xmData = nullptr;
     m_valid = false;
 
     if (!SDL_Init(SDL_INIT_AUDIO))
@@ -149,10 +148,6 @@ void CMusicSDL::close()
         if (m_data.mixData)
             Mix_FreeMusic(m_data.mixData);
         m_data.mixData = nullptr;
-    }
-    else if (m_type == TYPE_STREAM)
-    {
-        m_filepath = "";
     }
     m_type = TYPE_NONE;
 }

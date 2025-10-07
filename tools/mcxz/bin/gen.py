@@ -21,16 +21,15 @@ def get_deps_blocks():
     deps_blocks = ["all: $(TARGET)"]
     files = [
         "src/main.cpp",
-        #'../../map.cpp',
         "src/tileset.cpp",
         "../../src/logger.cpp",
         "../../src/shared/FileWrap.cpp",
+        "../../src/shared/FileMem.cpp",
         "../../src/shared/Frame.cpp",
         "../../src/shared/FrameSet.cpp",
         "../../src/shared/PngMagic.cpp",
         "../../src/shared/DotArray.cpp",
         "../../src/shared/helper.cpp",
-        #'../../states.cpp',
     ]
 
     for f in files:
