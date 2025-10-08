@@ -18,6 +18,6 @@
 #pragma once
 
 #define MAX_IMAGES 1024
-#define MAX_IMAGE_SIZE 256
+#define MAX_IMAGE_SIZE 512 // 256
 #define TAG_KEY_MAX 32
 #define TAG_VAL_MAX 1024
