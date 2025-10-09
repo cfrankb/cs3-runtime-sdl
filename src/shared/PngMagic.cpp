@@ -43,15 +43,6 @@
 #define PNG_COLOR_TYPE_RGBA PNG_COLOR_TYPE_RGB_ALPHA
 #define PNG_COLOR_TYPE_GA PNG_COLOR_TYPE_GRAY_ALPHA
 
-enum
-{
-    PNG_INITIAL_POS = 8,
-    PALETTE_SIZE = 256,
-    ALPHA = 255,
-    CHUNK_TYPE_LEN = 4,
-    RGB_BYTES = 3,
-};
-
 constexpr uint32_t OBLT_VERSION0 = 0;
 constexpr uint32_t OBLT_VERSION2 = 2;
 static bool g_verbose = false;
@@ -66,6 +57,10 @@ constexpr uint8_t FILTERING_PAETH = 4;
 constexpr int32_t PIXELWIDTH_PALETTE = 1;
 constexpr int32_t PIXELWIDTH_RGB = 3;
 constexpr int32_t PIXELWIDTH_RGBA = 4;
+constexpr size_t PALETTE_SIZE = 256;
+constexpr uint8_t ALPHA = 255;
+constexpr size_t CHUNK_TYPE_LEN = 4;
+constexpr size_t RGB_BYTES = 3;
 
 void enablePngMagicVerbose()
 {
@@ -129,9 +124,9 @@ static bool _8bpp(
 
 const std::string_view getFilteringName(uint8_t i)
 {
-    const std::string_view names[] = {
+    constexpr std::string_view names[] = {
         "None", "Sub", "Up", "Average", "Paeth"};
-    const size_t count = sizeof(names) / sizeof(names[0]);
+    constexpr size_t count = sizeof(names) / sizeof(names[0]);
     if (i < count)
         return names[i];
     else
@@ -141,9 +136,32 @@ const std::string_view getFilteringName(uint8_t i)
 bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
 {
     CCRC crc;
-    int pos = PNG_INITIAL_POS;
-    int fileSize = file.getSize();
-    file.seek(orgPos + PNG_INITIAL_POS);
+    auto fileSize = file.getSize();
+    if (fileSize < 0)
+    {
+        set.setLastError("failed to get file size");
+        return false;
+    }
+
+    constexpr uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    decltype(fileSize) pos = orgPos;
+    if (!file.seek(orgPos))
+    {
+        set.setLastError("seek to orgPos failed");
+        return false;
+    }
+    uint8_t sig[sizeof(pngSig)];
+    if (file.read(sig, sizeof(pngSig)) != IFILE_OK)
+    {
+        set.setLastError("failed to read signature");
+        return false;
+    }
+    pos += sizeof(pngSig);
+    if (memcmp(sig, pngSig, sizeof(pngSig)) != 0)
+    {
+        set.setLastError("signature mismatch; expecting png signature");
+        return false;
+    }
 
     png_IHDR ihdr;
     memset(&ihdr, 0, sizeof(png_IHDR));
@@ -189,9 +207,7 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
         ct[sizeof(chunkType)] = '\0';
 
         // read chunkdata
-        // uint8_t *p = new uint8_t[chunkSize + sizeof(chunkType)];
         std::vector<uint8_t> chunkDataRaw(chunkSize + sizeof(chunkType));
-        // file.read(p + sizeof(chunkType), chunkSize);
         if (chunkSize != 0 && file.read(chunkDataRaw.data() + sizeof(chunkType), chunkSize) != IFILE_OK)
         {
             char tmp[128];
@@ -200,8 +216,6 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
             return false;
         }
         pos += chunkSize;
-        // memset(chunkData + chunkSize, 0, 4);
-        // memcpy(p, chunkType, sizeof(chunkType));
         memcpy(chunkDataRaw.data(), chunkType, sizeof(chunkType));
         uint8_t *chunkData = chunkDataRaw.data() + sizeof(chunkType);
 
@@ -222,7 +236,6 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
             memcpy(((uint8_t *)&ihdr) + 8, chunkData, chunkSize);
             memcpy(ihdr.ChunkType, chunkType, 4);
             ihdr.Lenght = chunkSize;
-
             if (g_verbose)
             {
                 LOGI("Width: %d, Height: %d", CFrame::toNet(ihdr.Width), CFrame::toNet(ihdr.Height));
@@ -244,15 +257,10 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
             if (cData.size() != 0)
             {
                 cData.resize(cDataSize + chunkSize);
-                // uint8_t *tmp = new uint8_t[cDataSize + chunkSize];
-                // memcpy(tmp, cData, cDataSize);
-                // delete[] cData;
-                // cData = tmp;
                 memcpy(cData.data() + cDataSize, chunkData, chunkSize);
             }
             else
             {
-                // cData = new uint8_t[chunkSize];
                 cData.resize(chunkSize);
                 memcpy(cData.data(), chunkData, chunkSize);
             }

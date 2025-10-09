@@ -156,6 +156,8 @@ void CRuntime::paint()
     SDL_GetWindowSize(m_app.window, &width, &height);
     SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
 #endif
+    SDL_SetRenderDrawColor(m_app.renderer, 0, 0, 0, 255);
+    SDL_RenderClear(m_app.renderer);
     SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
     SDL_RenderPresent(m_app.renderer);
 }

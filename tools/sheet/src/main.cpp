@@ -347,19 +347,19 @@ void printRects(const std::vector<Rect> &rects)
     }
 }
 
-int32_t estimateSheetSize(CFrameSet &set)
+int64_t estimateSheetSize(CFrameSet &set)
 {
     // constexpr const int SIZE_ALIGNMENT = 8;   // Align size to 8 pixels
     // constexpr const int SIZE_ADJUSTMENT = 16; // Adjustment factor for sheet size
-    uint32_t space = 0;
+    uint64_t space = 0;
     for (const auto &frame : set.frames())
     {
         space += frame->width() * frame->height();
     }
     float sq = std::sqrt(space);
     // Create rectangular sheet w/ extra padding
-    int32_t z = (static_cast<int32_t>(sq) | (SpriteSheet::SIZE_ALIGNMENT - 1)) + 1;
-    int32_t sx = ((z + z / SpriteSheet::SIZE_ADJUSTMENT) | (SpriteSheet::SIZE_ALIGNMENT * 2 - 1)) + 1;
+    int64_t z = (static_cast<int32_t>(sq) | (SpriteSheet::SIZE_ALIGNMENT - 1)) + 1;
+    int64_t sx = ((z + z / SpriteSheet::SIZE_ADJUSTMENT) | (SpriteSheet::SIZE_ALIGNMENT * 2 - 1)) + 1;
     LOGI("space: %lu %lu ", space, sx);
     LOGI("sqrt: %f (%f) ", sq, sq * sq);
     return sx;
@@ -812,13 +812,19 @@ bool toSpriteSheet(CFrameSet &set, std::vector<uint8_t> &png, const SpriteSheet:
     std::vector<Rect> rects;
 
     // Find a place for all the sprites
-    int sx = estimateSheetSize(set);
+    int64_t sx = estimateSheetSize(set);
+    if (sx > 4096)
+    {
+        LOGE("size is out of bound %d -- max allowed %d", sx, 4096);
+        return false;
+    }
     Size size{sx, sx};
     placeSpritesOnSheet(set, sprites, flags, size, rects);
 
     // Create Png Sheet
     // LOGI("size: %d %d", size.sx, size.sy);
     size = findFrameSetBounds(sprites);
+
     // LOGI("size: %d %d", size.sx, size.sy);
     CFrame sheet(size.sx, size.sy);
     // rects.clear();

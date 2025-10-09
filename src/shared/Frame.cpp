@@ -950,6 +950,7 @@ CFrameSet *CFrame::explode(int count, uint16_t *sx, uint16_t *sy, CFrameSet *set
 
 CFrameSet *CFrame::explode(std::vector<CFrame::oblv2DataUnit_t> &metadata, CFrameSet *set)
 {
+    constexpr uint16_t INVALID = 0xffff;
     if (!set)
     {
         set = new CFrameSet();
@@ -957,7 +958,15 @@ CFrameSet *CFrame::explode(std::vector<CFrame::oblv2DataUnit_t> &metadata, CFram
 
     for (const auto &unit : metadata)
     {
-        CFrame *frame = clip(unit.x, unit.y, unit.sx, unit.sy);
+        CFrame *frame;
+        if (unit.x != INVALID && unit.y != INVALID)
+        {
+            frame = clip(unit.x, unit.y, unit.sx, unit.sy);
+        }
+        else
+        {
+            frame->resize(unit.sx, unit.sy);
+        }
         set->add(frame);
     }
     return set;

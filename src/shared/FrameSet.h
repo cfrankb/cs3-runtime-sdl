@@ -80,7 +80,7 @@ public:
     void resize(int size);
 
 private:
-    int m_nCurrFrame;
+    int m_currFrame;
     enum
     {
         FNT_SIZE = 8,
@@ -105,7 +105,7 @@ private:
     bool importOBL5(IFile &file, const long org = 0);
 
     std::string m_lastError;
-    std::vector<CFrame *> m_arrFrames;
+    std::vector<CFrame *> m_frames;
     std::string m_name;
     std::unordered_map<std::string, std::string> m_tags;
     friend class CFrameArray;
