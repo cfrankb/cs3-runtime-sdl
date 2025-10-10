@@ -19,19 +19,7 @@
 #include <stdio.h>
 #include <cstdint>
 #include "map.h"
-
-enum JoyAim : uint8_t
-{
-    AIM_UP = 0,
-    AIM_DOWN = 1,
-    AIM_LEFT = 2,
-    AIM_RIGHT = 3,
-    TOTAL_AIMS = 4,
-    AIM_NONE = 0xff,
-};
-
-JoyAim operator^=(JoyAim &aim, int i);
-JoyAim reverseDir(const JoyAim aim);
+#include "joyaim.h"
 
 class IFile;
 class CActor
@@ -44,13 +32,13 @@ public:
 
     bool canMove(const JoyAim aim) const;
     void move(const JoyAim aim);
-    inline uint8_t getX() const
+    inline int16_t getX() const
     {
-        return m_x;
+        return static_cast<int16_t>(m_x);
     }
-    inline uint8_t getY() const
+    inline int16_t getY() const
     {
-        return m_y;
+        return static_cast<int16_t>(m_y);
     }
     inline uint8_t type() const
     {
@@ -87,4 +75,5 @@ private:
     template <typename WriteFunc>
     bool writeCommon(WriteFunc writefile) const;
     friend class CGame;
+    friend class CBoss;
 };

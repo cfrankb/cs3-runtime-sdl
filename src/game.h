@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstdio>
 #include "actor.h"
+#include "boss.h"
 #include "map.h"
 #include "gamesfx.h"
 #include "events.h"
@@ -27,6 +28,7 @@
 class CGameStats;
 class CMapArch;
 class ISound;
+class CBoss;
 
 struct MapReport
 {
@@ -73,6 +75,7 @@ public:
     bool loadLevel(const GameMode mode);
     bool move(const JoyAim dir);
     void manageMonsters(const int ticks);
+    void manageBosses(const int ticks);
     uint8_t managePlayer(const uint8_t *joystate);
     static Pos translate(const Pos &p, const int aim);
     void consume();
@@ -138,6 +141,7 @@ public:
     void setDefaultLives(int lives);
     bool read(IFile &sfile);
     bool write(IFile &tfile);
+    const std::vector<CBoss> &bosses();
 
 private:
     enum
@@ -173,6 +177,7 @@ private:
     int m_introHint = 0;
     std::vector<Event> m_events;
     std::vector<CActor> m_monsters;
+    std::vector<CBoss> m_bosses;
     std::vector<sfx_t> m_sfx;
     CActor m_player;
     CMapArch *m_mapArch = nullptr;

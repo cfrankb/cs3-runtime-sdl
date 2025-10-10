@@ -830,6 +830,7 @@ void CRuntime::preloadAssets()
         &m_tiles,
         &m_animz,
         &m_users,
+        &m_bosses,
         &m_titlePix,
     };
     CFileMem mem;
@@ -1419,7 +1420,7 @@ void CRuntime::takeScreenshot()
     auto rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.width() * bitmap.height(); ++i)
     {
-        if (rgba[i] == CLEAR)
+        if (!(rgba[i] & ALPHA))
             rgba[i] = BLACK;
     }
     bitmap.enlarge();
@@ -2490,7 +2491,7 @@ void CRuntime::onOrientationChange()
         LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
 }
 
-CRuntime::Rect CRuntime::getSafeAreaWindow()
+Rect CRuntime::getSafeAreaWindow()
 {
     SDL_Rect safe;
     if (!SDL_GetWindowSafeArea(m_app.window, &safe))
@@ -2500,7 +2501,7 @@ CRuntime::Rect CRuntime::getSafeAreaWindow()
     return Rect{.x = safe.x, .y = safe.y, .width = safe.w, .height = safe.h};
 }
 
-CRuntime::Rect CRuntime::windowRect2textureRect(const Rect &wRect)
+Rect CRuntime::windowRect2textureRect(const Rect &wRect)
 {
     Rez rez = getWindowSize();
     float w = (float)_WIDTH * 2;

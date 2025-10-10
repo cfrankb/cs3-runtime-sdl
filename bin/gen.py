@@ -114,7 +114,7 @@ def make_auxilary_targets(test_cmd, libs_steps, help_info):
     lines.append("\trm -rf $(TARGET) && make")
     lines.append("")
     lines.append("run:")
-    lines.append(f"\t$(RUN_PREFIX) $(RUN)")
+    lines.append(f"\t$(RUN_PREFIX) $(RUN) $(RUN_ARGS)")
     lines.append("")
     lines.append("count:")
     lines.append("\tfind src  -type f -print0 | xargs -0 wc -l")

@@ -965,7 +965,7 @@ CFrameSet *CFrame::explode(std::vector<CFrame::oblv2DataUnit_t> &metadata, CFram
         }
         else
         {
-            frame->resize(unit.sx, unit.sy);
+            frame = new CFrame(unit.sx, unit.sy);
         }
         set->add(frame);
     }

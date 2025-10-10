@@ -178,7 +178,10 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
         {
             for (int col = 0; col < rect.width; ++col)
             {
-                dest[col] = tile.at(col + rect.x, row + rect.y);
+                auto color = tile.at(col + rect.x, row + rect.y);
+                if (!(color & ALPHA))
+                    continue;
+                dest[col] = color;
             }
             dest += width;
         }
@@ -191,7 +194,7 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
             for (int col = 0; col < rect.width; ++col)
             {
                 uint32_t color = tile.at(col + rect.x, row + rect.y);
-                if (!color)
+                if (!(color & ALPHA))
                     continue;
                 if (colorMap && colorMap->count(color))
                 {
@@ -673,6 +676,9 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
             drawTile(bitmap, px, py, *tile, true);
         }
     }
+
+    // draw Bosses
+    drawBossses(bitmap, m_cx, m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
 }
 
 void CGameMixin::drawViewPortStatic(CFrame &bitmap)
@@ -722,11 +728,69 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
         CFrame *tile = calcSpecialFrame(sprite);
         drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, true);
     }
+
+    // draw Bosses
+    drawBossses(bitmap,
+                mx * CBoss::BOSS_GRANULAR_FACTOR,
+                my * CBoss::BOSS_GRANULAR_FACTOR,
+                maxCols * CBoss::BOSS_GRANULAR_FACTOR,
+                maxRows * CBoss::BOSS_GRANULAR_FACTOR);
+}
+
+void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy)
+{
+    auto between = [](int a1, int a2, int b1, int b2)
+    {
+        return a1 < b2 && a2 > b1;
+    };
+
+    auto calcSize = [](auto _x, auto _wu, auto _sx)
+    {
+        if (_x < 0)
+            return _wu + _x;
+        else if (_x + _wu > _sx)
+            return _sx - _x;
+        return _wu;
+    };
+
+    // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
+    constexpr int GRID_SIZE = 8;
+    const int i = m_animator->offset() & 3;
+    auto &frames = (m_bosses.get())->frames();
+    auto &frame = *frames[i];
+    for (const auto &boss : m_game->bosses())
+    {
+        const auto &hitbox = boss.hitbox();
+        const int w = frame.width() / GRID_SIZE;
+        const int h = frame.height() / GRID_SIZE;
+        const Rect bRect{boss.x() - hitbox.x, boss.y() - hitbox.y, w, h};
+        //        if (between(boss.x(), boss.x() + wu, mx, mx + sx) &&
+        //          between(boss.y(), boss.y() + hu, my, my + sy))
+        if (between(bRect.x, bRect.x + bRect.width, mx, mx + sx) &&
+            between(bRect.y, bRect.y + bRect.height, my, my + sy))
+        {
+            //          const int x = boss.x() - mx;
+            //            const int y = boss.y() - my;
+            const int x = bRect.x - mx;
+            const int y = bRect.y - my;
+            Rect rect{
+                .x = x < 0 ? GRID_SIZE * std::abs(x) : 0,
+                .y = y < 0 ? GRID_SIZE * std::abs(y) : 0,
+                .width = GRID_SIZE * calcSize(x, bRect.width, sx),
+                .height = GRID_SIZE * calcSize(y, bRect.height, sy),
+            };
+            drawTile(bitmap,
+                     x > 0 ? x * GRID_SIZE : 0,
+                     y > 0 ? y * GRID_SIZE : 0,
+                     frame,
+                     rect);
+        }
+    }
 }
 
 void CGameMixin::centerCamera()
 {
-    CMap *map = &m_game->getMap();
+    const CMap *map = &m_game->getMap();
     CGame &game = *m_game;
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
@@ -978,7 +1042,6 @@ void CGameMixin::manageGamePlay()
         return;
     }
 
-    // handleFunctionKeys();
     if (m_paused)
     {
         stopRecorder();
@@ -1042,6 +1105,7 @@ void CGameMixin::manageGamePlay()
         m_animator->animate();
 
     game.manageMonsters(m_ticks);
+    game.manageBosses(m_ticks);
     const uint16_t exitKey = m_game->getMap().states().getU(POS_EXIT);
     if (game.isClosure())
     {

@@ -401,9 +401,9 @@ int CMap::hei() const
 
 const Pos CMap::findFirst(const uint8_t tileId) const
 {
-    for (uint16_t y = 0; y < m_hei; ++y)
+    for (int16_t y = 0; y < m_hei; ++y)
     {
-        for (uint16_t x = 0; x < m_len; ++x)
+        for (int16_t x = 0; x < m_len; ++x)
         {
             if (at(x, y) == tileId)
             {
@@ -572,6 +572,11 @@ void CMap::shift(Direction aim)
 uint16_t CMap::toKey(const uint8_t x, const uint8_t y)
 {
     return x + (y << 8);
+}
+
+uint16_t CMap::toKey(const Pos &pos)
+{
+    return toKey(pos.x, pos.y);
 }
 
 Pos CMap::toPos(const uint16_t key)

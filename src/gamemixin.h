@@ -29,6 +29,7 @@
 #include "colormap.h"
 #include "game.h"
 #include "gameui.h"
+#include "rect.h"
 #include "shared/FileWrap.h"
 
 #define WIDTH getWidth()
@@ -245,14 +246,6 @@ protected:
     uint8_t m_keyStates[Key_Count];
     uint8_t m_keyRepeters[Key_Count];
 
-    struct Rect
-    {
-        int x;
-        int y;
-        int width;
-        int height;
-    };
-
     struct cameraContext_t
     {
         int mx;
@@ -263,8 +256,8 @@ protected:
 
     struct sprite_t
     {
-        uint16_t x;
-        uint16_t y;
+        int16_t x;
+        int16_t y;
         uint8_t tileID;
         uint8_t aim;
         uint8_t attr;
@@ -301,6 +294,7 @@ protected:
     std::unique_ptr<CFrameSet> m_tiles;
     std::unique_ptr<CFrameSet> m_animz;
     std::unique_ptr<CFrameSet> m_users;
+    std::unique_ptr<CFrameSet> m_bosses;
     std::vector<uint8_t> m_fontData;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
@@ -342,6 +336,7 @@ protected:
     void fazeScreen(CFrame &bitmap, const int bitShift);
     void drawViewPortDynamic(CFrame &bitmap);
     void drawViewPortStatic(CFrame &bitmap);
+    void drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, Color color = WHITE, Color bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
     void drawRect(CFrame &frame, const Rect &rect, const Color color = GREEN, bool fill = true);

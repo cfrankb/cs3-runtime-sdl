@@ -447,6 +447,7 @@ void CGame::setMapArch(CMapArch *arch)
 bool CGame::findMonsters()
 {
     m_monsters.clear();
+    m_bosses.clear();
     for (int y = 0; y < m_map.hei(); ++y)
     {
         for (int x = 0; x < m_map.len(); ++x)
@@ -472,6 +473,19 @@ bool CGame::findMonsters()
             addMonster(CActor(pos, attr, aim));
             removed.emplace_back(pos);
         }
+        else if (RANGE(attr, ATTR_BOSS_MIN, ATTR_BOSS_MAX))
+        {
+            const Pos &pos = CMap::toPos(key);
+            Rect hitbox{.x = 16 / 8, .y = 48 / 8, .width = 32 / 8, .height = 16 / 8};
+            CBoss boss(
+                static_cast<int16_t>(pos.x) * CBoss::BOSS_GRANULAR_FACTOR,
+                static_cast<int16_t>(pos.y) * CBoss::BOSS_GRANULAR_FACTOR,
+                hitbox,
+                attr);
+            boss.setSpeed((rand() & 3) + 1);
+            m_bosses.emplace_back(std::move(boss));
+            removed.emplace_back(pos);
+        }
     }
 
     for (const auto &pos : removed)
@@ -480,7 +494,10 @@ bool CGame::findMonsters()
     }
 
     if (!m_quiet)
+    {
         LOGI("%zu monsters found.\n", m_monsters.size());
+        LOGI("%zu bosses found.\n", m_bosses.size());
+    }
     return true;
 }
 
@@ -1606,4 +1623,9 @@ void CGame::setDefaultLives(int lives)
 void CGame::setQuiet(bool state)
 {
     m_quiet = state;
+}
+
+const std::vector<CBoss> &CGame::bosses()
+{
+    return m_bosses;
 }
