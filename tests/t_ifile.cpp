@@ -150,6 +150,8 @@ bool test_ifile_create()
     CFileMem fm;
     if (!infuse_create(fm, OUTFILE, "FileMem"))
         return false;
+    LOGI("tell: %lu", fm.tell());
+    LOGI("getSize: %lu", fm.getSize());
     fm.close();
 
     // clean up

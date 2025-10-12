@@ -28,6 +28,7 @@ if [[ "$1" == "-a" ]] ; then
     cp out/tiles*.h $TARGET_EDITOR/src
     cp out/tiles*.cpp $TARGET_EDITOR/src
     cp out/animzdata*.h $TARGET_EDITOR/src
+    cp out/sprtypes.h $TARGET_EDITOR/src
     #cp out/anniedata*.h $TARGET_EDITOR/src
 elif [[ "$1" == "-g" ]] ; then
     echo "copy runtime to editor"

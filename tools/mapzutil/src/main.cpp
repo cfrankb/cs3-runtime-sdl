@@ -12,16 +12,21 @@
 #include <format>
 #include <filesystem>
 #include "../../../src/shared/FileWrap.h"
+#include "../../../src/shared/FileMem.h"
 #include "../../../src/maparch.h"
 #include "../../../src/map.h"
+#include "../../../src/game.h"
 #include "../../../src/states.h"
 #include "../../../src/statedata.h"
 #include "../../../src/logger.h"
+#include "../../../src/tilesdata.h"
+#include "../../../src/sprtypes.h"
 
 struct AppParams
 {
     std::vector<std::string> files;
     bool strip;
+    bool report;
 };
 
 /**
@@ -32,12 +37,13 @@ struct AppParams
 void showUsage(const char *cmd)
 {
     printf(
-        "mcxz tileset generator\n\n"
+        "mapzutil\n\n"
         "usage: \n"
-        "       %s [-s] file1.mapz [file1.mapz]\n"
+        "       %s [-sr] file1.mapz [file1.mapz]\n"
         "\n"
         "filex.mapz         mapz file\n"
         "-s                 strip private maps\n"
+        "-r                 output maps report\n"
         "-h --help          show help\n"
         "\n",
         cmd);
@@ -65,12 +71,137 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
                 appSettings.strip = true;
                 continue;
             }
+            else if (src[1] == 'r')
+            {
+                appSettings.report = true;
+                continue;
+            }
             LOGE("invalid switch: %s\n", src);
             return EXIT_FAILURE;
         }
         appSettings.files.emplace_back(src);
     }
     return EXIT_SUCCESS;
+}
+
+bool report(CMapArch &mf, IFile &file)
+{
+    const int BUFSIZE = 4095;
+    char *tmp = new char[BUFSIZE + 1];
+    auto writeItem = [&file, tmp](auto str, auto v)
+    {
+        sprintf(tmp, "  -- %-15s: %d\n", str, static_cast<int>(v));
+        file += tmp;
+    };
+
+    std::unordered_map<uint16_t, std::string> labels;
+    const auto &keyOptions = getKeyOptions();
+    for (const auto &[v, k] : keyOptions)
+    {
+        labels[k] = v;
+    }
+
+    typedef std::unordered_map<uint8_t, uint32_t> StatMap;
+
+    file += "Map List\n";
+    file += "========\n\n";
+
+    LOGI("@@@tell %lu", file.tell());
+
+    for (size_t i = 0; i < mf.size(); ++i)
+    {
+        CMap *map = mf.at(i);
+        sprintf(tmp, "Level %.2lu: %s\n", i + 1, map->title());
+        file += tmp;
+    }
+
+    file += "\n";
+    file += "MapArch statistics\n";
+    file += "==================\n\n";
+
+    StatMap globalUsage;
+
+    for (size_t i = 0; i < mf.size(); ++i)
+    {
+        CMap *map = mf.at(i);
+        MapReport report = CGame::generateMapReport(*map);
+        StatMap usage;
+        int monsters = 0;
+        int stops = 0;
+        for (int y = 0; y < map->hei(); ++y)
+        {
+            for (int x = 0; x < map->len(); ++x)
+            {
+                const auto &c = map->at(x, y);
+                ++usage[c];
+                ++globalUsage[c];
+                auto &def = getTileDef(c);
+                if (def.type == TYPE_MONSTER || def.type == TYPE_VAMPLANT)
+                {
+                    ++monsters;
+                }
+                if (def.type == TYPE_STOP)
+                {
+                    ++stops;
+                }
+            }
+        }
+
+        sprintf(tmp, "Level %.2lu: %s\n", i + 1, map->title());
+        file += tmp;
+        writeItem("Unique tiles", usage.size());
+        writeItem("Monsters", monsters);
+        writeItem("Attributs", map->attrs().size());
+        writeItem("Stops", stops);
+        sprintf(tmp, "  -- Size: %d x %d\n", map->len(), map->hei());
+        file += tmp;
+        writeItem("fruits", report.fruits);
+        writeItem("treasures", report.bonuses);
+        writeItem("secrets", report.secrets);
+
+        CStates &states = map->states();
+        std::vector<StateValuePair> pairs = states.getValues();
+        if (pairs.size())
+        {
+            file += "\nMeta-data\n";
+            for (const auto &item : pairs)
+            {
+                const bool isStr = (item.key & 0xff) >= 0x80;
+                const std::string label = labels[item.key];
+                sprintf(tmp, "  -- %-12s %s", label.c_str(), isStr ? item.value.c_str() : item.tip.c_str());
+                file += tmp;
+                if (isStr)
+                    strncpy(tmp, "\n", BUFSIZE);
+                else
+                    sprintf(tmp, " [%s]\n", item.value.c_str());
+                file += tmp;
+            }
+        }
+        file += "\n-----------------------------------\n";
+        file += "\n";
+    }
+
+    file += "Par time\n";
+    file += "==================\n\n";
+    for (size_t i = 0; i < mf.size(); ++i)
+    {
+        CMap *map = mf.at(i);
+        CStates &states = map->states();
+        uint16_t parTime = states.getU(PAR_TIME);
+        if (parTime == 0)
+            continue;
+        sprintf(tmp, "Level %.2lu: %s\n", i + 1, map->title());
+        file += tmp;
+        const int seconds = parTime % 60;
+        const int minutes = parTime / 60;
+        sprintf(tmp, "   PAR TIME:   %.2d:%.2d\n\n", minutes, seconds);
+        file += tmp;
+    }
+
+    sprintf(tmp, "\nGlobal Unique tiles: %lu\n", globalUsage.size());
+    file += tmp;
+
+    return true;
 }
 
 bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &params)
@@ -108,6 +239,27 @@ bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &par
             printf("no map removed\n");
         }
     }
+
+    if (params.report)
+    {
+        CFileMem mem;
+        if (!mem.open("", "wb"))
+        {
+            LOGE("failed open filemem");
+            return false;
+        }
+        report(arch, mem);
+        LOGI("getSize: %lu", mem.getSize());
+        LOGI("tell: %lu", mem.tell());
+        size_t size = mem.buffer().size();
+        char *buf = new char[size + 1];
+        buf[size] = '\0';
+        LOGI("size: %lu", size);
+
+        memcpy(buf, (void *)mem.buffer().data(), size);
+        puts(buf);
+        delete[] buf;
+    }
     return true;
 }
 
@@ -143,6 +295,7 @@ int main(int argc, char *argv[], char *envp[])
     (void)envp;
     AppParams params;
     params.strip = false;
+    params.report = false;
     if (parseParams(argc, argv, params) == EXIT_FAILURE)
         return EXIT_FAILURE;
 

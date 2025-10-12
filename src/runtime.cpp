@@ -831,6 +831,7 @@ void CRuntime::preloadAssets()
         &m_animz,
         &m_users,
         &m_bosses,
+        &m_uisheet,
         &m_titlePix,
     };
     CFileMem mem;
@@ -2612,8 +2613,6 @@ void CRuntime::onSDLQuit()
     if (!m_quiet)
         LOGI("SDL_QUIT\n");
     m_isRunning = false;
-    // m_sound->forget();
-    // m_music->close();
 }
 
 bool CRuntime::loadAppIcon()

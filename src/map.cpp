@@ -384,8 +384,9 @@ bool CMap::writeCommon(WriteFunc writefile) const
     uint32_t titleSize = static_cast<uint32_t>(m_title.size());
     if (!writefile(&titleSize, sizeof(uint8_t)))
         return false;
-    if (!writefile(m_title.c_str(), m_title.size()))
-        return false;
+    if (m_title.size() > 0)
+        if (!writefile(m_title.c_str(), m_title.size()))
+            return false;
 
     return true;
 }

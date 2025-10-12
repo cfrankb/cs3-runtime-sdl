@@ -1,0 +1,3 @@
+scroll/scroll_lf.png
+scroll/scroll_mid.png
+scroll/scroll_rg.png

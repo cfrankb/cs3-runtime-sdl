@@ -8,6 +8,7 @@ show_help () {
     echo "-a        copy metadata to editor"
     echo "-s        copy statedata to editor"
     echo "-g        copy runtime to editor"
+    echo "-u        copy assets to editor"
     echo "-m        updating map in runtime"
 }
 
@@ -26,11 +27,17 @@ elif [[ "$1" == "-g" ]] ; then
     cp $TARGET_MAIN/src/sounds.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/actor.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/animator.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/boss.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/game.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/game_ai.cpp $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/gamestats.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/gamesfx.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/gamemixin.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/isprite.h $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/joyaim.h $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/map.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/maparch.* $TARGET_EDITOR/src
+    cp $TARGET_MAIN/src/rect.h $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/states.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/statedata.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/sprtypes.h $TARGET_EDITOR/src
@@ -59,6 +66,11 @@ elif [[ "$1" == "-m" ]] ; then
         echo "Backed up $file to $file.bak_$timestamp"
     fi
     cp tests/in/levels2.mapz  data/levels.mapz
+elif [[ "$1" == "-u" ]] ; then
+    cp data/pixels/animz.obl $TARGET_EDITOR/src/data
+    cp data/pixels/tiles.obl $TARGET_EDITOR/src/data
+    cp data/pixels/bosses.obl $TARGET_EDITOR/src/data
+    cp data/pixels/uisheet.png $TARGET_EDITOR/src/data
 elif [ -z "$1" ]; then
     echo "nothing to do"
     show_help

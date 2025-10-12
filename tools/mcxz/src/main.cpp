@@ -17,6 +17,7 @@
 #include "../../../src/shared/Frame.h"
 #include "../../../src/logger.h"
 #include "tileset.h"
+#include "sheet.h"
 
 constexpr const char DEFAULT_APP_NAME[] = "cs3-runtime-sdl";
 constexpr const char DEFAULT_APP_AUTHOR[] = "Francois Blanchette";
@@ -1120,11 +1121,11 @@ bool processSection(
 
     TileVector tileDefs;
     CFileWrap sfile;
-    for (size_t i = 0; i < files.size(); ++i)
+    for (const auto &line : files)
     {
         CFrameSet images;
         StringVector list;
-        splitString(files[i], list);
+        splitString(line, list);
         const char *fname = list[0].c_str();
         // read original images
         if (extractImages(list[0], images))
@@ -1136,8 +1137,7 @@ bool processSection(
             std::vector<uint8_t> ch;
             Tile tile = parseFileParams(list, constConfig, start, end, ch, useTileDefs);
             tile.basename = getBasename(fname);
-            fileStats.push_back({sectionName + "_" + tile.name,
-                                 count});
+            fileStats.push_back({sectionName + "_" + tile.name, count});
 
             // create shrink copies
             int u = 0;
@@ -1189,7 +1189,12 @@ bool processSection(
     else if (appSettings.outputPNG)
     {
         std::vector<uint8_t> png;
-        imagesTiny.toPng(png);
+        if (!toSpriteSheet(imagesTiny, png, SpriteSheet::no_random_colors))
+        {
+            LOGE("can't create spritesheet");
+            return false;
+        };
+        // imagesTiny.toPng(png);
         tfileTiny.write(png.data(), png.size());
     }
     else

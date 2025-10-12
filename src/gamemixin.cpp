@@ -22,6 +22,7 @@
 #include "animzdata.h"
 #include "shared/FrameSet.h"
 #include "shared/Frame.h"
+#include "shared/FileWrap.h"
 #include "map.h"
 #include "game.h"
 #include "maparch.h"
@@ -36,7 +37,7 @@
 #include "gamestats.h"
 #include "attr.h"
 #include "logger.h"
-#include "shared/FileWrap.h"
+#include "strhelper.h"
 
 // Check windows
 #ifdef _WIN64
@@ -401,7 +402,8 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     else if (m_cameraMode == CAMERA_MODE_STATIC)
         drawViewPortStatic(bitmap);
 
-    const bool isPlayerHurt = m_playerFrameOffset == PLAYER_HIT_FRAME;
+    const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
+    const bool isPlayerHurt = hurtStage != CGame::HurtNone;
     if (isPlayerHurt)
         for (int i = 0; i < SCREEN_SHAKES; ++i)
             bitmap.shiftLEFT(false);
@@ -423,8 +425,16 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     const Color rectBorder = isPlayerHurt              ? PINK
                              : visualcues.livesShimmer ? GREEN
                                                        : LIGHTGRAY;
-    drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
-    drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
+
+    if (m_currentEvent >= MSG0)
+    {
+        drawScroll(bitmap);
+    }
+    else
+    {
+        drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
+        drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
+    }
 
     // draw current event text
     drawEventText(bitmap);
@@ -444,6 +454,22 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // draw timeout
     drawTimeout(bitmap);
+}
+
+void CGameMixin::drawScroll(CFrame &bitmap)
+{
+    const CFrameSet &sheet = *m_uisheet;
+    constexpr int SCROLL_LEFT = 0;
+    constexpr int SCROLL_MID = 1;
+    constexpr int SCROLL_RIGHT = 2;
+    constexpr int scrollHeight = 32;
+    constexpr int partWidth = 16;
+    const int y = bitmap.height() - scrollHeight;
+    constexpr Rect rect{0, 0, partWidth, scrollHeight};
+    drawTile(bitmap, 0, y, *sheet[SCROLL_LEFT], rect);
+    for (int x = partWidth; x < bitmap.width() - partWidth; x += partWidth)
+        drawTile(bitmap, x, y, *sheet[SCROLL_MID], rect);
+    drawTile(bitmap, bitmap.width() - partWidth, y, *sheet[SCROLL_RIGHT], rect);
 }
 
 void CGameMixin::drawTimeout(CFrame &bitmap)
@@ -502,7 +528,15 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
         else
         {
             tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
-            colorMask = (m_playerFrameOffset & PLAYER_HIT_FRAME) == PLAYER_HIT_FRAME ? COLOR_FADE : COLOR_NOCHANGE;
+            const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
+            if (hurtStage == CGame::HurtFlash)
+                colorMask = COLOR_ALL_WHITE;
+            else if (hurtStage == CGame::HurtInv)
+                colorMask = COLOR_INVERTED;
+            else if (hurtStage == CGame::HurtFaz)
+                colorMask = COLOR_FADE;
+            else
+                colorMask = COLOR_NOCHANGE;
         }
 
         if (m_game->isFrozen())
@@ -554,15 +588,15 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     const std::vector<CActor> &monsters = game.getMonsters();
     for (const auto &monster : monsters)
     {
-        const uint8_t &tileID = map->at(monster.getX(), monster.getY());
+        const uint8_t &tileID = map->at(monster.x(), monster.y());
         if (monster.isWithin(mx, my, mx + cols + ox, my + rows + oy) &&
             m_animator->isSpecialCase(tileID))
         {
             const Pos pos = monster.pos();
             const uint8_t attr = map->getAttr(pos.x, pos.y);
             sprites.emplace_back(
-                sprite_t{.x = monster.getX(),
-                         .y = monster.getY(),
+                sprite_t{.x = monster.x(),
+                         .y = monster.y(),
                          .tileID = tileID,
                          .aim = monster.getAim(),
                          .attr = attr});
@@ -687,12 +721,13 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
     CGame &game = *m_game;
 
     const int maxRows = HEIGHT / TILE_SIZE;
+    // const int maxRows = (HEIGHT - TILE_SIZE) / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
 
-    const int lmx = std::max(0, game.player().getX() - cols / 2);
-    const int lmy = std::max(0, game.player().getY() - rows / 2);
+    const int lmx = std::max(0, game.player().x() - cols / 2);
+    const int lmy = std::max(0, game.player().y() - rows / 2);
     const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
     bitmap.fill(BLACK);
@@ -744,7 +779,13 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         return a1 < b2 && a2 > b1;
     };
 
-    auto calcSize = [](auto _x, auto _wu, auto _sx)
+    auto betweenRect = [&between](const Rect &bRect, const Rect &sRect)
+    {
+        return between(bRect.x, bRect.x + bRect.width, sRect.x, sRect.x + sRect.width) &&
+               between(bRect.y, bRect.y + bRect.height, sRect.y, sRect.y + sRect.height);
+    };
+
+    auto calcSize = [](const auto _x, const auto _wu, const auto _sx)
     {
         if (_x < 0)
             return _wu + _x;
@@ -753,27 +794,32 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         return _wu;
     };
 
+    auto printRect = [](const Rect &rect, const std::string_view &name)
+    {
+        LOGI("%s (%d, %d) w:%d h: %d", name.data(), rect.x, rect.y, rect.width, rect.height);
+    };
+
+    (void)printRect;
+
     // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
     constexpr int GRID_SIZE = 8;
-    const int i = m_animator->offset() & 3;
     auto &frames = (m_bosses.get())->frames();
-    auto &frame = *frames[i];
     for (const auto &boss : m_game->bosses())
     {
-        const auto &hitbox = boss.hitbox();
+        if (boss.isHidden())
+            continue;
+        const int num = boss.currentFrame();
+        auto &frame = *frames[num];
+        const Rect &hitbox = boss.hitbox();
         const int w = frame.width() / GRID_SIZE;
         const int h = frame.height() / GRID_SIZE;
         const Rect bRect{boss.x() - hitbox.x, boss.y() - hitbox.y, w, h};
-        //        if (between(boss.x(), boss.x() + wu, mx, mx + sx) &&
-        //          between(boss.y(), boss.y() + hu, my, my + sy))
-        if (between(bRect.x, bRect.x + bRect.width, mx, mx + sx) &&
-            between(bRect.y, bRect.y + bRect.height, my, my + sy))
+        const Rect sRect{.x = mx, .y = my, .width = sx, .height = sy};
+        if (betweenRect(bRect, sRect))
         {
-            //          const int x = boss.x() - mx;
-            //            const int y = boss.y() - my;
             const int x = bRect.x - mx;
             const int y = bRect.y - my;
-            Rect rect{
+            const Rect rect{
                 .x = x < 0 ? GRID_SIZE * std::abs(x) : 0,
                 .y = y < 0 ? GRID_SIZE * std::abs(y) : 0,
                 .width = GRID_SIZE * calcSize(x, bRect.width, sx),
@@ -784,6 +830,42 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
                      y > 0 ? y * GRID_SIZE : 0,
                      frame,
                      rect);
+        }
+
+        const int HP_BAR_HEIGHT = 8;
+        const int HP_BAR_SPACING = 2;
+
+        const int mxF = mx * GRID_SIZE;
+        const int myF = my * GRID_SIZE;
+        const int sxF = sx * GRID_SIZE;
+        const int syF = sy * GRID_SIZE;
+        const Rect sRectFull{.x = mxF, .y = myF, .width = sxF, .height = syF};
+        const Rect hpRectFull{
+            .x = bRect.x * GRID_SIZE,
+            .y = bRect.y * GRID_SIZE - HP_BAR_HEIGHT - HP_BAR_SPACING,
+            .width = 64,
+            .height = HP_BAR_HEIGHT,
+        };
+        if (betweenRect(hpRectFull, sRectFull))
+        {
+            const int x = hpRectFull.x - mxF;
+            const int y = hpRectFull.y - myF;
+            const Rect rectFullHp{
+                .x = std::max(0, x),
+                .y = std::max(0, y),
+                .width = calcSize(x, hpRectFull.width, sxF),
+                .height = calcSize(y, hpRectFull.height, syF),
+            };
+            const Rect rectHp{
+                .x = std::max(0, x),
+                .y = std::max(0, y),
+                .width = calcSize(x, boss.hp(), sxF),
+                .height = calcSize(y, hpRectFull.height, syF),
+            };
+            // draw healthbar
+            drawRect(bitmap, rectFullHp, BLACK, true);
+            drawRect(bitmap, rectHp, ORANGE, true);
+            drawRect(bitmap, rectFullHp, WHITE, false);
         }
     }
 }
@@ -796,8 +878,8 @@ void CGameMixin::centerCamera()
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
-    const int lmx = std::max(0, game.player().getX() - cols / 2);
-    const int lmy = std::max(0, game.player().getY() - rows / 2);
+    const int lmx = std::max(0, game.player().x() - cols / 2);
+    const int lmy = std::max(0, game.player().y() - rows / 2);
     const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
     m_cx = mx * 2;
@@ -974,8 +1056,8 @@ void CGameMixin::moveCamera()
 
     const int mx = m_cx / 2;
     const int my = m_cy / 2;
-    const int x = m_game->player().getX() - mx;
-    const int y = m_game->player().getY() - my;
+    const int x = m_game->player().x() - mx;
+    const int y = m_game->player().y() - my;
 
     const int hDeadZone = cols / 2 - 1;
     const int vDeadZone = rows / 2 - 1;
@@ -1062,11 +1144,11 @@ void CGameMixin::manageGamePlay()
     {
         if (game.managePlayer(joyState) != AIM_NONE)
         {
-            game.m_gameStats->set(S_IDLE_TIME, 0);
+            game.stats().set(S_IDLE_TIME, 0);
         }
         else
         {
-            int &idleTime = game.m_gameStats->inc(S_IDLE_TIME);
+            int &idleTime = game.stats().inc(S_IDLE_TIME);
             if (idleTime >= MAX_IDLE_CYCLES)
                 idleTime = 0;
         }
@@ -1081,18 +1163,22 @@ void CGameMixin::manageGamePlay()
     {
         if (!game.isClosure())
         {
-            if (game.health() < m_healthRef && m_playerFrameOffset != PLAYER_HIT_FRAME)
+            const int hurtStage = game.stats().get(S_PLAYER_HURT);
+            if (game.health() < m_healthRef && hurtStage == CGame::HurtNone)
             {
-                m_playerFrameOffset = PLAYER_HIT_FRAME;
+                game.stats().set(S_PLAYER_HURT, CGame::HurtStart);
             }
             else if (*(reinterpret_cast<uint32_t *>(joyState)))
             {
-                m_playerFrameOffset = (m_playerFrameOffset + 1) % PLAYER_STD_FRAMES;
+                m_playerFrameOffset = (m_playerFrameOffset + 1) & PLAYER_STD_FRAMES;
             }
             else
             {
                 m_playerFrameOffset = 0;
             }
+
+            if (game.health() >= m_healthRef)
+                game.stats().dec(S_PLAYER_HURT);
             m_healthRef = game.health();
         }
         else
@@ -1753,97 +1839,148 @@ void CGameMixin::drawEventText(CFrame &bitmap)
 {
     if (m_currentEvent != EVENT_NONE)
     {
-        Color color = CYAN;
-        int scaleX = 1;
-        int scaleY = 1;
-        int baseY = bitmap.height() - 4;
-        const std::string &s = getEventText(scaleX, scaleY, baseY, color);
-        const int x = (WIDTH - s.size() * FONT_SIZE * scaleX) / 2;
-        const int y = baseY - FONT_SIZE * scaleY;
-        drawFont(bitmap, x, y, s.c_str(), color, CLEAR, scaleX, scaleY);
+        const int baseY = bitmap.height() - 4;
+        const message_t message = getEventText(baseY);
+        const size_t maxLines = sizeof(message.lines) / sizeof(message.lines[0]);
+        for (size_t i = 0; i < maxLines; ++i)
+        {
+            const auto &line = std::move(message.lines[i]);
+            if (line.size() == 0)
+                break;
+            const int x = (WIDTH - line.size() * FONT_SIZE * message.scaleX) / 2;
+            const int y = message.baseY - FONT_SIZE * message.scaleY + i * 12;
+            drawFont(bitmap, x, y, line.c_str(), message.color, CLEAR, message.scaleX, message.scaleY);
+        }
     }
 }
 
-std::string CGameMixin::getEventText(int &scaleX, int &scaleY, int &baseY, Color &color)
+CGameMixin::message_t CGameMixin::getEventText(const int baseY)
 {
-    (void)baseY;
     if (m_currentEvent == EVENT_SECRET)
     {
-        scaleX = 2;
-        color = CYAN;
-        return "SECRET !";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = CYAN,
+            .lines{"SECRET !", ""},
+        };
     }
     else if (m_currentEvent == EVENT_PASSAGE)
     {
-        scaleX = 2;
-        color = LIGHTGRAY;
-        return "PASSAGE";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = LIGHTGRAY,
+            .lines{"PASSAGE", ""},
+        };
     }
     else if (m_currentEvent == EVENT_EXTRA_LIFE)
     {
-        scaleX = 2;
-        color = GREEN;
-        return "EXTRA LIFE";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = GREEN,
+            .lines{"EXTRA LIFE", ""},
+        };
     }
     else if (m_currentEvent == EVENT_SUGAR_RUSH)
     {
-        scaleX = 2;
-        scaleY = 2;
+        Color color;
         if ((m_ticks >> 3) & 1)
             color = LIME;
         else
             color = ORANGE;
-        return "SUGAR RUSH";
+        return {
+            .scaleX = 2,
+            .scaleY = 2,
+            .baseY = baseY,
+            .color = color,
+            .lines{"SUGAR RUSH", ""},
+        };
     }
     else if (m_currentEvent == EVENT_GOD_MODE)
     {
-        scaleX = 2;
-        color = BLACK;
-        return "GOD MODE !";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = BLACK,
+            .lines{"GOD MODE!", ""},
+        };
     }
     else if (m_currentEvent == EVENT_SUGAR)
     {
-        scaleX = 2;
-        color = PURPLE;
         char tmp[16];
         snprintf(tmp, sizeof(tmp), "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
-        return tmp;
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = PURPLE,
+            .lines{tmp, ""},
+        };
     }
     else if (m_currentEvent >= MSG0)
     {
-        scaleX = 1;
-        scaleY = 1;
-        color = DARKGRAY;
-        return _WIDTH >= MIN_WIDTH_FULL ? m_game->getMap().states().getS(m_currentEvent) : "";
+        const std::string tmp = m_game->getMap().states().getS(m_currentEvent);
+        const auto list = split(tmp, '\n');
+        const std::string line1 = list[0];
+        const std::string line2 = list.size() > 1 ? list[1] : "";
+        return {
+            .scaleX = 1,
+            .scaleY = 1,
+            .baseY = baseY - 4,
+            .color = DARKGRAY,
+            .lines{line1, line2},
+        };
     }
     else if (m_currentEvent == EVENT_RAGE)
     {
-        scaleX = 2;
-        color = DARKORANGE;
-        return "RAGE !!!";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = DARKORANGE,
+            .lines{"RAGE !!!", ""},
+        };
     }
     else if (m_currentEvent == EVENT_FREEZE)
     {
-        scaleX = 2;
-        color = WHITE;
-        return "FREEZE TRAP";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = WHITE,
+            .lines{"FREEZE TRAP", ""},
+        };
     }
     else if (m_currentEvent == EVENT_TRAP)
     {
-        scaleX = 2;
-        color = RED;
-        return "TRAP";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = RED,
+            .lines{"TRAP", ""},
+        };
     }
     else if (m_currentEvent == EVENT_EXIT_OPENED)
     {
-        scaleX = 2;
-        color = SEAGREEN;
-        return "EXIT DOOR IS OPENED";
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = SEAGREEN,
+            .lines{"EXIT DOOR IS OPENED", ""},
+        };
     }
     else
     {
         LOGW("unhandled event: 0x%.2x\n", m_currentEvent);
-        return "";
+        return message_t{};
     }
 }
 

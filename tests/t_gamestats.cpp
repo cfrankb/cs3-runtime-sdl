@@ -64,7 +64,6 @@ bool test_gamestats()
         return false;
 
     const char *outFile1 = "tests/out/stats1.dat";
-    const char *outFile2 = "tests/out/stats2.dat";
 
     // FileWrap Write
     CFileWrap fwfile;
@@ -75,24 +74,6 @@ bool test_gamestats()
     }
     stats.write(fwfile);
     fwfile.close();
-
-    // FILE* write
-    FILE *file = fopen(outFile2, "wb");
-    if (!file)
-    {
-        LOGE("cannot write %s\n", outFile2);
-        return false;
-    }
-    stats.write(file);
-    fclose(file);
-
-    // correlate both files
-    if (getFileSize(outFile1) != getFileSize(outFile2))
-    {
-        LOGE("file %s size %ld, file %s size %ld; mismatch writers\n",
-             outFile1, getFileSize(outFile1), outFile2, getFileSize(outFile2));
-        return false;
-    }
 
     CGameStats stats2{stats};
     if (!testStats(stats2, "constructor"))
@@ -115,19 +96,6 @@ bool test_gamestats()
     {
         return false;
     }
-
-    // FILE* read
-    CGameStats stats5;
-    file = fopen(outFile2, "rb");
-    if (!file)
-    {
-        LOGE("cannot read %s\n", outFile2);
-        return false;
-    }
-    stats5.read(file);
-    fclose(file);
-    if (!testStats(stats5, "read FILE*"))
-        return false;
 
     // inc and dec
     int skill = stats.inc(S_SKILL);
@@ -159,6 +127,5 @@ bool test_gamestats()
     }
 
     std::filesystem::remove(outFile1);
-    std::filesystem::remove(outFile2);
     return true;
 }

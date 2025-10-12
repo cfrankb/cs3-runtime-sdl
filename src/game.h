@@ -19,11 +19,13 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+#include <set>
 #include "actor.h"
 #include "boss.h"
 #include "map.h"
 #include "gamesfx.h"
 #include "events.h"
+#include "tilesdata.h"
 
 class CGameStats;
 class CMapArch;
@@ -64,6 +66,15 @@ public:
         MAX_SUGAR_RUSH_LEVEL = 5,
         MAX_KEYS = 6,
         MAX_KEY_STATE = 5,
+    };
+
+    enum Hurt
+    {
+        HurtNone,
+        HurtFaz,
+        HurtInv,
+        HurtFlash,
+        HurtStart = HurtFlash
     };
 
     struct userKeys_t
@@ -142,6 +153,13 @@ public:
     bool read(IFile &sfile);
     bool write(IFile &tfile);
     const std::vector<CBoss> &bosses();
+    int findMonsterAt(const int x, const int y) const;
+    void deleteMonster(const int i);
+
+    enum
+    {
+        INVALID = -1,
+    };
 
 private:
     enum
@@ -162,7 +180,6 @@ private:
         FAST_PLAYER_SPEED = 2,
         CRUSHER_SPEED_MASK = 3,
         AUTOKILL = -1024,
-        INVALID = -1,
         ENGINE_VERSION = (0x0200 << 16) + 0x0005,
     };
 
@@ -194,9 +211,8 @@ private:
     CGame();
     ~CGame();
     int clearAttr(const uint8_t attr);
-    bool findMonsters();
+    bool spawnMonsters();
     int addMonster(const CActor actor);
-    int findMonsterAt(const int x, const int y) const;
     void addHealth(const int hp);
     void addPoints(const int points);
     void addLife();
@@ -205,6 +221,19 @@ private:
     static bool isFruit(const uint8_t tileID);
     static bool isBonusItem(const uint8_t tileID);
     CGameStats &stats();
+    const CGameStats &statsConst() const;
+    void handleMonster(CActor &actor, const TileDef &def);
+    void handleDrone(CActor &actor, const TileDef &def);
+    void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters);
+    void handleCrusher(CActor &actor, const bool speeds[]);
+    void handleIceCube(CActor &actor);
+    void handleFirball(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
+    CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
+    inline bool between(int a1, int a2, int b1, int b2) const
+    {
+        return a1 < b2 && a2 > b1;
+    };
+
     static CMap m_map;
     friend class CGameMixin;
 };

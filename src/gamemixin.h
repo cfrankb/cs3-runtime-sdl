@@ -100,7 +100,6 @@ protected:
         INTERLINES = 2,
         Y_STATUS = 2,
         PLAYER_FRAMES = 8,
-        PLAYER_HIT_FRAME = 7,
         PLAYER_STD_FRAMES = 7,
         PLAYER_DOWN_INDEX = 8,
         PLAYER_TOTAL_FRAMES = 44,
@@ -285,6 +284,15 @@ protected:
         char name[MAX_NAME_LENGTH];
     };
 
+    struct message_t
+    {
+        int scaleX;
+        int scaleY;
+        int baseY;
+        Color color;
+        std::string lines[2];
+    };
+
     hiscore_t m_hiscores[MAX_SCORES];
     uint8_t m_joyState[JOY_AIMS];
     uint8_t m_vjoyState[JOY_AIMS];
@@ -295,6 +303,7 @@ protected:
     std::unique_ptr<CFrameSet> m_animz;
     std::unique_ptr<CFrameSet> m_users;
     std::unique_ptr<CFrameSet> m_bosses;
+    std::unique_ptr<CFrameSet> m_uisheet;
     std::vector<uint8_t> m_fontData;
     CGame *m_game = nullptr;
     CMapArch *m_maparch = nullptr;
@@ -350,6 +359,7 @@ protected:
     inline CFrame *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void drawHealthBar(CFrame &bitmap, const bool isPlayerHurt);
     void drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues);
+    void drawScroll(CFrame &bitmap);
     CFrame *calcSpecialFrame(const sprite_t &sprite);
     void nextLevel();
     void restartLevel();
@@ -360,7 +370,7 @@ protected:
     bool inputPlayerName();
     bool handleInputString(char *inputDest, const size_t limit);
     void drawEventText(CFrame &bitmap);
-    std::string getEventText(int &scaleX, int &scaleY, int &baseY, Color &color);
+    message_t getEventText(const int baseY);
     void manageCurrentEvent();
     void manageTimer();
     void clearScores();

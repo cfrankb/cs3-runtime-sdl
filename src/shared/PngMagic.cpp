@@ -310,7 +310,7 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos)
         }
         else
         {
-            LOGW("ignored unsupported chunkType: %s", ct);
+            // LOGW("ignored unsupported chunkType: %s", ct);
         }
     }
 

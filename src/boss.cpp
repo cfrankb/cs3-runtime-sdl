@@ -30,11 +30,48 @@ CBoss::CBoss(const int16_t x, const int16_t y, const Rect hitbox, const uint8_t 
     m_type = type;
     m_hitbox = hitbox;
     m_state = Patrol;
+    m_framePtr = 0;
+    m_hp = MAX_HP;
 }
 
-bool CBoss::isPlayerHere() const
+bool CBoss::isPlayer(const Pos &pos)
 {
     const CMap &map = CGame::getMap();
+    const auto c = map.at(pos.x, pos.y);
+    const TileDef &def = getTileDef(c);
+    return def.type == TYPE_PLAYER;
+}
+
+bool CBoss::isIceCube(const Pos &pos)
+{
+    const CMap &map = CGame::getMap();
+    const auto c = map.at(pos.x, pos.y);
+    const TileDef &def = getTileDef(c);
+    return def.type == TYPE_ICECUBE;
+}
+
+bool CBoss::meltIceCube(const Pos &pos)
+{
+    CGame *game = CGame::getGame();
+    CMap &map = CGame::getMap();
+    int i = game->findMonsterAt(pos.x, pos.y);
+    if (i != CGame::INVALID)
+    {
+        game->deleteMonster(i);
+        game->getSfx().emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION6, .timeout = SFX_EXPLOSION6_TIMEOUT});
+        map.set(pos.x, pos.y, TILES_BLANK);
+    }
+    return true;
+}
+
+bool CBoss::isSolid(const uint8_t c)
+{
+    const TileDef &def = getTileDef(c);
+    return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
+}
+
+bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
+{
     const int x = m_x / BOSS_GRANULAR_FACTOR;
     const int y = m_y / BOSS_GRANULAR_FACTOR;
     const int w = m_hitbox.width / BOSS_GRANULAR_FACTOR;
@@ -43,19 +80,12 @@ bool CBoss::isPlayerHere() const
     {
         for (int ax = 0; ax < w; ++ax)
         {
-            const auto c = map.at(x + ax, y + ay);
-            const TileDef &def = getTileDef(c);
-            if (def.type == TYPE_PLAYER)
-                return true;
+            const Pos pos{static_cast<int16_t>(x + ax), static_cast<int16_t>(y + ay)};
+            if (testCallback(pos))
+                return actionCallback ? actionCallback(pos) : true;
         }
     }
     return false;
-}
-
-bool CBoss::isSolid(const uint8_t c) const
-{
-    const TileDef &def = getTileDef(c);
-    return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
 }
 
 bool CBoss::canMove(const JoyAim aim) const
@@ -77,7 +107,6 @@ bool CBoss::canMove(const JoyAim aim) const
             if (isSolid(c))
                 return false;
         }
-        return true;
     }
     else if (aim == JoyAim::AIM_DOWN)
     {
@@ -91,7 +120,6 @@ bool CBoss::canMove(const JoyAim aim) const
             if (isSolid(c))
                 return false;
         }
-        return true;
     }
     else if (aim == JoyAim::AIM_LEFT)
     {
@@ -105,7 +133,6 @@ bool CBoss::canMove(const JoyAim aim) const
             if (isSolid(c))
                 return false;
         }
-        return true;
     }
     else if (aim == JoyAim::AIM_RIGHT)
     {
@@ -119,13 +146,13 @@ bool CBoss::canMove(const JoyAim aim) const
             if (isSolid(c))
                 return false;
         }
-        return true;
     }
     else
     {
-        LOGE("invalid aim: %d on %s\n", aim, __LINE__);
+        LOGW("invalid aim: %.2x on %d", aim, __LINE__);
+        return false;
     }
-    return false;
+    return true;
 }
 
 void CBoss::move(const JoyAim aim)
@@ -145,19 +172,117 @@ void CBoss::move(const JoyAim aim)
         ++m_x;
         break;
     default:
-        LOGE("invalid aim: %d\n", aim);
+        LOGE("invalid aim: %.2x", aim);
     }
 }
 
 /**
- * @brief Calculate the distance between two actors
+ * @brief Calculate the distance between the boss and another actor
  *
  * @param actor
  * @return int
  */
 int CBoss::distance(const CActor &actor) const
 {
-    int dx = std::abs(actor.m_x - m_x / 2);
-    int dy = std::abs(actor.m_y - m_y / 2);
+    int dx = std::abs(actor.m_x - m_x / BOSS_GRANULAR_FACTOR);
+    int dy = std::abs(actor.m_y - m_y / BOSS_GRANULAR_FACTOR);
     return std::sqrt(dx * dx + dy * dy);
+}
+
+void CBoss::move(const Pos pos)
+{
+    move(pos.x, pos.y);
+}
+
+void CBoss::animate()
+{
+    // constexpr int MAX_FRAMES = 4;
+    int maxFrames = 0;
+    if (m_state == BossState::Patrol)
+    {
+        maxFrames = LEN_BOSS_FLYING;
+    }
+    else if (m_state == BossState::Chase)
+    {
+        maxFrames = LEN_BOSS_FLYING;
+    }
+    else if (m_state == BossState::Attack)
+    {
+        maxFrames = LEN_BOSS_ATTACK;
+    }
+    else if (m_state == BossState::Hurt)
+    {
+        maxFrames = LEN_BOSS_HURT;
+    }
+    else if (m_state == BossState::Death)
+    {
+        maxFrames = LEN_BOSS_DEATH;
+    }
+    else
+    {
+        LOGW("animated - unknown state: %d", m_state);
+    }
+
+    ++m_framePtr;
+    if (m_framePtr == maxFrames)
+    {
+        m_framePtr = 0;
+        if (m_state == BossState::Hurt)
+            m_state = BossState::Patrol;
+        else if (m_state == BossState::Attack)
+            m_state = BossState::Chase;
+        else if (m_state == BossState::Death)
+            m_state = BossState::Hidden;
+    }
+}
+
+int CBoss::currentFrame() const
+{
+    int baseFrame = 0;
+    if (m_state == BossState::Patrol)
+    {
+        baseFrame = BASE_BOSS_FLYING;
+    }
+    else if (m_state == BossState::Chase)
+    {
+        baseFrame = BASE_BOSS_FLYING;
+    }
+    else if (m_state == BossState::Attack)
+    {
+        baseFrame = BASE_BOSS_ATTACK;
+    }
+    else if (m_state == BossState::Hurt)
+    {
+        baseFrame = BASE_BOSS_HURT;
+    }
+    else if (m_state == BossState::Death)
+    {
+        baseFrame = BASE_BOSS_DEATH;
+    }
+    else
+    {
+        LOGW("currentFrame - unknown state: %d", m_state);
+    }
+
+    return baseFrame + m_framePtr;
+}
+
+void CBoss::setState(const BossState state)
+{
+    m_state = state;
+    m_framePtr = 0;
+};
+
+int CBoss::maxHp() const
+{
+    return MAX_HP;
+}
+
+void CBoss::subtainDamage(const int lostHP)
+{
+    m_hp = std::max(m_hp - lostHP, 0);
+    if (m_hp == 0)
+        setState(Death);
+    else
+        setState(Hurt);
 }
