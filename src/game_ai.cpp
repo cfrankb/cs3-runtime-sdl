@@ -199,6 +199,12 @@ private:
 
 CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
 {
+    if (x < 0 || y < 0 || x >= m_map.len() || y >= m_map.hei())
+    {
+        LOGW("cannot spawn at invalid coordonates: %d,%d", x, y);
+        return nullptr;
+    }
+
     const TileDef &def = getTileDef(tile);
     const uint8_t pu = m_map.at(x, y);
     CActor actor(x, y, def.type, aim);
@@ -231,9 +237,9 @@ void CGame::manageBosses(const int ticks)
         const int bx = boss.x() / 2;
         const int by = boss.y() / 2;
         if (boss.testHitbox(CBoss::isPlayer, nullptr))
-            addHealth(-1);
+            addHealth(-boss.damage());
         if (boss.testHitbox(CBoss::isIceCube, CBoss::meltIceCube))
-            boss.subtainDamage(16);
+            boss.subtainDamage(ICE_CUBE_DAMAGE);
 
         if (boss.speed() != 0 && (ticks % boss.speed() != 0))
             continue;
@@ -552,6 +558,13 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
     }
     else
     {
+        m_map.set(actor.x(), actor.y(), actor.getPU());
+        deletedMonsters.insert(i);
+        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
+
+        if (CGame::translate(Pos{actor.x(), actor.y()}, aim) == actor.pos())
+            // coordonate outside map bounds
+            return;
         const uint8_t tileID = actor.tileAt(aim);
         const TileDef &defX = getTileDef(tileID);
         if (defX.type == TYPE_ICECUBE)
@@ -569,8 +582,5 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
         {
             addHealth(def.health);
         }
-        m_map.set(actor.x(), actor.y(), actor.getPU());
-        deletedMonsters.insert(i);
-        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
     }
 }

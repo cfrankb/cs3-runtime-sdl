@@ -120,6 +120,70 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
     }
 }
 
+void CGameMixin::drawFont6x6(CFrame &bitmap, int x, int y, const char *text, const Color color, const Color bgcolor)
+{
+    constexpr int fontSize = 6;
+    constexpr int fontOffset = FONT_SIZE;
+    const int textSize = strlen(text);
+    constexpr int rowIndex[] = {0, 2, 3, 4, 5, 6};
+    constexpr int colIndex[] = {0, 2, 3, 4, 5, 6};
+    enum
+    {
+        SKIP,
+        CONTINUE,
+        STOP
+    };
+
+    auto boundCheck = [&bitmap](int rx, int ry)
+    {
+        if (rx >= bitmap.width() || ry >= bitmap.height())
+            return STOP;
+        else if (rx < 0 || ry < 0)
+            return SKIP;
+        else
+            return CONTINUE;
+    };
+
+    for (int i = 0; i < textSize; ++i)
+    {
+        const uint8_t c = static_cast<uint8_t>(text[i]);
+        const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+                                                : m_fontData.data() + (c - ' ') * fontOffset;
+
+        for (int row = 0; row < fontSize; ++row)
+        {
+            const uint8_t &fbits = font[rowIndex[row]];
+            const int rx = x + i * fontSize;
+            const int ry = y + row;
+            const int result = boundCheck(rx, ry);
+            if (result == STOP)
+                break;
+            else if (result == SKIP)
+                continue;
+
+            uint32_t *dest = &bitmap.at(rx, ry);
+            for (int col = 0; col < fontSize; ++col)
+            {
+                const int result = boundCheck(rx + col, ry);
+                if (result == STOP)
+                    break;
+                else if (result == SKIP)
+                    continue;
+
+                const uint8_t bitmask = 1 << colIndex[col];
+                if (fbits & bitmask)
+                {
+                    dest[col] = color;
+                }
+                else if (bgcolor != CLEAR)
+                {
+                    dest[col] = bgcolor;
+                }
+            }
+        }
+    }
+}
+
 /**
  * @brief draw Rectangle into pixmap buffer
  *
@@ -430,7 +494,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     {
         drawScroll(bitmap);
     }
-    else
+    else if (false)
     {
         drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
         drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
@@ -462,7 +526,7 @@ void CGameMixin::drawScroll(CFrame &bitmap)
     constexpr int SCROLL_LEFT = 0;
     constexpr int SCROLL_MID = 1;
     constexpr int SCROLL_RIGHT = 2;
-    constexpr int scrollHeight = 32;
+    constexpr int scrollHeight = 48;
     constexpr int partWidth = 16;
     const int y = bitmap.height() - scrollHeight;
     constexpr Rect rect{0, 0, partWidth, scrollHeight};
@@ -811,23 +875,39 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         const int num = boss.currentFrame();
         auto &frame = *frames[num];
         const Rect &hitbox = boss.hitbox();
-        const int w = frame.width() / GRID_SIZE;
-        const int h = frame.height() / GRID_SIZE;
-        const Rect bRect{boss.x() - hitbox.x, boss.y() - hitbox.y, w, h};
-        const Rect sRect{.x = mx, .y = my, .width = sx, .height = sy};
+
+        // Logical coordonates comverted to screen positions
+        // (using GRID_SIZE)
+
+        // Boss Rect
+        const Rect bRect{
+            GRID_SIZE * (boss.x() - hitbox.x),
+            GRID_SIZE * (boss.y() - hitbox.y),
+            frame.width(),
+            frame.height(),
+        };
+
+        // Screen Rect
+        const Rect sRect{
+            .x = GRID_SIZE * mx,
+            .y = GRID_SIZE * my,
+            .width = GRID_SIZE * sx,
+            .height = GRID_SIZE * sy,
+        };
+
         if (betweenRect(bRect, sRect))
         {
-            const int x = bRect.x - mx;
-            const int y = bRect.y - my;
+            const int x = bRect.x - sRect.x;
+            const int y = bRect.y - sRect.y;
             const Rect rect{
-                .x = x < 0 ? GRID_SIZE * std::abs(x) : 0,
-                .y = y < 0 ? GRID_SIZE * std::abs(y) : 0,
-                .width = GRID_SIZE * calcSize(x, bRect.width, sx),
-                .height = GRID_SIZE * calcSize(y, bRect.height, sy),
+                .x = x < 0 ? std::abs(x) : 0,
+                .y = y < 0 ? std::abs(y) : 0,
+                .width = calcSize(x, bRect.width, sRect.width),
+                .height = calcSize(y, bRect.height, sRect.height),
             };
             drawTile(bitmap,
-                     x > 0 ? x * GRID_SIZE : 0,
-                     y > 0 ? y * GRID_SIZE : 0,
+                     x > 0 ? x : 0,
+                     y > 0 ? y : 0,
                      frame,
                      rect);
         }
@@ -835,38 +915,40 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         const int HP_BAR_HEIGHT = 8;
         const int HP_BAR_SPACING = 2;
 
-        const int mxF = mx * GRID_SIZE;
-        const int myF = my * GRID_SIZE;
-        const int sxF = sx * GRID_SIZE;
-        const int syF = sy * GRID_SIZE;
-        const Rect sRectFull{.x = mxF, .y = myF, .width = sxF, .height = syF};
-        const Rect hpRectFull{
-            .x = bRect.x * GRID_SIZE,
-            .y = bRect.y * GRID_SIZE - HP_BAR_HEIGHT - HP_BAR_SPACING,
-            .width = 64,
+        // Hp Rect
+        const Rect hRect{
+            .x = bRect.x,
+            .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
+            .width = boss.maxHp(),
             .height = HP_BAR_HEIGHT,
         };
-        if (betweenRect(hpRectFull, sRectFull))
+        if (betweenRect(hRect, sRect))
         {
-            const int x = hpRectFull.x - mxF;
-            const int y = hpRectFull.y - myF;
+            const int x = hRect.x - sRect.x;
+            const int y = hRect.y - sRect.y;
             const Rect rectFullHp{
                 .x = std::max(0, x),
                 .y = std::max(0, y),
-                .width = calcSize(x, hpRectFull.width, sxF),
-                .height = calcSize(y, hpRectFull.height, syF),
+                .width = calcSize(x, hRect.width, sRect.width),
+                .height = calcSize(y, hRect.height, sRect.height),
             };
             const Rect rectHp{
                 .x = std::max(0, x),
                 .y = std::max(0, y),
-                .width = calcSize(x, boss.hp(), sxF),
-                .height = calcSize(y, hpRectFull.height, syF),
+                .width = calcSize(x, boss.hp(), sRect.width),
+                .height = calcSize(y, hRect.height, sRect.height),
             };
+
             // draw healthbar
-            drawRect(bitmap, rectFullHp, BLACK, true);
-            drawRect(bitmap, rectHp, ORANGE, true);
-            drawRect(bitmap, rectFullHp, WHITE, false);
+            drawRect(bitmap, rectFullHp, BLACK, true);  // black background
+            drawRect(bitmap, rectHp, ORANGE, true);     // orange hp bar
+            drawRect(bitmap, rectFullHp, WHITE, false); // white outline
         }
+
+        // draw Boss Name
+        const int x = hRect.x - sRect.x;
+        const int y = hRect.y - sRect.y - FONT_SIZE;
+        drawFont6x6(bitmap, x, y, boss.name(), RED, CLEAR);
     }
 }
 
@@ -1848,7 +1930,7 @@ void CGameMixin::drawEventText(CFrame &bitmap)
             if (line.size() == 0)
                 break;
             const int x = (WIDTH - line.size() * FONT_SIZE * message.scaleX) / 2;
-            const int y = message.baseY - FONT_SIZE * message.scaleY + i * 12;
+            const int y = message.baseY - FONT_SIZE * message.scaleY + i * 10;
             drawFont(bitmap, x, y, line.c_str(), message.color, CLEAR, message.scaleX, message.scaleY);
         }
     }
@@ -1863,7 +1945,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = CYAN,
-            .lines{"SECRET !", ""},
+            .lines{"SECRET !"},
         };
     }
     else if (m_currentEvent == EVENT_PASSAGE)
@@ -1873,7 +1955,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = LIGHTGRAY,
-            .lines{"PASSAGE", ""},
+            .lines{"PASSAGE"},
         };
     }
     else if (m_currentEvent == EVENT_EXTRA_LIFE)
@@ -1883,7 +1965,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = GREEN,
-            .lines{"EXTRA LIFE", ""},
+            .lines{"EXTRA LIFE"},
         };
     }
     else if (m_currentEvent == EVENT_SUGAR_RUSH)
@@ -1898,7 +1980,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 2,
             .baseY = baseY,
             .color = color,
-            .lines{"SUGAR RUSH", ""},
+            .lines{"SUGAR RUSH"},
         };
     }
     else if (m_currentEvent == EVENT_GOD_MODE)
@@ -1908,7 +1990,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = BLACK,
-            .lines{"GOD MODE!", ""},
+            .lines{"GOD MODE!"},
         };
     }
     else if (m_currentEvent == EVENT_SUGAR)
@@ -1920,21 +2002,23 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = PURPLE,
-            .lines{tmp, ""},
+            .lines{tmp},
         };
     }
-    else if (m_currentEvent >= MSG0)
+    else if (RANGE(m_currentEvent, MSG0, MSGF))
     {
         const std::string tmp = m_game->getMap().states().getS(m_currentEvent);
         const auto list = split(tmp, '\n');
         const std::string line1 = list[0];
         const std::string line2 = list.size() > 1 ? list[1] : "";
+        const std::string line3 = list.size() > 2 ? list[2] : "";
+        const int y = list.size() == 0 ? baseY - 14 : baseY + -8 * (std ::min(list.size(), (size_t)3));
         return {
             .scaleX = 1,
             .scaleY = 1,
-            .baseY = baseY - 4,
+            .baseY = y,
             .color = DARKGRAY,
-            .lines{line1, line2},
+            .lines{line1, line2, line3},
         };
     }
     else if (m_currentEvent == EVENT_RAGE)
@@ -1944,7 +2028,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = DARKORANGE,
-            .lines{"RAGE !!!", ""},
+            .lines{"RAGE !!!"},
         };
     }
     else if (m_currentEvent == EVENT_FREEZE)
@@ -1954,7 +2038,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = WHITE,
-            .lines{"FREEZE TRAP", ""},
+            .lines{"FREEZE TRAP"},
         };
     }
     else if (m_currentEvent == EVENT_TRAP)
@@ -1964,7 +2048,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = RED,
-            .lines{"TRAP", ""},
+            .lines{"TRAP"},
         };
     }
     else if (m_currentEvent == EVENT_EXIT_OPENED)
@@ -1974,7 +2058,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .scaleY = 1,
             .baseY = baseY,
             .color = SEAGREEN,
-            .lines{"EXIT DOOR IS OPENED", ""},
+            .lines{"EXIT DOOR IS OPENED"},
         };
     }
     else

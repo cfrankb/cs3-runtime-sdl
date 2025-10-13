@@ -24,8 +24,8 @@
 #include "actor.h"
 #include "isprite.h"
 #include "map.h"
+#include "bossdata.h"
 
-typedef std::function<bool(const uint8_t)> hitboxCallback_t;
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 
 class CBoss : public ISprite
@@ -41,17 +41,19 @@ public:
         Death,
         Hidden,
     };
-    CBoss(const int16_t x, const int16_t y, const Rect hitbox, const uint8_t type);
+    CBoss(const int16_t x, const int16_t y, const bossData_t *data);
     virtual ~CBoss() = default;
     inline int16_t x() const override { return m_x; }
     inline int16_t y() const override { return m_y; }
-    inline const Rect &hitbox() const { return m_hitbox; }
-    uint8_t type() const override { return m_type; }
+    inline const Rect &hitbox() const { return m_bossData->hitbox; }
+    uint8_t type() const override { return m_bossData->type; }
     bool testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const;
     static bool isPlayer(const Pos &pos);
     static bool isIceCube(const Pos &pos);
+    static bool isSolid(const Pos &pos);
     static bool isSolid(const uint8_t c);
     static bool meltIceCube(const Pos &pos);
+    static const Pos toPos(int x, int y);
     bool canMove(const JoyAim aim) const override;
     void move(const JoyAim aim) override;
     int distance(const CActor &actor) const override;
@@ -78,28 +80,23 @@ public:
     inline const Pos pos() const override { return Pos{m_x, m_y}; };
     void animate();
     int currentFrame() const;
+    int damage() const;
+    int sheet() const { return m_bossData->sheet; }
+    int score() const { return m_bossData->score; }
+    const char *name() const { return m_bossData->name; }
 
     enum : int16_t
     {
         BOSS_GRANULAR_FACTOR = 2,
-        BASE_BOSS_FLYING = 0,
-        LEN_BOSS_FLYING = 4,
-        BASE_BOSS_ATTACK = 4,
-        LEN_BOSS_ATTACK = 8,
-        BASE_BOSS_HURT = 12,
-        LEN_BOSS_HURT = 4,
-        BASE_BOSS_DEATH = 16,
-        LEN_BOSS_DEATH = 6,
-        MAX_HP = 64,
     };
 
 private:
+    const bossData_t *m_bossData;
     int m_framePtr;
     int16_t m_x;
     int16_t m_y;
     int m_hp;
-    uint8_t m_type;
+    uint8_t m_type; // not used
     BossState m_state;
-    Rect m_hitbox;
     int m_speed;
 };

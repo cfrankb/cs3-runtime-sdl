@@ -18,6 +18,7 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <stdexcept>
 #include "map.h"
 #include "shared/IFile.h"
 #include "states.h"
@@ -55,11 +56,21 @@ CMap::~CMap()
 
 uint8_t &CMap::get(const int x, const int y)
 {
+    if (!isValid(x, y))
+    {
+        LOGE("invalid coordonates (%d, %d) -- upper bound(%d,%d)", x, y, m_len, m_hei);
+        throw std::out_of_range("Invalid map access");
+    }
     return m_map[x + y * m_len];
 }
 
 uint8_t CMap::at(const int x, const int y) const
 {
+    if (!isValid(x, y))
+    {
+        LOGE("invalid coordonates (%d, %d) -- upper bound(%d,%d)", x, y, m_len, m_hei);
+        throw std::out_of_range("Invalid map access");
+    }
     return m_map[x + y * m_len];
 }
 

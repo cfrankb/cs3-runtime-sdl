@@ -1,3 +1,6 @@
-scroll/scroll_lf.png
-scroll/scroll_mid.png
-scroll/scroll_rg.png
+#scroll/scroll_lf.png
+#scroll/scroll_mid.png
+#scroll/scroll_rg.png
+scroll/scr-left.png
+scroll/scr-mid.png
+scroll/scr-right.png

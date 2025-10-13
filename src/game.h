@@ -164,6 +164,7 @@ public:
 private:
     enum
     {
+        ICE_CUBE_DAMAGE = 16,
         MAX_HEALTH = 200,
         DEFAULT_HEALTH = 64,
         DEFAULT_LIVES = 5,

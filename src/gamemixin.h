@@ -290,7 +290,7 @@ protected:
         int scaleY;
         int baseY;
         Color color;
-        std::string lines[2];
+        std::string lines[3];
     };
 
     hiscore_t m_hiscores[MAX_SCORES];
@@ -348,6 +348,7 @@ protected:
     void drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, Color color = WHITE, Color bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
+    void drawFont6x6(CFrame &frame, int x, int y, const char *text, const Color color = WHITE, const Color bgcolor = BLACK);
     void drawRect(CFrame &frame, const Rect &rect, const Color color = GREEN, bool fill = true);
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, const Color color);
     inline void drawTimeout(CFrame &bitmap);

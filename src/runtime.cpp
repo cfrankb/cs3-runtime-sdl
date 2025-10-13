@@ -1418,10 +1418,10 @@ void CRuntime::takeScreenshot()
         bitmap.copy(m_bitmap);
     else
         bitmap.fill(BLACK);
-    auto rgba = bitmap.getRGB();
+    auto &rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.width() * bitmap.height(); ++i)
     {
-        if (!(rgba[i] & ALPHA))
+        if ((rgba[i] & ALPHA) != ALPHA)
             rgba[i] = BLACK;
     }
     bitmap.enlarge();

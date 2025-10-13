@@ -23,15 +23,14 @@
 #include "sprtypes.h"
 #include "logger.h"
 
-CBoss::CBoss(const int16_t x, const int16_t y, const Rect hitbox, const uint8_t type)
+CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossData(data)
 {
     m_x = x;
     m_y = y;
-    m_type = type;
-    m_hitbox = hitbox;
+    m_speed = data->speed;
     m_state = Patrol;
     m_framePtr = 0;
-    m_hp = MAX_HP;
+    m_hp = data->hp;
 }
 
 bool CBoss::isPlayer(const Pos &pos)
@@ -70,12 +69,20 @@ bool CBoss::isSolid(const uint8_t c)
     return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
 }
 
+bool CBoss::isSolid(const Pos &pos)
+{
+    CMap &map = CGame::getMap();
+    const auto c = map.at(pos.x, pos.y);
+    const TileDef &def = getTileDef(c);
+    return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
+}
+
 bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
 {
     const int x = m_x / BOSS_GRANULAR_FACTOR;
     const int y = m_y / BOSS_GRANULAR_FACTOR;
-    const int w = m_hitbox.width / BOSS_GRANULAR_FACTOR;
-    const int h = m_hitbox.height / BOSS_GRANULAR_FACTOR;
+    const int w = m_bossData->hitbox.width / BOSS_GRANULAR_FACTOR;
+    const int h = m_bossData->hitbox.height / BOSS_GRANULAR_FACTOR;
     for (int ay = 0; ay < h; ++ay)
     {
         for (int ax = 0; ax < w; ++ax)
@@ -93,56 +100,79 @@ bool CBoss::canMove(const JoyAim aim) const
     const CMap &map = CGame::getMap();
     const int x = m_x / BOSS_GRANULAR_FACTOR;
     const int y = m_y / BOSS_GRANULAR_FACTOR;
-    const int w = m_hitbox.width / BOSS_GRANULAR_FACTOR;
-    const int h = m_hitbox.height / BOSS_GRANULAR_FACTOR;
+    const int w = m_bossData->hitbox.width / BOSS_GRANULAR_FACTOR + (m_x & 1);
+    const int h = m_bossData->hitbox.height / BOSS_GRANULAR_FACTOR + (m_y & 1);
+    auto checkBound = [&map](int rx, int ry)
+    {
+        if (rx < 0 || ry < 0 || rx >= map.len() || ry >= map.hei())
+            return false;
+        return true;
+    };
+
     if (aim == JoyAim::AIM_UP)
     {
-        if (m_y & 1)
-            return true;
         if (y == 0)
             return false;
+        if (m_y & 1)
+            return true;
         for (int ax = 0; ax < w; ++ax)
         {
-            const auto c = map.at(x + ax, y - 1);
+            int rx = x + ax, ry = y - 1;
+            if (!checkBound(rx, ry))
+                continue;
+            const auto c = map.at(rx, ry);
+            // const auto c = map.at(x + ax, y - 1);
             if (isSolid(c))
                 return false;
         }
     }
     else if (aim == JoyAim::AIM_DOWN)
     {
-        if (m_y & 1)
-            return true;
         if (y + h >= map.hei() * BOSS_GRANULAR_FACTOR)
             return false;
+        // if (m_y & 1)
+        //     return true;
         for (int ax = 0; ax < w; ++ax)
         {
-            const auto c = map.at(x + ax, y + h);
+            int rx = x + ax, ry = y + h;
+            if (!checkBound(rx, ry))
+                continue;
+            const auto c = map.at(rx, ry);
+            // const auto c = map.at(x + ax, y + h);
             if (isSolid(c))
                 return false;
         }
     }
     else if (aim == JoyAim::AIM_LEFT)
     {
-        if (m_x & 1)
-            return true;
         if (x == 0)
             return false;
+        if (m_x & 1)
+            return true;
         for (int ay = 0; ay < h; ++ay)
         {
-            const auto c = map.at(x - 1, y + ay);
+            int rx = x - 1, ry = y + ay;
+            if (!checkBound(rx, ry))
+                continue;
+            const auto c = map.at(rx, ry);
+            // const auto c = map.at(x - 1, y + ay);
             if (isSolid(c))
                 return false;
         }
     }
     else if (aim == JoyAim::AIM_RIGHT)
     {
-        if (m_x & 1)
-            return true;
         if (x + w >= map.len() * BOSS_GRANULAR_FACTOR)
             return false;
+        // if (m_x & 1)
+        //     return true;
         for (int ay = 0; ay < h; ++ay)
         {
-            const auto c = map.at(x + w, y + ay);
+            int rx = x + w, ry = y + ay;
+            if (!checkBound(rx, ry))
+                continue;
+            const auto c = map.at(rx, ry);
+            //            const auto c = map.at(x + w, y + ay);
             if (isSolid(c))
                 return false;
         }
@@ -196,31 +226,37 @@ void CBoss::move(const Pos pos)
 
 void CBoss::animate()
 {
-    // constexpr int MAX_FRAMES = 4;
     int maxFrames = 0;
     if (m_state == BossState::Patrol)
     {
-        maxFrames = LEN_BOSS_FLYING;
+        maxFrames = m_bossData->moving.lenght;
     }
     else if (m_state == BossState::Chase)
     {
-        maxFrames = LEN_BOSS_FLYING;
+        maxFrames = m_bossData->moving.lenght;
     }
     else if (m_state == BossState::Attack)
     {
-        maxFrames = LEN_BOSS_ATTACK;
+        maxFrames = m_bossData->attack.lenght;
     }
     else if (m_state == BossState::Hurt)
     {
-        maxFrames = LEN_BOSS_HURT;
+        maxFrames = m_bossData->hurt.lenght;
     }
     else if (m_state == BossState::Death)
     {
-        maxFrames = LEN_BOSS_DEATH;
+        maxFrames = m_bossData->death.lenght;
     }
     else
     {
         LOGW("animated - unknown state: %d", m_state);
+    }
+
+    // sanity check
+    if (maxFrames == 0)
+    {
+        m_framePtr = 0;
+        return;
     }
 
     ++m_framePtr;
@@ -241,23 +277,23 @@ int CBoss::currentFrame() const
     int baseFrame = 0;
     if (m_state == BossState::Patrol)
     {
-        baseFrame = BASE_BOSS_FLYING;
+        baseFrame = m_bossData->moving.base;
     }
     else if (m_state == BossState::Chase)
     {
-        baseFrame = BASE_BOSS_FLYING;
+        baseFrame = m_bossData->moving.base;
     }
     else if (m_state == BossState::Attack)
     {
-        baseFrame = BASE_BOSS_ATTACK;
+        baseFrame = m_bossData->attack.base;
     }
     else if (m_state == BossState::Hurt)
     {
-        baseFrame = BASE_BOSS_HURT;
+        baseFrame = m_bossData->hurt.base;
     }
     else if (m_state == BossState::Death)
     {
-        baseFrame = BASE_BOSS_DEATH;
+        baseFrame = m_bossData->death.base;
     }
     else
     {
@@ -275,7 +311,7 @@ void CBoss::setState(const BossState state)
 
 int CBoss::maxHp() const
 {
-    return MAX_HP;
+    return m_bossData->hp;
 }
 
 void CBoss::subtainDamage(const int lostHP)
@@ -285,4 +321,14 @@ void CBoss::subtainDamage(const int lostHP)
         setState(Death);
     else
         setState(Hurt);
+}
+
+int CBoss::damage() const
+{
+    return m_bossData->damage;
+}
+
+const Pos CBoss::toPos(int x, int y)
+{
+    return Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)};
 }

@@ -40,6 +40,7 @@
 #include "attr.h"
 #include "logger.h"
 #include "strhelper.h"
+#include "bossdata.h"
 
 CMap CGame::m_map(30, 30);
 CGame::userKeys_t CGame::m_keys;
@@ -496,17 +497,23 @@ bool CGame::spawnMonsters()
         else if (RANGE(attr, ATTR_BOSS_MIN, ATTR_BOSS_MAX))
         {
             const Pos &pos = CMap::toPos(key);
-            Rect hitbox{.x = 16 / 8, .y = 48 / 8, .width = 32 / 8, .height = 16 / 8};
-            CBoss boss(
-                static_cast<int16_t>(pos.x) * CBoss::BOSS_GRANULAR_FACTOR,
-                static_cast<int16_t>(pos.y) * CBoss::BOSS_GRANULAR_FACTOR,
-                hitbox,
-                attr);
-            const int speed = (rand() & 3) + 1;
-            LOGI("boss 0x%.2x speed=%d", attr, speed);
-            boss.setSpeed(speed);
-            m_bosses.emplace_back(std::move(boss));
+            const bossData_t *bossData = getBossData(attr);
+            if (bossData)
+            {
+                CBoss boss(
+                    static_cast<int16_t>(pos.x) * CBoss::BOSS_GRANULAR_FACTOR,
+                    static_cast<int16_t>(pos.y) * CBoss::BOSS_GRANULAR_FACTOR,
+                    bossData);
+                LOGI("boss 0x%.2x speed=%d", attr, bossData->speed);
+                m_bosses.emplace_back(std::move(boss));
+            }
+            else
+            {
+                LOGW("ignored spawn point for unhandled boss type: 0x%.2x", attr);
+            }
             removed.emplace_back(pos);
+
+            // Rect hitbox{.x = 16 / 8, .y = 48 / 8, .width = 32 / 8, .height = 16 / 8};
         }
     }
 

@@ -503,15 +503,15 @@ bool CFrameSet::read(IFile &file)
     return result;
 }
 
-CFrame *CFrameSet::operator[](int n) const
+CFrame *CFrameSet::operator[](int i) const
 {
-    const size_t size = m_frames.size();
-    if (!(n & 0x8000) && n < (int)size && n >= 0)
+    if (i < static_cast<int>(m_frames.size()) && i >= 0)
     {
-        return m_frames[n];
+        return m_frames[i];
     }
     else
     {
+        LOGW("requesting frame: %d -- upper bound %lu", i, m_frames.size());
         return nullptr;
     }
 }

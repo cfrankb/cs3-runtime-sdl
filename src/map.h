@@ -77,6 +77,10 @@ public:
     static uint16_t toKey(const uint8_t x, const uint8_t y);
     static uint16_t toKey(const Pos &pos);
     static Pos toPos(const uint16_t key);
+    inline bool isValid(const int x, const int y) const
+    {
+        return x >= 0 && x < m_len && y >= 0 && y < m_hei;
+    }
 
     enum Direction : int16_t
     {
