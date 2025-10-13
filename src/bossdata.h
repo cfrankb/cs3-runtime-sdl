@@ -26,7 +26,7 @@
 
 #define FLAG_FIREBALL 0x1
 
-#define BOSS_DEMON 0xb0
+#define BOSS_MR_DEMON 0xb0
 
 
 struct boss_seq_t

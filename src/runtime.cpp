@@ -39,6 +39,7 @@
 #include "assetman.h"
 #include "logger.h"
 #include "attr.h"
+#include "color.h"
 
 #define _f(x) static_cast<float>(x)
 

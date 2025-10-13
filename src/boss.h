@@ -84,6 +84,7 @@ public:
     int sheet() const { return m_bossData->sheet; }
     int score() const { return m_bossData->score; }
     const char *name() const { return m_bossData->name; }
+    const bossData_t *data() const { return m_bossData; }
 
     enum : int16_t
     {

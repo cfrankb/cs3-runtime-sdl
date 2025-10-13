@@ -151,7 +151,7 @@ bool report(CMapArch &mf, IFile &file)
         file += tmp;
         writeItem("Unique tiles", usage.size());
         writeItem("Monsters", monsters);
-        writeItem("Attributs", map->attrs().size());
+        writeItem("Attributes", map->attrs().size());
         writeItem("Stops", stops);
         sprintf(tmp, "  -- Size: %d x %d\n", map->len(), map->hei());
         file += tmp;
