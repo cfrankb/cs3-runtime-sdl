@@ -26,7 +26,8 @@
 #include "map.h"
 #include "bossdata.h"
 
-class AStar;
+class IPath;
+// class AStar;
 
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 
@@ -91,7 +92,7 @@ public:
     {
         BOSS_GRANULAR_FACTOR = 2,
     };
-    bool followPath(const Pos &playerPos, const AStar &astar);
+    bool followPath(const Pos &playerPos, const IPath &astar);
     void patrol(); // New method for random patrol behavior
 
 private:
@@ -100,7 +101,6 @@ private:
     int16_t m_x;
     int16_t m_y;
     int m_hp;
-    // uint8_t m_type; // not used
     BossState m_state;
     int m_speed;
 

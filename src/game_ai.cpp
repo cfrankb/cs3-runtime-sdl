@@ -23,7 +23,7 @@
 #include <memory>
 #include <algorithm>
 #include <set>
-#include <random>
+#include <array>
 #include "map.h"
 #include "boss.h"
 #include "attr.h"
@@ -31,164 +31,14 @@
 #include "sprtypes.h"
 #include "logger.h"
 #include "actor.h"
-#include "game_ai.h"
 #include "randomz.h"
+#include "ai_path.h"
 
-constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
 constexpr int PURSUIT_DISTANCE = 15;
 constexpr int CHASE_DISTANCE = 10;
 constexpr int TARGET_DISTANCE = 5;
-constexpr std::array<Pos, 4> g_deltas = {
-    Pos{-1, 0}, // Up
-    Pos{1, 0},  // Down
-    Pos{0, -1}, // Left
-    Pos{0, 1},  // Right
-};
 
-namespace std
-{
-    template <>
-    struct hash<Pos>
-    {
-        size_t operator()(const Pos &pos) const
-        {
-            return (static_cast<uint32_t>(pos.x) << 16) | (pos.y & 0xFFFF);
-        }
-    };
-}
-
-struct Node
-{
-    Pos pos;
-    int gCost, hCost;
-    Node *parent;
-    Node(const Pos &p, int g, int h, Node *par) : pos(p), gCost(g), hCost(h), parent(par) {}
-    int fCost() const { return gCost + hCost; }
-};
-
-// Comparator for priority queue (min heap based on fCost)
-struct CompareNode
-{
-    bool operator()(const Node *a, const Node *b) const
-    {
-        return a->fCost() > b->fCost(); // Lower fCost has higher priority
-    }
-};
-
-int AStar::manhattanDistance(const Pos &a, const Pos &b) const
-{
-    return abs(a.x - b.x) + abs(a.y - b.y);
-}
-
-std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
-{
-    int granularFactor = sprite.getGranularFactor();
-    const CMap &map = CGame::getMap();
-    int mapLen = map.len() * granularFactor;
-    int mapHei = map.hei() * granularFactor;
-    std::vector<JoyAim> directions;
-    const Pos startPos = sprite.pos();
-
-    // Validate start and goal positions
-    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
-        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
-    {
-        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
-             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
-        return {};
-    }
-
-    // Priority queue for open list
-    std::priority_queue<Node *, std::vector<Node *>, CompareNode> openList;
-    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
-    std::unordered_map<Pos, bool> closedList;
-
-    // Create start node
-    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
-    openList.push(nodes[startPos].get());
-
-    while (!openList.empty())
-    {
-        Node *current = openList.top();
-        openList.pop();
-
-        // Reached goal
-        if (current->pos == goalPos)
-        {
-            // Convert path to directions
-            Node *node = current;
-            std::vector<Pos> path;
-            while (node != nullptr)
-            {
-                path.push_back(node->pos);
-                node = node->parent;
-            }
-            std::reverse(path.begin(), path.end());
-
-            // Convert positions to directions
-            for (size_t i = 1; i < path.size(); ++i)
-            {
-                int dx = path[i].x - path[i - 1].x;
-                int dy = path[i].y - path[i - 1].y;
-                if (dx == 1 && dy == 0)
-                    directions.push_back(JoyAim::AIM_RIGHT);
-                else if (dx == -1 && dy == 0)
-                    directions.push_back(JoyAim::AIM_LEFT);
-                else if (dx == 0 && dy == 1)
-                    directions.push_back(JoyAim::AIM_DOWN);
-                else if (dx == 0 && dy == -1)
-                    directions.push_back(JoyAim::AIM_UP);
-                else
-                {
-                    LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
-                         path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
-                    return {};
-                }
-            }
-            return directions;
-        }
-
-        closedList[current->pos] = true;
-
-        // Explore neighbors
-        for (size_t i = 0; i < g_deltas.size(); ++i)
-        {
-            const Pos newPos{static_cast<int16_t>(current->pos.x + g_deltas[i].x),
-                             static_cast<int16_t>(current->pos.y + g_deltas[i].y)};
-
-            // Check bounds before moving
-            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
-                continue;
-
-            if (closedList.find(newPos) != closedList.end())
-                continue;
-
-            // save original position
-            Pos originalPos{sprite.pos()};
-
-            // Check if move is valid
-            sprite.move(newPos);
-            if (!sprite.canMove(g_dirs[i]))
-            {
-                const_cast<ISprite &>(sprite).move(originalPos);
-                continue;
-            }
-            sprite.move(originalPos);
-
-            int newGCost = current->gCost + 1;
-            int newHCost = manhattanDistance(newPos, goalPos);
-
-            auto it = nodes.find(newPos);
-            if (it == nodes.end() || newGCost < it->second->gCost)
-            {
-                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
-                openList.push(nodes[newPos].get());
-            }
-        }
-    }
-    // No path found
-    return directions; // Empty if no path found
-}
+/////////////////////////////////////////////////////////////////////
 
 CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
 {
@@ -211,14 +61,112 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
     return nullptr;
 }
 
+void CGame::handleBossPath(CBoss &boss)
+{
+    const int bx = boss.x() / 2;
+    const int by = boss.y() / 2;
+    const AStar aStar;
+    const AStarSmooth aStarSmooth;
+    const BFS bFS;
+    const LineOfSight lineOfSight;
+    const CActor &player = m_player;
+
+    Pos playerPos{static_cast<int16_t>(m_player.x() * CBoss::BOSS_GRANULAR_FACTOR),
+                  static_cast<int16_t>(m_player.y() * CBoss::BOSS_GRANULAR_FACTOR)};
+
+    if (playerPos.x < 0 || playerPos.x >= m_map.len() * boss.getGranularFactor() ||
+        playerPos.y < 0 || playerPos.y >= m_map.hei() * boss.getGranularFactor())
+    {
+        LOGE("Invalid player position (%d,%d) for map bounds (%d,%d)",
+             playerPos.x, playerPos.y, m_map.len() * boss.getGranularFactor(),
+             m_map.hei() * boss.getGranularFactor());
+        // continue;
+        return;
+    }
+
+    const uint8_t algo = boss.data()->path;
+    if (algo == BossData::ASTAR)
+    {
+        if (boss.followPath(playerPos, aStar))
+            // continue;
+            return;
+    }
+    else if (algo == BossData::LOS)
+    {
+        if (boss.followPath(playerPos, lineOfSight))
+            // continue;
+            return;
+    }
+    else if (algo == BossData::BFS)
+    {
+        if (boss.followPath(playerPos, bFS))
+            // continue;
+            return;
+    }
+    else if (algo == BossData::ASTAR_SMOOTH)
+    {
+        if (boss.followPath(playerPos, aStarSmooth))
+            // continue;
+            return;
+    }
+    else
+    {
+        LOGE("unsupported ai algo: %u", algo);
+    }
+
+    // Fallback movement
+    if (bx < player.x() && boss.canMove(JoyAim::AIM_RIGHT))
+    {
+        boss.move(JoyAim::AIM_RIGHT);
+    }
+    else if (bx > player.x() && boss.canMove(JoyAim::AIM_LEFT))
+    {
+        boss.move(JoyAim::AIM_LEFT);
+    }
+    else if (by < player.y() && boss.canMove(JoyAim::AIM_DOWN))
+    {
+        boss.move(JoyAim::AIM_DOWN);
+    }
+    else if (by > player.y() && boss.canMove(JoyAim::AIM_UP))
+    {
+        boss.move(JoyAim::AIM_UP);
+    }
+}
+
+void CGame::handleBossBullet(CBoss &boss)
+{
+    const int bx = boss.x() / 2;
+    const int by = boss.y() / 2;
+    const CActor &player = m_player;
+    CActor *bullet = nullptr;
+
+    if (player.y() < by - boss.hitbox().height)
+    {
+        bullet = spawnBullet(bx, by - boss.hitbox().height, JoyAim::AIM_UP, TILES_FIREBALL);
+    }
+    else if (player.y() > by + boss.hitbox().height)
+    {
+        bullet = spawnBullet(bx, by + boss.hitbox().height, JoyAim::AIM_DOWN, TILES_FIREBALL);
+    }
+    else if (player.x() < bx)
+    {
+        bullet = spawnBullet(bx - 1, by - 1, JoyAim::AIM_LEFT, TILES_FIREBALL);
+    }
+    else if (player.x() > bx + boss.hitbox().width)
+    {
+        bullet = spawnBullet(bx + boss.hitbox().width, by - 1, JoyAim::AIM_RIGHT, TILES_FIREBALL);
+    }
+    if (bullet != nullptr)
+    {
+        boss.setState(CBoss::BossState::Attack);
+    }
+}
+
 void CGame::manageBosses(const int ticks)
 {
     auto &rng = getRandom();
     rng.setTick(ticks);
 
-    // static std::mt19937 rng(std::random_device{}());
-    // static std::uniform_int_distribution<int> dist(0, 3);
-    const AStar aStar;
     const CActor &player = m_player;
     for (auto &boss : m_bosses)
     {
@@ -251,17 +199,6 @@ void CGame::manageBosses(const int ticks)
             {
                 boss.setState(CBoss::BossState::Chase);
             }
-
-            /*JoyAim aim = g_dirs[dist(rng)];
-            if (boss.canMove(aim))
-            {
-                boss.move(aim);
-            }
-
-            if (boss.distance(player) <= CHASE_DISTANCE)
-            {
-                boss.setState(CBoss::BossState::Chase);
-            }*/
         }
         else if (boss.state() == CBoss::BossState::Chase)
         {
@@ -274,60 +211,9 @@ void CGame::manageBosses(const int ticks)
             // Fireball spawning
             if (rng.range(0, 15) == 0 && bx > 2 && by > 0)
             {
-                CActor *bullet = nullptr;
-                if (player.y() < by - boss.hitbox().height)
-                {
-                    bullet = spawnBullet(bx, by - boss.hitbox().height, JoyAim::AIM_UP, TILES_FIREBALL);
-                }
-                else if (player.y() > by + boss.hitbox().height)
-                {
-                    bullet = spawnBullet(bx, by + boss.hitbox().height, JoyAim::AIM_DOWN, TILES_FIREBALL);
-                }
-                else if (player.x() < bx)
-                {
-                    bullet = spawnBullet(bx - 1, by - 1, JoyAim::AIM_LEFT, TILES_FIREBALL);
-                }
-                else if (player.x() > bx + boss.hitbox().width)
-                {
-                    bullet = spawnBullet(bx + boss.hitbox().width, by - 1, JoyAim::AIM_RIGHT, TILES_FIREBALL);
-                }
-                if (bullet != nullptr)
-                {
-                    boss.setState(CBoss::BossState::Attack);
-                }
+                handleBossBullet(boss);
             }
-
-            Pos playerPos{static_cast<int16_t>(m_player.x() * CBoss::BOSS_GRANULAR_FACTOR),
-                          static_cast<int16_t>(m_player.y() * CBoss::BOSS_GRANULAR_FACTOR)};
-            // CBoss tmp{boss};
-
-            if (boss.followPath(playerPos, aStar))
-                continue;
-
-            /*auto path = aStar.findPath(boss, playerPos);
-            if (path.size() > 1)
-            {
-                boss.move((path)[1]);
-                continue;
-            }*/
-
-            // Fallback movement
-            if (bx < player.x() && boss.canMove(JoyAim::AIM_RIGHT))
-            {
-                boss.move(JoyAim::AIM_RIGHT);
-            }
-            else if (bx > player.x() && boss.canMove(JoyAim::AIM_LEFT))
-            {
-                boss.move(JoyAim::AIM_LEFT);
-            }
-            else if (by < player.y() && boss.canMove(JoyAim::AIM_DOWN))
-            {
-                boss.move(JoyAim::AIM_DOWN);
-            }
-            else if (by > player.y() && boss.canMove(JoyAim::AIM_UP))
-            {
-                boss.move(JoyAim::AIM_UP);
-            }
+            handleBossPath(boss);
         }
     }
 }
@@ -426,6 +312,8 @@ void CGame::manageMonsters(const int ticks)
 
 void CGame::handleMonster(CActor &actor, const TileDef &def)
 {
+    constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+
     if (actor.isPlayerThere(actor.getAim()))
     {
         // apply health damages
@@ -490,6 +378,8 @@ void CGame::handleDrone(CActor &actor, const TileDef &def)
 
 void CGame::handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters)
 {
+    constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+
     for (uint8_t i = 0; i < sizeof(g_dirs); ++i)
     {
         const Pos p = CGame::translate(Pos{actor.x(), actor.y()}, g_dirs[i]);

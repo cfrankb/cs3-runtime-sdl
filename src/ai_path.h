@@ -25,12 +25,43 @@
 
 class ISprite;
 
-// A* Pathfinding class
-class AStar
+class IPath
 {
 public:
-    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const;
+    virtual std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const = 0;
+};
+
+// A* Pathfinding class
+class AStar : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 
 private:
     int manhattanDistance(const Pos &a, const Pos &b) const;
+};
+
+// A* Pathfinding class
+class AStarSmooth : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+    std::vector<JoyAim> smoothPath(const std::vector<Pos> &path, ISprite &sprite) const;
+};
+
+// BFS Pathfinding class
+class BFS : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
+// Line-of-Sight Pathfinding class
+class LineOfSight : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 };

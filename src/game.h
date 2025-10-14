@@ -225,13 +225,20 @@ private:
     static bool isBonusItem(const uint8_t tileID);
     CGameStats &stats();
     const CGameStats &statsConst() const;
+
+    // regular monsters (mob)
     void handleMonster(CActor &actor, const TileDef &def);
     void handleDrone(CActor &actor, const TileDef &def);
     void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters);
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
     void handleFirball(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
+
+    // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
+    void handleBossPath(CBoss &boss);
+    void handleBossBullet(CBoss &boss);
+
     inline bool between(int a1, int a2, int b1, int b2) const
     {
         return a1 < b2 && a2 > b1;

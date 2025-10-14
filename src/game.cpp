@@ -515,7 +515,6 @@ bool CGame::spawnMonsters()
                 LOGW("ignored spawn point for unhandled boss type: 0x%.2x", attr);
             }
             removed.emplace_back(pos);
-
             // Rect hitbox{.x = 16 / 8, .y = 48 / 8, .width = 32 / 8, .height = 16 / 8};
         }
     }

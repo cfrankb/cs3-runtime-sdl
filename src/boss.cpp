@@ -19,11 +19,14 @@
 #include <cmath>
 #include "boss.h"
 #include "game.h"
-#include "game_ai.h"
+// #include "game_ai.h"
 #include "tilesdata.h"
 #include "sprtypes.h"
 #include "logger.h"
 #include "randomz.h"
+#include "ai_path.h"
+
+constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
 
 CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossData(data)
 {
@@ -345,15 +348,13 @@ const Pos CBoss::toPos(int x, int y)
     return Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)};
 }
 
-bool CBoss::followPath(const Pos &playerPos, const AStar &astar)
+bool CBoss::followPath(const Pos &playerPos, const IPath &astar)
 {
-    static constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
-
     // Check if path is invalid or timed out
     if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
     {
-        CBoss tmp{*this};
-        m_cachedDirections = astar.findPath(tmp, playerPos);
+        // CBoss tmp{*this};
+        m_cachedDirections = astar.findPath(*this, playerPos);
         m_pathIndex = 0;
         m_pathTimeout = PATH_TIMEOUT_MAX;
         if (m_cachedDirections.empty())

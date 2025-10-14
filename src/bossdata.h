@@ -29,6 +29,16 @@
 #define BOSS_MR_DEMON 0xb0
 
 
+namespace BossData
+{
+    enum Path:uint8_t {
+        ASTAR,
+        BFS,
+        LOS,
+        ASTAR_SMOOTH
+    };
+}
+
 struct boss_seq_t
 {
     int base;
@@ -45,6 +55,7 @@ struct bossData_t
     int score;              // score received
     int damage;             // damage given
     uint32_t flags;         // custom flags
+    uint32_t path;          // path finding algo
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt

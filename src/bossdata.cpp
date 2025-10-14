@@ -49,6 +49,7 @@ bossData_t g_bosses[] = {
         .score = 1000,
         .damage = 16,
         .flags = 0,
+        .path = BFS,
         .moving = {MR_DEMON_MOVING_BASE, MR_DEMON_MOVING_LEN},
         .attack = {MR_DEMON_ATTACK_BASE, MR_DEMON_ATTACK_LEN},
         .hurt = {MR_DEMON_HURT_BASE, MR_DEMON_HURT_LEN},
@@ -68,4 +69,3 @@ bossData_t *getBossData(const int type)
     }
     return nullptr;
 }
-
