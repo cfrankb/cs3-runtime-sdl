@@ -30,19 +30,20 @@ struct boss_seq_t
 
 struct bossData_t
 {
-    const char* name;
-    int speed;
-    int hp;
-    int type;
-    int score;
-    int damage;
-    uint32_t flags;
-    boss_seq_t moving;
-    boss_seq_t attack;
-    boss_seq_t hurt;
-    boss_seq_t death;
-    Rect hitbox;
-    int sheet;
+    const char* name;       // boss name
+    int speed;              // movement speed
+    int a_speed;            // animation speed
+    int hp;                 // hp
+    int type;               // type
+    int score;              // score received
+    int damage;             // damage given
+    uint32_t flags;         // custom flags
+    boss_seq_t moving;      // animation seq: moving
+    boss_seq_t attack;      // animation seq: attack
+    boss_seq_t hurt;        // animation seq: hurt
+    boss_seq_t death;       // animation seq: death
+    Rect hitbox;            // boss hitbox
+    int sheet;              // sprite sheet used
 };
 """
 
@@ -64,7 +65,13 @@ def clean_name(name):
     return re.sub("[^0-9a-zA-Z_]+", "_", name.upper())
 
 
-attr_names = ["speed", "hp", "type", "score", "damage", "flags"]
+def save_seq(all_seqs, seq):
+    if seq:
+        all_seqs.append(seq)
+        seq = {}
+
+
+attr_names = ["speed", "a_speed", "hp", "type", "score", "damage", "flags"]
 seq_names = ["moving", "attack", "hurt", "death"]
 
 EXIT_FAILURE = 1
@@ -92,9 +99,10 @@ for t in data.split("\n"):
     e = [x for x in t.split() if x]
     if t[0] == "[" and t[-1] == "]":
         # save previous boss
-        if section:
-            all_seqs.append(seq)
-        seq = {}
+        # if section:
+        #    all_seqs.append(seq)
+        # seq = {}
+        save_seq(all_seqs, seq)
         section = t[1:-1].strip()
         if not section:
             print(f"section header empty on line {line}")
@@ -103,9 +111,10 @@ for t in data.split("\n"):
         seq["sheet"] = sheet
     elif t[0] == "[":
         # save previous boss
-        if section:
-            all_seqs.append(seq)
-        seq = {}
+        # if section:
+        #    all_seqs.append(seq)
+        # seq = {}
+        save_seq(all_seqs, seq)
         print(f"section header not terminated on line {line}")
         section = t[1:].strip()
         if not section:
@@ -158,8 +167,9 @@ for t in data.split("\n"):
     else:
         print(f"unknown data on line {line}: {t}")
 
-if seq:
-    all_seqs.append(seq)
+# if seq:
+#    all_seqs.append(seq)
+save_seq(all_seqs, seq)
 
 """
 bossData_t bosses[] = {

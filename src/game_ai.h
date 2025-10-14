@@ -17,23 +17,20 @@
 */
 
 #pragma once
-
+#include <vector>
+#include "sprtypes.h"
 #include "rect.h"
 #include "joyaim.h"
-#include <cstdint>
-class CActor;
-class ISprite
+#include "map.h"
+
+class ISprite;
+
+// A* Pathfinding class
+class AStar
 {
 public:
-    virtual ~ISprite() {};
-    virtual int16_t x() const = 0;
-    virtual int16_t y() const = 0;
-    virtual uint8_t type() const = 0;
-    virtual bool canMove(const JoyAim aim) const = 0;
-    virtual void move(const JoyAim aim) = 0;
-    virtual int distance(const CActor &actor) const = 0;
-    virtual void move(const int16_t x, const int16_t y) = 0;
-    virtual void move(const Pos pos) = 0;
-    virtual inline int16_t getGranularFactor() const = 0;
-    virtual const Pos pos() const = 0;
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
 };

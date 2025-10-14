@@ -26,6 +26,8 @@
 #include "map.h"
 #include "bossdata.h"
 
+class AStar;
+
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 
 class CBoss : public ISprite
@@ -76,7 +78,7 @@ public:
         return m_state;
     }
     void setState(const BossState state);
-    inline int16_t granularFactor() const override { return BOSS_GRANULAR_FACTOR; };
+    inline int16_t getGranularFactor() const override { return BOSS_GRANULAR_FACTOR; };
     inline const Pos pos() const override { return Pos{m_x, m_y}; };
     void animate();
     int currentFrame() const;
@@ -85,11 +87,12 @@ public:
     int score() const { return m_bossData->score; }
     const char *name() const { return m_bossData->name; }
     const bossData_t *data() const { return m_bossData; }
-
     enum : int16_t
     {
         BOSS_GRANULAR_FACTOR = 2,
     };
+    bool followPath(const Pos &playerPos, const AStar &astar);
+    void patrol(); // New method for random patrol behavior
 
 private:
     const bossData_t *m_bossData;
@@ -97,7 +100,12 @@ private:
     int16_t m_x;
     int16_t m_y;
     int m_hp;
-    uint8_t m_type; // not used
+    // uint8_t m_type; // not used
     BossState m_state;
     int m_speed;
+
+    // Path caching
+    std::vector<JoyAim> m_cachedDirections;
+    size_t m_pathIndex;
+    int m_pathTimeout;
 };

@@ -42,7 +42,8 @@ using namespace BossData;
 bossData_t g_bosses[] = {
     {
         .name = "Mr. Demon",
-        .speed = 2,
+        .speed = 3,
+        .a_speed = 3,
         .hp = 64,
         .type = 0xb0,
         .score = 1000,

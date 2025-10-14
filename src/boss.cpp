@@ -19,9 +19,11 @@
 #include <cmath>
 #include "boss.h"
 #include "game.h"
+#include "game_ai.h"
 #include "tilesdata.h"
 #include "sprtypes.h"
 #include "logger.h"
+#include "randomz.h"
 
 CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossData(data)
 {
@@ -31,6 +33,8 @@ CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossD
     m_state = Patrol;
     m_framePtr = 0;
     m_hp = data->hp;
+    m_pathIndex = 0;
+    m_pathTimeout = 0;
 }
 
 bool CBoss::isPlayer(const Pos &pos)
@@ -140,7 +144,7 @@ bool CBoss::canMove(const JoyAim aim) const
     switch (aim)
     {
     case JoyAim::AIM_UP:
-        if (y <= 0)
+        if (next_y < 0)
             return false;
         for (int ax = x; ax < x + w; ++ax)
         {
@@ -152,7 +156,7 @@ bool CBoss::canMove(const JoyAim aim) const
         break;
 
     case JoyAim::AIM_DOWN:
-        if (y + h >= mapHei)
+        if (next_y + m_bossData->hitbox.height > maxY)
             return false;
         for (int ax = x; ax < x + w; ++ax)
         {
@@ -164,7 +168,7 @@ bool CBoss::canMove(const JoyAim aim) const
         break;
 
     case JoyAim::AIM_LEFT:
-        if (x <= 0)
+        if (next_x < 0)
             return false;
         for (int ay = y; ay < y + h; ++ay)
         {
@@ -339,4 +343,50 @@ int CBoss::damage() const
 const Pos CBoss::toPos(int x, int y)
 {
     return Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)};
+}
+
+bool CBoss::followPath(const Pos &playerPos, const AStar &astar)
+{
+    static constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
+
+    // Check if path is invalid or timed out
+    if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
+    {
+        CBoss tmp{*this};
+        m_cachedDirections = astar.findPath(tmp, playerPos);
+        m_pathIndex = 0;
+        m_pathTimeout = PATH_TIMEOUT_MAX;
+        if (m_cachedDirections.empty())
+        {
+            return false; // No valid path
+        }
+    }
+
+    // Try the next direction
+    JoyAim aim = m_cachedDirections[m_pathIndex];
+    if (canMove(aim))
+    {
+        move(aim);
+        ++m_pathIndex;
+        --m_pathTimeout;
+        return true;
+    }
+
+    // Move failed, invalidate cache and recompute next turn
+    m_cachedDirections.clear();
+    m_pathIndex = 0;
+    m_pathTimeout = 0;
+    return false;
+}
+
+void CBoss::patrol()
+{
+    constexpr JoyAim dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    Random &rng = CGame::getRandom();
+    int dir = rng.range(0, 4); // Choose random direction
+    JoyAim aim = dirs[dir];
+    if (canMove(aim))
+    {
+        move(aim);
+    }
 }

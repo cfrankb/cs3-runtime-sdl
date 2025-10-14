@@ -31,6 +31,7 @@ class CGameStats;
 class CMapArch;
 class ISound;
 class CBoss;
+class Random;
 
 struct MapReport
 {
@@ -155,6 +156,7 @@ public:
     const std::vector<CBoss> &bosses();
     int findMonsterAt(const int x, const int y) const;
     void deleteMonster(const int i);
+    static Random &getRandom();
 
     enum
     {

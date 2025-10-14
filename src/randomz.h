@@ -17,23 +17,38 @@
 */
 
 #pragma once
-
-#include "rect.h"
-#include "joyaim.h"
 #include <cstdint>
-class CActor;
-class ISprite
+
+class Random
 {
 public:
-    virtual ~ISprite() {};
-    virtual int16_t x() const = 0;
-    virtual int16_t y() const = 0;
-    virtual uint8_t type() const = 0;
-    virtual bool canMove(const JoyAim aim) const = 0;
-    virtual void move(const JoyAim aim) = 0;
-    virtual int distance(const CActor &actor) const = 0;
-    virtual void move(const int16_t x, const int16_t y) = 0;
-    virtual void move(const Pos pos) = 0;
-    virtual inline int16_t getGranularFactor() const = 0;
-    virtual const Pos pos() const = 0;
+    // Initialize with a fixed seed and optional tick
+    explicit Random(uint32_t seed = 12345, uint32_t tick = 0);
+
+    // Get next pseudo-random number (0 to UINT32_MAX)
+    uint32_t next();
+
+    // Get random number in range [min, max)
+    int range(int min, int max);
+
+    // Update with ticks from manageBosses
+    void setTick(uint32_t tick);
+
+    // Reset to initial seed and tick
+    void reset();
+
+private:
+    uint32_t state_;
+    uint32_t initialSeed_;
+    uint32_t tick_;
 };
+
+// Precomputed random table for fast lookups
+namespace PrecomputedRandom
+{
+    constexpr uint32_t TABLE_SIZE = 1024;
+    extern const uint32_t table[TABLE_SIZE];
+
+    // Get value using ticks
+    uint32_t get(uint32_t tick);
+}

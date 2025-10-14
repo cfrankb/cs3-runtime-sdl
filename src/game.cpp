@@ -41,11 +41,14 @@
 #include "logger.h"
 #include "strhelper.h"
 #include "bossdata.h"
+#include "randomz.h"
 
 CMap CGame::m_map(30, 30);
 CGame::userKeys_t CGame::m_keys;
 static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
 CGame *g_game = nullptr;
+
+Random g_randomz(12345, 0);
 
 const std::set<uint8_t> g_fruits = {
     TILES_APPLE,
@@ -1505,4 +1508,9 @@ const std::vector<CBoss> &CGame::bosses()
 void CGame::deleteMonster(const int i)
 {
     m_monsters.erase(m_monsters.begin() + i);
+}
+
+Random &CGame::getRandom()
+{
+    return g_randomz;
 }

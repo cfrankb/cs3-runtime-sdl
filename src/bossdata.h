@@ -37,19 +37,20 @@ struct boss_seq_t
 
 struct bossData_t
 {
-    const char* name;
-    int speed;
-    int hp;
-    int type;
-    int score;
-    int damage;
-    uint32_t flags;
-    boss_seq_t moving;
-    boss_seq_t attack;
-    boss_seq_t hurt;
-    boss_seq_t death;
-    Rect hitbox;
-    int sheet;
+    const char* name;       // boss name
+    int speed;              // movement speed
+    int a_speed;            // animation speed
+    int hp;                 // hp
+    int type;               // type
+    int score;              // score received
+    int damage;             // damage given
+    uint32_t flags;         // custom flags
+    boss_seq_t moving;      // animation seq: moving
+    boss_seq_t attack;      // animation seq: attack
+    boss_seq_t hurt;        // animation seq: hurt
+    boss_seq_t death;       // animation seq: death
+    Rect hitbox;            // boss hitbox
+    int sheet;              // sprite sheet used
 };
 
 bossData_t *getBossData(const int type);

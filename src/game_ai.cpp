@@ -23,7 +23,6 @@
 #include <memory>
 #include <algorithm>
 #include <set>
-#include <optional>
 #include <random>
 #include "map.h"
 #include "boss.h"
@@ -32,8 +31,11 @@
 #include "sprtypes.h"
 #include "logger.h"
 #include "actor.h"
+#include "game_ai.h"
+#include "randomz.h"
 
 constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+constexpr int PURSUIT_DISTANCE = 15;
 constexpr int CHASE_DISTANCE = 10;
 constexpr int TARGET_DISTANCE = 5;
 constexpr std::array<Pos, 4> g_deltas = {
@@ -43,18 +45,24 @@ constexpr std::array<Pos, 4> g_deltas = {
     Pos{0, 1},  // Right
 };
 
-// Represents a grid cell (node) in the A* algorithm
+namespace std
+{
+    template <>
+    struct hash<Pos>
+    {
+        size_t operator()(const Pos &pos) const
+        {
+            return (static_cast<uint32_t>(pos.x) << 16) | (pos.y & 0xFFFF);
+        }
+    };
+}
+
 struct Node
 {
-    Pos pos;      // Coordinates
-    int gCost;    // Cost from start to this node
-    int hCost;    // Heuristic (estimated cost to goal)
-    Node *parent; // Parent node for path reconstruction
-
-    Node(Pos pos, int g = 0, int h = 0, Node *p = nullptr)
-        : pos(pos), gCost(g), hCost(h), parent(p) {}
-
-    // Total cost (f = g + h) for priority queue
+    Pos pos;
+    int gCost, hCost;
+    Node *parent;
+    Node(const Pos &p, int g, int h, Node *par) : pos(p), gCost(g), hCost(h), parent(par) {}
     int fCost() const { return gCost + hCost; }
 };
 
@@ -67,130 +75,120 @@ struct CompareNode
     }
 };
 
-// A* Pathfinding class
-class AStar
+int AStar::manhattanDistance(const Pos &a, const Pos &b) const
 {
-public:
-    uint32_t toKey(const Pos &pos) const
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    int mapLen = map.len() * granularFactor;
+    int mapHei = map.hei() * granularFactor;
+    std::vector<JoyAim> directions;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
     {
-        return static_cast<uint32_t>(pos.x) | (static_cast<uint32_t>(pos.y) << 16);
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
     }
 
-    /**
-     * @brief find a path between Sprite and TargetPos. Sprite must be a temp object
-     * since it will be modified.
-     *
-     * @param boss
-     * @param goalPos
-     * @return std::vector<Pos>
-     */
-    std::optional<std::vector<Pos>> findPath(ISprite &boss, const Pos goalPos) const
+    // Priority queue for open list
+    std::priority_queue<Node *, std::vector<Node *>, CompareNode> openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+
+    // Create start node
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
+    openList.push(nodes[startPos].get());
+
+    while (!openList.empty())
     {
-        const Pos startPos = boss.pos();
-        const CMap &map = CGame::getMap();
+        Node *current = openList.top();
+        openList.pop();
 
-        // Validate start and goal positions
-        if (!isValid(startPos, boss.granularFactor()) || !isValid(goalPos, boss.granularFactor()))
+        // Reached goal
+        if (current->pos == goalPos)
         {
-            LOGW("Invalid start (%d,%d) or goal (%d,%d) -- expected < %d,%d",
-                 startPos.x, startPos.y, goalPos.x, goalPos.y,
-                 map.len() * boss.granularFactor(), map.hei() * boss.granularFactor());
-            return std::nullopt;
-        }
-
-        // Priority queue for open list
-        std::priority_queue<Node *, std::vector<Node *>, CompareNode> openList;
-        std::unordered_map<uint32_t, std::unique_ptr<Node>> nodes;
-        std::unordered_map<uint32_t, bool> closedList;
-
-        // Create start node
-        auto startNode = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos));
-        openList.push(startNode.get());
-        nodes[toKey(startPos)] = std::move(startNode);
-
-        while (!openList.empty())
-        {
-            Node *current = openList.top();
-            openList.pop();
-            closedList[toKey(current->pos)] = true;
-
-            // Reached goal
-            if (current->pos.x == goalPos.x && current->pos.y == goalPos.y)
+            // Convert path to directions
+            Node *node = current;
+            std::vector<Pos> path;
+            while (node != nullptr)
             {
-                boss.move(startPos); // Restore original position
-                return reconstructPath(current);
+                path.push_back(node->pos);
+                node = node->parent;
             }
+            std::reverse(path.begin(), path.end());
 
-            // Explore neighbors
-            for (size_t i = 0; i < g_deltas.size(); ++i)
+            // Convert positions to directions
+            for (size_t i = 1; i < path.size(); ++i)
             {
-                const Pos newPos{static_cast<int16_t>(current->pos.x + g_deltas[i].x),
-                                 static_cast<int16_t>(current->pos.y + g_deltas[i].y)};
-                const auto newKey = toKey(newPos);
-                if (closedList[newKey])
-                    continue;
-
-                // Move boss to current position to check canMove
-                boss.move(current->pos);
-                if (!boss.canMove(g_dirs[i]))
-                    continue;
-
-                int newGCost = current->gCost + 1; // Cost to move to neighbor
-                if (!nodes[newKey])
+                int dx = path[i].x - path[i - 1].x;
+                int dy = path[i].y - path[i - 1].y;
+                if (dx == 1 && dy == 0)
+                    directions.push_back(JoyAim::AIM_RIGHT);
+                else if (dx == -1 && dy == 0)
+                    directions.push_back(JoyAim::AIM_LEFT);
+                else if (dx == 0 && dy == 1)
+                    directions.push_back(JoyAim::AIM_DOWN);
+                else if (dx == 0 && dy == -1)
+                    directions.push_back(JoyAim::AIM_UP);
+                else
                 {
-                    nodes[newKey] = std::make_unique<Node>(newPos, newGCost,
-                                                           manhattanDistance(newPos, goalPos), current); // Use current as parent
-                    openList.push(nodes[newKey].get());
-                }
-
-                else if (newGCost < nodes[newKey]->gCost)
-                {
-                    nodes[newKey]->gCost = newGCost;
-                    nodes[newKey]->parent = current; // Update parent
-                    openList.push(nodes[newKey].get());
+                    LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                         path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                    return {};
                 }
             }
+            return directions;
         }
-        // No path found
-        boss.move(startPos); // Restore original position
-        return std::nullopt;
-    }
 
-private:
-    bool isValid(const Pos &pos, const int16_t granularFactor) const
-    {
-        const CMap &map = CGame::getMap();
-        return pos.x >= 0 && pos.y >= 0 &&
-               pos.x < map.len() * granularFactor &&
-               pos.y < map.hei() * granularFactor;
-    }
+        closedList[current->pos] = true;
 
-    // Manhattan distance heuristic
-    int manhattanDistance(const Pos &a, const Pos &b) const
-    {
-        return std::abs(a.x - b.x) + std::abs(a.y - b.y);
-    }
-
-    // Reconstruct path from goal to start
-    std::optional<std::vector<Pos>> reconstructPath(const Node *node) const
-    {
-        std::vector<Pos> path;
-        while (node)
+        // Explore neighbors
+        for (size_t i = 0; i < g_deltas.size(); ++i)
         {
-            path.emplace_back(node->pos);
-            node = node->parent;
-        }
-        std::reverse(path.begin(), path.end());
-        return path;
-    }
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_deltas[i].x),
+                             static_cast<int16_t>(current->pos.y + g_deltas[i].y)};
 
-    // Clean up dynamically allocated nodes
-    void cleanup(std::unordered_map<uint32_t, Node *> &nodes) const
-    {
-        for (auto &[k, v] : nodes)
-            delete v;
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // save original position
+            Pos originalPos{sprite.pos()};
+
+            // Check if move is valid
+            sprite.move(newPos);
+            if (!sprite.canMove(g_dirs[i]))
+            {
+                const_cast<ISprite &>(sprite).move(originalPos);
+                continue;
+            }
+            sprite.move(originalPos);
+
+            int newGCost = current->gCost + 1;
+            int newHCost = manhattanDistance(newPos, goalPos);
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end() || newGCost < it->second->gCost)
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
+                openList.push(nodes[newPos].get());
+            }
+        }
     }
-};
+    // No path found
+    return directions; // Empty if no path found
+}
 
 CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
 {
@@ -215,8 +213,11 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
 
 void CGame::manageBosses(const int ticks)
 {
-    static std::mt19937 rng(std::random_device{}());
-    static std::uniform_int_distribution<int> dist(0, 3);
+    auto &rng = getRandom();
+    rng.setTick(ticks);
+
+    // static std::mt19937 rng(std::random_device{}());
+    // static std::uniform_int_distribution<int> dist(0, 3);
     const AStar aStar;
     const CActor &player = m_player;
     for (auto &boss : m_bosses)
@@ -224,7 +225,9 @@ void CGame::manageBosses(const int ticks)
         if (boss.state() == CBoss::BossState::Hidden)
             continue;
 
-        if (ticks % 3 == 0)
+        // customize animation speed
+        const int a_speed = boss.data()->a_speed;
+        if (a_speed == 0 || (ticks % a_speed) == 0)
             boss.animate();
 
         // ignore dead bosses
@@ -243,7 +246,13 @@ void CGame::manageBosses(const int ticks)
 
         if (boss.state() == CBoss::BossState::Patrol)
         {
-            JoyAim aim = g_dirs[dist(rng)];
+            boss.patrol();
+            if (boss.distance(player) <= CHASE_DISTANCE)
+            {
+                boss.setState(CBoss::BossState::Chase);
+            }
+
+            /*JoyAim aim = g_dirs[dist(rng)];
             if (boss.canMove(aim))
             {
                 boss.move(aim);
@@ -252,18 +261,18 @@ void CGame::manageBosses(const int ticks)
             if (boss.distance(player) <= CHASE_DISTANCE)
             {
                 boss.setState(CBoss::BossState::Chase);
-            }
+            }*/
         }
         else if (boss.state() == CBoss::BossState::Chase)
         {
-            if (boss.distance(player) > CHASE_DISTANCE)
+            if (boss.distance(player) > PURSUIT_DISTANCE)
             {
                 boss.setState(CBoss::BossState::Patrol);
                 continue;
             }
 
             // Fireball spawning
-            if ((rand() & 0xf) == 0 && bx > 2 && by > 0)
+            if (rng.range(0, 15) == 0 && bx > 2 && by > 0)
             {
                 CActor *bullet = nullptr;
                 if (player.y() < by - boss.hitbox().height)
@@ -290,16 +299,17 @@ void CGame::manageBosses(const int ticks)
 
             Pos playerPos{static_cast<int16_t>(m_player.x() * CBoss::BOSS_GRANULAR_FACTOR),
                           static_cast<int16_t>(m_player.y() * CBoss::BOSS_GRANULAR_FACTOR)};
-            CBoss tmp{boss};
+            // CBoss tmp{boss};
 
-            if (auto path = aStar.findPath(boss, playerPos))
+            if (boss.followPath(playerPos, aStar))
+                continue;
+
+            /*auto path = aStar.findPath(boss, playerPos);
+            if (path.size() > 1)
             {
-                if (path->size() > 1)
-                {
-                    boss.move((*path)[1]);
-                    continue;
-                }
-            }
+                boss.move((path)[1]);
+                continue;
+            }*/
 
             // Fallback movement
             if (bx < player.x() && boss.canMove(JoyAim::AIM_RIGHT))
