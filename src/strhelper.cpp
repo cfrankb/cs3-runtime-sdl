@@ -18,6 +18,7 @@
 #include "strhelper.h"
 #include <cstring>
 #include <sstream>
+#include "logger.h"
 
 /**
  * @brief Clean up a line of text
@@ -61,6 +62,11 @@ std::string processLine(std::string &input, size_t &pos)
     if (pos >= input.size())
         return "";
     size_t end = input.find_first_of("\r\n", pos);
+    if (end == pos) // empty line
+    {
+        ++pos;
+        return "";
+    }
     std::string line = (end == std::string::npos) ? input.substr(pos) : input.substr(pos, end - pos);
     pos = (end == std::string::npos) ? input.size() : end + 1;
     size_t comment = line.find('#');

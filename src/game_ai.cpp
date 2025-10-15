@@ -34,9 +34,21 @@
 #include "randomz.h"
 #include "ai_path.h"
 
-constexpr int PURSUIT_DISTANCE = 15;
-constexpr int CHASE_DISTANCE = 10;
-constexpr int TARGET_DISTANCE = 5;
+namespace Game
+{
+    constexpr int PURSUIT_DISTANCE = 15;
+    constexpr int CHASE_DISTANCE = 10;
+    constexpr int TARGET_DISTANCE = 5;
+
+    enum
+    {
+        ICE_CUBE_DAMAGE = 16,
+        CRUSHER_SPEED_MASK = 3,
+        AUTOKILL = -1024,
+    };
+}
+
+using namespace Game;
 
 /////////////////////////////////////////////////////////////////////
 

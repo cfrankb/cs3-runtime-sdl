@@ -122,7 +122,7 @@ const std::string getPrefix()
 #elif defined(__ANDROID__)
     return "";
 #elif defined(__EMSCRIPTEN__)
-    return "data";
+    return "data/";
 #else
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
@@ -165,7 +165,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     {
         LOGI("%d>>> %s\n", i, list[i].c_str());
     }
-#else
+#elif !defined(EMSCRIPTEN)
 int main(int argc, char *args[])
 {
     std::vector<std::string> list;
@@ -174,6 +174,10 @@ int main(int argc, char *args[])
     {
         list.emplace_back(args[i]);
     }
+#else
+int main(int argc, char *args[])
+{
+    std::vector<std::string> list;
 #endif
 
     LOGI("Starting Game %s: Build [%s]\n", VERSION, BUILD_HASH);
@@ -194,7 +198,7 @@ int main(int argc, char *args[])
     }
     params.workspace = path;
 #elif defined(__EMSCRIPTEN__)
-    params.workspace = "/offline";
+    params.workspace = "/offline/";
 #endif
     LOGI("workspace: %s\n", params.workspace.c_str());
 
@@ -203,6 +207,8 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     else if (appExit)
         return EXIT_SUCCESS;
+
+    LOGI("prefix: %s", params.prefix.c_str());
 
     LOGI("MapArch: %s\n", params.mapArch.c_str());
     data_t data = AssetMan::read(params.mapArch);

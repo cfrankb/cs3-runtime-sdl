@@ -74,16 +74,16 @@ protected slots:
 protected:
     enum : uint32_t
     {
-        TICK_RATE = 24,
+        TICK_RATE = 24, // 1s
         NO_ANIMZ = 255,
         KEY_PRESSED = 1,
         KEY_RELEASED = 0,
         BUTTON_PRESSED = 1,
         BUTTON_RELEASED = 0,
-        INTRO_DELAY = TICK_RATE * 3,
+        INTRO_DELAY = 3 * TICK_RATE,
         HISCORE_DELAY = 5 * TICK_RATE,
         EVENT_COUNTDOWN_DELAY = TICK_RATE,
-        MSG_COUNTDOWN_DELAY = 4 * TICK_RATE,
+        MSG_COUNTDOWN_DELAY = 6 * TICK_RATE,
         TRAP_MSG_COUNTDOWN_DELAY = 2 * TICK_RATE,
         TILE_SIZE = 16,
         COUNTDOWN_INTRO = 1,

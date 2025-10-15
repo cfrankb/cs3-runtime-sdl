@@ -58,4 +58,7 @@ protected:
     MusicData m_data; // Background Music
     uint8_t m_type = TYPE_NONE;
     bool m_playing = false;
+#if defined(EMSCRIPTEN)
+    std::string m_filepath;
+#endif
 };

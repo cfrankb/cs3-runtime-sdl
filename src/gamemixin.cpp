@@ -38,6 +38,7 @@
 #include "attr.h"
 #include "logger.h"
 #include "strhelper.h"
+#include "filemacros.h"
 
 // Check windows
 #ifdef _WIN64
@@ -870,7 +871,7 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
     auto &frames = (m_bosses.get())->frames();
     for (const auto &boss : m_game->bosses())
     {
-        if (boss.isHidden())
+        if (boss.isDone())
             continue;
         const int num = boss.currentFrame();
         auto &frame = *frames[num];
@@ -1218,6 +1219,7 @@ void CGameMixin::manageGamePlay()
     game.decTimers();
     if (m_ticks % game.playerSpeed() == 0 && game.closusureTimer())
     {
+        // decrease closure timer
         game.decClosure();
     }
     else if (m_ticks % game.playerSpeed() == 0 &&
@@ -1298,7 +1300,7 @@ void CGameMixin::manageGamePlay()
             }
         }
 
-        if (!game.isGameOver() && game.goalCount() == 0)
+        if (!game.isGameOver() && !game.goalCount())
         {
             if (exitKey == 0 || m_game->player().pos() == CMap::toPos(exitKey))
             {
@@ -1763,21 +1765,21 @@ bool CGameMixin::read(IFile &sfile, std::string &name)
     clearVisualStates();
     m_paused = false;
     m_prompt = PROMPT_NONE;
-    readfile(&m_ticks, sizeof(m_ticks));
-    readfile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
-    readfile(&m_healthRef, sizeof(m_healthRef));
-    readfile(&m_countdown, sizeof(m_countdown));
+    _R(&m_ticks, sizeof(m_ticks));
+    _R(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
+    _R(&m_healthRef, sizeof(m_healthRef));
+    _R(&m_countdown, sizeof(m_countdown));
 
     size_t ptr = 0;
     sfile.seek(SAVENAME_PTR_OFFSET);
     // fseek(sfile, SAVENAME_PTR_OFFSET, SEEK_SET);
-    readfile(&ptr, sizeof(uint32_t));
+    _R(&ptr, sizeof(uint32_t));
     sfile.seek(ptr);
     // fseek(sfile, ptr, SEEK_SET);
     size_t size = 0;
-    readfile(&size, sizeof(uint16_t));
+    _R(&size, sizeof(uint16_t));
     std::vector<char> tmp(size);
-    readfile(tmp.data(), size);
+    _R(tmp.data(), size);
     name = tmp.data();
     return true;
 }
@@ -1789,20 +1791,20 @@ bool CGameMixin::write(IFile &tfile, const std::string &name)
         return tfile.write(ptr, size) == 1;
     };
     m_game->write(tfile);
-    writefile(&m_ticks, sizeof(m_ticks));
-    writefile(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
-    writefile(&m_healthRef, sizeof(m_healthRef));
-    writefile(&m_countdown, sizeof(m_countdown));
+    _W(&m_ticks, sizeof(m_ticks));
+    _W(&m_playerFrameOffset, sizeof(m_playerFrameOffset));
+    _W(&m_healthRef, sizeof(m_healthRef));
+    _W(&m_countdown, sizeof(m_countdown));
 
     const size_t ptr = tfile.tell();
     const size_t size = name.size();
-    writefile(&size, sizeof(uint16_t));
-    writefile(name.c_str(), name.size());
+    _W(&size, sizeof(uint16_t));
+    _W(name.c_str(), name.size());
     // save EOF offset
     auto offset = tfile.tell();
     tfile.seek(SAVENAME_PTR_OFFSET);
     // fseek(tfile, SAVENAME_PTR_OFFSET, SEEK_SET);
-    writefile(&ptr, sizeof(uint32_t));
+    _W(&ptr, sizeof(uint32_t));
     // return offset to EOF
     tfile.seek(offset);
     return true;
@@ -2053,12 +2055,13 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     }
     else if (m_currentEvent == EVENT_EXIT_OPENED)
     {
+        const char *text = (m_ticks >> 3) & 1 ? "EXIT DOOR IS OPENED" : "";
         return {
             .scaleX = 2,
             .scaleY = 1,
-            .baseY = baseY,
+            .baseY = baseY - 16,
             .color = SEAGREEN,
-            .lines{"EXIT DOOR IS OPENED"},
+            .lines{text},
         };
     }
     else

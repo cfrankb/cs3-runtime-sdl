@@ -19,14 +19,21 @@
 #include <cmath>
 #include "boss.h"
 #include "game.h"
-// #include "game_ai.h"
 #include "tilesdata.h"
 #include "sprtypes.h"
 #include "logger.h"
 #include "randomz.h"
 #include "ai_path.h"
+#include "shared/IFile.h"
+#include "bossdata.h"
+#include "filemacros.h"
 
 constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
+constexpr size_t MAX_PATH_SIZE = 4096;
+constexpr int16_t MAX_POS = 512;
+constexpr int MAX_HP = 4096;
+constexpr int MAX_SPEED = 10;
+constexpr int MAX_FRAME = 16;
 
 CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossData(data)
 {
@@ -390,4 +397,133 @@ void CBoss::patrol()
     {
         move(aim);
     }
+}
+
+bool CBoss::read(IFile &sfile)
+{
+    auto readfile = [&sfile](auto ptr, auto size) -> bool
+    {
+        return sfile.read(ptr, size) == IFILE_OK;
+    };
+
+    auto checkBound = [](auto a, auto b)
+    {
+        if (std::is_same_v<decltype(a), size_t>)
+        {
+            if (a > b)
+            {
+                LOGE("%s: %lu outside expected -- expected < %lu", _S(a), a, b);
+                return false;
+            }
+        }
+        else if (std::is_same_v<decltype(a), uint8_t>)
+        {
+            if (a > b)
+            {
+                LOGE("%s: %u outside expected -- expected < %u", _S(a), a, b);
+                return false;
+            }
+        }
+        else
+        {
+            if (a > b || a < 0)
+            {
+                LOGE("%s: %d outside expected -- expected > 0 && < %d", _S(a), a, b);
+                return false;
+            }
+        }
+        return true;
+    };
+
+    constexpr size_t DATA_SIZE = 2;
+    uint8_t type = 0;
+    _R(&type, sizeof(uint8_t));
+    auto data = getBossData(type);
+    if (!data)
+    {
+        LOGE("invalid boss type 0x%.2x", type);
+        return false;
+    }
+    m_bossData = data; // const_cast<const bossData_t *>(data);
+
+    m_framePtr = 0;
+    _R(&m_framePtr, DATA_SIZE);
+    checkBound(m_framePtr, MAX_FRAME);
+    _R(&m_x, sizeof(m_x)); // uint16_t
+    checkBound(m_x, MAX_POS);
+    _R(&m_y, sizeof(m_y)); // uint16_t
+    checkBound(m_y, MAX_POS);
+
+    m_hp = 0;
+    _R(&m_hp, DATA_SIZE);
+    checkBound(m_hp, MAX_HP);
+
+    _R(&m_state, sizeof(m_state)); // uint8_t
+    checkBound(m_state, BossState::MAX_STATE);
+
+    m_speed = 0;
+    _R(&m_speed, DATA_SIZE);
+    checkBound(m_speed, MAX_SPEED);
+
+    //////////////////////////////////////
+    // Read Path (saved)
+    m_cachedDirections.clear();
+    size_t pathSize = 0;
+    _R(&pathSize, DATA_SIZE);
+    checkBound(pathSize, MAX_PATH_SIZE);
+    for (size_t i = 0; i < pathSize; ++i)
+    {
+        JoyAim dir;
+        _R(&dir, sizeof(dir));
+        m_cachedDirections.emplace_back(dir);
+    }
+    m_pathIndex = 0;
+    _R(&m_pathIndex, DATA_SIZE);
+    checkBound(m_pathIndex, MAX_PATH_SIZE);
+    m_pathTimeout = 0;
+    _R(&m_pathTimeout, DATA_SIZE);
+    checkBound(m_pathTimeout, MAX_PATH_SIZE);
+    return true;
+}
+
+bool CBoss::write(IFile &tfile)
+{
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        return tfile.write(ptr, size) == IFILE_OK;
+    };
+
+    constexpr size_t DATA_SIZE = 2;
+    _W(&m_bossData->type, sizeof(uint8_t));
+    _W(&m_framePtr, DATA_SIZE);
+    _W(&m_x, sizeof(m_x)); // uint16_t
+    _W(&m_y, sizeof(m_y)); // uint16_t
+    _W(&m_hp, DATA_SIZE);
+    _W(&m_state, sizeof(m_state)); // uint8_t
+    _W(&m_speed, DATA_SIZE);
+
+    auto pathSize = m_cachedDirections.size();
+    _W(&pathSize, DATA_SIZE);
+    for (const auto &dir : m_cachedDirections)
+    {
+        _W(&dir, sizeof(dir));
+    }
+    _W(&m_pathIndex, DATA_SIZE);
+    _W(&m_pathTimeout, DATA_SIZE);
+    return true;
+
+    /*
+        const bossData_t *m_bossData;
+        int m_framePtr;
+        int16_t m_x;
+        int16_t m_y;
+        int m_hp;
+        BossState m_state;
+        int m_speed;
+
+        // Path caching
+        std::vector<JoyAim> m_cachedDirections;
+        size_t m_pathIndex;
+        int m_pathTimeout;
+    */
 }

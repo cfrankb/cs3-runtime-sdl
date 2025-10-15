@@ -27,7 +27,7 @@
 #include "bossdata.h"
 
 class IPath;
-// class AStar;
+class IFile;
 
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 
@@ -43,8 +43,9 @@ public:
         Hurt,
         Death,
         Hidden,
+        MAX_STATE
     };
-    CBoss(const int16_t x, const int16_t y, const bossData_t *data);
+    CBoss(const int16_t x = 0, const int16_t y = 0, const bossData_t *data = nullptr);
     virtual ~CBoss() = default;
     inline int16_t x() const override { return m_x; }
     inline int16_t y() const override { return m_y; }
@@ -67,6 +68,7 @@ public:
     int maxHp() const;
     void subtainDamage(const int lostHP);
     bool isHidden() const { return m_state == Hidden; }
+    bool isDone() const { return m_state == Hidden; }
 
     void move(const int16_t x, const int16_t y) override
     {
@@ -94,6 +96,9 @@ public:
     };
     bool followPath(const Pos &playerPos, const IPath &astar);
     void patrol(); // New method for random patrol behavior
+
+    bool read(IFile &file);
+    bool write(IFile &file);
 
 private:
     const bossData_t *m_bossData;

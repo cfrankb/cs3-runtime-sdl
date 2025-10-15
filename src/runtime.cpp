@@ -40,6 +40,7 @@
 #include "logger.h"
 #include "attr.h"
 #include "color.h"
+#include "filemacros.h"
 
 #define _f(x) static_cast<float>(x)
 
@@ -1067,6 +1068,8 @@ void CRuntime::load()
     std::string name;
     if (!loadFromFile(path, name))
     {
+        // TODO: fix this later
+        LOGI("failed loading: %s", path.c_str());
     }
     game.setMode(CGame::MODE_PLAY);
     openMusicForLevel(m_game->level());
@@ -1391,7 +1394,7 @@ void CRuntime::setupTitleScreen()
     }
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
-        .disable(!fileExists(getSavePath()));
+        .disable(!isValidSavegame(getSavePath()));
     menu.addItem(CMenuItem("LEVEL %.2d", 0, m_game->size() - 1, &m_startLevel))
         .setRole(MENU_ITEM_LEVEL);
 
@@ -1876,7 +1879,7 @@ void CRuntime::toggleGameMenu()
     menu.setScaleY(2);
     menu.addItem(CMenuItem("NEW GAME", MENU_ITEM_NEW_GAME));
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
-        .disable(!fileExists(getSavePath()));
+        .disable(!isValidSavegame(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
 #if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
@@ -2706,7 +2709,11 @@ bool CRuntime::saveToFile(const std::string filepath, const std::string name)
     CFileWrap tfile;
     if (tfile.open(filepath.c_str(), "wb"))
     {
-        write(tfile, name);
+        if (!write(tfile, name))
+        {
+            LOGE("failed to write file: %s", filepath.c_str());
+            return false;
+        }
         tfile.close();
 #ifdef __EMSCRIPTEN__
         EM_ASM(
@@ -2718,7 +2725,7 @@ bool CRuntime::saveToFile(const std::string filepath, const std::string name)
     }
     else
     {
-        LOGE("can't write:%s\n", filepath.c_str());
+        LOGE("can't write: %s\n", filepath.c_str());
         return false;
     }
     return true;
@@ -2741,8 +2748,39 @@ bool CRuntime::loadFromFile(const std::string filepath, std::string &name)
     }
     else
     {
-        LOGE("can't read:%s\n", filepath.c_str());
+        LOGE("can't read: %s\n", filepath.c_str());
         return false;
     }
     return true;
+}
+
+bool CRuntime::isValidSavegame(const std::string &filepath)
+{
+    CFileWrap sfile;
+    auto readfile = [&sfile](auto ptr, auto size) -> bool
+    {
+        return sfile.read(ptr, size) == IFILE_OK;
+    };
+
+    if (!fileExists(filepath))
+    {
+        return false;
+    }
+
+    if (sfile.open(filepath, "rb"))
+    {
+        char sig[4];
+        uint32_t version;
+        _R(sig, sizeof(sig));
+        _R(&version, sizeof(version));
+        sfile.close();
+        if (!CGame::validateSignature(sig, version))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    LOGE("couldn't read %s", filepath.c_str());
+    return false;
 }

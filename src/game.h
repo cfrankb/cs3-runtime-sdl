@@ -134,6 +134,7 @@ public:
     void purgeSfx();
     static CGame *getGame();
     bool isClosure() const;
+    bool isLevelCompleted() const;
     int closusureTimer() const;
     void checkClosure();
     void decClosure();
@@ -157,6 +158,7 @@ public:
     int findMonsterAt(const int x, const int y) const;
     void deleteMonster(const int i);
     static Random &getRandom();
+    static bool validateSignature(const char *signature, const uint32_t version);
 
     enum
     {
@@ -164,33 +166,11 @@ public:
     };
 
 private:
-    enum
-    {
-        ICE_CUBE_DAMAGE = 16,
-        MAX_HEALTH = 200,
-        DEFAULT_HEALTH = 64,
-        DEFAULT_LIVES = 5,
-        LEVEL_BONUS = 500,
-        SCORE_LIFE = 5000,
-        MAX_LIVES = 99,
-        GODMODE_TIMER = 100,
-        EXTRASPEED_TIMER = 200,
-        CLOSURE_TIMER = 7,
-        RAGE_TIMER = 150,
-        FREEZE_TIMER = 80,
-        TRAP_DAMAGE = -16,
-        DEFAULT_PLAYER_SPEED = 3,
-        FAST_PLAYER_SPEED = 2,
-        CRUSHER_SPEED_MASK = 3,
-        AUTOKILL = -1024,
-        ENGINE_VERSION = (0x0200 << 16) + 0x0005,
-    };
-
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;
     int m_score = 0;
-    int m_nextLife = SCORE_LIFE;
+    int m_nextLife;
     int m_diamonds = 0;
     static userKeys_t m_keys;
     GameMode m_mode;
@@ -205,7 +185,7 @@ private:
     std::vector<std::string> m_hints;
     std::unique_ptr<CGameStats> m_gameStats;
     MapReport m_report;
-    int m_defaultLives = DEFAULT_LIVES;
+    int m_defaultLives;
     bool m_quiet = false;
     void resetKeys();
     void clearKeyIndicators();

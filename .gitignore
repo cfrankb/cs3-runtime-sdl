@@ -12,6 +12,7 @@ setup/*
 techdocs/originals
 local/*
 setup/*
+bb/*
 #VERSION
-/CMakeLists.txt
+#/CMakeLists.txt
 levels2.mapz

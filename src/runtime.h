@@ -72,6 +72,7 @@ public:
     void debugSDL();
     bool saveToFile(const std::string filepath, const std::string name);
     bool loadFromFile(const std::string filepath, std::string &name);
+    bool isValidSavegame(const std::string &filepath);
 
 private:
     typedef struct

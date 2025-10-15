@@ -462,7 +462,7 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
 
         for (int i = 0; i < 4; ++i)
         {
-            Pos newPos = {current->pos.x + g_deltas[i].x, current->pos.y + g_deltas[i].y};
+            Pos newPos = {static_cast<int16_t>(current->pos.x + g_deltas[i].x), static_cast<int16_t>(current->pos.y + g_deltas[i].y)};
             if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei || closedList[newPos])
                 continue;
 

@@ -357,7 +357,7 @@ bool CFrameSet::readSolid(IFile &file, int size)
     if (err != Z_OK)
     {
         char tmp[128];
-        snprintf(tmp, sizeof(tmp), "Zlib error %d or size mismatch (%lu != %ld)", err, destLen, totalSize);
+        snprintf(tmp, sizeof(tmp), "Zlib error %d or size mismatch (%lu != %lld)", err, destLen, totalSize);
         m_lastError = tmp;
         return false;
     }

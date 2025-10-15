@@ -293,7 +293,7 @@ bool CActor::read(IFile &sfile)
 {
     auto readfile = [&sfile](auto ptr, auto size) -> bool
     {
-        return sfile.read(ptr, size) == 1;
+        return sfile.read(ptr, size) == IFILE_OK;
     };
 
     return readCommon(readfile);
@@ -328,7 +328,7 @@ bool CActor::write(IFile &tfile) const
 {
     auto writefile = [&tfile](auto ptr, auto size)
     {
-        return tfile.write(ptr, size) == 1;
+        return tfile.write(ptr, size) == IFILE_OK;
     };
     return writeCommon(writefile);
 }
