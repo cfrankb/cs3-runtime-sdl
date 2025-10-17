@@ -25,13 +25,14 @@ cp ../chars/out/chars.cpp $TARGET_MAIN/src
 
 if [[ "$1" == "-a" ]] ; then
     echo "copy metadata to editor"
-    cp out/tiles*.h $TARGET_EDITOR/src
-    cp out/tiles*.cpp $TARGET_EDITOR/src
-    cp out/animzdata*.h $TARGET_EDITOR/src
-    cp out/sprtypes.h $TARGET_EDITOR/src
+    cp out/tiles*.h $TARGET_EDITOR/src/runtime
+    cp out/tiles*.cpp $TARGET_EDITOR/src/runtime
+    cp out/animzdata*.h $TARGET_EDITOR/src/runtime
+    cp out/sprtypes.h $TARGET_EDITOR/src/runtime
     #cp out/anniedata*.h $TARGET_EDITOR/src
 elif [[ "$1" == "-g" ]] ; then
     echo "copy runtime to editor"
+    exit(1)
     cp $TARGET_MAIN/src/sounds.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/actor.* $TARGET_EDITOR/src
     cp $TARGET_MAIN/src/animator.* $TARGET_EDITOR/src

@@ -21,15 +21,15 @@
 #include <functional>
 #include "rect.h"
 #include "joyaim.h"
-#include "actor.h"
 #include "isprite.h"
-#include "map.h"
 #include "bossdata.h"
 
 class IPath;
 class IFile;
+class CActor;
 
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
+typedef std::function<bool(const Pos &)> canWalkCallback_t;
 
 class CBoss : public ISprite
 {
@@ -55,7 +55,7 @@ public:
     static bool isPlayer(const Pos &pos);
     static bool isIceCube(const Pos &pos);
     static bool isSolid(const Pos &pos);
-    static bool isSolid(const uint8_t c);
+    static bool isGhostBlocked(const Pos &pos);
     static bool meltIceCube(const Pos &pos);
     static const Pos toPos(int x, int y);
     bool canMove(const JoyAim aim) const override;
@@ -69,6 +69,7 @@ public:
     void subtainDamage(const int lostHP);
     bool isHidden() const { return m_state == Hidden; }
     bool isDone() const { return m_state == Hidden; }
+    bool isGoal() const { return m_bossData->is_goal; }
 
     void move(const int16_t x, const int16_t y) override
     {
@@ -108,9 +109,11 @@ private:
     int m_hp;
     BossState m_state;
     int m_speed;
+    canWalkCallback_t m_isSolidOperator;
+    void setSolidOperator();
 
     // Path caching
     std::vector<JoyAim> m_cachedDirections;
     size_t m_pathIndex;
-    int m_pathTimeout;
+    size_t m_pathTimeout;
 };

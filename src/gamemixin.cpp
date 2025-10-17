@@ -993,6 +993,9 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         break;
     case CGame::MODE_TIMEOUT:
         strncpy(t, "OUT OF TIME", sizeof(t));
+        break;
+    case CGame::MODE_CHUTE:
+        snprintf(t, sizeof(t), "DROP TO LEVEL %.2d", m_game->level() + 1);
     };
 
     const int x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
@@ -1044,6 +1047,8 @@ void CGameMixin::mainLoop()
     case CGame::MODE_RESTART:
         [[fallthrough]];
     case CGame::MODE_GAMEOVER:
+        [[fallthrough]];
+    case CGame::MODE_CHUTE:
         [[fallthrough]];
     case CGame::MODE_TIMEOUT:
         if (m_countdown)
@@ -1298,6 +1303,17 @@ void CGameMixin::manageGamePlay()
                 game.setMode(CGame::MODE_GAMEOVER);
                 changeMoodMusic(CGame::MODE_GAMEOVER);
             }
+        }
+
+        const bool isChute = m_game->stats().get(S_CHUTE) != 0;
+        if (isChute)
+        {
+            clearButtonStates();
+            clearJoyStates();
+            nextLevel();
+            m_game->setMode(CGame::MODE_CHUTE);
+            startCountdown(1 * COUNTDOWN_INTRO);
+            return;
         }
 
         if (!game.isGameOver() && !game.goalCount())

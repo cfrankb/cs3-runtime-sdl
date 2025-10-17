@@ -107,6 +107,7 @@ void CRuntime::paint()
     case CGame::MODE_RESTART:
     case CGame::MODE_GAMEOVER:
     case CGame::MODE_TIMEOUT:
+    case CGame::MODE_CHUTE:
         drawLevelIntro(bitmap);
         break;
     case CGame::MODE_PLAY:
@@ -1237,10 +1238,10 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
         if (static_cast<int>(i) == menu.index() && !menu.isCaretDisabled())
         {
             // draw red triangle
-            char tmp[2];
+            uint8_t tmp[2];
             tmp[0] = CHARS_TRIGHT;
             tmp[1] = '\0';
-            drawFont(bitmap, 32, y, tmp, RED, CLEAR, scaleX, scaleY);
+            drawFont(bitmap, 32, y, (char *)tmp, RED, CLEAR, scaleX, scaleY);
         }
         if (item.type() == CMenuItem::ITEM_BAR)
         {
@@ -1288,10 +1289,10 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
 
     const int baseY = 2 * offsetY + title.height();
     const Rect rect{
-        .x = 8,
-        .y = baseY,
-        .width = WIDTH - 16,
-        .height = HEIGHT - baseY - 24};
+        8,
+        baseY,
+        WIDTH - 16,
+        HEIGHT - baseY - 24};
     drawRect(bitmap, rect, DARKRED, false);
 
     CMenu &menu = *m_mainMenu;
@@ -1425,8 +1426,11 @@ void CRuntime::takeScreenshot()
     auto &rgba = bitmap.getRGB();
     for (int i = 0; i < bitmap.width() * bitmap.height(); ++i)
     {
-        if ((rgba[i] & ALPHA) != ALPHA)
+        auto &color = rgba[i];
+        if ((color >> 24) < 128)
+        {
             rgba[i] = BLACK;
+        }
     }
     bitmap.enlarge();
     std::vector<uint8_t> png;
@@ -2460,7 +2464,7 @@ Rez CRuntime::getScreenSize()
 {
     const SDL_DisplayID display = SDL_GetPrimaryDisplay();
     const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
-    return Rez{.w = mode->w, .h = mode->h};
+    return Rez{mode->w, mode->h};
 }
 
 Rez CRuntime::getWindowSize()
@@ -2471,7 +2475,7 @@ Rez CRuntime::getWindowSize()
     {
         LOGE("SDL_GetWindowSizeInPixels failed ! SDL_Error: %s\n", SDL_GetError());
     }
-    return Rez{.w = w, .h = h};
+    return Rez{w, h};
 }
 
 CRuntime::pos_t CRuntime::windowPos2texturePos(posF_t pos)
@@ -2484,7 +2488,10 @@ CRuntime::pos_t CRuntime::windowPos2texturePos(posF_t pos)
     float h = _HEIGHT;
     return {.x = static_cast<int>(w * pos.x / safeRect.width), .y = static_cast<int>(h * pos.y / safeRect.height)};
 #else
-    return {.x = static_cast<int>(pos.x) / PIXEL_SCALE, .y = static_cast<int>(pos.y) / PIXEL_SCALE};
+    return {
+        static_cast<int>(pos.x) / PIXEL_SCALE,
+        static_cast<int>(pos.y) / PIXEL_SCALE,
+    };
 #endif
 }
 
@@ -2503,7 +2510,12 @@ Rect CRuntime::getSafeAreaWindow()
     {
         LOGE("SDL_GetWindowSafeArea() failed; error: %s\n", SDL_GetError());
     }
-    return Rect{.x = safe.x, .y = safe.y, .width = safe.w, .height = safe.h};
+    return Rect{
+        safe.x,
+        safe.y,
+        safe.w,
+        safe.h,
+    };
 }
 
 Rect CRuntime::windowRect2textureRect(const Rect &wRect)
@@ -2515,7 +2527,12 @@ Rect CRuntime::windowRect2textureRect(const Rect &wRect)
     {
         return static_cast<int>(w * (float)u / rez.w);
     };
-    return Rect{.x = _c(wRect.x), .y = _c(wRect.y), .width = _c(wRect.width), .height = _c(wRect.height)};
+    return Rect{
+        _c(wRect.x),
+        _c(wRect.y),
+        _c(wRect.width),
+        _c(wRect.height),
+    };
 }
 
 /**
@@ -2545,13 +2562,13 @@ void CRuntime::initVirtualKeyboard()
         const int row = i / rowSize;
         const int col = i % rowSize;
         button_t button{
-            .id = c,
-            .x = col * (BTN_SIZE + BTN_PADDING),
-            .y = row * (BTN_SIZE + BTN_PADDING),
-            .width = BTN_SIZE,
-            .height = BTN_SIZE,
-            .text = t,
-            .color = WHITE,
+            c,
+            col * (BTN_SIZE + BTN_PADDING),
+            row * (BTN_SIZE + BTN_PADDING),
+            BTN_SIZE,
+            BTN_SIZE,
+            t,
+            WHITE,
         };
         ui.addButton(button);
         ++i;
@@ -2566,14 +2583,13 @@ void CRuntime::initVirtualKeyboard()
     {
         int width = FONT_SIZE * 2 * strlen(key);
         button_t button{
-            .id = id[i],
-            .x = x,
-            .y = y,
-            .width = width,
-            .height = BTN_SIZE,
-            .text = key,
-            .color = WHITE,
-        };
+            id[i],
+            x,
+            y,
+            width,
+            BTN_SIZE,
+            key,
+            WHITE};
         x += width + BTN_PADDING;
         ui.addButton(button);
         ++i;

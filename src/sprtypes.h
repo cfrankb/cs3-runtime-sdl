@@ -54,3 +54,4 @@
 #define TYPE_ICECUBE             0x0c
 #define TYPE_FIREBALL            0x0d
 #define TYPE_BOULDER             0x0e
+#define TYPE_CHUTE               0x0f

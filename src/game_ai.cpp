@@ -36,10 +36,6 @@
 
 namespace Game
 {
-    constexpr int PURSUIT_DISTANCE = 15;
-    constexpr int CHASE_DISTANCE = 10;
-    constexpr int TARGET_DISTANCE = 5;
-
     enum
     {
         ICE_CUBE_DAMAGE = 16,
@@ -92,7 +88,6 @@ void CGame::handleBossPath(CBoss &boss)
         LOGE("Invalid player position (%d,%d) for map bounds (%d,%d)",
              playerPos.x, playerPos.y, m_map.len() * boss.getGranularFactor(),
              m_map.hei() * boss.getGranularFactor());
-        // continue;
         return;
     }
 
@@ -100,25 +95,21 @@ void CGame::handleBossPath(CBoss &boss)
     if (algo == BossData::ASTAR)
     {
         if (boss.followPath(playerPos, aStar))
-            // continue;
             return;
     }
     else if (algo == BossData::LOS)
     {
         if (boss.followPath(playerPos, lineOfSight))
-            // continue;
             return;
     }
     else if (algo == BossData::BFS)
     {
         if (boss.followPath(playerPos, bFS))
-            // continue;
             return;
     }
     else if (algo == BossData::ASTAR_SMOOTH)
     {
         if (boss.followPath(playerPos, aStarSmooth))
-            // continue;
             return;
     }
     else
@@ -151,22 +142,23 @@ void CGame::handleBossBullet(CBoss &boss)
     const int by = boss.y() / 2;
     const CActor &player = m_player;
     CActor *bullet = nullptr;
+    const auto tileID = boss.data()->bullet;
 
     if (player.y() < by - boss.hitbox().height)
     {
-        bullet = spawnBullet(bx, by - boss.hitbox().height, JoyAim::AIM_UP, TILES_FIREBALL);
+        bullet = spawnBullet(bx, by - boss.hitbox().height, JoyAim::AIM_UP, tileID);
     }
     else if (player.y() > by + boss.hitbox().height)
     {
-        bullet = spawnBullet(bx, by + boss.hitbox().height, JoyAim::AIM_DOWN, TILES_FIREBALL);
+        bullet = spawnBullet(bx, by + boss.hitbox().height, JoyAim::AIM_DOWN, tileID);
     }
     else if (player.x() < bx)
     {
-        bullet = spawnBullet(bx - 1, by - 1, JoyAim::AIM_LEFT, TILES_FIREBALL);
+        bullet = spawnBullet(bx - 1, by - 1, JoyAim::AIM_LEFT, tileID);
     }
     else if (player.x() > bx + boss.hitbox().width)
     {
-        bullet = spawnBullet(bx + boss.hitbox().width, by - 1, JoyAim::AIM_RIGHT, TILES_FIREBALL);
+        bullet = spawnBullet(bx + boss.hitbox().width, by - 1, JoyAim::AIM_RIGHT, tileID);
     }
     if (bullet != nullptr)
     {
@@ -187,6 +179,7 @@ void CGame::manageBosses(const int ticks)
 
         // customize animation speed
         const int a_speed = boss.data()->a_speed;
+        const uint32_t boss_flags = boss.data()->flags;
         if (a_speed == 0 || (ticks % a_speed) == 0)
             boss.animate();
 
@@ -198,8 +191,9 @@ void CGame::manageBosses(const int ticks)
         const int by = boss.y() / 2;
         if (boss.testHitbox(CBoss::isPlayer, nullptr))
             addHealth(-boss.damage());
-        if (boss.testHitbox(CBoss::isIceCube, CBoss::meltIceCube))
-            boss.subtainDamage(ICE_CUBE_DAMAGE);
+        if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
+            if (boss.testHitbox(CBoss::isIceCube, CBoss::meltIceCube))
+                boss.subtainDamage(ICE_CUBE_DAMAGE);
 
         if (boss.speed() != 0 && (ticks % boss.speed() != 0))
             continue;
@@ -207,23 +201,26 @@ void CGame::manageBosses(const int ticks)
         if (boss.state() == CBoss::BossState::Patrol)
         {
             boss.patrol();
-            if (boss.distance(player) <= CHASE_DISTANCE)
+            if (boss.distance(player) <= boss.data()->chase_distance)
             {
                 boss.setState(CBoss::BossState::Chase);
             }
         }
         else if (boss.state() == CBoss::BossState::Chase)
         {
-            if (boss.distance(player) > PURSUIT_DISTANCE)
+            if (boss.distance(player) > boss.data()->pursuit_distance)
             {
                 boss.setState(CBoss::BossState::Patrol);
                 continue;
             }
 
-            // Fireball spawning
-            if (rng.range(0, 15) == 0 && bx > 2 && by > 0)
+            if (boss.data()->bullet != TILES_BLANK)
             {
-                handleBossBullet(boss);
+                // Fireball spawning
+                if (rng.range(0, boss.data()->bullet_speed) == 0 && bx > 2 && by > 0)
+                {
+                    handleBossBullet(boss);
+                }
             }
             handleBossPath(boss);
         }

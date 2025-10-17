@@ -27,6 +27,7 @@
 #include "shared/IFile.h"
 #include "bossdata.h"
 #include "filemacros.h"
+#include "map.h"
 
 constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
 constexpr size_t MAX_PATH_SIZE = 4096;
@@ -45,6 +46,7 @@ CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossD
     m_hp = data->hp;
     m_pathIndex = 0;
     m_pathTimeout = 0;
+    setSolidOperator();
 }
 
 bool CBoss::isPlayer(const Pos &pos)
@@ -71,16 +73,10 @@ bool CBoss::meltIceCube(const Pos &pos)
     if (i != CGame::INVALID)
     {
         game->deleteMonster(i);
-        game->getSfx().emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION6, .timeout = SFX_EXPLOSION6_TIMEOUT});
+        game->getSfx().emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION6, SFX_EXPLOSION6_TIMEOUT});
         map.set(pos.x, pos.y, TILES_BLANK);
     }
     return true;
-}
-
-bool CBoss::isSolid(const uint8_t c)
-{
-    const TileDef &def = getTileDef(c);
-    return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
 }
 
 bool CBoss::isSolid(const Pos &pos)
@@ -89,6 +85,14 @@ bool CBoss::isSolid(const Pos &pos)
     const auto c = map.at(pos.x, pos.y);
     const TileDef &def = getTileDef(c);
     return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
+}
+
+bool CBoss::isGhostBlocked(const Pos &pos)
+{
+    CMap &map = CGame::getMap();
+    const auto c = map.at(pos.x, pos.y);
+    const TileDef &def = getTileDef(c);
+    return def.type == TYPE_SWAMP || def.type == TYPE_ICECUBE;
 }
 
 bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
@@ -160,7 +164,8 @@ bool CBoss::canMove(const JoyAim aim) const
         {
             if (ax < 0 || ax >= mapLen)
                 continue;
-            if (isSolid(map.at(ax, y - 1)))
+            const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y - 1)};
+            if (m_isSolidOperator(pos))
                 return false;
         }
         break;
@@ -172,7 +177,8 @@ bool CBoss::canMove(const JoyAim aim) const
         {
             if (ax < 0 || ax >= mapLen)
                 continue;
-            if (isSolid(map.at(ax, y + h)))
+            const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y + h)};
+            if (m_isSolidOperator(pos))
                 return false;
         }
         break;
@@ -184,7 +190,8 @@ bool CBoss::canMove(const JoyAim aim) const
         {
             if (ay < 0 || ay >= mapHei)
                 continue;
-            if (isSolid(map.at(x - 1, ay)))
+            const Pos pos{static_cast<int16_t>(x - 1), static_cast<int16_t>(ay)};
+            if (m_isSolidOperator(pos))
                 return false;
         }
         break;
@@ -196,7 +203,8 @@ bool CBoss::canMove(const JoyAim aim) const
         {
             if (ay < 0 || ay >= mapHei)
                 continue;
-            if (isSolid(map.at(x + w, ay)))
+            const Pos pos{static_cast<int16_t>(x + w), static_cast<int16_t>(ay)};
+            if (m_isSolidOperator(pos))
                 return false;
         }
         break;
@@ -251,7 +259,7 @@ void CBoss::animate()
     int maxFrames = 0;
     if (m_state == BossState::Patrol)
     {
-        maxFrames = m_bossData->moving.lenght;
+        maxFrames = m_bossData->idle.lenght;
     }
     else if (m_state == BossState::Chase)
     {
@@ -299,7 +307,7 @@ int CBoss::currentFrame() const
     int baseFrame = 0;
     if (m_state == BossState::Patrol)
     {
-        baseFrame = m_bossData->moving.base;
+        baseFrame = m_bossData->idle.base;
     }
     else if (m_state == BossState::Chase)
     {
@@ -408,7 +416,9 @@ bool CBoss::read(IFile &sfile)
 
     auto checkBound = [](auto a, auto b)
     {
-        if (std::is_same_v<decltype(a), size_t>)
+        using T = decltype(a);
+
+        if constexpr (std::is_same_v<T, size_t>)
         {
             if (a > b)
             {
@@ -416,7 +426,7 @@ bool CBoss::read(IFile &sfile)
                 return false;
             }
         }
-        else if (std::is_same_v<decltype(a), uint8_t>)
+        else if constexpr (std::is_same_v<T, uint8_t>)
         {
             if (a > b)
             {
@@ -424,7 +434,7 @@ bool CBoss::read(IFile &sfile)
                 return false;
             }
         }
-        else
+        else if constexpr (std::is_integral_v<T>)
         {
             if (a > b || a < 0)
             {
@@ -432,6 +442,11 @@ bool CBoss::read(IFile &sfile)
                 return false;
             }
         }
+        else
+        {
+            static_assert(std::is_integral_v<T>, "checkBound only supports integral types");
+        }
+
         return true;
     };
 
@@ -459,7 +474,7 @@ bool CBoss::read(IFile &sfile)
     checkBound(m_hp, MAX_HP);
 
     _R(&m_state, sizeof(m_state)); // uint8_t
-    checkBound(m_state, BossState::MAX_STATE);
+    checkBound((uint8_t)m_state, (uint8_t)BossState::MAX_STATE);
 
     m_speed = 0;
     _R(&m_speed, DATA_SIZE);
@@ -483,6 +498,8 @@ bool CBoss::read(IFile &sfile)
     m_pathTimeout = 0;
     _R(&m_pathTimeout, DATA_SIZE);
     checkBound(m_pathTimeout, MAX_PATH_SIZE);
+
+    setSolidOperator();
     return true;
 }
 
@@ -511,19 +528,15 @@ bool CBoss::write(IFile &tfile)
     _W(&m_pathIndex, DATA_SIZE);
     _W(&m_pathTimeout, DATA_SIZE);
     return true;
+}
 
-    /*
-        const bossData_t *m_bossData;
-        int m_framePtr;
-        int16_t m_x;
-        int16_t m_y;
-        int m_hp;
-        BossState m_state;
-        int m_speed;
-
-        // Path caching
-        std::vector<JoyAim> m_cachedDirections;
-        size_t m_pathIndex;
-        int m_pathTimeout;
-    */
+void CBoss::setSolidOperator()
+{
+    LOGI("set solidOperator for boss %.2x", m_bossData->type);
+    if (m_bossData->type == BOSS_MR_DEMON)
+        m_isSolidOperator = isSolid;
+    else if (m_bossData->type == BOSS_GHOST)
+        m_isSolidOperator = isGhostBlocked;
+    else
+        m_isSolidOperator = nullptr;
 }

@@ -12,27 +12,19 @@ else()
     message(STATUS "Targeting native GCC/Linux")
 endif()
 
-# Collect .cpp files
-file(GLOB CPP_SOURCES
-    src/*.cpp
-    src/shared/*.cpp
-    src/shared/implementers/*.cpp
-)
+add_subdirectory(src)
 
 # Add External
 if(EMSCRIPTEN)
     set(libxmp_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/libxmp/include")
-    set(libxmp_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/build/ems/libxmp_build")
-    add_subdirectory(external/libxmp libxmp_build)
+    set(libxmp_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/build/ems/libxmp_build/libxmp.a")
 endif()
 
 add_subdirectory(external/SDL3 SDL3)
 add_subdirectory(external/SDL3_mixer SDL3_mixer)
 
-#message("*******${CMAKE_CURRENT_SOURCE_DIR}")
-
 # Your app
-add_executable(${PROJECT_NAME} ${CPP_SOURCES})
+add_executable(${PROJECT_NAME} ${SRC_EXPORTED_FILES})
 
 if(EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PRIVATE
@@ -64,7 +56,7 @@ if(EMSCRIPTEN)
         INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}/external/libxmp/include"
     )
     target_link_libraries(${PROJECT_NAME}
-        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer libxmp_static
+        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer libxmp_static src_lib
 )
 else()
     #find_library(XMP_LIBRARY xmp)
@@ -72,11 +64,10 @@ else()
     #find_library(VORBIS_LIBRARY vorbisfile)
     find_library(ZLIB_LIBRARY z)
     target_link_libraries(${PROJECT_NAME}
-        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer ${ZLIB_LIBRARY}
+        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer ${ZLIB_LIBRARY} src_lib
 )
 endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    #${CMAKE_CURRENT_SOURCE_DIR}/external/libxmp/include
 )

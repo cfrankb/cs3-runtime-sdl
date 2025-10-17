@@ -24,9 +24,11 @@
 #include <cstdint>
 #include "rect.h"
 
-#define FLAG_FIREBALL 0x1
+#define FLAG_FIREBALL 0x00000001
+#define BOSS_FLAG_ICE_DAMAGE 0x80000000
 
 #define BOSS_MR_DEMON 0xb0
+#define BOSS_GHOST 0xb1
 
 
 namespace BossData
@@ -56,10 +58,16 @@ struct bossData_t
     int damage;             // damage given
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
+    uint8_t bullet;         // boss bullet    
+    uint8_t bullet_speed;   // boss bullet speed
+    int chase_distance;     // distance to engage chase
+    int pursuit_distance;   // continue pursuit within distance (chase)
+    bool is_goal;           // is this boss a map goal?
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt
     boss_seq_t death;       // animation seq: death
+    boss_seq_t idle;        // animation seq: idle
     Rect hitbox;            // boss hitbox
     int sheet;              // sprite sheet used
 };

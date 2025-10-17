@@ -90,12 +90,33 @@ bool getTestData(CFrameSet &set, const std::string_view &filepath)
     if (file.open(filepath))
     {
         size_t size = file.getSize();
-        std::vector<uint8_t> buf(size);
+        std::vector<char> buf(size);
         file.read(buf.data(), size);
+        file.close();
+
         std::string data;
         data.assign(reinterpret_cast<char *>(buf.data()), buf.size());
-        splitString2(data, list);
-        file.close();
+        // splitString2(data, list);
+
+        int line = 0;
+        size_t pos = 0;
+        LOGI("len: %u", data.length());
+        while (pos < data.length())
+        {
+            LOGI("line: %d pos: %u", line, pos);
+            ++line;
+            std::string current = processLine(data, pos);
+            if (current.empty())
+                continue;
+            list.push_back(current);
+            // std::vector<std::string> list;
+            // splitString2(current, list);
+            // if (list.size() < 4)
+            //     continue;
+            //  uint8_t ch = std::stoi(list[3], 0, 16);
+            //  chMap[ch] = i;
+            //++i;
+        }
     }
     else
     {
@@ -862,9 +883,26 @@ int main(int argc, char *argv[], char *envp[])
 
     int imagesLimit = argc > 2 ? std::stoi(argv[2]) : 0;
     std::string_view in_filepath = argc > 1 ? argv[1] : "list.txt";
-    CFrameSet set;
 
-    getTestData(set, in_filepath);
+    // find the out_filepath
+    char out_filepath[128];
+    strncpy(out_filepath, "out/", sizeof(out_filepath) - 1);
+    const char *in = in_filepath.data();
+    const char *p = strrchr(in, '/');
+    const char *s = p ? p + 1 : in;
+    strncat(out_filepath, s, sizeof(out_filepath) - 1);
+    char *dot = strrchr(out_filepath, '.');
+    if (dot)
+        strncpy(dot, ".png", sizeof(out_filepath) - 1);
+    else
+        strncat(out_filepath, ".png", sizeof(out_filepath) - 1);
+
+    CFrameSet set;
+    if (!getTestData(set, in_filepath))
+    {
+        LOGE("error occured");
+        return EXIT_FAILURE;
+    }
     if (imagesLimit != 0)
     {
         LOGI("LIMIT: %d", imagesLimit);
@@ -879,7 +917,7 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     // output to file
-    const char *out_filepath = "out/sheet.png";
+    // const char *out_filepath = "out/sheet.png";
     if (!outputToFile(png, out_filepath))
     {
         LOGE("failed to output png: %s", out_filepath);

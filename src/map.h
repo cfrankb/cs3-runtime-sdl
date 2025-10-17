@@ -72,6 +72,7 @@ public:
     bool fromMemory(uint8_t *mem);
     const char *title();
     void setTitle(const char *title);
+    void replaceTile(const uint8_t, const uint8_t);
     const AttrMap &attrs() { return m_attrs; }
     CStates &states();
     static uint16_t toKey(const uint8_t x, const uint8_t y);

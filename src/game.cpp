@@ -237,6 +237,14 @@ void CGame::consume()
     {
         addHealth(def.health);
     }
+    else if (def.type == TYPE_CHUTE)
+    {
+        // CMap::toKey(m_player.pos());
+        m_gameStats->set(S_CHUTE, 1);
+        checkClosure();
+        // nextLevel();
+        // loadLevel(MODE_CHUTE);
+    }
 
     if (isFruit(pu))
     {
@@ -338,7 +346,20 @@ bool CGame::loadLevel(const GameMode mode)
     CStates &states = m_map.states();
     const uint16_t origin = states.getU(POS_ORIGIN);
     Pos pos;
-    if (origin != 0)
+    if (m_gameStats->get(S_CHUTE) != 0)
+    {
+        pos = m_chuteTarget;
+        if (!m_map.isValid(pos.x, pos.y))
+        {
+            pos = m_map.findFirst(TILES_ANNIE2);
+        }
+        else
+        {
+            m_map.replaceTile(TILES_ANNIE2, TILES_BLANK);
+            m_map.set(pos.x, pos.y, TILES_ANNIE2);
+        }
+    }
+    else if (origin != 0)
     {
         pos = CMap::toPos(origin);
         m_map.set(pos.x, pos.y, TILES_ANNIE2);
@@ -446,6 +467,7 @@ void CGame::resetStats()
         S_IDLE_TIME,
         S_FREEZE_TIMER,
         S_TIME_TAKEN,
+        S_CHUTE,
     };
     for (const auto &stat : stats)
     {
@@ -776,11 +798,10 @@ void CGame::addHealth(const int hp)
 
 bool CGame::isLevelCompleted() const
 {
-
-    // check state of all bosses
+    // check state of all bosses (if isGoal)
     for (const auto &boss : m_bosses)
     {
-        if (!boss.isDone())
+        if (boss.isGoal() && !boss.isDone())
             return false;
     }
     return !m_diamonds; // check goal count
@@ -818,6 +839,13 @@ void CGame::checkClosure()
         {
             doClosure = true;
         }
+    }
+    else if (!isClosure() && m_gameStats->get(S_CHUTE) != 0)
+    {
+        // fallen down a chute
+        // save player position
+        m_chuteTarget = m_player.pos();
+        doClosure = true;
     }
 
     if (doClosure)
@@ -1011,7 +1039,12 @@ bool CGame::validateSignature(const char *signature, const uint32_t version)
         char tmp[sizeof(GAME_SIGNATURE) + 1];
         memcpy(tmp, &signature, sizeof(GAME_SIGNATURE));
         tmp[sizeof(GAME_SIGNATURE)] = '\0';
-        LOGW("savefile signature mismatch: `%s` -- expecting `%s`", signature, GAME_SIGNATURE);
+
+        char gameSig[sizeof(GAME_SIGNATURE) + 1];
+        memcpy(gameSig, GAME_SIGNATURE, sizeof(GAME_SIGNATURE));
+        gameSig[sizeof(GAME_SIGNATURE)] = '\0';
+
+        LOGW("savefile signature mismatch: `%s` -- expecting `%s`", signature, gameSig);
         return false;
     }
     if (version != ENGINE_VERSION)
@@ -1484,7 +1517,7 @@ int CGame::closusureTimer() const
  */
 void CGame::decClosure()
 {
-    int ct = m_gameStats->dec(S_CLOSURE_TIMER);
+    m_gameStats->dec(S_CLOSURE_TIMER);
 }
 
 /**

@@ -25,7 +25,7 @@
 #include "map.h"
 #include "gamesfx.h"
 #include "events.h"
-#include "tilesdata.h"
+#include "tilesdefs.h"
 
 class CGameStats;
 class CMapArch;
@@ -60,6 +60,7 @@ public:
         MODE_LEVEL_SUMMARY,
         MODE_SKLLSELECT,
         MODE_NEW_INPUTNAME,
+        MODE_CHUTE,
     };
 
     enum : uint32_t
@@ -166,6 +167,7 @@ public:
     };
 
 private:
+    Pos m_chuteTarget;
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;

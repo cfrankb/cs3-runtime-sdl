@@ -338,8 +338,8 @@ std::vector<JoyAim> LineOfSight::findPath(ISprite &sprite, const Pos &playerPos)
         }
         if (!moved)
         {
-            LOGE("Cannot move from (%d,%d) toward (%d,%d) on line %d",
-                 x, y, goalPos.x, goalPos.y, __LINE__);
+            //     LOGE("Cannot move from (%d,%d) toward (%d,%d) on line %d",
+            //        x, y, goalPos.x, goalPos.y, __LINE__);
             return {};
         }
     }

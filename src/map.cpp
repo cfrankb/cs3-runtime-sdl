@@ -653,3 +653,12 @@ bool CMap::resize(uint16_t in_len, uint16_t in_hei, uint8_t t, bool fast)
     m_hei = in_hei;
     return true;
 }
+
+void CMap::replaceTile(const uint8_t src, const uint8_t repl)
+{
+    for (auto &tileID : m_map)
+    {
+        if (tileID == src)
+            tileID = repl;
+    }
+}

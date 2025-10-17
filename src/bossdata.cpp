@@ -21,6 +21,7 @@
 
 #include <cstddef>
 #include "color.h"
+#include "tilesdata.h"
 #include "bossdata.h"
 
 namespace BossData
@@ -35,6 +36,16 @@ namespace BossData
     constexpr int MR_DEMON_HURT_LEN = 4;
     constexpr int MR_DEMON_DEATH_BASE = 16;
     constexpr int MR_DEMON_DEATH_LEN = 6;
+    constexpr int GHOST_IDLE_BASE = 22;
+    constexpr int GHOST_IDLE_LEN = 3;
+    constexpr int GHOST_MOVING_BASE = 25;
+    constexpr int GHOST_MOVING_LEN = 5;
+    constexpr int GHOST_ATTACK_BASE = 30;
+    constexpr int GHOST_ATTACK_LEN = 6;
+    constexpr int GHOST_HURT_BASE = 36;
+    constexpr int GHOST_HURT_LEN = 7;
+    constexpr int GHOST_DEATH_BASE = 43;
+    constexpr int GHOST_DEATH_LEN = 0;
 };
 
 using namespace BossData;
@@ -48,13 +59,42 @@ bossData_t g_bosses[] = {
         .type = 0xb0,
         .score = 1000,
         .damage = 16,
-        .flags = 0,
-        .path = BFS,
+        .flags = BOSS_FLAG_ICE_DAMAGE,
+        .path = ASTAR,
+        .bullet = TILES_FIREBALL,
+        .bullet_speed = 15,
+        .chase_distance = 10,
+        .pursuit_distance = 15,
+        .is_goal = true,
         .moving = {MR_DEMON_MOVING_BASE, MR_DEMON_MOVING_LEN},
         .attack = {MR_DEMON_ATTACK_BASE, MR_DEMON_ATTACK_LEN},
         .hurt = {MR_DEMON_HURT_BASE, MR_DEMON_HURT_LEN},
         .death = {MR_DEMON_DEATH_BASE, MR_DEMON_DEATH_LEN},
+        .idle = {MR_DEMON_MOVING_BASE, MR_DEMON_MOVING_LEN},
         .hitbox = {2, 6, 4, 2},
+        .sheet = 0,
+    },
+    {
+        .name = "Ghost",
+        .speed = 4,
+        .a_speed = 4,
+        .hp = 64,
+        .type = 0xb1,
+        .score = 500,
+        .damage = 5,
+        .flags = 0,
+        .path = LOS,
+        .bullet = TILES_BLANK,
+        .bullet_speed = 0,
+        .chase_distance = 10,
+        .pursuit_distance = 20,
+        .is_goal = false,
+        .moving = {GHOST_MOVING_BASE, GHOST_MOVING_LEN},
+        .attack = {GHOST_ATTACK_BASE, GHOST_ATTACK_LEN},
+        .hurt = {GHOST_HURT_BASE, GHOST_HURT_LEN},
+        .death = {GHOST_DEATH_BASE, GHOST_DEATH_LEN},
+        .idle = {GHOST_IDLE_BASE, GHOST_IDLE_LEN},
+        .hitbox = {0, 2, 4, 3},
         .sheet = 0,
     },
 };
@@ -69,3 +109,4 @@ bossData_t *getBossData(const int type)
     }
     return nullptr;
 }
+
