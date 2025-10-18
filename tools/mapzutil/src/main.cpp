@@ -215,10 +215,10 @@ bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &par
             CStates &states = map->states();
             if (states.getU(PRIVATE) != 0)
             {
+                // delete map;
                 ++mapRemoved;
                 printf("stripping out: level %d - %s\n", i + 1, map->title());
-                arch.removeAt(i);
-                delete map;
+                auto map = arch.removeAt(i);
             }
         }
         if (mapRemoved)
