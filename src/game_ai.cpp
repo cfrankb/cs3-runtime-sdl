@@ -300,9 +300,13 @@ void CGame::manageMonsters(const int ticks)
         {
             // Do nothing for now
         }
+        else if (actor.type() == TYPE_LIGHTNING_BOLT)
+        {
+            handleLightningBolt(actor, def, i, deletedMonsters);
+        }
         else
         {
-            LOGW("unhandled monster type: %.x", actor.type());
+            LOGW("unhandled monster type: %.2x at index %d", actor.type(), i);
         }
     }
 
@@ -466,6 +470,7 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
     }
     else
     {
+        // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
         m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
@@ -490,5 +495,26 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
         {
             addHealth(def.health);
         }
+    }
+}
+
+void CGame::handleLightningBolt(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters)
+{
+    JoyAim aim = actor.getAim();
+    if (actor.canMove(aim))
+    {
+        actor.move(aim);
+    }
+    else
+    {
+        // remove actor/ set to be deleted
+        m_map.set(actor.x(), actor.y(), actor.getPU());
+        deletedMonsters.insert(i);
+        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
+
+        const Pos &pos = translate(actor.pos(), aim);
+        if (pos == actor.pos())
+            // coordonate outside map bounds
+            return;
     }
 }

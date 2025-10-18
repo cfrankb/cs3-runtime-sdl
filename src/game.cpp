@@ -505,6 +505,23 @@ void CGame::setMapArch(CMapArch *arch)
     m_mapArch = arch;
 }
 
+bool CGame::isMonsterType(const uint8_t typeID) const
+{
+    std::array<uint8_t, 7> monsterTypes = {
+        TYPE_MONSTER,
+        TYPE_VAMPLANT,
+        TYPE_DRONE,
+        TYPE_ICECUBE,
+        TYPE_BOULDER,
+        TYPE_FIREBALL,
+        TYPE_LIGHTNING_BOLT};
+
+    for (size_t i = 0; i < monsterTypes.size(); ++i)
+        if (monsterTypes[i] == typeID)
+            return true;
+    return false;
+}
+
 /**
  * @brief Create a list of monster contained on the level
  *
@@ -521,12 +538,7 @@ bool CGame::spawnMonsters()
         {
             uint8_t c = m_map.at(x, y);
             const TileDef &def = getTileDef(c);
-            if (def.type == TYPE_MONSTER ||
-                def.type == TYPE_VAMPLANT ||
-                def.type == TYPE_DRONE ||
-                def.type == TYPE_ICECUBE ||
-                def.type == TYPE_FIREBALL ||
-                def.type == TYPE_BOULDER)
+            if (isMonsterType(def.type))
             {
                 if (def.type == TYPE_ICECUBE)
                     addMonster(CActor(x, y, def.type, JoyAim::AIM_NONE));

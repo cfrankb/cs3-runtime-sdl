@@ -4,6 +4,12 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(MSVC)
+    add_compile_options(/W4 /permissive-)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
 if(EMSCRIPTEN)
     message(STATUS "Targeting Emscripten/WebAssembly ${CMAKE_SOURCE_DIR}")
     set(CMAKE_EXECUTABLE_SUFFIX ".html")  # Optional: .html shell
@@ -70,4 +76,6 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/SDL3/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/SDL3_mixer/include
 )

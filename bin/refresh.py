@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python
 import glob
 import ntpath
 
@@ -60,6 +60,7 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
         f"""target_include_directories({master_lib} PUBLIC
     ${{CMAKE_CURRENT_SOURCE_DIR}}
     ${{SDL3_mixer_SOURCE_DIR}}/include
+    ${{SDL3_SOURCE_DIR}}/include
 )
 """.strip()
     )

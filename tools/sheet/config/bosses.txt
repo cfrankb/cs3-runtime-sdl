@@ -1,0 +1,65 @@
+####################################################
+# demon
+
+# demon moving
+demon/flying80x64-1.png
+demon/flying80x64-2.png
+demon/flying80x64-3.png
+demon/flying80x64-4.png
+
+# demon attack
+demon/attack80x64-1.png
+demon/attack80x64-2.png
+demon/attack80x64-3.png
+demon/attack80x64-4.png
+demon/attack80x64-5.png
+demon/attack80x64-6.png
+demon/attack80x64-7.png
+demon/attack80x64-8.png
+
+# demon hurt
+demon/hurt80x64-1.png
+demon/hurt80x64-2.png
+demon/hurt80x64-3.png
+demon/hurt80x64-4.png
+
+# demon death
+demon/death-1.png
+demon/death-2.png
+demon/death-3.png
+demon/death-4.png
+demon/death-5.png
+demon/death-6.png
+
+####################################################
+# ghost
+
+# ghost idle
+ghost/ghost-1.png
+ghost/ghost-2.png
+ghost/ghost-3.png
+
+# ghost moving
+ghost/ghost-4.png
+ghost/ghost-5.png
+ghost/ghost-6.png
+ghost/ghost-7.png
+ghost/ghost-8.png
+
+# ghost attack
+ghost/ghost-9.png
+ghost/ghost-10.png
+ghost/ghost-11.png
+ghost/ghost-12.png
+ghost/ghost-13.png
+ghost/ghost-14.png
+
+# ghost flee
+ghost/ghost-modif15.png
+ghost/ghost-modif16.png
+ghost/ghost-modif17.png
+ghost/ghost-modif18.png
+ghost/ghost-modif19.png
+ghost/ghost-modif20.png
+ghost/ghost-modif21.png
+ghost/ghost-modif22.png

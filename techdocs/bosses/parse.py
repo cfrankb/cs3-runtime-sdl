@@ -55,6 +55,7 @@ struct bossData_t
     int chase_distance;     // distance to engage chase
     int pursuit_distance;   // continue pursuit within distance (chase)
     bool is_goal;           // is this boss a map goal?
+    bool show_details;      // display hp bar/name
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt
@@ -83,6 +84,19 @@ def clean_name(name):
     return re.sub("[^0-9a-zA-Z_]+", "_", name.upper())
 
 
+def sanity_check(seq):
+    result = True
+    missing_fields = [k for k in all_fields if k not in seq]
+    if missing_fields:
+        print(f"missing fields: {missing_fields} for `{seq['name']}`")
+        result = False
+    invalid_fields = [k for k in seq.keys() if k not in all_fields]
+    if invalid_fields:
+        print(f"invalid fields: {invalid_fields} for `{seq['name']}`")
+        result = False
+    return result
+
+
 def save_seq(all_seqs, seq):
     if seq:
         all_seqs.append(copy.deepcopy(seq))
@@ -103,8 +117,12 @@ attr_names = [
     "chase_distance",
     "pursuit_distance",
     "is_goal",
+    "show_details",
 ]
 seq_names = ["moving", "attack", "hurt", "death", "idle"]
+misc_names = ["hitbox", "sheet"]
+all_fields = ["name"] + attr_names + seq_names + misc_names
+
 
 EXIT_FAILURE = 1
 EXIT_SUCCESS = 0
@@ -151,6 +169,7 @@ for t in data.split("\n"):
     elif e[0] == ">>>sheet" and len(e) == 2:
         sheet = int(e[1])
         print(f"switched to sheet {sheet}")
+        frame = 0
     elif not section:
         if len(e) != 3:
             print(f"expecting 3 literals on line {line}: {t} -- found {len(e)}")
@@ -163,10 +182,16 @@ for t in data.split("\n"):
         else:
             f"unknown operator `{e[0]}` on line {line}"
     elif section:
-        if len(e) < 2:
+        item_name = e[0]
+        if item_name == "hitbox":
+            if len(e) == 5:
+                seq[item_name] = " ".join(e[1:])
+            else:
+                print(f"{item_name} must have 4 dimensions")
+            continue
+        if len(e) != 2:
             print(f"missing qualifier on line {line}: {t}")
             continue
-        item_name = e[0]
         if item_name in seq_names:
             seq_name = item_name
             if e[1][0] == "@":
@@ -189,8 +214,6 @@ for t in data.split("\n"):
             seq[item_name] = " ".join(e[1:]).replace(",", " |")
         elif item_name in attr_names:
             seq[item_name] = e[1]
-        elif item_name == "hitbox":
-            seq[item_name] = " ".join(e[1:])
         else:
             print(f"item name {item_name} on {line} is unknown")
     else:
@@ -210,6 +233,9 @@ bossData_t bosses[] = {
 """
 
 for seq in all_seqs:
+    if not sanity_check(seq):
+        print("please fix config")
+        exit(EXIT_FAILURE)
     name = clean_name(seq["name"])
     boss_types.append(f"#define BOSS_{name} {seq['type']}")
 

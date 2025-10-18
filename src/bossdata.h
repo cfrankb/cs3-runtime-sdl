@@ -58,11 +58,12 @@ struct bossData_t
     int damage;             // damage given
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
-    uint8_t bullet;         // boss bullet    
+    uint8_t bullet;         // boss bullet
     uint8_t bullet_speed;   // boss bullet speed
     int chase_distance;     // distance to engage chase
     int pursuit_distance;   // continue pursuit within distance (chase)
     bool is_goal;           // is this boss a map goal?
+    bool show_details;      // display hp bar/name
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt

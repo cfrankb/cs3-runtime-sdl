@@ -160,6 +160,7 @@ public:
     void deleteMonster(const int i);
     static Random &getRandom();
     static bool validateSignature(const char *signature, const uint32_t version);
+    bool isMonsterType(const uint8_t typeID) const;
 
     enum
     {
@@ -215,6 +216,7 @@ private:
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
     void handleFirball(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
+    void handleLightningBolt(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
 
     // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);

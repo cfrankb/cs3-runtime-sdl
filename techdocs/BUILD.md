@@ -1,13 +1,48 @@
 # Build Steps
 
+If your system uses `python3` rather than `python`, update
+the snippets accordingly.
+
+## New build chain
+
+### Wasm/Web version
+
+First install [emscripten](https://emscripten.org/index.html)
+
+```
+$ python bin/ems/patch.py
+$ bin/build.sh emsdl3
+```
+
+Run game
+
+```
+$ emrun --hostname 0.0.0.0 build/ems/cs3-runtime.html
+```
+
+## Arch Linux / Ubuntu
+
+This version requires that libXMP and zlib be installed on your system.
+
+Build the game
+
+```
+$ bin/build.sh sdl3
+```
+
+Run game
+
+```
+$ build/std/cs3-runtime
+```
+
+## Old Build Chain (deprecated)
+
 ### Web browser version
 
 This version requires SDL3, SDL3-mixer, libXMP, zlib and Emscripten.
 
 First install [emscripten](https://emscripten.org/index.html)
-
-If your system uses `python3` rather than `python`, update
-the snippets accordingly.
 
 #### Run these commands
 
@@ -23,7 +58,7 @@ $ make
 $ emrun build/cs3v2.html
 ```
 
-## Arch Linux / Ubuntu
+### Arch Linux / Ubuntu
 
 This version requires that libXMP and zlib be installed on your system.
 
@@ -35,7 +70,13 @@ $ make build_libs
 $ make
 ```
 
-## Mingw32 on Linux (manual)
+Run the game
+
+```
+$ make run
+```
+
+### Mingw32 on Linux (manual)
 
 Install build dependencies
 
@@ -49,4 +90,10 @@ $ apt install mingw-w64 autoconf automake libtool pkg-config git make
 $ python bin/gen.py mingw32-sdl3
 $ make build_libs
 $ make
+```
+
+Run the game
+
+```
+$ make run
 ```

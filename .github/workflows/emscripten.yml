@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - master
-      #- develop
+      - develop
     tags:
       - "v*"
   pull_request:
@@ -38,15 +38,11 @@ jobs:
           emcc -v
           em++ -v
 
-      - name: build SDL3 from source
+      - name: download and patch SDL3 source
         run: |
           git submodule update --init --recursive
           ls external/SDL3 -l
           python3 bin/ems/patch-xmp.py
-          bin/ems/build-xmp.sh
-          bin/ems/build-sdl3.sh
-          bin/ems/build-sdl3-mixer.sh
-          rm data/gamecontrollerdb.txt
 
       - name: Build mapzutil
         run: |
@@ -65,18 +61,27 @@ jobs:
       - name: Build your app
         run: |
           echo "Preparing itch.io version"
+          python bin/refresh.py
+          #bin/ems/build-xmp.sh
+          #bin/ems/build-sdl3.sh
+          #bin/ems/build-sdl3-mixer.sh
+          rm data/gamecontrollerdb.txt
+          bin/build.sh emsdl3
+
           mkdir -p build/cs3
           cp data/musics/*.ogg build/cs3
           cp packages/data/win32/cs3-runtime.ico build/cs3/favicon.ico
-          python3 bin/gen.py emsdl3 -s
-          make
-          cp build/cs3v2.* build/cs3
+          cp build/ems/cs3-runtime* build/cs3
           cp LICENSE build/cs3
-          mv build/cs3/cs3v2.html build/cs3/index.html
+          mv build/cs3/cs3-runtime.html build/cs3/index.html
+
+          #python3 bin/gen.py emsdl3 -s
+          #make
+
           echo "Preparing local version"
           mkdir -p ./build/local
           cp packages/data/win32/cs3-runtime.ico build/local/favicon.ico
-          cp ./build/cs3v2.* ./build/local
+          cp ./build/ems/cs3v2.* ./build/local
           gzip  ./build/local/*.data ./build/local/*.wasm
           mv ./build/local/cs3v2.data.gz ./build/local/cs3v2.data
           mv ./build/local/cs3v2.wasm.gz ./build/local/cs3v2.wasm

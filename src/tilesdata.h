@@ -170,4 +170,5 @@
 #define TILES_HSKULLBONE2         0x93
 #define TILES_HSKULL1             0x94
 #define TILES_CHUTE               0x95
-#define TILES_TOTAL_COUNT         0x96
+#define TILES_LIGHTNING_BOLT      0x96
+#define TILES_TOTAL_COUNT         0x97

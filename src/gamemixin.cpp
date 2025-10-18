@@ -871,6 +871,7 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
     auto &frames = (m_bosses.get())->frames();
     for (const auto &boss : m_game->bosses())
     {
+        // don't process completed bosses
         if (boss.isDone())
             continue;
         const int num = boss.currentFrame();
@@ -906,12 +907,17 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
                 .width = calcSize(x, bRect.width, sRect.width),
                 .height = calcSize(y, bRect.height, sRect.height),
             };
+            // draw boss
             drawTile(bitmap,
                      x > 0 ? x : 0,
                      y > 0 ? y : 0,
                      frame,
                      rect);
         }
+
+        // skip drawing the healthbar and name
+        if (!boss.data()->show_details)
+            continue;
 
         const int HP_BAR_HEIGHT = 8;
         const int HP_BAR_SPACING = 2;
@@ -1003,7 +1009,7 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, YELLOW, BLACK, 2, 2);
 
-    if (mode == CGame::MODE_LEVEL_INTRO)
+    if (mode == CGame::MODE_LEVEL_INTRO || mode == CGame::MODE_CHUTE)
     {
         const char *t = m_game->getMap().title();
         const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
