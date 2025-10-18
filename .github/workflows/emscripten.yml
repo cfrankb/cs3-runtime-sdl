@@ -81,10 +81,10 @@ jobs:
           echo "Preparing local version"
           mkdir -p ./build/local
           cp packages/data/win32/cs3-runtime.ico build/local/favicon.ico
-          cp ./build/ems/cs3v2.* ./build/local
+          cp ./build/ems/cs3-runtime.* ./build/local
           gzip  ./build/local/*.data ./build/local/*.wasm
-          mv ./build/local/cs3v2.data.gz ./build/local/cs3v2.data
-          mv ./build/local/cs3v2.wasm.gz ./build/local/cs3v2.wasm
+          mv ./build/local/cs3-runtime.data.gz ./build/local/cs3-runtime.data
+          mv ./build/local/cs3-runtime.wasm.gz ./build/local/cs3-runtime.wasm
           cp build/cs3/*.ogg ./build/local
 
       - name: Upload WebAssembly Build Artifacts (itchio)
