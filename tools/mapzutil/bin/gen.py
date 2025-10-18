@@ -56,7 +56,7 @@ def get_deps_blocks():
 def main():
     vars = [
         "CXX=g++ --std=c++20 -Wall -Wextra",
-        "CXXFLAGS=-g  -DQT_NOT_WANTED",
+        "CXXFLAGS=-g  -DQT_NOT_WANTED -DSDL_NOT_WANTED",
         "LIBS=-lm -lz",
         "BPATH=build",
         "EXT=.o",
