@@ -22,6 +22,13 @@ jobs:
           submodules: recursive
           fetch-depth: 0 # fetch full history including tags
 
+      - name: Refresh CMakeLists.txt
+        run: |
+          python3 bin/refresh.py
+          cat src/CMakeLists.txt
+          cat src/shared/CMakeLists.txt
+          cat src/shared/implementers/CMakeLists.txt
+
       - name: Update build information
         run: |
           bin/setbuild.sh
@@ -61,10 +68,6 @@ jobs:
       - name: Build your app
         run: |
           echo "Preparing itch.io version"
-          python bin/refresh.py
-          #bin/ems/build-xmp.sh
-          #bin/ems/build-sdl3.sh
-          #bin/ems/build-sdl3-mixer.sh
           rm data/gamecontrollerdb.txt
           bin/build.sh emsdl3
 
@@ -74,9 +77,6 @@ jobs:
           cp build/ems/cs3-runtime* build/cs3
           cp LICENSE build/cs3
           mv build/cs3/cs3-runtime.html build/cs3/index.html
-
-          #python3 bin/gen.py emsdl3 -s
-          #make
 
           echo "Preparing local version"
           mkdir -p ./build/local

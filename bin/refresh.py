@@ -55,13 +55,14 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
 """.strip()
     )
 
+    prefix = "../" * len(folder.split("/"))
     lines.append("")
     lines.append(
         f"""target_include_directories({master_lib} PUBLIC
     ${{CMAKE_CURRENT_SOURCE_DIR}}
-    ${{SDL3_mixer_SOURCE_DIR}}/include
-    ${{SDL3_SOURCE_DIR}}/include
-)
+    {prefix}external/SDL3/include
+    {prefix}external/SDL3_mixer/include
+    )
 """.strip()
     )
 

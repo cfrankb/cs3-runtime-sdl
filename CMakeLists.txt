@@ -23,7 +23,7 @@ add_subdirectory(src)
 # Add External
 if(EMSCRIPTEN)
     set(libxmp_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/libxmp/include")
-    set(libxmp_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/build/ems/libxmp_build/libxmp.a")
+    set(libxmp_LIBRARY "${CMAKE_CURRENT_SOURCE_DIR}/build/ems/build_libxmp/libxmp.a")
 endif()
 
 add_subdirectory(external/SDL3 SDL3)
