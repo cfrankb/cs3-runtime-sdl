@@ -67,10 +67,6 @@ jobs:
 
       - name: Build your app
         run: |
-          #python3 bin/gen.py mingw32-sdl3 -s
-          #mkdir -p build
-          #make build_libs
-          #make
           bin/build.sh mingw
 
       - name: Make Installer

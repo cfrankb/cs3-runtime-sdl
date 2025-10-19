@@ -19,6 +19,17 @@ elseif(IS_MINGW)
     set(SDL3_DIR "${CMAKE_SOURCE_DIR}/external/SDL3")
     set(SDL3_DISABLE_INSTALL ON)
     set(SDL3_mixer_DISABLE_INSTALL ON)
+
+    # build application resources (including icon)
+    set(APP_ICON_RC "${CMAKE_CURRENT_SOURCE_DIR}/src/app.rc")
+    set(APP_ICON_OBJ "${CMAKE_CURRENT_BINARY_DIR}/app_icon.o")
+    add_custom_command(OUTPUT ${APP_ICON_OBJ}
+        COMMAND ${CMAKE_RC_COMPILER} -O coff -i ${APP_ICON_RC} -o ${APP_ICON_OBJ}
+        DEPENDS ${APP_ICON_RC}
+        COMMENT "Compiling Windows icon resource"
+    )
+    add_custom_target(app_icon_res DEPENDS ${APP_ICON_OBJ})
+
 elseif(MSVC)
     message(STATUS "Using MSVC")
     add_compile_options(/W4 /permissive-)
@@ -52,6 +63,8 @@ add_subdirectory(external/SDL3_mixer SDL3_mixer)
 # Your app
 #add_executable(${PROJECT_NAME} ${SRC_EXPORTED_FILES})
 add_executable(${PROJECT_NAME} src/main.cpp)
+
+
 
 #enable_testing()
 #add_subdirectory(tests)
@@ -94,6 +107,10 @@ elseif(IS_MINGW)
     target_link_libraries(${PROJECT_NAME}
         PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer  zlib src_lib
     )
+
+    # link application resources
+    add_dependencies(${PROJECT_NAME} app_icon_res)
+    target_sources(${PROJECT_NAME} PRIVATE ${APP_ICON_OBJ})
 
 else()
     message(STATUS "Link Target Linux")

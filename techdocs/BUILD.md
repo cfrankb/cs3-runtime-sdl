@@ -28,7 +28,7 @@ Run game
 $ emrun --hostname 0.0.0.0 build/ems/cs3-runtime.html
 ```
 
-## Arch Linux / Ubuntu
+### Arch Linux / Ubuntu
 
 This version requires that libXMP and zlib be installed on your system.
 
@@ -42,6 +42,21 @@ Run game
 
 ```
 $ build/std/cs3-runtime
+```
+
+### Mingw (linux)
+
+Build the game
+
+```
+$ bin/build.sh mingw
+$ python packages/mksetup.sh
+```
+
+Run game
+
+```
+$ wine setup/cs3-runtime
 ```
 
 ## Old Build Chain (deprecated)

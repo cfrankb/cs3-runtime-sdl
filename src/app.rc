@@ -17,7 +17,7 @@
 */
 #include "winver.h" // For standard version info definitions
 
-IDI_ICON1 ICON "packages/data/win32/cs3-runtime.ico"
+IDI_ICON1 ICON "../../packages/data/win32/cs3-runtime.ico"
 
 // -------------------------------------------------------------------------
 // VERSION INFORMATION BLOCK
@@ -63,4 +63,4 @@ END
 // "app.manifest" is the path to your manifest XML file.
 // -------------------------------------------------------------------------
 
-1 RT_MANIFEST "packages/data/app.manifest"
+1 RT_MANIFEST "../../packages/data/app.manifest"
