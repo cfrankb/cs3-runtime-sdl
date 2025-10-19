@@ -67,10 +67,10 @@ jobs:
 
       - name: Build your app
         run: |
-          echo "Preparing itch.io version"
           rm data/gamecontrollerdb.txt
           bin/build.sh emsdl3
 
+          echo "Preparing itch.io version"
           mkdir -p build/cs3
           cp data/musics/*.ogg build/cs3
           cp packages/data/win32/cs3-runtime.ico build/cs3/favicon.ico

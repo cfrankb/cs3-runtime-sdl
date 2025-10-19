@@ -19,11 +19,6 @@
 #include "game.h"
 #include <vector>
 #include <queue>
-#include <cmath>
-#include <memory>
-#include <algorithm>
-#include <set>
-#include <array>
 #include "map.h"
 #include "boss.h"
 #include "attr.h"
@@ -33,6 +28,7 @@
 #include "actor.h"
 #include "randomz.h"
 #include "ai_path.h"
+#include "sounds.h"
 
 namespace Game
 {
@@ -162,7 +158,9 @@ void CGame::handleBossBullet(CBoss &boss)
     }
     if (bullet != nullptr)
     {
+        playSound(SOUND_SHOOT3);
         boss.setState(CBoss::BossState::Attack);
+        playSound(SOUND_DINOSAUR3);
     }
 }
 
@@ -193,7 +191,12 @@ void CGame::manageBosses(const int ticks)
             addHealth(-boss.damage());
         if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
             if (boss.testHitbox(CBoss::isIceCube, CBoss::meltIceCube))
-                boss.subtainDamage(ICE_CUBE_DAMAGE);
+            {
+                playSound(SOUND_SPLASH01);
+                const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
+                if (justDied)
+                    addPoints(boss.data()->score);
+            }
 
         if (boss.speed() != 0 && (ticks % boss.speed() != 0))
             continue;
@@ -306,7 +309,7 @@ void CGame::manageMonsters(const int ticks)
         }
         else
         {
-            LOGW("unhandled monster type: %.2x at index %d", actor.type(), i);
+            LOGW("unhandled monster type: %.2x at index %lu", actor.type(), i);
         }
     }
 
@@ -470,6 +473,7 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
     }
     else
     {
+        playSound(SOUND_HIT2);
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
@@ -482,6 +486,7 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
         const TileDef &defX = getTileDef(tileID);
         if (defX.type == TYPE_ICECUBE)
         {
+            playSound(SOUND_SPLASH01);
             const Pos &pos = translate(actor.pos(), aim);
             int i = findMonsterAt(pos.x, pos.y);
             if (i != INVALID)
@@ -507,6 +512,7 @@ void CGame::handleLightningBolt(CActor &actor, const TileDef &def, const int i, 
     }
     else
     {
+        playSound(SOUND_HIT2);
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
@@ -516,5 +522,24 @@ void CGame::handleLightningBolt(CActor &actor, const TileDef &def, const int i, 
         if (pos == actor.pos())
             // coordonate outside map bounds
             return;
+
+        const uint8_t tileID = actor.tileAt(aim);
+        const TileDef &defX = getTileDef(tileID);
+        if (defX.type == TYPE_ICECUBE)
+        {
+            playSound(SOUND_SPLASH01);
+            const Pos &pos = translate(actor.pos(), aim);
+            int i = findMonsterAt(pos.x, pos.y);
+            if (i != INVALID)
+            {
+                deletedMonsters.insert(i);
+                m_sfx.emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION7, .timeout = SFX_EXPLOSION7_TIMEOUT});
+                m_map.set(pos.x, pos.y, TILES_BLANK);
+            }
+        }
+        else if (actor.isPlayerThere(aim) && !isGodMode())
+        {
+            addHealth(def.health);
+        }
     }
 }

@@ -158,6 +158,9 @@ uint16_t parseStringToUShort(const std::string &s, bool &isValid)
  */
 std::string trimString(const std::string &s)
 {
+    if (s.empty())
+        return "";
+
     size_t i;
     size_t j;
     for (i = 0; i < s.size(); ++i)

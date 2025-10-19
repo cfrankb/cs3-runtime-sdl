@@ -66,7 +66,7 @@ public:
     void setHP(const int hp) { m_hp = hp; }
     int hp() const { return m_hp; }
     int maxHp() const;
-    void subtainDamage(const int lostHP);
+    bool subtainDamage(const int lostHP);
     bool isHidden() const { return m_state == Hidden; }
     bool isDone() const { return m_state == Hidden; }
     bool isGoal() const { return m_bossData->is_goal; }

@@ -239,11 +239,12 @@ void CGame::consume()
     }
     else if (def.type == TYPE_CHUTE)
     {
-        // CMap::toKey(m_player.pos());
         m_gameStats->set(S_CHUTE, 1);
         checkClosure();
-        // nextLevel();
-        // loadLevel(MODE_CHUTE);
+    }
+    else if (def.type == TYPE_FIRE)
+    {
+        addHealth(def.health);
     }
 
     if (isFruit(pu))

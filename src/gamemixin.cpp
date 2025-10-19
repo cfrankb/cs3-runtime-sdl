@@ -19,7 +19,6 @@
 #include <memory>
 #include "gamemixin.h"
 #include "tilesdata.h"
-#include "animzdata.h"
 #include "shared/FrameSet.h"
 #include "shared/Frame.h"
 #include "shared/FileWrap.h"
@@ -574,7 +573,7 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
         const uint8_t userID = game.getUserID();
         const uint32_t userBaseFrame = PLAYER_TOTAL_FRAMES * userID;
         const int aim = game.playerConst().getAim();
-        CFrameSet &annie = *m_users;
+        const CFrameSet &annie = *m_users;
         if (!game.health())
         {
             tile = annie[INDEX_PLAYER_DEAD * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
@@ -623,15 +622,15 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
     }
     else
     {
-        uint16_t j = m_animator->at(tileID);
+        const uint16_t j = m_animator->at(tileID);
         if (j == NO_ANIMZ)
         {
-            CFrameSet &tiles = *m_tiles;
+            const CFrameSet &tiles = *m_tiles;
             tile = tiles[tileID];
         }
         else
         {
-            CFrameSet &animz = *m_animz;
+            const CFrameSet &animz = *m_animz;
             tile = animz[j];
         }
     }
@@ -786,7 +785,6 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
     CGame &game = *m_game;
 
     const int maxRows = HEIGHT / TILE_SIZE;
-    // const int maxRows = (HEIGHT - TILE_SIZE) / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());

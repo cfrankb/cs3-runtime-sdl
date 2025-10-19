@@ -87,7 +87,6 @@ def process_list(sync_list, action, verbose):
                 diff = str(diff) if diff < 0 else "+" + str(diff)
                 print(f"[X] {f} {diff}")
             else:
-                # pass
                 if verbose:
                     print(f"[ ] {f}")
                 continue

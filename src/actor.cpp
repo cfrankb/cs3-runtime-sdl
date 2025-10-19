@@ -110,7 +110,8 @@ bool CActor::canMove(const JoyAim aim) const
             def.type == TYPE_DIAMOND ||
             def.type == TYPE_STOP ||
             def.type == TYPE_CHUTE ||
-            def.type == TYPE_KEY)
+            def.type == TYPE_KEY ||
+            def.type == TYPE_FIRE)
         {
             return true;
         }

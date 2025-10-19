@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 set(PROJECT_NAME "cs3-runtime")
 project(${PROJECT_NAME} LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
@@ -30,7 +30,12 @@ add_subdirectory(external/SDL3 SDL3)
 add_subdirectory(external/SDL3_mixer SDL3_mixer)
 
 # Your app
-add_executable(${PROJECT_NAME} ${SRC_EXPORTED_FILES})
+#add_executable(${PROJECT_NAME} ${SRC_EXPORTED_FILES})
+add_executable(${PROJECT_NAME} src/main.cpp)
+
+enable_testing()
+add_subdirectory(tests)
+
 
 if(EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PRIVATE

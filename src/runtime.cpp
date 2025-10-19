@@ -2522,8 +2522,8 @@ Rect CRuntime::windowRect2textureRect(const Rect &wRect)
 {
     Rez rez = getWindowSize();
     float w = (float)_WIDTH * 2;
-    float h = (float)_HEIGHT * 2;
-    auto _c = [rez, w, h](auto u)
+    // float h = (float)_HEIGHT * 2;
+    auto _c = [rez, w](auto u)
     {
         return static_cast<int>(w * (float)u / rez.w);
     };

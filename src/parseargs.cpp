@@ -39,6 +39,7 @@ void showHelp()
          "--short                   optimize for youtube shorts\n"
          "-f                        start in fullscreen\n"
          "-v                        verbose\n"
+         "-s                        strip private maps\n"
          "-h --help                 show this screen\n"
          "-q                        mute music by default\n");
 }
@@ -53,6 +54,7 @@ void initArgs(params_t &params)
     params.verbose = false;
     params.width = CRuntime::DEFAULT_WIDTH;
     params.height = CRuntime::DEFAULT_HEIGHT;
+    params.strip_private = false;
 }
 
 bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &appExit)
@@ -184,6 +186,9 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     showHelp();
                     appExit = true;
                     return true;
+                case 's':
+                    params.strip_private = true;
+                    break;
                 default:
                     LOGE("invalid switch: %c\n", list[i].c_str()[j]);
                     result = false;

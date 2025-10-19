@@ -344,13 +344,23 @@ int CBoss::maxHp() const
     return m_bossData->hp;
 }
 
-void CBoss::subtainDamage(const int lostHP)
+bool CBoss::subtainDamage(const int lostHP)
 {
+    bool justDied = false;
     m_hp = std::max(m_hp - lostHP, 0);
     if (m_hp == 0)
-        setState(Death);
+    {
+        if (m_state != Death)
+        {
+            justDied = true;
+            setState(Death);
+        }
+    }
     else
+    {
         setState(Hurt);
+    }
+    return justDied;
 }
 
 int CBoss::damage() const

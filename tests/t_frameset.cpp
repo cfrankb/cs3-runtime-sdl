@@ -159,7 +159,10 @@ bool test_frameset_seq(const char *source, const char *name)
     snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5.png");
 
     if (!performDoubleBlind(fs, OBL5_UNPACKED, out_path, out_path2))
+    {
+        LOGE("doubleblind `%s` `%s` failed", out_path, out_path2);
         return false;
+    }
     listOutFiles.emplace_back(out_path);
     listOutFiles.emplace_back(out_path2);
     refFiles.emplace_back(out_path2);
@@ -167,16 +170,25 @@ bool test_frameset_seq(const char *source, const char *name)
     snprintf(out_path, sizeof(out_path), OUT_PATH, name, "-obl5s.obl");
     snprintf(out_path2, sizeof(out_path2), OUT_PATH, name, "-obl5s.png");
     if (!performDoubleBlind(fs, OBL5_SOLID, out_path, out_path2))
+    {
+        LOGE("doubleblind `%s` `%s` failed", out_path, out_path2);
         return false;
+    }
     listOutFiles.emplace_back(out_path);
     listOutFiles.emplace_back(out_path2);
     refFiles.emplace_back(out_path2);
 
     if (!compareFiles(refFiles[0].c_str(), refFiles[1].c_str()))
+    {
+        LOGE("compareFiles `%s` `%s` failed", refFiles[0].c_str(), refFiles[1].c_str());
         return false;
+    }
 
     if (!compareFiles(refFiles[0].c_str(), refFiles[2].c_str()))
+    {
+        LOGE("compareFiles `%s` `%s` failed", refFiles[0].c_str(), refFiles[1].c_str());
         return false;
+    }
 
     // clean up
     for (const auto &path : listOutFiles)
@@ -190,7 +202,6 @@ bool test_frameset_serializer()
     return test_frameset_seq(IN_HEADY_MCX, "mcx") &&
            test_frameset_seq(IN_HEADY_OBL4, "obl4") &&
            test_frameset_seq(IN_HEADY_OBL5, "obl5");
-    return true;
 }
 
 bool test_frameset()

@@ -33,6 +33,8 @@
 #include "assetman.h"
 #include "logger.h"
 #include "build.h"
+#include "statedata.h"
+#include "states.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -78,13 +80,33 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 }
 #endif
 
+void stripMaps(CMapArch &arch)
+{
+    int mapRemoved = 0;
+    for (int i = static_cast<int>(arch.size()) - 1; i >= 0; --i)
+    {
+        CMap *map = arch.at(i);
+        CStates &states = map->states();
+        if (states.getU(PRIVATE) != 0)
+        {
+            ++mapRemoved;
+            LOGI("stripping out: level %d - %s\n", i + 1, map->title());
+            arch.removeAt(i);
+        }
+    }
+    if (mapRemoved)
+    {
+        LOGI("removed %d map%s\n", mapRemoved, mapRemoved > 1 ? "s" : "");
+        LOGI("%lu maps remaining.", arch.size());
+    }
+}
+
 void loop_handler(void *)
 {
     uint32_t currTick = SDL_GetTicks();
     uint32_t meantime = currTick - g_lastTick;
     if (meantime >= g_sleepDelay)
     {
-        // CRuntime *runtime = reinterpret_cast<CRuntime *>(arg);
         g_runtime->doInput();
         g_runtime->run();
         uint32_t btime = SDL_GetTicks();
@@ -122,7 +144,7 @@ const std::string getPrefix()
 #elif defined(__ANDROID__)
     return "";
 #elif defined(__EMSCRIPTEN__)
-    return "data/";
+    return DEFAULT_PREFIX;
 #else
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
@@ -177,6 +199,8 @@ int main(int argc, char *args[])
 #else
 int main(int argc, char *args[])
 {
+    (void)argc;
+    (void)args;
     std::vector<std::string> list;
 #endif
 
@@ -219,6 +243,9 @@ int main(int argc, char *args[])
         LOGE("mapArch error: %s\n", maparch.lastError());
         return EXIT_FAILURE;
     }
+    if (params.strip_private)
+        stripMaps(maparch);
+
     std::string configFile = AssetMan::addTrailSlash(params.prefix) + CONF_FILE;
     std::unique_ptr<CRuntime> runtime = std::make_unique<CRuntime>();
     g_runtime = runtime.get();

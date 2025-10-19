@@ -28,6 +28,7 @@ typedef struct
     bool fullscreen;
     bool hardcore;
     bool verbose;
+    bool strip_private;
     uint8_t skill;
     std::string mapArch;
     std::string workspace;

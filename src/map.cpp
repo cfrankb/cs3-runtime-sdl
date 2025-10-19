@@ -26,7 +26,6 @@
 
 static const char SIG[]{'M', 'A', 'P', 'Z'};
 static const char XTR_SIG[]{"XTR"};
-static const char XTR_VER = 0;
 static const uint16_t VERSION = 0;
 static const uint16_t MAX_SIZE = 256;
 static const uint16_t MAX_TITLE = 255;

@@ -161,7 +161,6 @@ private:
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
     Summary m_summary;
-    int m_mainMenuBar = 0;
     int m_lastMenuBaseY = 0;
     int m_lastMenuBaseX = 0;
     CMenu *m_lastMenu = nullptr;

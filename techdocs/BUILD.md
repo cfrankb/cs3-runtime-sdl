@@ -5,9 +5,17 @@ the snippets accordingly.
 
 ## New build chain
 
+You should first refresh the `CMakeLists.txt` for the game modules and download the git submodules.
+
+```
+$ git submodule update --init --recursive
+$ python bin/refresh.py
+```
+
 ### Wasm/Web version
 
-First install [emscripten](https://emscripten.org/index.html)
+First install [emscripten](https://emscripten.org/index.html) before running the
+patcher and build script.
 
 ```
 $ python bin/ems/patch.py
