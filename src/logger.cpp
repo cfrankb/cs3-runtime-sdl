@@ -24,7 +24,7 @@
 #include <SDL3/SDL.h>
 #endif
 
-Logger::Level Logger::m_minLevel = Logger::INFO;
+Logger::Level Logger::m_minLevel = Logger::L_INFO;
 FILE *Logger::m_output = nullptr;
 std::mutex Logger::m_mutex;
 
@@ -53,18 +53,18 @@ void Logger::log(Level level, const char *tag, const char *format, ...)
                                                                     : ANDROID_LOG_FATAL;
     __android_log_vprint(priority, tag, format, args);
 #else
-    FILE *out = m_output ? m_output : (level == ERROR || level == FATAL) ? stderr
-                                                                         : stdout;
-    fprintf(out, "[%s/%s] ", tag, level == INFO ? "INFO" : level == WARN ? "WARN"
-                                                       : level == ERROR  ? "ERROR"
-                                                                         : "FATAL");
+    FILE *out = m_output ? m_output : (level == L_ERROR || level == L_FATAL) ? stderr
+                                                                             : stdout;
+    fprintf(out, "[%s/%s] ", tag, level == L_INFO ? "INFO" : level == L_WARN ? "WARN"
+                                                         : level == L_ERROR  ? "ERROR"
+                                                                             : "FATAL");
     vfprintf(out, format, args);
 
     std::string s = std::string(format);
     auto p = s.rfind('\n');
     if (p == std::string::npos || p != s.size() - 1)
         fprintf(out, "\n");
-    if (level == FATAL)
+    if (level == L_FATAL)
         exit(1);
 #endif
     va_end(args);

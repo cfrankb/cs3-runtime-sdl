@@ -5,6 +5,7 @@ show_help () {
     printf '\navailable targets:\n\n'
     echo "sdl3      "
     echo "emsdl3    "
+    echo "mingw     "
 }
 
 APP_NAME=cs3-runtime
@@ -22,14 +23,20 @@ elif [[ "$1" == "emsdl3" ]] ; then
     # preload only xm files/ download ogg files from web
     mkdir -p ${BPATH}/ems_data && cp -r data/* ${BPATH}/ems_data && mv ${BPATH}/ems_data/musics/*.ogg ${BPATH}
     ls ${BPATH}/ems_data -l
-    emcmake cmake -S external/libxmp -B ${BPATH}/build_libxmp -DBUILD_SHARED_LIBS=OFF
-    cmake --build ${BPATH}/build_libxmp
     emcmake cmake -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
-    cmake --build ${BPATH} && echo "To run: emrun --hostname 0.0.0.0 ${TARGET}"
+    cmake --build ${BPATH}  -- VERBOSE=1   && echo "To run: emrun --hostname 0.0.0.0 ${TARGET}"
+elif [[ "$1" == "mingw" ]] ; then
+    BPATH=build/mingw
+    cmake -DCMAKE_TOOLCHAIN_FILE=packages/cmake/mingw.toolchain.cmake -DIS_MINGW=ON -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
+    cmake --build ${BPATH} -- VERBOSE=1
 elif [[ "$1" == "run_ems" ]] ; then
     emrun --hostname 0.0.0.0 build/ems/cs3-runtime.html
 elif [[ "$1" == "clean" ]] ; then
     rm -rf build
+elif [[ "$1" == "tests" ]] ; then
+    # rm -rf build
+    cmake -S . -B build
+    cmake --build build --target cs3-tests
 elif [ -z "$1" ]; then
     echo "nothing to do"
     show_help

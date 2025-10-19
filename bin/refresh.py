@@ -65,9 +65,18 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
     ${{CMAKE_CURRENT_SOURCE_DIR}}
     {prefix}external/SDL3/include
     {prefix}external/SDL3_mixer/include
+    {prefix}external/zlib
     )
 """.strip()
     )
+
+    lines.append("")
+    lines.append("if(IS_MINGW)")
+    lines.append(
+        f"target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlib)"
+    )
+    lines.append("endif()")
+    lines.append("")
 
     with open(file_path, "w") as tfile:
         tfile.write("\n".join(lines) + "\n")
@@ -106,6 +115,9 @@ target_include_directories(cs3-tests PRIVATE
     )
     lines.append("")
     lines.append("add_test(NAME cs3-runtime-tests COMMAND cs3-tests)")
+
+    lines.append("")
+    lines.append('message(STATUS "Building cs3-tests with ${TEST_SOURCES}")')
 
     with open(file_path, "w") as tfile:
         tfile.write("\n".join(lines) + "\n")
