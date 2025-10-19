@@ -26,6 +26,13 @@ jobs:
           bin/setbuild.sh
           cat src/build.h
 
+      - name: Refresh CMakeLists.txt
+        run: |
+          python3 bin/refresh.py
+          cat src/CMakeLists.txt
+          cat src/shared/CMakeLists.txt
+          cat src/shared/implementers/CMakeLists.txt
+
       - name: Install build dependencies
         run: |
           sudo apt update
