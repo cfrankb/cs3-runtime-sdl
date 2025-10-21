@@ -11,6 +11,9 @@
 #include "../../../src/shared/FrameSet.h"
 #include "../../../src/shared/Frame.h"
 #include "../../../src/logger.h"
+#include <openssl/sha.h>
+#include <iostream>
+#include <iomanip> // For std::hex and std::setfill
 
 namespace SpriteSheet
 {
@@ -83,9 +86,33 @@ bool extractFrameSet(CFrameSet &set, const std::string_view &filepath)
     return true;
 }
 
-bool getTestData(CFrameSet &set, const std::string_view &filepath)
+std::string generateSHA1(CFrame *frame)
 {
-    std::vector<std::string> list;
+    // std::string input = "example string";
+    unsigned char hash[SHA_DIGEST_LENGTH];
+    const auto &rgb = frame->getRGB();
+    // LOGI("w: %d h: %d size: %lu", frame->width(), frame->height(), rgb.size());
+    SHA1(reinterpret_cast<const unsigned char *>(rgb.data()), rgb.size() * sizeof(uint32_t), hash);
+
+    // std::cout << "SHA-1 hash: ";
+    //  for (int i = 0; i < SHA_DIGEST_LENGTH; ++i)
+    //  {
+    //     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+    //  }
+    char sha1Str[SHA_DIGEST_LENGTH * 2 + 1];
+    for (int i = 0; i < SHA_DIGEST_LENGTH; ++i)
+    {
+        sprintf(sha1Str + i * 2, "%.2x", hash[i]);
+    }
+    // delete[] sha1Str;
+    // LOGI("sha-1: %s [0x%p]", sha1Str, frame);
+
+    return sha1Str;
+    // std::cout << std::endl;
+}
+
+bool parseList(const std::string_view &filepath, std::vector<std::string> &list)
+{
     CFileWrap file;
     if (file.open(filepath))
     {
@@ -96,54 +123,133 @@ bool getTestData(CFrameSet &set, const std::string_view &filepath)
 
         std::string data;
         data.assign(reinterpret_cast<char *>(buf.data()), buf.size());
-        // splitString2(data, list);
 
         int line = 0;
         size_t pos = 0;
-        LOGI("len: %u", data.length());
         while (pos < data.length())
         {
-            LOGI("line: %d pos: %u", line, pos);
             ++line;
             std::string current = processLine(data, pos);
             if (current.empty())
                 continue;
             list.push_back(current);
-            // std::vector<std::string> list;
-            // splitString2(current, list);
-            // if (list.size() < 4)
-            //     continue;
-            //  uint8_t ch = std::stoi(list[3], 0, 16);
-            //  chMap[ch] = i;
-            //++i;
         }
+        return true;
     }
     else
     {
         LOGE("can't open: %s", filepath.data());
         return false;
     }
+}
 
-    size_t last = 0;
-    for (const auto &item : list)
+std::string parseItem(const std::string &item, int &splitH, int &splitV)
+{
+    std::string filename;
+    const auto posH = item.find_last_of(":");
+    if (posH != std::string::npos)
     {
-        if (item == "list.txt")
-            continue;
-        // LOGI("item:%s", item.c_str());
-        std::string filepath = "data/" + item;
-        if (extractFrameSet(set, filepath))
+        //   LOGI("%s %lu", item.c_str(), posH);
+        filename = item.substr(0, posH);
+        const std::string remnant = item.substr(posH + 1);
+        //  LOGI("remnentn: %s", remnant.c_str());
+        splitH = std::stoi(remnant);
+        const auto posV = remnant.find_last_of(",");
+        if (posV != std::string::npos)
         {
-            if (set.getSize() - last == 0)
-            {
-                LOGW("empty set???");
-            }
-            if (set.getSize() < last)
-            {
-                LOGW("bad set???");
-            }
-            last = set.getSize();
+            splitV = std::stoi(remnant.substr(posV + 1));
         }
     }
+    else
+    {
+        filename = item;
+    }
+    return filename;
+}
+
+bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordered_map<std::string, int> &lookupTable, std::vector<int> &index)
+{
+    int totalImages = 0;
+    int totalDupes = 0;
+
+    auto addImage = [&lookupTable, &index, &set, &totalImages, &totalDupes](CFrame *frame)
+    {
+        ++totalImages;
+        size_t imageID;
+        std::string sha1 = generateSHA1(frame);
+        if (lookupTable.count(sha1) == 0)
+        {
+            lookupTable[sha1] = set.getSize();
+            index.push_back(set.getSize());
+            imageID = set.getSize();
+            set.add(frame);
+        }
+        else
+        {
+            ++totalDupes;
+            // LOGI("duplicated frame");
+            imageID = lookupTable[sha1];
+            index.push_back(lookupTable[sha1]);
+        }
+        return imageID;
+    };
+
+    std::vector<std::string> list;
+    if (!parseList(filepath, list))
+        return false;
+
+    LOGI("items: %lu", list.size());
+
+    for (const auto &item : list)
+    {
+        if (item.ends_with(".txt"))
+            continue;
+
+        int splitH = 0;
+        int splitV = 0;
+        std::string filename = parseItem(item, splitH, splitV);
+        std::string filepath = "data/" + filename;
+        LOGI("%s px:%d py:%d", filepath.c_str(), splitH, splitV);
+
+        CFrameSet tmp;
+        if (extractFrameSet(tmp, filepath))
+        {
+            for (auto &frame : tmp.frames())
+            {
+                if (splitH == 0)
+                {
+                    size_t imageID = addImage(frame);
+                    LOGI("   imageID: %lu", imageID);
+                }
+                else
+                {
+                    CFrameSet *splitSet = frame->split(splitH, splitV);
+                    if (splitSet == nullptr)
+                    {
+                        LOGE("splitSet failed: %s", splitSet->getLastError());
+                        continue;
+                    }
+                    LOGI("==> split strip into %lu parts", splitSet->getSize());
+
+                    for (auto &piece : splitSet->frames())
+                    {
+                        size_t imageID = addImage(piece);
+                        LOGI("   imageID: %lu", imageID);
+                    }
+                    splitSet->removeAll();
+                    delete splitSet;
+                    delete frame; // tmp[i];
+                }
+            }
+        }
+        if (tmp.getSize() == 0)
+        {
+            LOGW("empty set???");
+        }
+        tmp.removeAll();
+    }
+
+    LOGI("Processed: %d images; dupes found: %d", totalImages, totalDupes);
     return true;
 }
 
@@ -839,7 +945,7 @@ bool toSpriteSheet(CFrameSet &set, std::vector<uint8_t> &png, const SpriteSheet:
         LOGE("size is out of bound %d -- max allowed %d", sx, 4096);
         return false;
     }
-    Size size{sx, sx};
+    Size size{(int)sx, (int)sx};
     placeSpritesOnSheet(set, sprites, flags, size, rects);
 
     // Create Png Sheet
@@ -873,6 +979,63 @@ bool toSpriteSheet(CFrameSet &set, std::vector<uint8_t> &png, const SpriteSheet:
     return true;
 }
 
+const std::string getOutPath(const std::string &in_filepath, const char *ext)
+{
+    //   LOGI("%s", in_filepath.c_str());
+    char out_filepath[256];
+    strncpy(out_filepath, "out/", sizeof(out_filepath) - 1);
+    out_filepath[sizeof(out_filepath) - 1] = '\0'; // Ensure null termination
+
+    const char *in = in_filepath.c_str();
+    const char *p = strrchr(in, '/');
+    const char *s = p ? p + 1 : in;
+
+    // Calculate remaining space and append filename
+    size_t current_len = strlen(out_filepath);
+    size_t remaining = sizeof(out_filepath) - current_len - 1;
+    strncat(out_filepath, s, remaining);
+
+    // Replace or add extension
+    char *dot = strrchr(out_filepath, '.');
+    if (dot)
+    {
+        // Ensure we don't write beyond buffer when replacing extension
+        size_t space_left = sizeof(out_filepath) - (dot - out_filepath);
+        strncpy(dot, ext, space_left - 1);
+        dot[space_left - 1] = '\0'; // Ensure null termination
+    }
+    else
+    {
+        current_len = strlen(out_filepath);
+        remaining = sizeof(out_filepath) - current_len - 1;
+        strncat(out_filepath, ext, remaining);
+    }
+
+    return std::string(out_filepath);
+}
+
+bool saveIndex(std::string outpath, std::vector<int> index)
+{
+    FILE *file = fopen(outpath.c_str(), "wb");
+    if (!file)
+    {
+        LOGE("can't create %s", outpath.c_str());
+        return false;
+    }
+    char tmp[16];
+    for (auto const &i : index)
+    {
+        snprintf(tmp, sizeof(tmp), "%d\n", i);
+        if (fwrite(tmp, strlen(tmp), 1, file) != 1)
+        {
+            LOGE("can't wrote to %s", outpath.c_str());
+            return false;
+        }
+    }
+    fclose(file);
+    return true;
+}
+
 int main(int argc, char *argv[], char *envp[])
 {
     (void)envp;
@@ -881,24 +1044,19 @@ int main(int argc, char *argv[], char *envp[])
 
     srand(time(nullptr));
 
+    std::unordered_map<std::string, int> lookupTable;
+    std::vector<int> index;
     int imagesLimit = argc > 2 ? std::stoi(argv[2]) : 0;
-    std::string_view in_filepath = argc > 1 ? argv[1] : "list.txt";
+    std::string in_filepath = argc > 1 ? argv[1] : "list.txt";
+
+    LOGI("generating sheet for: %s", in_filepath.c_str());
 
     // find the out_filepath
-    char out_filepath[128];
-    strncpy(out_filepath, "out/", sizeof(out_filepath) - 1);
-    const char *in = in_filepath.data();
-    const char *p = strrchr(in, '/');
-    const char *s = p ? p + 1 : in;
-    strncat(out_filepath, s, sizeof(out_filepath) - 1);
-    char *dot = strrchr(out_filepath, '.');
-    if (dot)
-        strncpy(dot, ".png", sizeof(out_filepath) - 1);
-    else
-        strncat(out_filepath, ".png", sizeof(out_filepath) - 1);
+    const std::string out_filepath_png = getOutPath(in_filepath, ".png");
+    const std::string out_filepath_idx = getOutPath(in_filepath, ".idx");
 
     CFrameSet set;
-    if (!getTestData(set, in_filepath))
+    if (!getConfData(set, in_filepath, lookupTable, index))
     {
         LOGE("error occured");
         return EXIT_FAILURE;
@@ -918,16 +1076,21 @@ int main(int argc, char *argv[], char *envp[])
 
     // output to file
     // const char *out_filepath = "out/sheet.png";
-    if (!outputToFile(png, out_filepath))
+    if (!outputToFile(png, out_filepath_png))
     {
-        LOGE("failed to output png: %s", out_filepath);
+        LOGE("failed to output png: %s", out_filepath_png.c_str());
         return EXIT_FAILURE;
     }
 
-    CFrameSet set2;
-    if (!extractFrameSet(set2, out_filepath))
+    if (!saveIndex(out_filepath_idx, index))
     {
-        LOGE("failed to extract: %s", out_filepath);
+        LOGE("failed to write: %s", out_filepath_idx.c_str());
+    }
+
+    CFrameSet set2;
+    if (!extractFrameSet(set2, out_filepath_png))
+    {
+        LOGE("failed to extract: %s", out_filepath_png.c_str());
         return EXIT_FAILURE;
     }
 

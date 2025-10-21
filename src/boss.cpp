@@ -548,5 +548,8 @@ void CBoss::setSolidOperator()
     else if (m_bossData->type == BOSS_GHOST)
         m_isSolidOperator = isGhostBlocked;
     else
-        m_isSolidOperator = nullptr;
+    {
+        LOGW("No custom solidOperator for this boss");
+        m_isSolidOperator = isSolid;
+    }
 }

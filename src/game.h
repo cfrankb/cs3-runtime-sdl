@@ -161,6 +161,10 @@ public:
     static Random &getRandom();
     static bool validateSignature(const char *signature, const uint32_t version);
     bool isMonsterType(const uint8_t typeID) const;
+    static bool isFruit(const uint8_t tileID);
+    static bool isBonusItem(const uint8_t tileID);
+    static bool isBulletType(const uint8_t typeID);
+    static bool isMoveableType(const uint8_t typeID);
 
     enum
     {
@@ -204,8 +208,6 @@ private:
     void addLife();
     int calcScoreLife() const;
     const char *getHintText();
-    static bool isFruit(const uint8_t tileID);
-    static bool isBonusItem(const uint8_t tileID);
     CGameStats &stats();
     const CGameStats &statsConst() const;
 

@@ -864,6 +864,8 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
 
     (void)printRect;
 
+    constexpr int MAX_HP_GAUGE = 64;
+
     // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
     constexpr int GRID_SIZE = 8;
     auto &frames = (m_bosses.get())->frames();
@@ -921,10 +923,12 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         const int HP_BAR_SPACING = 2;
 
         // Hp Rect
+        const float hpRatio = (float)boss.data()->hp / MAX_HP_GAUGE;
+
         const Rect hRect{
             .x = bRect.x,
             .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
-            .width = boss.maxHp(),
+            .width = MAX_HP_GAUGE, // boss.maxHp(),
             .height = HP_BAR_HEIGHT,
         };
         if (betweenRect(hRect, sRect))
@@ -940,7 +944,7 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
             const Rect rectHp{
                 .x = std::max(0, x),
                 .y = std::max(0, y),
-                .width = calcSize(x, boss.hp(), sRect.width),
+                .width = calcSize(x, static_cast<int>(boss.hp() / hpRatio), sRect.width),
                 .height = calcSize(y, hRect.height, sRect.height),
             };
 

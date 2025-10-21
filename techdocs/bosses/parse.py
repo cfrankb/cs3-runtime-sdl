@@ -26,6 +26,7 @@ struct = """
 namespace BossData
 {
     enum Path:uint8_t {
+        NONE,
         ASTAR,
         BFS,
         LOS,
@@ -51,7 +52,10 @@ struct bossData_t
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
-    uint8_t bullet_speed;   // boss bullet speed
+    uint8_t bullet_freq;   // boss bullet speed
+    bool bullet_seeking;
+    uint8_t bullet_sound;
+    uint8_t attack_sound;
     int chase_distance;     // distance to engage chase
     int pursuit_distance;   // continue pursuit within distance (chase)
     bool is_goal;           // is this boss a map goal?
@@ -113,7 +117,10 @@ attr_names = [
     "flags",
     "path",
     "bullet",
-    "bullet_speed",
+    "bullet_freq",
+    "bullet_seeking",
+    "bullet_sound",
+    "attack_sound",
     "chase_distance",
     "pursuit_distance",
     "is_goal",
@@ -122,12 +129,15 @@ attr_names = [
 seq_names = ["moving", "attack", "hurt", "death", "idle"]
 misc_names = ["hitbox", "sheet"]
 all_fields = ["name"] + attr_names + seq_names + misc_names
-
+in_file = "bosses.ini"
 
 EXIT_FAILURE = 1
 EXIT_SUCCESS = 0
 
-with open("bosses.ini") as sfile:
+
+print(f"parsing {in_file}")
+
+with open(in_file) as sfile:
     data = sfile.read()
 
 boss_types = []
@@ -249,6 +259,7 @@ with open("bossdata.cpp", "w") as tfile:
     tfile.write("#include <cstddef>\n")
     tfile.write('#include "color.h"\n')
     tfile.write('#include "tilesdata.h"\n')
+    tfile.write('#include "sounds.h"\n')
     tfile.write('#include "bossdata.h"\n\n')
     tfile.write("namespace BossData\n")
     tfile.write(f"{{\n{SPACE}")

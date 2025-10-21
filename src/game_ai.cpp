@@ -56,7 +56,7 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
     const uint8_t pu = m_map.at(x, y);
     CActor actor(x, y, def.type, aim);
     actor.setPU(pu);
-    if (pu == TILES_BLANK)
+    if (pu == TILES_BLANK || pu == TILES_STOP)
     {
         m_map.set(x, y, tile);
         int size = addMonster(actor);
@@ -158,9 +158,9 @@ void CGame::handleBossBullet(CBoss &boss)
     }
     if (bullet != nullptr)
     {
-        playSound(SOUND_SHOOT3);
+        playSound(boss.data()->bullet_sound);
         boss.setState(CBoss::BossState::Attack);
-        playSound(SOUND_DINOSAUR3);
+        playSound(boss.data()->attack_sound);
     }
 }
 
@@ -220,7 +220,7 @@ void CGame::manageBosses(const int ticks)
             if (boss.data()->bullet != TILES_BLANK)
             {
                 // Fireball spawning
-                if (rng.range(0, boss.data()->bullet_speed) == 0 && bx > 2 && by > 0)
+                if (rng.range(0, boss.data()->bullet_freq) == 0 && bx > 2 && by > 0)
                 {
                     handleBossBullet(boss);
                 }
@@ -516,7 +516,7 @@ void CGame::handleLightningBolt(CActor &actor, const TileDef &def, const int i, 
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
-        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
+        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION7, .timeout = SFX_EXPLOSION1_TIMEOUT});
 
         const Pos &pos = translate(actor.pos(), aim);
         if (pos == actor.pos())

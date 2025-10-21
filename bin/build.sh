@@ -19,10 +19,10 @@ elif [[ "$1" == "sdl3" ]] ; then
 elif [[ "$1" == "emsdl3" ]] ; then
     BPATH=build/ems
     TARGET=${BPATH}/${APP_NAME}.html
-    echo "BUILD PATH: ${BPATH}"
+    #echo "BUILD PATH: ${BPATH}"
     # preload only xm files/ download ogg files from web
-    mkdir -p ${BPATH}/ems_data && cp -r data/* ${BPATH}/ems_data && mv ${BPATH}/ems_data/musics/*.ogg ${BPATH}
-    ls ${BPATH}/ems_data -l
+    #mkdir -p ${BPATH}/ems_data && cp -r data/* ${BPATH}/ems_data && mv ${BPATH}/ems_data/musics/*.ogg ${BPATH}
+    #ls ${BPATH}/ems_data -l
     emcmake cmake -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
     cmake --build ${BPATH}  -- VERBOSE=1   && echo "To run: emrun --hostname 0.0.0.0 ${TARGET}"
 elif [[ "$1" == "mingw" ]] ; then
@@ -33,8 +33,14 @@ elif [[ "$1" == "run_ems" ]] ; then
     emrun --hostname 0.0.0.0 build/ems/cs3-runtime.html
 elif [[ "$1" == "clean" ]] ; then
     rm -rf build
+elif [[ "$1" == "bosses" ]] ; then
+    cd tools/sheet
+    make && build/sheet config/bosses.txt
+    cp out/bosses.png ../../data/pixels/bosses.obl
+    cd ../..
+    cd techdocs/bosses
+    python parse.py
 elif [[ "$1" == "tests" ]] ; then
-    # rm -rf build
     cmake -S . -B build
     cmake --build build --target cs3-tests
 elif [ -z "$1" ]; then

@@ -29,11 +29,13 @@
 
 #define BOSS_MR_DEMON 0xb0
 #define BOSS_GHOST 0xb1
+#define BOSS_HARPY 0xb2
 
 
 namespace BossData
 {
     enum Path:uint8_t {
+        NONE,
         ASTAR,
         BFS,
         LOS,
@@ -59,7 +61,10 @@ struct bossData_t
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
-    uint8_t bullet_speed;   // boss bullet speed
+    uint8_t bullet_freq;   // boss bullet speed
+    bool bullet_seeking;
+    uint8_t bullet_sound;
+    uint8_t attack_sound;
     int chase_distance;     // distance to engage chase
     int pursuit_distance;   // continue pursuit within distance (chase)
     bool is_goal;           // is this boss a map goal?

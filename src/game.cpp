@@ -1664,3 +1664,13 @@ Random &CGame::getRandom()
 {
     return g_randomz;
 }
+
+bool CGame::isBulletType(const uint8_t typeID)
+{
+    return typeID == TYPE_FIREBALL || typeID == TYPE_LIGHTNING_BOLT;
+}
+
+bool CGame::isMoveableType(const uint8_t typeID)
+{
+    return typeID == TYPE_BOULDER || typeID == TYPE_ICECUBE;
+}

@@ -14,6 +14,7 @@ if(EMSCRIPTEN)
     set(CMAKE_EXECUTABLE_SUFFIX ".html")  # Optional: .html shell
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=0 -O3 -sUSE_ZLIB=1 ")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
+
 elseif(IS_MINGW)
     message(STATUS "Targeting MinGW/Windows")
     set(SDL3_DIR "${CMAKE_SOURCE_DIR}/external/SDL3")
@@ -71,6 +72,21 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 
 
 if(EMSCRIPTEN)
+    set(BPATH "${CMAKE_CURRENT_BINARY_DIR}")
+    set(DATA_SRC "${CMAKE_SOURCE_DIR}/data")
+    set(DATA_DST "${BPATH}/ems_data")
+    # custom build steps
+    add_custom_target(prepare_ems_data ALL
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${DATA_DST}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${DATA_DST}
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${DATA_SRC} ${DATA_DST}
+        COMMAND ${CMAKE_COMMAND} -E echo "Moving .ogg files from ems_data/musics to ${BPATH}"
+        COMMAND ${CMAKE_COMMAND} -E copy ${DATA_DST}/musics/*.ogg ${BPATH}
+        COMMAND ${CMAKE_COMMAND} -E remove ${DATA_DST}/musics/*.ogg
+        COMMENT "Preparing ems_data and relocating .ogg files"
+    )
+    add_dependencies(${PROJECT_NAME} prepare_ems_data)
+
     message(STATUS "Link Target EMSCRIPTEN")
     target_link_options(${PROJECT_NAME} PRIVATE
         #--preload-file ../data@data

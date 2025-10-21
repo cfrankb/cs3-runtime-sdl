@@ -33,7 +33,7 @@ demon/death-5.png
 demon/death-6.png
 
 ####################################################
-# ghost (paid)
+# ghost (paid) $1.00
 # https://gabl18.itch.io/halloween-asset-pack
 
 # ghost idle
@@ -65,3 +65,12 @@ ghost/ghost-modif19.png
 ghost/ghost-modif20.png
 ghost/ghost-modif21.png
 ghost/ghost-modif22.png
+
+########################################
+# harpy (paid) $1.50
+# https://xzany.itch.io/harpy-2d-pixel-art
+
+harpy/harpy-attack.png:48     # 8 frames
+harpy/harpy-death.png:48      # 6 frames
+harpy/harpy-fly.png:48        # 4 frames
+harpy/harpy-hurt.png:48       # 3 frames

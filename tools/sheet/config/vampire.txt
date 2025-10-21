@@ -1,0 +1,1 @@
+vampire/Vampires1_Death_full.png:64,64

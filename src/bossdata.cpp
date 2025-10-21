@@ -22,6 +22,7 @@
 #include <cstddef>
 #include "color.h"
 #include "tilesdata.h"
+#include "sounds.h"
 #include "bossdata.h"
 
 namespace BossData
@@ -45,7 +46,15 @@ namespace BossData
     constexpr int GHOST_HURT_BASE = 36;
     constexpr int GHOST_HURT_LEN = 7;
     constexpr int GHOST_DEATH_BASE = 43;
-    constexpr int GHOST_DEATH_LEN = 0;
+    constexpr int GHOST_DEATH_LEN = 1;
+    constexpr int HARPY_ATTACK_BASE = 44;
+    constexpr int HARPY_ATTACK_LEN = 8;
+    constexpr int HARPY_DEATH_BASE = 52;
+    constexpr int HARPY_DEATH_LEN = 6;
+    constexpr int HARPY_IDLE_BASE = 58;
+    constexpr int HARPY_IDLE_LEN = 4;
+    constexpr int HARPY_HURT_BASE = 62;
+    constexpr int HARPY_HURT_LEN = 3;
 };
 
 using namespace BossData;
@@ -62,7 +71,10 @@ bossData_t g_bosses[] = {
         .flags = BOSS_FLAG_ICE_DAMAGE,
         .path = ASTAR,
         .bullet = TILES_FIREBALL,
-        .bullet_speed = 15,
+        .bullet_freq = 15,
+        .bullet_seeking = false,
+        .bullet_sound = SOUND_SHOOT3,
+        .attack_sound = SOUND_DINOSAUR3,
         .chase_distance = 10,
         .pursuit_distance = 15,
         .is_goal = true,
@@ -86,7 +98,10 @@ bossData_t g_bosses[] = {
         .flags = 0,
         .path = LOS,
         .bullet = TILES_BLANK,
-        .bullet_speed = 0,
+        .bullet_freq = 0,
+        .bullet_seeking = false,
+        .bullet_sound = SOUND_NONE,
+        .attack_sound = SOUND_NONE,
         .chase_distance = 10,
         .pursuit_distance = 20,
         .is_goal = false,
@@ -97,6 +112,33 @@ bossData_t g_bosses[] = {
         .death = {GHOST_DEATH_BASE, GHOST_DEATH_LEN},
         .idle = {GHOST_IDLE_BASE, GHOST_IDLE_LEN},
         .hitbox = {0, 2, 4, 3},
+        .sheet = 0,
+    },
+    {
+        .name = "Harpy",
+        .speed = 3,
+        .a_speed = 3,
+        .hp = 256,
+        .type = 0xb2,
+        .score = 2500,
+        .damage = 5,
+        .flags = 0,
+        .path = BFS,
+        .bullet = TILES_BULLETY1,
+        .bullet_freq = 3,
+        .bullet_seeking = true,
+        .bullet_sound = SOUND_NONE,
+        .attack_sound = SOUND_NONE,
+        .chase_distance = 10,
+        .pursuit_distance = 20,
+        .is_goal = true,
+        .show_details = true,
+        .moving = {HARPY_IDLE_BASE, HARPY_IDLE_LEN},
+        .attack = {HARPY_ATTACK_BASE, HARPY_ATTACK_LEN},
+        .hurt = {HARPY_HURT_BASE, HARPY_HURT_LEN},
+        .death = {HARPY_DEATH_BASE, HARPY_DEATH_LEN},
+        .idle = {HARPY_IDLE_BASE, HARPY_IDLE_LEN},
+        .hitbox = {2, 6, 2, 2},
         .sheet = 0,
     },
 };

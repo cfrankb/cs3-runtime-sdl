@@ -1,0 +1,4 @@
+harpy/harpy-attack.png:48     # 8 frames
+harpy/harpy-death.png:48      # 6 frames
+harpy/harpy-fly.png:48        # 4 frames
+harpy/harpy-hurt.png:48       # 3 frames

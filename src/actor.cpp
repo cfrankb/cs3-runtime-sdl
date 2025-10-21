@@ -125,6 +125,11 @@ bool CActor::canMove(const JoyAim aim) const
         if (def.type == TYPE_PLAYER)
             return true;
     }
+    else if (CGame::isMoveableType(m_type) || CGame::isBulletType(m_type))
+    {
+        if (def.type == TYPE_STOP)
+            return true;
+    }
     return false;
 }
 
