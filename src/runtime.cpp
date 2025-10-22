@@ -64,6 +64,7 @@ CRuntime::CRuntime() : CGameMixin()
     m_skill = 0;
     m_verbose = false;
     m_summary = Summary{0, 0, 0, 0};
+    m_hasFocus = false;
     m_virtualKeyboard = new CGameUI();
     initVirtualKeyboard();
 
@@ -418,9 +419,11 @@ void CRuntime::doInput()
             break;
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
             LOGI("SDL_EVENT_WINDOW_FOCUS_GAINED\n");
+            m_hasFocus = true;
             break;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
             LOGI("SDL_EVENT_WINDOW_FOCUS_LOST\n");
+            m_hasFocus = false;
             break;
 
         case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:

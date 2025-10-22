@@ -167,6 +167,7 @@ private:
     uint8_t m_mouseButtons[3];
     CGameUI *m_virtualKeyboard;
     std::string m_input;
+    bool m_hasFocus;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
