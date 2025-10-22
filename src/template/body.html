@@ -171,6 +171,21 @@
         const canvas = document.getElementById('canvas');
         const fsBtn = document.getElementById('fs-btn');
 
+
+        // Wait a bit for itch.io to inject their UI
+        setTimeout(() => {
+          // Check if itch.io's fullscreen button exists
+          const itchFsBtn = document.querySelector('.icon-fullscreen') ||
+            document.querySelector('[title*="fullscreen"]') ||
+            (window.self !== window.top);
+
+          if (itchFsBtn || window.self !== window.top) {
+            fsBtn.style.display = 'none';
+            console.log("itch.io detected - hiding custom fullscreen button");
+          }
+        }, 500);
+
+
         // Define your game's aspect ratio (adjust these values to match your game)
         const GAME_WIDTH = 640;
         const GAME_HEIGHT = 480;
