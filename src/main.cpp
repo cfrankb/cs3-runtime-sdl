@@ -292,7 +292,8 @@ int main(int argc, char *args[])
     g_runtime->checkMusicFiles();
 #endif
 #ifdef __EMSCRIPTEN__
-    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
+    // emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
+    emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_TRUE, on_fullscreen_change);
     emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
 #else
     while (g_runtime->isRunning())
