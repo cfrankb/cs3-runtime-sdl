@@ -865,9 +865,11 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
     (void)printRect;
 
     constexpr int MAX_HP_GAUGE = 64;
+    constexpr int GRID_SIZE = 8;
+    constexpr int HP_BAR_HEIGHT = 8;
+    constexpr int HP_BAR_SPACING = 2;
 
     // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
-    constexpr int GRID_SIZE = 8;
     auto &frames = (m_bosses.get())->frames();
     for (const auto &boss : m_game->bosses())
     {
@@ -919,12 +921,8 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         if (!boss.data()->show_details)
             continue;
 
-        const int HP_BAR_HEIGHT = 8;
-        const int HP_BAR_SPACING = 2;
-
         // Hp Rect
-        const float hpRatio = (float)boss.data()->hp / MAX_HP_GAUGE;
-
+        const float hpRatio = (float)boss.maxHp() / MAX_HP_GAUGE;
         const Rect hRect{
             .x = bRect.x,
             .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
@@ -947,17 +945,16 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
                 .width = calcSize(x, static_cast<int>(boss.hp() / hpRatio), sRect.width),
                 .height = calcSize(y, hRect.height, sRect.height),
             };
-
             // draw healthbar
-            drawRect(bitmap, rectFullHp, BLACK, true);  // black background
-            drawRect(bitmap, rectHp, ORANGE, true);     // orange hp bar
-            drawRect(bitmap, rectFullHp, WHITE, false); // white outline
+            drawRect(bitmap, rectFullHp, BLACK, true);             // black background
+            drawRect(bitmap, rectHp, boss.data()->color_hp, true); // orange hp bar
+            drawRect(bitmap, rectFullHp, WHITE, false);            // white outline
         }
 
         // draw Boss Name
         const int x = hRect.x - sRect.x;
         const int y = hRect.y - sRect.y - FONT_SIZE;
-        drawFont6x6(bitmap, x, y, boss.name(), RED, CLEAR);
+        drawFont6x6(bitmap, x, y, boss.name(), boss.data()->color_name, CLEAR);
     }
 }
 
@@ -2323,7 +2320,7 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
             health -= step;
         }
     }
-    else
+    else if (m_healthBar == HEALTHBAR_CLASSIC)
     {
         const Color hpColor = game.isGodMode() ? WHITE : isPlayerHurt ? PINK
                                                                       : LIME;

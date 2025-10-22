@@ -59,8 +59,8 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
     if (pu == TILES_BLANK || pu == TILES_STOP)
     {
         m_map.set(x, y, tile);
-        int size = addMonster(actor);
-        return &m_monsters[size - 1];
+        m_monsters.emplace_back(std::move(actor));
+        return &m_monsters[m_monsters.size() - 1];
     }
     return nullptr;
 }
@@ -69,10 +69,6 @@ void CGame::handleBossPath(CBoss &boss)
 {
     const int bx = boss.x() / 2;
     const int by = boss.y() / 2;
-    const AStar aStar;
-    const AStarSmooth aStarSmooth;
-    const BFS bFS;
-    const LineOfSight lineOfSight;
     const CActor &player = m_player;
 
     Pos playerPos{static_cast<int16_t>(m_player.x() * CBoss::BOSS_GRANULAR_FACTOR),
@@ -88,29 +84,11 @@ void CGame::handleBossPath(CBoss &boss)
     }
 
     const uint8_t algo = boss.data()->path;
-    if (algo == BossData::ASTAR)
+    if (algo != BossData::Path::NONE)
     {
-        if (boss.followPath(playerPos, aStar))
-            return;
-    }
-    else if (algo == BossData::LOS)
-    {
-        if (boss.followPath(playerPos, lineOfSight))
-            return;
-    }
-    else if (algo == BossData::BFS)
-    {
-        if (boss.followPath(playerPos, bFS))
-            return;
-    }
-    else if (algo == BossData::ASTAR_SMOOTH)
-    {
-        if (boss.followPath(playerPos, aStarSmooth))
-            return;
-    }
-    else
-    {
-        LOGE("unsupported ai algo: %u", algo);
+        auto pathAI = CPath::getPathAlgo(algo);
+        if (pathAI)
+            boss.followPath(playerPos, *pathAI);
     }
 
     // Fallback movement
@@ -132,7 +110,7 @@ void CGame::handleBossPath(CBoss &boss)
     }
 }
 
-void CGame::handleBossBullet(CBoss &boss)
+bool CGame::handleBossBullet(CBoss &boss)
 {
     const int bx = boss.x() / 2;
     const int by = boss.y() / 2;
@@ -161,7 +139,12 @@ void CGame::handleBossBullet(CBoss &boss)
         playSound(boss.data()->bullet_sound);
         boss.setState(CBoss::BossState::Attack);
         playSound(boss.data()->attack_sound);
+        if (boss.data()->bullet_algo != BossData::Path::NONE)
+            bullet->startPath(m_player.pos(), boss.data()->bullet_algo, boss.data()->bullet_timeout);
+
+        return true;
     }
+    return false;
 }
 
 void CGame::manageBosses(const int ticks)
@@ -176,9 +159,9 @@ void CGame::manageBosses(const int ticks)
             continue;
 
         // customize animation speed
-        const int a_speed = boss.data()->a_speed;
+        const int speed_anime = boss.data()->speed_anime;
         const uint32_t boss_flags = boss.data()->flags;
-        if (a_speed == 0 || (ticks % a_speed) == 0)
+        if (speed_anime == 0 || (ticks % speed_anime) == 0)
             boss.animate();
 
         // ignore dead bosses
@@ -204,23 +187,24 @@ void CGame::manageBosses(const int ticks)
         if (boss.state() == CBoss::BossState::Patrol)
         {
             boss.patrol();
-            if (boss.distance(player) <= boss.data()->chase_distance)
+            if (boss.distance(player) <= boss.data()->distance_chase)
             {
                 boss.setState(CBoss::BossState::Chase);
             }
         }
         else if (boss.state() == CBoss::BossState::Chase)
         {
-            if (boss.distance(player) > boss.data()->pursuit_distance)
+            if (boss.distance(player) > boss.data()->distance_pursuit)
             {
                 boss.setState(CBoss::BossState::Patrol);
                 continue;
             }
 
-            if (boss.data()->bullet != TILES_BLANK)
+            if (boss.distance(player) <= boss.data()->distance_attack &&
+                boss.data()->bullet != TILES_BLANK)
             {
                 // Fireball spawning
-                if (rng.range(0, boss.data()->bullet_freq) == 0 && bx > 2 && by > 0)
+                if (rng.range(0, boss.data()->bullet_rate) == 0 && bx > 2 && by > 0)
                 {
                     handleBossBullet(boss);
                 }
@@ -297,7 +281,7 @@ void CGame::manageMonsters(const int ticks)
         }
         else if (actor.type() == TYPE_FIREBALL)
         {
-            handleFirball(actor, def, i, deletedMonsters);
+            handleBullet(actor, def, i, {.sound = SOUND_HIT2, .sfxID = SFX_EXPLOSION1, .sfxTimeOut = SFX_EXPLOSION1_TIMEOUT}, deletedMonsters);
         }
         else if (actor.type() == TYPE_BOULDER)
         {
@@ -305,7 +289,7 @@ void CGame::manageMonsters(const int ticks)
         }
         else if (actor.type() == TYPE_LIGHTNING_BOLT)
         {
-            handleLightningBolt(actor, def, i, deletedMonsters);
+            handleBullet(actor, def, i, {.sound = SOUND_HIT2, .sfxID = SFX_EXPLOSION7, .sfxTimeOut = SFX_EXPLOSION7_TIMEOUT}, deletedMonsters);
         }
         else
         {
@@ -314,9 +298,9 @@ void CGame::manageMonsters(const int ticks)
     }
 
     // moved here to avoid reallocation while using a reference
-    for (auto const &monster : newMonsters)
+    for (auto &monster : newMonsters)
     {
-        addMonster(monster);
+        m_monsters.emplace_back(std::move(monster));
     }
 
     // remove deleted monsters
@@ -464,20 +448,28 @@ void CGame::handleIceCube(CActor &actor)
     }
 }
 
-void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters)
+void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters)
 {
+    bool isMoving;
     JoyAim aim = actor.getAim();
-    if (actor.canMove(aim))
+    if (actor.isFollowingPath())
     {
-        actor.move(aim);
+        isMoving = actor.followPath(m_player.pos());
     }
     else
     {
-        playSound(SOUND_HIT2);
+        isMoving = actor.canMove(aim);
+        if (isMoving)
+            actor.move(aim);
+    }
+
+    if (!isMoving)
+    {
+        playSound(bullet.sound);
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
-        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
+        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = bullet.sfxID, .timeout = bullet.sfxTimeOut});
 
         if (CGame::translate(Pos{actor.x(), actor.y()}, aim) == actor.pos())
             // coordonate outside map bounds
@@ -493,47 +485,6 @@ void CGame::handleFirball(CActor &actor, const TileDef &def, const int i, std::s
             {
                 deletedMonsters.insert(i);
                 m_sfx.emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION6, .timeout = SFX_EXPLOSION6_TIMEOUT});
-                m_map.set(pos.x, pos.y, TILES_BLANK);
-            }
-        }
-        else if (actor.isPlayerThere(aim) && !isGodMode())
-        {
-            addHealth(def.health);
-        }
-    }
-}
-
-void CGame::handleLightningBolt(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters)
-{
-    JoyAim aim = actor.getAim();
-    if (actor.canMove(aim))
-    {
-        actor.move(aim);
-    }
-    else
-    {
-        playSound(SOUND_HIT2);
-        // remove actor/ set to be deleted
-        m_map.set(actor.x(), actor.y(), actor.getPU());
-        deletedMonsters.insert(i);
-        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = SFX_EXPLOSION7, .timeout = SFX_EXPLOSION1_TIMEOUT});
-
-        const Pos &pos = translate(actor.pos(), aim);
-        if (pos == actor.pos())
-            // coordonate outside map bounds
-            return;
-
-        const uint8_t tileID = actor.tileAt(aim);
-        const TileDef &defX = getTileDef(tileID);
-        if (defX.type == TYPE_ICECUBE)
-        {
-            playSound(SOUND_SPLASH01);
-            const Pos &pos = translate(actor.pos(), aim);
-            int i = findMonsterAt(pos.x, pos.y);
-            if (i != INVALID)
-            {
-                deletedMonsters.insert(i);
-                m_sfx.emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION7, .timeout = SFX_EXPLOSION7_TIMEOUT});
                 m_map.set(pos.x, pos.y, TILES_BLANK);
             }
         }

@@ -24,6 +24,7 @@
 #include "map.h"
 
 class ISprite;
+class IFile;
 
 class IPath
 {
@@ -64,4 +65,23 @@ class LineOfSight : public IPath
 {
 public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
+class CPath
+{
+public:
+    CPath();
+    ~CPath() {};
+
+    bool followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar);
+    bool read(IFile &file);
+    bool write(IFile &file);
+    void setTimeout(int timeout);
+    static const IPath *getPathAlgo(const uint8_t algo);
+
+private:
+    // Path caching
+    std::vector<JoyAim> m_cachedDirections;
+    size_t m_pathIndex;
+    size_t m_pathTimeout;
 };

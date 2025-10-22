@@ -37,34 +37,16 @@ demon/death-6.png
 # https://gabl18.itch.io/halloween-asset-pack
 
 # ghost idle
-ghost/ghost-1.png
-ghost/ghost-2.png
-ghost/ghost-3.png
+ghost/idle.zip
 
 # ghost moving
-ghost/ghost-4.png
-ghost/ghost-5.png
-ghost/ghost-6.png
-ghost/ghost-7.png
-ghost/ghost-8.png
+ghost/moving.zip
 
 # ghost attack
-ghost/ghost-9.png
-ghost/ghost-10.png
-ghost/ghost-11.png
-ghost/ghost-12.png
-ghost/ghost-13.png
-ghost/ghost-14.png
+ghost/attack.zip
 
 # ghost flee
-ghost/ghost-modif15.png
-ghost/ghost-modif16.png
-ghost/ghost-modif17.png
-ghost/ghost-modif18.png
-ghost/ghost-modif19.png
-ghost/ghost-modif20.png
-ghost/ghost-modif21.png
-ghost/ghost-modif22.png
+ghost/hurt.zip
 
 ########################################
 # harpy (paid) $1.50

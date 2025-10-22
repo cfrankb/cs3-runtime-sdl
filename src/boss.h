@@ -23,10 +23,12 @@
 #include "joyaim.h"
 #include "isprite.h"
 #include "bossdata.h"
+#include "ai_path.h"
 
 class IPath;
 class IFile;
 class CActor;
+class CPath;
 
 typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 typedef std::function<bool(const Pos &)> canWalkCallback_t;
@@ -46,7 +48,7 @@ public:
         MAX_STATE
     };
     CBoss(const int16_t x = 0, const int16_t y = 0, const bossData_t *data = nullptr);
-    virtual ~CBoss() = default;
+    virtual ~CBoss() {};
     inline int16_t x() const override { return m_x; }
     inline int16_t y() const override { return m_y; }
     inline const Rect &hitbox() const { return m_bossData->hitbox; }
@@ -96,8 +98,7 @@ public:
         BOSS_GRANULAR_FACTOR = 2,
     };
     bool followPath(const Pos &playerPos, const IPath &astar);
-    void patrol(); // New method for random patrol behavior
-
+    void patrol();
     bool read(IFile &file);
     bool write(IFile &file);
 
@@ -109,11 +110,8 @@ private:
     int m_hp;
     BossState m_state;
     int m_speed;
+    JoyAim m_aim;
     canWalkCallback_t m_isSolidOperator;
     void setSolidOperator();
-
-    // Path caching
-    std::vector<JoyAim> m_cachedDirections;
-    size_t m_pathIndex;
-    size_t m_pathTimeout;
+    CPath m_path;
 };

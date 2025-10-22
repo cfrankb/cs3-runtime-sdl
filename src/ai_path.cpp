@@ -24,15 +24,29 @@
 #include "map.h"
 #include "logger.h"
 #include "ai_path.h"
+#include "isprite.h"
+#include "filemacros.h"
+#include "shared/IFile.h"
 
-constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+namespace PathData
+{
+    const AStar aStar;
+    const AStarSmooth aStarSmooth;
+    const BFS bFS;
+    const LineOfSight lineOfSight;
 
-constexpr std::array<Pos, JoyAim::TOTAL_AIMS> g_deltas = {
-    Pos{-1, 0}, // Up
-    Pos{1, 0},  // Down
-    Pos{0, -1}, // Left
-    Pos{0, 1},  // Right
-};
+    constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
+    constexpr size_t MAX_PATH_SIZE = 4096;
+    constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    constexpr std::array<Pos, JoyAim::TOTAL_AIMS> g_deltas = {
+        Pos{-1, 0}, // Up
+        Pos{1, 0},  // Down
+        Pos{0, -1}, // Left
+        Pos{0, 1},  // Right
+    };
+}
+
+using namespace PathData;
 
 namespace std
 {
@@ -484,4 +498,159 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
         }
     }
     return {};
+}
+
+////////////////////////////////////////////////
+bool CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar)
+{
+    // Check if path is invalid or timed out
+    if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
+    {
+        // CBoss tmp{*this};
+        m_cachedDirections = astar.findPath(sprite, playerPos);
+        m_pathIndex = 0;
+        m_pathTimeout = PATH_TIMEOUT_MAX;
+        if (m_cachedDirections.empty())
+        {
+            return false; // No valid path
+        }
+    }
+
+    // Try the next direction
+    JoyAim aim = m_cachedDirections[m_pathIndex];
+    if (sprite.canMove(aim))
+    {
+        sprite.move(aim);
+        ++m_pathIndex;
+        --m_pathTimeout;
+        return true;
+    }
+
+    // Move failed, invalidate cache and recompute next turn
+    m_cachedDirections.clear();
+    m_pathIndex = 0;
+    m_pathTimeout = 0;
+    return false;
+}
+
+bool CPath::read(IFile &sfile)
+{
+    auto readfile = [&sfile](auto ptr, auto size) -> bool
+    {
+        return sfile.read(ptr, size) == IFILE_OK;
+    };
+
+    auto checkBound = [](auto a, auto b)
+    {
+        using T = decltype(a);
+
+        if constexpr (std::is_same_v<T, size_t>)
+        {
+            if (a > b)
+            {
+                LOGE("%s: %lu outside expected -- expected < %lu", _S(a), a, b);
+                return false;
+            }
+        }
+        else if constexpr (std::is_same_v<T, uint8_t>)
+        {
+            if (a > b)
+            {
+                LOGE("%s: %u outside expected -- expected < %u", _S(a), a, b);
+                return false;
+            }
+        }
+        else if constexpr (std::is_integral_v<T>)
+        {
+            if (a > b || a < 0)
+            {
+                LOGE("%s: %d outside expected -- expected > 0 && < %d", _S(a), a, b);
+                return false;
+            }
+        }
+        else
+        {
+            static_assert(std::is_integral_v<T>, "checkBound only supports integral types");
+        }
+
+        return true;
+    };
+
+    constexpr size_t DATA_SIZE = 2;
+    //////////////////////////////////////
+    // Read Path (saved)
+    m_cachedDirections.clear();
+    size_t pathSize = 0;
+    _R(&pathSize, DATA_SIZE);
+    checkBound(pathSize, MAX_PATH_SIZE);
+    for (size_t i = 0; i < pathSize; ++i)
+    {
+        JoyAim dir;
+        _R(&dir, sizeof(dir));
+        m_cachedDirections.emplace_back(dir);
+    }
+    m_pathIndex = 0;
+    _R(&m_pathIndex, DATA_SIZE);
+    checkBound(m_pathIndex, MAX_PATH_SIZE);
+    m_pathTimeout = 0;
+    _R(&m_pathTimeout, DATA_SIZE);
+    checkBound(m_pathTimeout, MAX_PATH_SIZE);
+
+    return true;
+}
+
+bool CPath::write(IFile &tfile)
+{
+    auto writefile = [&tfile](auto ptr, auto size)
+    {
+        return tfile.write(ptr, size) == IFILE_OK;
+    };
+
+    constexpr size_t DATA_SIZE = 2;
+    auto pathSize = m_cachedDirections.size();
+    _W(&pathSize, DATA_SIZE);
+    for (const auto &dir : m_cachedDirections)
+    {
+        _W(&dir, sizeof(dir));
+    }
+    _W(&m_pathIndex, DATA_SIZE);
+    _W(&m_pathTimeout, DATA_SIZE);
+
+    return true;
+}
+
+CPath::CPath()
+{
+    m_pathIndex = 0;
+    m_pathTimeout = 0;
+}
+
+const IPath *CPath::getPathAlgo(const uint8_t algo)
+{
+    if (algo == BossData::ASTAR)
+    {
+        return &PathData::aStar;
+    }
+    else if (algo == BossData::LOS)
+    {
+        return &PathData::lineOfSight;
+    }
+    else if (algo == BossData::BFS)
+    {
+        return &PathData::bFS;
+    }
+    else if (algo == BossData::ASTAR_SMOOTH)
+    {
+        return &PathData::aStarSmooth;
+    }
+    else
+    {
+        LOGE("unsupported ai algo: %u", algo);
+        return nullptr;
+    }
+}
+
+void CPath::setTimeout(int timeout)
+{
+    m_pathTimeout = timeout;
 }

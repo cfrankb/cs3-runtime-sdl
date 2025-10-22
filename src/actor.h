@@ -20,14 +20,26 @@
 #include "map.h"
 #include "joyaim.h"
 #include "isprite.h"
+#include "ai_path.h"
+#include "color.h"
 
 class IFile;
+class IPath;
+class CPath;
+
 class CActor : public ISprite
 {
 
 public:
     CActor(const uint8_t x = 0, const uint8_t y = 0, const uint8_t type = 0, const JoyAim aim = AIM_UP);
     CActor(const Pos &pos, uint8_t type = 0, JoyAim aim = AIM_UP);
+
+    CActor(CActor &&other) noexcept;
+    CActor &operator=(CActor &&other) noexcept;
+
+    CActor(const CActor &) = delete;
+    CActor &operator=(const CActor &) = delete;
+
     ~CActor();
 
     bool canMove(const JoyAim aim) const override;
@@ -62,11 +74,15 @@ public:
     void move(const int16_t x, const int16_t y) override;
     void move(const Pos pos) override;
     inline int16_t getGranularFactor() const override { return ACTOR_GRANULAR_FACTOR; };
+    bool followPath(const Pos &playerPos);
+    bool startPath(const Pos &playerPos, const uint8_t algo, const int timeout);
+    bool isFollowingPath();
 
 private:
     uint8_t m_x;
     uint8_t m_y;
     uint8_t m_type;
+    uint8_t m_algo;
     JoyAim m_aim;
     uint8_t m_pu;
     template <typename ReadFunc>
@@ -79,4 +95,7 @@ private:
     {
         ACTOR_GRANULAR_FACTOR = 1
     };
+    std::unique_ptr<CPath> m_path;
+    bool readPath(IFile &sfile);
+    bool writePath(IFile &tfile) const;
 };

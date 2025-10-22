@@ -29,8 +29,6 @@
 #include "filemacros.h"
 #include "map.h"
 
-constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
-constexpr size_t MAX_PATH_SIZE = 4096;
 constexpr int16_t MAX_POS = 512;
 constexpr int MAX_HP = 4096;
 constexpr int MAX_SPEED = 10;
@@ -43,9 +41,7 @@ CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossD
     m_speed = data->speed;
     m_state = Patrol;
     m_framePtr = 0;
-    m_hp = data->hp;
-    m_pathIndex = 0;
-    m_pathTimeout = 0;
+    m_hp = maxHp(); // data->hp;
     setSolidOperator();
 }
 
@@ -92,7 +88,7 @@ bool CBoss::isGhostBlocked(const Pos &pos)
     CMap &map = CGame::getMap();
     const auto c = map.at(pos.x, pos.y);
     const TileDef &def = getTileDef(c);
-    return def.type == TYPE_SWAMP || def.type == TYPE_ICECUBE;
+    return def.type == TYPE_SWAMP || def.type == TYPE_ICECUBE || c == TILES_WALLS93_3;
 }
 
 bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
@@ -233,7 +229,9 @@ void CBoss::move(const JoyAim aim)
         break;
     default:
         LOGE("invalid aim: %.2x", aim);
+        return;
     }
+    m_aim = aim;
 }
 
 /**
@@ -341,7 +339,8 @@ void CBoss::setState(const BossState state)
 
 int CBoss::maxHp() const
 {
-    return m_bossData->hp;
+    auto skill = (int)CGame::getGame()->skill();
+    return (int)m_bossData->hp * ((skill * 0.5) + 1);
 }
 
 bool CBoss::subtainDamage(const int lostHP)
@@ -375,34 +374,7 @@ const Pos CBoss::toPos(int x, int y)
 
 bool CBoss::followPath(const Pos &playerPos, const IPath &astar)
 {
-    // Check if path is invalid or timed out
-    if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
-    {
-        // CBoss tmp{*this};
-        m_cachedDirections = astar.findPath(*this, playerPos);
-        m_pathIndex = 0;
-        m_pathTimeout = PATH_TIMEOUT_MAX;
-        if (m_cachedDirections.empty())
-        {
-            return false; // No valid path
-        }
-    }
-
-    // Try the next direction
-    JoyAim aim = m_cachedDirections[m_pathIndex];
-    if (canMove(aim))
-    {
-        move(aim);
-        ++m_pathIndex;
-        --m_pathTimeout;
-        return true;
-    }
-
-    // Move failed, invalidate cache and recompute next turn
-    m_cachedDirections.clear();
-    m_pathIndex = 0;
-    m_pathTimeout = 0;
-    return false;
+    return m_path.followPath(*this, playerPos, astar);
 }
 
 void CBoss::patrol()
@@ -469,7 +441,7 @@ bool CBoss::read(IFile &sfile)
         LOGE("invalid boss type 0x%.2x", type);
         return false;
     }
-    m_bossData = data; // const_cast<const bossData_t *>(data);
+    m_bossData = data;
 
     m_framePtr = 0;
     _R(&m_framePtr, DATA_SIZE);
@@ -490,24 +462,11 @@ bool CBoss::read(IFile &sfile)
     _R(&m_speed, DATA_SIZE);
     checkBound(m_speed, MAX_SPEED);
 
-    //////////////////////////////////////
-    // Read Path (saved)
-    m_cachedDirections.clear();
-    size_t pathSize = 0;
-    _R(&pathSize, DATA_SIZE);
-    checkBound(pathSize, MAX_PATH_SIZE);
-    for (size_t i = 0; i < pathSize; ++i)
-    {
-        JoyAim dir;
-        _R(&dir, sizeof(dir));
-        m_cachedDirections.emplace_back(dir);
-    }
-    m_pathIndex = 0;
-    _R(&m_pathIndex, DATA_SIZE);
-    checkBound(m_pathIndex, MAX_PATH_SIZE);
-    m_pathTimeout = 0;
-    _R(&m_pathTimeout, DATA_SIZE);
-    checkBound(m_pathTimeout, MAX_PATH_SIZE);
+    _R(&m_aim, sizeof(m_aim));
+    checkBound(static_cast<uint8_t>(m_aim), JoyAim::TOTAL_AIMS);
+
+    // read path
+    m_path.read(sfile);
 
     setSolidOperator();
     return true;
@@ -528,15 +487,11 @@ bool CBoss::write(IFile &tfile)
     _W(&m_hp, DATA_SIZE);
     _W(&m_state, sizeof(m_state)); // uint8_t
     _W(&m_speed, DATA_SIZE);
+    _W(&m_aim, sizeof(m_aim));
 
-    auto pathSize = m_cachedDirections.size();
-    _W(&pathSize, DATA_SIZE);
-    for (const auto &dir : m_cachedDirections)
-    {
-        _W(&dir, sizeof(dir));
-    }
-    _W(&m_pathIndex, DATA_SIZE);
-    _W(&m_pathTimeout, DATA_SIZE);
+    // write path
+    m_path.write(tfile);
+
     return true;
 }
 
@@ -547,6 +502,8 @@ void CBoss::setSolidOperator()
         m_isSolidOperator = isSolid;
     else if (m_bossData->type == BOSS_GHOST)
         m_isSolidOperator = isGhostBlocked;
+    else if (m_bossData->type == BOSS_HARPY)
+        m_isSolidOperator = isSolid;
     else
     {
         LOGW("No custom solidOperator for this boss");

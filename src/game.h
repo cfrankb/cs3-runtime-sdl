@@ -40,6 +40,13 @@ struct MapReport
     int secrets;
 };
 
+struct bulletData_t
+{
+    uint8_t sound;
+    uint8_t sfxID;
+    uint16_t sfxTimeOut;
+};
+
 class CGame
 {
 public:
@@ -202,7 +209,6 @@ private:
     ~CGame();
     int clearAttr(const uint8_t attr);
     bool spawnMonsters();
-    int addMonster(const CActor actor);
     void addHealth(const int hp);
     void addPoints(const int points);
     void addLife();
@@ -217,13 +223,12 @@ private:
     void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters);
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
-    void handleFirball(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
-    void handleLightningBolt(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
+    void handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters);
 
     // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
     void handleBossPath(CBoss &boss);
-    void handleBossBullet(CBoss &boss);
+    bool handleBossBullet(CBoss &boss);
 
     inline bool between(int a1, int a2, int b1, int b2) const
     {

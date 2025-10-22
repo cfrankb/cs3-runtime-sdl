@@ -50,7 +50,7 @@ CGame::userKeys_t CGame::m_keys;
 
 namespace Game
 {
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0006;
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0007;
     static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     CGame *g_game = nullptr;
     Random g_randomz(12345, 0);
@@ -372,7 +372,7 @@ bool CGame::loadLevel(const GameMode mode)
     }
     if (!m_quiet)
         LOGI("Player at: %d %d\n", pos.x, pos.y);
-    m_player = CActor(pos, TYPE_PLAYER, AIM_DOWN);
+    m_player = std::move(CActor(pos, TYPE_PLAYER, AIM_DOWN));
     m_diamonds = states.hasU(MAP_GOAL) ? states.getU(MAP_GOAL) : m_map.count(TILES_DIAMOND);
     resetKeys();
     m_health = DEFAULT_HEALTH;
@@ -543,9 +543,9 @@ bool CGame::spawnMonsters()
             if (isMonsterType(def.type))
             {
                 if (def.type == TYPE_ICECUBE)
-                    addMonster(CActor(x, y, def.type, JoyAim::AIM_NONE));
+                    m_monsters.emplace_back(std::move(CActor(x, y, def.type, JoyAim::AIM_NONE)));
                 else
-                    addMonster(CActor(x, y, def.type));
+                    m_monsters.emplace_back(std::move(CActor(x, y, def.type)));
             }
         }
     }
@@ -557,7 +557,8 @@ bool CGame::spawnMonsters()
         {
             const Pos &pos = CMap::toPos(key);
             const JoyAim aim = attr < ATTR_CRUSHERH_MIN ? AIM_UP : AIM_LEFT;
-            addMonster(CActor(pos, attr, aim));
+            m_monsters.emplace_back(std::move(CActor(pos, attr, aim)));
+
             removed.emplace_back(pos);
         }
         else if (RANGE(attr, ATTR_BOSS_MIN, ATTR_BOSS_MAX))
@@ -593,18 +594,6 @@ bool CGame::spawnMonsters()
         LOGI("%zu bosses found.\n", m_bosses.size());
     }
     return true;
-}
-
-/**
- * @brief Add a monster to managed list
- *
- * @param actor
- * @return current monster count
- */
-int CGame::addMonster(const CActor actor)
-{
-    m_monsters.emplace_back(actor);
-    return (int)m_monsters.size();
 }
 
 /**

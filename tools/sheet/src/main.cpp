@@ -12,8 +12,8 @@
 #include "../../../src/shared/Frame.h"
 #include "../../../src/logger.h"
 #include <openssl/sha.h>
-#include <iostream>
-#include <iomanip> // For std::hex and std::setfill
+#include <minizip/unzip.h>
+#include <filesystem>
 
 namespace SpriteSheet
 {
@@ -84,6 +84,101 @@ bool extractFrameSet(CFrameSet &set, const std::string_view &filepath)
     }
 
     return true;
+}
+
+bool isImageFile(const std::string &filepath)
+{
+    return filepath.ends_with(".obl") || filepath.ends_with(".mcx") || filepath.ends_with(".ima") || filepath.ends_with(".png");
+}
+
+bool readZipFile(const std::string &zipPath, CFrameSet &images, std::string &error)
+{
+    unzFile zip = unzOpen(zipPath.c_str());
+    if (!zip)
+    {
+        error = std::string("Cannot open ZIP file: ") + zipPath;
+        return false;
+    }
+
+    if (unzGoToFirstFile(zip) != UNZ_OK)
+    {
+        error = "Cannot read first file in ZIP";
+        unzClose(zip);
+        return false;
+    }
+
+    do
+    {
+        char filename[256];
+        unz_file_info fileInfo;
+
+        if (unzGetCurrentFileInfo(zip, &fileInfo, filename, sizeof(filename), nullptr, 0, nullptr, 0) != UNZ_OK)
+        {
+            error = "Cannot get file info";
+            return false;
+        }
+
+        if (!isImageFile(filename))
+        {
+            LOGW("Skipping unsupported file:%s in archive %s", filename, zipPath.c_str());
+            continue;
+        }
+
+        // std::cout << "Found file: " << filename << " (" << fileInfo.uncompressed_size << " bytes)\n";
+        if (unzOpenCurrentFile(zip) != UNZ_OK)
+        {
+            error = std::string("Cannot open file: ") + filename;
+            return false;
+        }
+
+        std::vector<char> buffer(fileInfo.uncompressed_size);
+        int bytesRead = unzReadCurrentFile(zip, buffer.data(), buffer.size());
+        if (bytesRead < 0)
+        {
+            error = std::string("Error reading file: ") + filename;
+            return false;
+        }
+        else
+        {
+            namespace fs = std::filesystem;
+            fs::path tmpDir = fs::temp_directory_path();
+            const std::string tmpFile = std::format("{0}/mcxz{1}.bin", tmpDir.c_str(), rand());
+            CFileWrap file;
+            if (file.open(tmpFile.c_str(), "wb"))
+            {
+                if (file.write(buffer.data(), buffer.size()) != IFILE_OK)
+                {
+                    error = std::string("cannot write to tmpfile: ") + tmpFile;
+                    return false;
+                }
+                file.close();
+                if (file.open(tmpFile.c_str(), "rb"))
+                {
+                    if (!images.extract(file))
+                    {
+                        error = std::string("failed extract from tmpfile: ") + tmpFile;
+                        return false;
+                    }
+                    file.close();
+                }
+                else
+                {
+                    error = std::string("fail to open tmpfile: ") + tmpFile;
+                    return false;
+                }
+                fs::remove(tmpFile);
+            }
+            else
+            {
+                error = std::string("cannot create tmpfile: ") + tmpFile;
+                return false;
+            }
+        }
+        unzCloseCurrentFile(zip);
+    } while (unzGoToNextFile(zip) == UNZ_OK);
+
+    unzClose(zip);
+    return images.getSize() != 0;
 }
 
 std::string generateSHA1(CFrame *frame)
@@ -212,7 +307,24 @@ bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordere
         LOGI("%s px:%d py:%d", filepath.c_str(), splitH, splitV);
 
         CFrameSet tmp;
-        if (extractFrameSet(tmp, filepath))
+
+        bool result;
+
+        if (filepath.ends_with(".zip"))
+        {
+            std::string error;
+            result = readZipFile(filepath, tmp, error);
+            if (!result)
+                LOGE("failed to opem %s-- error %s", filepath.c_str(), error.c_str());
+        }
+        else
+        {
+            result = extractFrameSet(tmp, filepath);
+            if (!result)
+                LOGE("failed to opem %s", filepath.c_str());
+        }
+
+        if (result)
         {
             for (auto &frame : tmp.frames())
             {

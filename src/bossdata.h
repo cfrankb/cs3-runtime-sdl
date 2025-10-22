@@ -24,6 +24,7 @@
 #include <cstdint>
 #include "rect.h"
 
+#include "color.h"
 #define FLAG_FIREBALL 0x00000001
 #define BOSS_FLAG_ICE_DAMAGE 0x80000000
 
@@ -53,7 +54,7 @@ struct bossData_t
 {
     const char* name;       // boss name
     int speed;              // movement speed
-    int a_speed;            // animation speed
+    int speed_anime;        // animation speed
     int hp;                 // hp
     int type;               // type
     int score;              // score received
@@ -61,14 +62,18 @@ struct bossData_t
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
-    uint8_t bullet_freq;   // boss bullet speed
-    bool bullet_seeking;
-    uint8_t bullet_sound;
-    uint8_t attack_sound;
-    int chase_distance;     // distance to engage chase
-    int pursuit_distance;   // continue pursuit within distance (chase)
+    uint8_t bullet_rate;    // boss bullet rate
+    uint8_t bullet_algo;       // bullet algo
+    uint8_t bullet_sound;   // bullet firing sound
+    int bullet_timeout;     // bullet timeout
+    uint8_t attack_sound;   // sound during an attack
+    int distance_chase;     // distance to engage chase
+    int distance_pursuit;   // continue pursuit within distance (chase)
+    int distance_attack;
     bool is_goal;           // is this boss a map goal?
     bool show_details;      // display hp bar/name
+    Color color_hp;         // hp bar color
+    Color color_name;       // namr color
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt

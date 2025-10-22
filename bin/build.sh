@@ -19,10 +19,6 @@ elif [[ "$1" == "sdl3" ]] ; then
 elif [[ "$1" == "emsdl3" ]] ; then
     BPATH=build/ems
     TARGET=${BPATH}/${APP_NAME}.html
-    #echo "BUILD PATH: ${BPATH}"
-    # preload only xm files/ download ogg files from web
-    #mkdir -p ${BPATH}/ems_data && cp -r data/* ${BPATH}/ems_data && mv ${BPATH}/ems_data/musics/*.ogg ${BPATH}
-    #ls ${BPATH}/ems_data -l
     emcmake cmake -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
     cmake --build ${BPATH}  -- VERBOSE=1   && echo "To run: emrun --hostname 0.0.0.0 ${TARGET}"
 elif [[ "$1" == "mingw" ]] ; then

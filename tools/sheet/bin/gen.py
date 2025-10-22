@@ -53,7 +53,7 @@ def main():
     vars = [
         "CXX=g++ --std=c++20 -Wall -Wextra",
         "CXXFLAGS=-g  -DQT_NOT_WANTED",
-        "LIBS=-lm -lz -lssl -lcrypto",
+        "LIBS=-lm -lz -lssl -lcrypto -lminizip",
         "BPATH=build",
         "EXT=.o",
         "TARGET=$(BPATH)/sheet",
