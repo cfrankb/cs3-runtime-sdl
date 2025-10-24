@@ -245,7 +245,7 @@ void CGame::consume()
         addHealth(def.health);
         playTileSound(pu);
     }
-    else if (def.type == TYPE_SWAMP)
+    else if (def.type == TYPE_SWAMP && m_gameStats->get(S_BOAT) == 0)
     {
         addHealth(def.health);
     }
@@ -268,7 +268,17 @@ void CGame::consume()
     }
 
     if (pu == TILES_SHIELD)
-        m_gameStats->inc(S_SHIELD);
+    {
+        if (m_gameStats->get(S_SHIELD) < MAX_SHIELDS)
+            m_gameStats->inc(S_SHIELD);
+        m_events.emplace_back(EVENT_SHIELD);
+    }
+
+    if (pu == TILES_BOAT)
+    {
+        m_gameStats->set(S_BOAT, 1);
+        m_events.emplace_back(EVENT_BOAT);
+    }
 
     if (isOneTimeItem(pu))
         m_usedItems.push_back(m_player.pos());
@@ -435,7 +445,7 @@ void CGame::restartLevel()
 {
     m_events.clear();
     resetStats();
-    resetSugar();
+    resetStatsUponDeath();
 }
 
 /**
@@ -449,17 +459,18 @@ void CGame::restartGame()
     m_nextLife = calcScoreLife();
     m_score = 0;
     m_lives = defaultLives();
-    resetSugar();
+    resetStatsUponDeath();
 }
 
 /**
  * @brief Reset SugarMeter to 0.
  *
  */
-void CGame::resetSugar()
+void CGame::resetStatsUponDeath()
 {
     m_gameStats->set(S_SUGAR, 0);
     m_gameStats->set(S_SUGAR_LEVEL, 0);
+    m_gameStats->set(S_SHIELD, 0);
 }
 
 /**
@@ -653,7 +664,7 @@ int CGame::findMonsterAt(const int x, const int y) const
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
     auto const pu = m_player.getPU();
-    if (pu == TILES_SWAMP)
+    if (pu == TILES_SWAMP && m_gameStats->get(S_BOAT) == 0)
     {
         // apply health damage
         const TileDef &def = getTileDef(pu);

@@ -25,11 +25,21 @@
 #include "states.h"
 #include "logger.h"
 
-static const char SIG[]{'M', 'A', 'P', 'Z'};
-static const char XTR_SIG[]{"XTR"};
-static const uint16_t VERSION = 0;
-static const uint16_t MAX_SIZE = 256;
-static const uint16_t MAX_TITLE = 255;
+namespace MapPrivate
+{
+    enum
+    {
+        XTR_VER0 = 0,
+        XTR_VER1 = 1,
+    };
+    constexpr char SIG[]{'M', 'A', 'P', 'Z'};
+    constexpr char XTR_SIG[]{"XTR"};
+    constexpr uint16_t VERSION = 0;
+    constexpr uint16_t MAX_SIZE = 256;
+    constexpr uint16_t MAX_TITLE = 255;
+};
+
+using namespace MapPrivate;
 
 typedef struct
 {

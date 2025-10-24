@@ -23,8 +23,19 @@
 #include "shared/FileWrap.h"
 #include "logger.h"
 
-constexpr const char MAAZ_SIG[]{'M', 'A', 'A', 'Z'};
-const uint16_t MAAZ_VERSION = 0;
+namespace MapArchPrivate
+{
+    constexpr const char MAAZ_SIG[]{'M', 'A', 'A', 'Z'};
+    constexpr uint16_t MAAZ_VERSION = 0;
+    enum
+    {
+        OFFSET_COUNT = 6,
+        OFFSET_INDEX = 8,
+        MAX_MAPS = 1000,
+    };
+};
+
+using namespace MapArchPrivate;
 
 // Define header structure
 struct Header

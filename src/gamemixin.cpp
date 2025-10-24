@@ -585,19 +585,24 @@ CFrame *CGameMixin::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::
             const int frame = idleTime & 0x08 ? idleFrame : static_cast<int>(PLAYER_DOWN_INDEX);
             tile = annie[frame + userBaseFrame];
         }
+        else if (game.m_gameStats->get(S_BOAT) != 0 && game.playerConst().getPU() == TILES_SWAMP)
+        {
+            tile = annie[PLAYER_BOAT_FRAME + userBaseFrame];
+        }
         else
         {
             tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
-            const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
-            if (hurtStage == CGame::HurtFlash)
-                colorMask = COLOR_ALL_WHITE;
-            else if (hurtStage == CGame::HurtInv)
-                colorMask = COLOR_INVERTED;
-            else if (hurtStage == CGame::HurtFaz)
-                colorMask = COLOR_FADE;
-            else
-                colorMask = COLOR_NOCHANGE;
         }
+
+        const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
+        if (hurtStage == CGame::HurtFlash)
+            colorMask = COLOR_ALL_WHITE;
+        else if (hurtStage == CGame::HurtInv)
+            colorMask = COLOR_INVERTED;
+        else if (hurtStage == CGame::HurtFaz)
+            colorMask = COLOR_FADE;
+        else
+            colorMask = COLOR_NOCHANGE;
 
         if (m_game->isFrozen())
         {
@@ -2080,6 +2085,28 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .baseY = baseY - (int)TILE_SIZE,
             .color = SEAGREEN,
             .lines{text},
+        };
+    }
+    else if (m_currentEvent == EVENT_SHIELD)
+    {
+        char tmp[40];
+        snprintf(tmp, sizeof(tmp), "SHIELD %d%%", 25 * m_game->stats().get(S_SHIELD));
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = LIME,
+            .lines{tmp},
+        };
+    }
+    else if (m_currentEvent == EVENT_BOAT)
+    {
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = BROWN,
+            .lines{"BOAT FOUND"},
         };
     }
     else

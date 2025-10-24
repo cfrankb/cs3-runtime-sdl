@@ -109,7 +109,6 @@ public:
         MAX = RIGHT,
         NOT_FOUND = -1 // 0xffff
     };
-    // void shift(int aim);
     void shift(Direction aim);
     void debug();
 
@@ -118,12 +117,6 @@ private:
     bool writeCommon(WriteFunc writefile) const;
     template <typename ReadFunc>
     bool readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::function<bool(size_t)> seek, std::function<bool()> readStates);
-
-    enum
-    {
-        XTR_VER0 = 0,
-        XTR_VER1 = 1,
-    };
 
     uint16_t m_len;
     uint16_t m_hei;

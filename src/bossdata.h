@@ -56,7 +56,7 @@ struct bossData_t
     int speed;              // movement speed (lower = faster)
     int speed_anime;        // animation speed (lower = faster)
     int hp;                 // hp
-    int type;               // type
+    uint8_t type;           // type
     int score;              // score received
     int damage;             // damage given
     uint32_t flags;         // custom flags
@@ -83,4 +83,4 @@ struct bossData_t
     int sheet;              // sprite sheet used
 };
 
-bossData_t *getBossData(const int type);
+bossData_t *getBossData(const uint8_t type);

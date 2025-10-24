@@ -173,4 +173,5 @@
 #define TILES_LIGHTNING_BOLT      0x96
 #define TILES_FIRE                0x97
 #define TILES_BULLETY1            0x98
-#define TILES_TOTAL_COUNT         0x99
+#define TILES_BOAT                0x99
+#define TILES_TOTAL_COUNT         0x9a

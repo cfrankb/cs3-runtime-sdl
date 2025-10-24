@@ -175,7 +175,8 @@ const TileDef tileDefs[] = {
     {0x00, TYPE_CHUTE, 0, 0, 0, 0, false, "chute.png"},                     // 95 TILES_CHUTE
     {0x00, TYPE_LIGHTNING_BOLT, 0, -10, 4, 0, false, "lightning_bolt.png"}, // 96 TILES_LIGHTNING_BOLT
     {0x00, TYPE_FIRE, 0, -1, 0, 0, false, "fire.zip"},                      // 97 TILES_FIRE
-    {0x00, TYPE_LIGHTNING_BOLT, 0, -10, 4, 0, false, "bullety1.zip"}        // 98 TILES_BULLETY1
+    {0x00, TYPE_LIGHTNING_BOLT, 0, -10, 4, 0, false, "bullety1.zip"},       // 98 TILES_BULLETY1
+    {0x00, TYPE_PICKUP, 125, 0, 0, 0, false, "boat.png"}                    // 99 TILES_BOAT
 };
 
 const uint8_t chMap[] = {
@@ -194,8 +195,7 @@ const uint8_t chMap[] = {
     0x00, 0x30, 0x31, 0x33, 0x00, 0x00, 0x00, 0x4c,
     0x52, 0x66, 0x00, 0x00, 0x67, 0x38, 0x00, 0x49,
     0x24, 0x71, 0x58, 0x01, 0x37, 0x00, 0x6d, 0x40,
-    0x00, 0x5a, 0x00, 0x00, 0x65, 0x00, 0x00, 0x00,
-};
+    0x00, 0x5a, 0x00, 0x00, 0x65, 0x00, 0x00, 0x00};
 
 uint8_t getChTile(const uint8_t i)
 {
@@ -211,4 +211,3 @@ const TileDef &getTileDef(int i)
 {
   return tileDefs[i];
 }
-

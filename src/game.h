@@ -156,7 +156,7 @@ public:
     const MapReport &originalMapReport();
     int timeTaken();
     void incTimeTaken();
-    void resetSugar();
+    void resetStatsUponDeath();
     void decKeyIndicators();
     int defaultLives();
     void setDefaultLives(int lives);

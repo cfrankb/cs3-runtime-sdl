@@ -23,6 +23,7 @@
 #include "tilesdata.h"
 #include "sounds.h"
 #include "bossdata.h"
+#include "logger.h"
 
 namespace BossData
 {
@@ -54,6 +55,7 @@ namespace BossData
     constexpr int HARPY_IDLE_LEN = 4;
     constexpr int HARPY_HURT_BASE = 62;
     constexpr int HARPY_HURT_LEN = 3;
+    constexpr size_t BOSS_COUNT = 3;
 };
 
 using namespace BossData;
@@ -154,14 +156,12 @@ bossData_t g_bosses[] = {
     },
 };
 
-bossData_t *getBossData(const int type)
+bossData_t *getBossData(const uint8_t type)
 {
-    constexpr size_t bossCount = sizeof(g_bosses) / sizeof(g_bosses[0]);
-    for (size_t i = 0; i < bossCount; ++i)
+    for (size_t i = 0; i < BOSS_COUNT; ++i)
     {
         if (g_bosses[i].type == type)
             return &g_bosses[i];
     }
     return nullptr;
 }
-

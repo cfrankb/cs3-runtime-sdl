@@ -41,6 +41,7 @@ enum GameStat : uint16_t
     S_CHUTE,
     S_SUGAR_LEVEL,
     S_SHIELD,
+    S_BOAT,
 };
 
 class CGameStats

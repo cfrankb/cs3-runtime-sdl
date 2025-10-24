@@ -1355,7 +1355,7 @@ void CRuntime::drawScroller(CFrame &bitmap)
  */
 void CRuntime::setupTitleScreen()
 {
-    m_game->resetSugar();
+    m_game->resetStatsUponDeath();
     size_t len = scrollerBufSize();
     memset(m_scroll, ' ', len);
     m_scroll[len] = 0;

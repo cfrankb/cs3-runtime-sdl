@@ -48,7 +48,7 @@ struct bossData_t
     int speed;              // movement speed (lower = faster)
     int speed_anime;        // animation speed (lower = faster)
     int hp;                 // hp
-    int type;               // type
+    uint8_t type;           // type
     int score;              // score received
     int damage;             // damage given
     uint32_t flags;         // custom flags
@@ -77,10 +77,9 @@ struct bossData_t
 """
 
 cpp_body = """
-bossData_t *getBossData(const int type)
+bossData_t *getBossData(const uint8_t type)
 {
-    constexpr size_t bossCount = sizeof(g_bosses) / sizeof(g_bosses[0]);
-    for (size_t i = 0; i < bossCount; ++i)
+    for (size_t i = 0; i < BOSS_COUNT; ++i)
     {
         if (g_bosses[i].type == type)
             return &g_bosses[i];
@@ -289,6 +288,9 @@ for seq in all_seqs:
     name = clean_name(seq["name"])
     boss_types.append(f"#define BOSS_{name} {seq['type']}")
 
+g_vars.append(f"constexpr size_t BOSS_COUNT = {len(all_seqs)};")
+
+
 SPACE = " " * 4
 SPACE2 = " " * 8
 
@@ -334,7 +336,7 @@ with open("bossdata.h", "w") as tfile:
     tfile.write("\n".join(defines) + "\n\n")
     tfile.write("\n".join(boss_types) + "\n\n")
     tfile.write(struct)
-    tfile.write("\nbossData_t *getBossData(const int type);\n")
+    tfile.write("\nbossData_t *getBossData(const uint8_t type);\n")
 
 copyfile("bossdata.h", "../../src")
 copyfile("bossdata.cpp", "../../src")
