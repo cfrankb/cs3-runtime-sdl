@@ -128,7 +128,7 @@ using namespace GamePrivate;
  */
 CGame::CGame()
 {
-    LOGI("starting up engine: 0x%.8x\n", ENGINE_VERSION);
+    LOGI("starting up engine: 0x%.8x", ENGINE_VERSION);
     m_health = 0;
     m_level = 0;
     m_score = 0;
@@ -357,7 +357,7 @@ void CGame::consume()
 bool CGame::loadLevel(const GameMode mode)
 {
     if (!m_quiet)
-        LOGI("loading level: %d ...\n", m_level + 1);
+        LOGI("loading level: %d ...", m_level + 1);
     setMode(mode);
 
     // clear used items list when entering a new level
@@ -372,10 +372,10 @@ bool CGame::loadLevel(const GameMode mode)
         m_map.set(pos.x, pos.y, TILES_BLANK);
 
     if (!m_quiet)
-        LOGI("level loaded\n");
+        LOGI("level loaded");
 
     if (m_hints.size() == 0)
-        LOGW("hints not loaded -- not available???\n");
+        LOGW("hints not loaded -- not available???");
 
     m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
     m_events.clear();
@@ -407,7 +407,7 @@ bool CGame::loadLevel(const GameMode mode)
         pos = m_map.findFirst(TILES_ANNIE2);
     }
     if (!m_quiet)
-        LOGI("Player at: %d %d\n", pos.x, pos.y);
+        LOGI("Player at: %d %d", pos.x, pos.y);
     m_player = std::move(CActor(pos, TYPE_PLAYER, AIM_DOWN));
     m_diamonds = states.hasU(MAP_GOAL) ? states.getU(MAP_GOAL) : m_map.count(TILES_DIAMOND);
     resetKeys();
@@ -629,8 +629,8 @@ bool CGame::spawnMonsters()
 
     if (!m_quiet)
     {
-        LOGI("%zu actors found.\n", m_monsters.size());
-        LOGI("%zu bosses found.\n", m_bosses.size());
+        LOGI("%zu actors found.", m_monsters.size());
+        LOGI("%zu bosses found.", m_bosses.size());
     }
     return true;
 }
@@ -1093,7 +1093,7 @@ bool CGame::validateSignature(const char *signature, const uint32_t version)
     }
     if (version != ENGINE_VERSION)
     {
-        LOGW("savegame version mismatched: 0x%.8x -- expecting 0x%.8x\n", version, ENGINE_VERSION);
+        LOGW("savegame version mismatched: 0x%.8x -- expecting 0x%.8x", version, ENGINE_VERSION);
         return false;
     }
     return true;

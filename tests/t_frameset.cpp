@@ -40,13 +40,13 @@ bool read_data_in(CFrameSet &fs, const char *filepath)
     CFileWrap file;
     if (!file.open(filepath, "rb"))
     {
-        LOGE("can't read %s\n", filepath);
+        LOGE("can't read %s", filepath);
         return false;
     }
 
     if (!fs.extract(file))
     {
-        LOGE("can't extract from %s: %s\n", filepath, fs.getLastError());
+        LOGE("can't extract from %s: %s", filepath, fs.getLastError());
         return false;
     }
     file.close();
@@ -58,7 +58,7 @@ bool write_data_out(CFrameSet &fs, const char *filepath, Format format)
     CFileWrap file;
     if (!file.open(filepath, "wb"))
     {
-        LOGE("can't create %s\n", filepath);
+        LOGE("can't create %s", filepath);
         return false;
     }
 
@@ -67,13 +67,13 @@ bool write_data_out(CFrameSet &fs, const char *filepath, Format format)
         std::vector<uint8_t> png;
         if (!fs.toPng(png))
         {
-            LOGE("can't convert to png\n");
+            LOGE("can't convert to png");
             return false;
         }
 
         if (file.write(png.data(), png.size()) != IFILE_OK)
         {
-            LOGE("fail to write to %s\n", filepath);
+            LOGE("fail to write to %s", filepath);
             return false;
         }
     }
@@ -81,7 +81,7 @@ bool write_data_out(CFrameSet &fs, const char *filepath, Format format)
     {
         if (!fs.write(file, CFrameSet::OBL5_SOLID))
         {
-            LOGE("fail to write to %s\n", filepath);
+            LOGE("fail to write to %s", filepath);
             return false;
         }
     }
@@ -89,13 +89,13 @@ bool write_data_out(CFrameSet &fs, const char *filepath, Format format)
     {
         if (!fs.write(file, CFrameSet::OBL5_UNPACKED))
         {
-            LOGE("fail to write to %s\n", filepath);
+            LOGE("fail to write to %s", filepath);
             return false;
         }
     }
     else
     {
-        LOGE("unknown format: %d\n", format);
+        LOGE("unknown format: %d", format);
         return true;
     }
 
@@ -109,7 +109,7 @@ bool performDoubleBlind(CFrameSet &fs, const Format format, const char *out_path
     // write out file
     if (!write_data_out(fs, out_path, format))
     {
-        LOGE("failed to write %s\n", out_path);
+        LOGE("failed to write %s", out_path);
         return false;
     }
 
@@ -117,14 +117,14 @@ bool performDoubleBlind(CFrameSet &fs, const Format format, const char *out_path
     CFrameSet fs2;
     if (!read_data_in(fs2, out_path))
     {
-        LOGE("failed to read %s\n", out_path);
+        LOGE("failed to read %s", out_path);
         return false;
     }
 
     // writeback file
     if (!write_data_out(fs2, out_path2, PNG))
     {
-        LOGE("failed to write %s\n", out_path2);
+        LOGE("failed to write %s", out_path2);
         return false;
     }
 
@@ -139,7 +139,7 @@ bool test_frameset_seq(const char *source, const char *name)
     CFrameSet fs;
     if (!read_data_in(fs, source))
     {
-        LOGE("failed to read %s\n", source);
+        LOGE("failed to read %s", source);
         return false;
     }
 
@@ -149,7 +149,7 @@ bool test_frameset_seq(const char *source, const char *name)
     snprintf(out_path, sizeof(out_path), OUT_PATH, name, ".png");
     if (!write_data_out(fs, out_path, PNG))
     {
-        LOGE("failed to write %s\n", out_path);
+        LOGE("failed to write %s", out_path);
         return false;
     }
     refFiles.emplace_back(out_path);

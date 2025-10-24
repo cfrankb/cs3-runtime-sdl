@@ -51,13 +51,13 @@ bool checkInjectedStates(CMapArch &arch, const char *context)
     auto &states = map->states();
     if (states.getU(KEY1) != VAL1)
     {
-        LOGE("missing injected state. %s\n", context);
+        LOGE("missing injected state. %s", context);
         return false;
     }
 
     if (std::string(states.getS(KEY2)) != VAL2)
     {
-        LOGE("missing injected state. %s\n", context);
+        LOGE("missing injected state. %s", context);
         return false;
     }
     return true;
@@ -81,7 +81,7 @@ bool test_maparch_1()
     arch2.read(OUT_FILE1);
     if (arch1.size() != arch2.size())
     {
-        LOGE("map count mismatch in arch after write\n");
+        LOGE("map count mismatch in arch after write");
         return false;
     }
 
@@ -96,7 +96,7 @@ bool test_maparch_1()
     arch3.write(OUT_FILE2);
     if (getFileSize(OUT_FILE1) != getFileSize(OUT_FILE2))
     {
-        LOGE("different disk size for identical content\n");
+        LOGE("different disk size for identical content");
         return false;
     }
 
@@ -117,7 +117,7 @@ bool test_maparch_2()
     CMapArch arch1;
     if (!arch1.read(IN_FILE))
     {
-        LOGE("can't open %s; last error: %s\n", IN_FILE, arch1.lastError());
+        LOGE("can't open %s; last error: %s", IN_FILE, arch1.lastError());
         return false;
     }
     size_t size_maparch1 = arch1.size();
@@ -125,39 +125,39 @@ bool test_maparch_2()
     CMap *tmap = map.get();
     if (arch1.add(std::move(map)) != size_maparch1)
     {
-        LOGE("map not inserted\n");
+        LOGE("map not inserted");
         return false;
     }
 
     if (arch1.at(size_maparch1) != tmap)
     {
-        LOGE("map not inserted at the end\n");
+        LOGE("map not inserted at the end");
         return false;
     };
 
     map = arch1.removeAt(size_maparch1);
     if (map.get() != tmap)
     {
-        LOGE("last map not what is expected\n");
+        LOGE("last map not what is expected");
         return false;
     }
 
     if (arch1.size() != size_maparch1)
     {
-        LOGE("maparch size is not what is expected\n");
+        LOGE("maparch size is not what is expected");
         return false;
     }
 
     CMapArch arch2;
     if (!arch2.extract(IN_FILE))
     {
-        LOGE("can't extact from %s; last error: %s\n", IN_FILE, arch2.lastError());
+        LOGE("can't extact from %s; last error: %s", IN_FILE, arch2.lastError());
         return false;
     }
 
     if (arch1.size() != arch2.size())
     {
-        LOGE("maparch1 and maparch2 don't have same map count\n");
+        LOGE("maparch1 and maparch2 don't have same map count");
         return false;
     }
 
@@ -170,7 +170,7 @@ bool test_maparch_2()
     CMapArch arch3;
     if (!arch3.read(file))
     {
-        LOGE("can't read from IFile for %s; last error: %s\n", IN_FILE, arch3.lastError());
+        LOGE("can't read from IFile for %s; last error: %s", IN_FILE, arch3.lastError());
         return false;
     }
     file.seek(0);
@@ -178,7 +178,7 @@ bool test_maparch_2()
     if (arch2.size() != arch3.size())
     {
         file.close();
-        LOGE("maparch2 and maparch3 don't have same map count\n");
+        LOGE("maparch2 and maparch3 don't have same map count");
         return false;
     }
 
@@ -187,7 +187,7 @@ bool test_maparch_2()
     if (file.read(buf, size) != IFILE_OK)
     {
         file.close();
-        LOGE("read error for %s\n", IN_FILE);
+        LOGE("read error for %s", IN_FILE);
         return false;
     }
     file.close();
@@ -195,7 +195,7 @@ bool test_maparch_2()
     CMapArch arch4;
     if (!arch4.fromMemory(reinterpret_cast<uint8_t *>(buf)))
     {
-        LOGE("maparch fromMemory on data from IFile failed for %s; last error: %s\n", IN_FILE, arch4.lastError());
+        LOGE("maparch fromMemory on data from IFile failed for %s; last error: %s", IN_FILE, arch4.lastError());
         return false;
     }
     delete[] buf;
@@ -209,7 +209,7 @@ bool test_maparch_2()
         snprintf(fpath, sizeof(fpath), OUT_ARCH_TEST2, i);
         if (!arch->write(fpath))
         {
-            LOGE("write error for %s; last error: %s\n", fpath, arch->lastError());
+            LOGE("write error for %s; last error: %s", fpath, arch->lastError());
             return false;
         }
         CFileWrap file;
@@ -222,7 +222,7 @@ bool test_maparch_2()
         file.close();
         if (i > 0 && archFileSizes[i] != archFileSizes[i - 1])
         {
-            LOGE("filesize for file%ld and file%ld don't match\n", i, i - 1);
+            LOGE("filesize for file%ld and file%ld don't match", i, i - 1);
             return false;
         }
     }
@@ -232,12 +232,12 @@ bool test_maparch_2()
     arch1.insertAt(0, std::move(map2));
     if (arch1.size() != size_maparch1 + 1)
     {
-        LOGE("map not inserted sucessfully\n");
+        LOGE("map not inserted sucessfully");
         return false;
     }
     if (arch1.at(0) != tmap2)
     {
-        LOGE("map inserted not found at the start\n");
+        LOGE("map inserted not found at the start");
         return false;
     }
 
@@ -265,7 +265,7 @@ bool test_maparch_3()
     if (file.read(buf, size) != IFILE_OK)
     {
         file.close();
-        LOGE("read error for %s\n", IN_FILE);
+        LOGE("read error for %s", IN_FILE);
         return false;
     }
     file.close();
@@ -273,19 +273,19 @@ bool test_maparch_3()
     IndexVector index1;
     if (!CMapArch::indexFromFile(IN_FILE, index1))
     {
-        LOGE("failed to get index from file %s\n", IN_FILE);
+        LOGE("failed to get index from file %s", IN_FILE);
         return false;
     }
 
     IndexVector index2;
     if (!CMapArch::indexFromMemory(reinterpret_cast<uint8_t *>(buf), index2))
     {
-        LOGE("failed to get index from memory\n");
+        LOGE("failed to get index from memory");
         return false;
     }
     if (index1.size() != index2.size())
     {
-        LOGE("index1 size [%ld] doesn't match index2 [%ld\n", index1.size(), index2.size());
+        LOGE("index1 size [%ld] doesn't match index2 [%ld", index1.size(), index2.size());
         return false;
     }
 
@@ -294,12 +294,12 @@ bool test_maparch_3()
     {
         if (index1.at(i) != index2.at(i))
         {
-            LOGE("index1 [0x%.lx] at position %ld mismatch w/ index2 [0x%.lx]\n", index1.at(i), i, index2.at(i));
+            LOGE("index1 [0x%.lx] at position %ld mismatch w/ index2 [0x%.lx]", index1.at(i), i, index2.at(i));
             return false;
         }
         if (!map->fromMemory(reinterpret_cast<uint8_t *>(buf) + index1.at(i)))
         {
-            LOGE("failed to serialize map at offset 0x%.lx from archfile %s\n", index1.at(i), IN_FILE);
+            LOGE("failed to serialize map at offset 0x%.lx from archfile %s", index1.at(i), IN_FILE);
             return false;
         }
     }
@@ -328,5 +328,5 @@ void testIndexFromMemory()
     assert(index.size() == 2);
     // assert(index[0] > sizeof(MAAZ_SIG) + sizeof(uint16_t) * 2 + sizeof(uint32_t));
     assert(index[1] > index[0]);
-    LOGI("Offsets: %ld, %ld\n", index[0], index[1]);
+    LOGI("Offsets: %ld, %ld", index[0], index[1]);
 }

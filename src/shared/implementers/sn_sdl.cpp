@@ -33,7 +33,7 @@ CSndSDL::CSndSDL()
     // Initialize all SDL subsystems
     if (!SDL_Init(SDL_INIT_AUDIO))
     {
-        LOGE("SDL_init failed: %s\n", SDL_GetError());
+        LOGE("SDL_init failed: %s", SDL_GetError());
         m_valid = false;
     }
 }
@@ -59,7 +59,7 @@ bool CSndSDL::add(const char *filename, unsigned int uid)
 {
     if (m_sounds.count(uid) != 0)
     {
-        LOGW("ADD: sound already added: %u\n", uid);
+        LOGW("ADD: sound already added: %u", uid);
         return false;
     }
     SND *snd = new SND;
@@ -76,7 +76,7 @@ bool CSndSDL::add(const char *filename, unsigned int uid)
     else
     {
         fail = true;
-        LOGE("Mix_LoadWAV_RW Failed: %s\n", SDL_GetError());
+        LOGE("Mix_LoadWAV_RW Failed: %s", SDL_GetError());
     }
     m_sounds[uid] = snd;
     return !fail;
@@ -87,7 +87,7 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
     // TODO: FIX OR REMOVE THIS FUNCTION
     if (m_sounds.count(uid) != 0)
     {
-        LOGW("ADD: sound already added: %u\n", uid);
+        LOGW("ADD: sound already added: %u", uid);
         return false;
     }
     SND *snd = new SND;
@@ -101,7 +101,7 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
     if (!rw)
     {
         fail = true;
-        LOGE("SDL_RWFromConstMem Failed: %s\n", SDL_GetError());
+        LOGE("SDL_RWFromConstMem Failed: %s", SDL_GetError());
     }
     else
     {
@@ -114,7 +114,7 @@ bool CSndSDL::add(unsigned char *data, unsigned int size, unsigned int uid)
         else
         {
             fail = true;
-            LOGE("Mix_LoadWAV_RW Failed: %s\n", SDL_GetError());
+            LOGE("Mix_LoadWAV_RW Failed: %s", SDL_GetError());
         }
     }
     m_sounds[uid] = snd;
@@ -132,7 +132,7 @@ void CSndSDL::remove(unsigned int uid)
 {
     if (m_sounds.find(uid) == m_sounds.end())
     {
-        LOGW("REMOVE: sound not found: %u\n", uid);
+        LOGW("REMOVE: sound not found: %u", uid);
         return;
     }
     SND *snd = m_sounds[uid];
@@ -164,7 +164,7 @@ void CSndSDL::play(unsigned int uid)
                 snd->channels[i], snd->chunk, 0);
             if (snd->channels[i] == -1)
             {
-                LOGE("Mix_PlayChannel: %s\n", SDL_GetError());
+                LOGE("Mix_PlayChannel: %s", SDL_GetError());
             }
             break;
         }

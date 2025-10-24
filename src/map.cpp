@@ -182,14 +182,14 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
     if (!readfile(sig, sizeof(SIG)))
     {
         m_lastError = "failed to read signature [m]";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
     if (memcmp(sig, SIG, sizeof(SIG)) != 0)
     {
         m_lastError = "signature mismatch";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
@@ -198,14 +198,14 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
     if (!readfile(&ver, sizeof(VERSION)))
     {
         m_lastError = "failed to read version";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
     if (ver > VERSION)
     {
         m_lastError = "bad version";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
@@ -215,7 +215,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
     if (!readfile(&len, sizeof(uint8_t)) || !readfile(&hei, sizeof(uint8_t)))
     {
         m_lastError = "failed to read dimensions";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
@@ -227,7 +227,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
     if (!readfile(m_map.data(), len * hei))
     {
         m_lastError = "failed to read map data [m]";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
@@ -237,7 +237,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
     if (!readfile(&attrCount, sizeof(attrCount)))
     {
         m_lastError = "failed to read attribute count";
-        LOGE("%s\n", m_lastError.c_str());
+        LOGE("%s", m_lastError.c_str());
         return false;
     }
 
@@ -249,7 +249,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
             !readfile(&a, sizeof(a)))
         {
             m_lastError = "failed to read attribute data";
-            LOGE("%s\n", m_lastError.c_str());
+            LOGE("%s", m_lastError.c_str());
             return false;
         }
         setAttr(x, y, a);
@@ -270,7 +270,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
             uint16_t size = 0;
             if (readfile(&size, 1) != IFILE_OK)
             {
-                LOGE("failed to read map title size\n");
+                LOGE("failed to read map title size");
                 return false;
             }
             if (size != 0)
@@ -279,7 +279,7 @@ bool CMap::readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::func
                 tmp[size] = 0;
                 if (readfile(tmp, size) != IFILE_OK)
                 {
-                    LOGE("failed to read map title\n");
+                    LOGE("failed to read map title");
                     return false;
                 }
                 m_title = tmp;
@@ -584,7 +584,7 @@ void CMap::shift(Direction aim)
         break;
 
     default:
-        LOGW("Invalid shift direction: %d\n", static_cast<int>(aim));
+        LOGW("Invalid shift direction: %d", static_cast<int>(aim));
         return;
     }
 
@@ -609,15 +609,15 @@ Pos CMap::toPos(const uint16_t key)
 
 void CMap::debug()
 {
-    LOGI("len: %d hei:%d\n", m_len, m_hei);
-    LOGI("attrCount:%zu\n", m_attrs.size());
+    LOGI("len: %d hei:%d", m_len, m_hei);
+    LOGI("attrCount:%zu", m_attrs.size());
     for (auto &it : m_attrs)
     {
         uint16_t key = it.first;
         uint8_t x = key & 0xff;
         uint8_t y = key >> 8;
         uint8_t a = it.second;
-        LOGI("key:%.4x x:%.2x y:%.2x a:%.2x\n", key, x, y, a);
+        LOGI("key:%.4x x:%.2x y:%.2x a:%.2x", key, x, y, a);
     }
 }
 

@@ -94,7 +94,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
             }
             else
             {
-                LOGE("missing %s value on cmdline\n", paramdefs[j].name);
+                LOGE("missing %s value on cmdline", paramdefs[j].name);
                 result = false;
             }
         }
@@ -110,33 +110,33 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     params.width = strtol(w, nullptr, 10) / 2;
                     if (params.width < 240)
                     {
-                        LOGE("invalid width: %d for --window\n", params.width);
+                        LOGE("invalid width: %d for --window", params.width);
                         result = false;
                     }
                     params.height = strtol(++h, nullptr, 10) / 2;
                     if (params.height < 240)
                     {
-                        LOGE("invalid height: %d for --window\n", params.height);
+                        LOGE("invalid height: %d for --window", params.height);
                         result = false;
                     }
                     if (params.verbose)
-                        LOGI("w: %d h: %d\n", params.width, params.height);
+                        LOGI("w: %d h: %d", params.width, params.height);
                 }
                 else
                 {
-                    LOGE("invalid size for --window\n");
+                    LOGE("invalid size for --window");
                     result = false;
                 }
             }
             else
             {
-                LOGE("missing size for --window\n");
+                LOGE("missing size for --window");
                 result = false;
             }
         }
         else if (strcmp(list[i].c_str(), "--short") == 0)
         {
-            LOGI("switching to short resolution\n");
+            LOGI("switching to short resolution");
             params.width = 480 / 2;
             params.height = 640 / 2;
         }
@@ -160,7 +160,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
         }
         else if (memcmp(list[i].c_str(), "--", 2) == 0)
         {
-            LOGE("invalid option: %s\n", list[i].c_str());
+            LOGE("invalid option: %s", list[i].c_str());
             result = false;
         }
         // handle switch
@@ -171,15 +171,15 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                 switch (list[i].c_str()[j])
                 {
                 case 'v':
-                    LOGI("verbose\n");
+                    LOGI("verbose");
                     params.verbose = true;
                     break;
                 case 'f':
-                    LOGI("fullscreen\n");
+                    LOGI("fullscreen");
                     params.fullscreen = true;
                     break;
                 case 'q':
-                    LOGI("muted music\n");
+                    LOGI("muted music");
                     params.muteMusic = true;
                     break;
                 case 'h':
@@ -190,7 +190,7 @@ bool parseArgs(const std::vector<std::string> &list, params_t &params, bool &app
                     params.strip_private = true;
                     break;
                 default:
-                    LOGE("invalid switch: %c\n", list[i].c_str()[j]);
+                    LOGE("invalid switch: %c", list[i].c_str()[j]);
                     result = false;
                 }
             }

@@ -316,7 +316,7 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     if (err != Z_OK)
     {
         m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
-        LOGE("CFrame::toPng error: %d\n", err);
+        LOGE("CFrame::toPng error: %d", err);
         return true;
     }
 

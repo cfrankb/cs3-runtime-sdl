@@ -80,7 +80,7 @@ CRuntime::~CRuntime()
     if (m_app.window)
     {
         if (!m_quiet)
-            LOGI("detroying SDL3 objects\n");
+            LOGI("detroying SDL3 objects");
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
@@ -175,10 +175,10 @@ void CRuntime::paint()
 bool CRuntime::initSDL()
 {
     if (!m_quiet)
-        LOGI("SDL Init()\n");
+        LOGI("SDL Init()");
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
-        LOGE("SDL could not initialize video! SDL_Error: %s\n", SDL_GetError());
+        LOGE("SDL could not initialize video! SDL_Error: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -199,21 +199,21 @@ bool CRuntime::createSDLWindow()
     m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
     if (m_app.window == nullptr)
     {
-        LOGE("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        LOGE("Window could not be created! SDL_Error: %s", SDL_GetError());
         return false;
     }
     else
     {
         if (!m_quiet)
-            LOGI("SDL Window created: %d x %d\n", width, height);
+            LOGI("SDL Window created: %d x %d", width, height);
         m_app.renderer = SDL_CreateRenderer(m_app.window, nullptr);
         if (m_app.renderer == nullptr)
         {
-            LOGE("Failed to create renderer: %s\n", SDL_GetError());
+            LOGE("Failed to create renderer: %s", SDL_GetError());
             return false;
         }
         if (!m_quiet)
-            LOGI("SDL Rendered created\n");
+            LOGI("SDL Rendered created");
 
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
@@ -221,23 +221,23 @@ bool CRuntime::createSDLWindow()
             SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
         if (m_app.texture == nullptr)
         {
-            LOGE("Failed to create texture: %s\n", SDL_GetError());
+            LOGE("Failed to create texture: %s", SDL_GetError());
             return false;
         }
         if (!m_quiet)
-            LOGI("texture created: %dx%d\n", WIDTH, HEIGHT);
+            LOGI("texture created: %dx%d", WIDTH, HEIGHT);
 
         // this prevents the pixelart from looking fuzy
         if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
         {
-            LOGE("SDL_SetTextureScaleMode  failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetTextureScaleMode  failed: %s", SDL_GetError());
             return false;
         }
     }
 
     if (!loadAppIcon())
     {
-        LOGE("Failed to load appIcon\n");
+        LOGE("Failed to load appIcon");
     }
 
 #if !defined(__EMSCRIPTEN__) && !defined(__ANDROID__)
@@ -253,31 +253,31 @@ void CRuntime::debugSDL()
     int h = 0;
     if (!SDL_GetCurrentRenderOutputSize(m_app.renderer, &w, &h))
     {
-        LOGE("SDL_GetCurrentRenderOutputSize failed: %s\n", SDL_GetError());
+        LOGE("SDL_GetCurrentRenderOutputSize failed: %s", SDL_GetError());
     }
-    LOGI("SDL_GetCurrentRenderOutputSize() %d x %d\n", w, h);
+    LOGI("SDL_GetCurrentRenderOutputSize() %d x %d", w, h);
 
     const int displayIndex = SDL_GetDisplayForWindow(m_app.window);
     SDL_DisplayOrientation currentOrientation = SDL_GetCurrentDisplayOrientation(displayIndex);
     const Rez rezScreen = getScreenSize();
-    LOGI("SCREENSIZE: %d x %d; Orientation: %d\n", rezScreen.w, rezScreen.h, currentOrientation);
+    LOGI("SCREENSIZE: %d x %d; Orientation: %d", rezScreen.w, rezScreen.h, currentOrientation);
 
     Rect safeAreaWmd = getSafeAreaWindow();
-    LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d\n", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
+    LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
     Rect safeAreaTexture = windowRect2textureRect(safeAreaWmd);
-    LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d\n", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
+    LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
 
     int pixelW = 0, pixelH = 0;
     if (!SDL_GetWindowSizeInPixels(m_app.window, &pixelW, &pixelH))
     {
-        LOGE("SDL_GetWindowSizeInPixels failed: %s\n", SDL_GetError());
+        LOGE("SDL_GetWindowSizeInPixels failed: %s", SDL_GetError());
     }
-    LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d\n", pixelW, pixelH);
+    LOGI("SDL_GetWindowSizeInPixels() w: %d h:%d", pixelW, pixelH);
 }
 
 void CRuntime::cleanup()
 {
-    LOGI("cleanup()\n");
+    LOGI("cleanup()");
 }
 
 void CRuntime::run()
@@ -374,17 +374,17 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_WINDOW_SHOWN:
-            LOGI("SDL_EVENT_WINDOW_SHOWN\n");
+            LOGI("SDL_EVENT_WINDOW_SHOWN");
             break;
         case SDL_EVENT_WINDOW_HIDDEN:
-            LOGI("SDL_EVENT_WINDOW_HIDDEN\n");
+            LOGI("SDL_EVENT_WINDOW_HIDDEN");
             break;
 
         case SDL_EVENT_WINDOW_RESIZED:
-            LOGI("SDL_EVENT_WINDOW_RESIZED\n");
+            LOGI("SDL_EVENT_WINDOW_RESIZED");
             if (!m_app.isFullscreen)
             {
-                LOGI("resized\n");
+                LOGI("resized");
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
             // updateScreenInfo();
@@ -392,46 +392,46 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_WINDOW_MINIMIZED:
-            LOGI("SDL_EVENT_WINDOW_MINIMIZED\n");
+            LOGI("SDL_EVENT_WINDOW_MINIMIZED");
             break;
 
         case SDL_EVENT_WINDOW_RESTORED:
-            LOGI("SDL_EVENT_WINDOW_RESTORED\n");
+            LOGI("SDL_EVENT_WINDOW_RESTORED");
             // updateScreenInfo();
             break;
 
         case SDL_EVENT_DISPLAY_ORIENTATION:
-            LOGI("SDL_EVENT_DISPLAY_ORIENTATION\n");
+            LOGI("SDL_EVENT_DISPLAY_ORIENTATION");
             // updateScreenInfo();
             onOrientationChange();
             break;
 
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED\n");
+            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED");
             break;
 
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
-            // LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER\n");
+            // LOGI("SDL_EVENT_WINDOW_MOUSE_ENTER");
             break;
         case SDL_EVENT_WINDOW_MOUSE_LEAVE:
             memset(m_mouseButtons, BUTTON_RELEASED, sizeof(m_mouseButtons));
-            // LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE\n");
+            // LOGI("SDL_EVENT_WINDOW_MOUSE_LEAVE");
             break;
         case SDL_EVENT_WINDOW_FOCUS_GAINED:
-            LOGI("SDL_EVENT_WINDOW_FOCUS_GAINED\n");
+            LOGI("SDL_EVENT_WINDOW_FOCUS_GAINED");
             m_hasFocus = true;
             break;
         case SDL_EVENT_WINDOW_FOCUS_LOST:
-            LOGI("SDL_EVENT_WINDOW_FOCUS_LOST\n");
+            LOGI("SDL_EVENT_WINDOW_FOCUS_LOST");
             m_hasFocus = false;
             break;
 
         case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED\n");
+            LOGI("SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED");
             break;
 
         case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED\n");
+            LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED");
             /*
             SDL_Rect safe;
             if (SDL_GetWindowSafeArea(window, &safe))
@@ -443,16 +443,16 @@ void CRuntime::doInput()
             break;
 
         case SDL_EVENT_CLIPBOARD_UPDATE:
-            LOGI("SDL_EVENT_CLIPBOARD_UPDATE\n");
+            LOGI("SDL_EVENT_CLIPBOARD_UPDATE");
             break;
 
         case SDL_EVENT_AUDIO_DEVICE_ADDED:
-            LOGI("SDL_EVENT_AUDIO_DEVICE_ADDED\n");
+            LOGI("SDL_EVENT_AUDIO_DEVICE_ADDED");
             break;
 
         default:
             if (m_trace)
-                LOGI("UNHANDLED EVENT: %d\n", event.type);
+                LOGI("UNHANDLED EVENT: %d", event.type);
         }
     }
 #ifdef __EMSCRIPTEN__
@@ -474,7 +474,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         m_mouseButtons[event.button.button] = BUTTON_RELEASED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (m_trace)
-            LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u\n",
+            LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u",
                  event.button.button, event.button.x, event.button.y, event.button.clicks);
         if (event.button.button == SDL_BUTTON_LEFT && isMenuActive())
         {
@@ -491,9 +491,9 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (m_trace)
         {
-            LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u\n",
+            LOGI("SDL_EVENT_MOUSE_BUTTON_DOWN button: %d x=%f y=%f c=%u",
                  event.button.button, event.button.x, event.button.y, event.button.clicks);
-            LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}\n",
+            LOGI("==>>> (%d, %d) SDL_EVENT_MOUSE_BUTTON_DOWN BTN%d[%d] from {%f, %f}",
                  pos.x, pos.y, event.button.button, event.button.clicks, event.button.x, event.button.y);
         }
         if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
@@ -519,24 +519,24 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     else if (event.type == SDL_EVENT_FINGER_DOWN)
     {
         if (m_trace)
-            LOGI("SDL_EVENT_FINGER_DOWN x=%f y=%f\n",
+            LOGI("SDL_EVENT_FINGER_DOWN x=%f y=%f",
                  event.tfinger.x, event.tfinger.y);
         handleFingerDown(event.tfinger.x, event.tfinger.y);
     }
     else if (event.type == SDL_EVENT_FINGER_UP)
     {
         if (m_trace)
-            LOGI("SDL_EVENT_FINGER_UP x=%f y=%f\n",
+            LOGI("SDL_EVENT_FINGER_UP x=%f y=%f",
                  event.tfinger.x, event.tfinger.y);
     }
     else if (event.type == SDL_EVENT_FINGER_MOTION)
     {
-        LOGI("SDL_EVENT_FINGER_MOTION\n");
+        LOGI("SDL_EVENT_FINGER_MOTION");
     }
     else if (event.type == SDL_EVENT_MOUSE_MOTION)
     {
         if (m_trace)
-            LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f\n",
+            LOGI("SDL_EVENT_MOUSE_MOTION x=%f y=%f",
                  event.motion.x, event.motion.y);
         pos_t pos = windowPos2texturePos(posF_t{event.motion.x, event.motion.y});
         if (isMenuActive())
@@ -550,7 +550,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_MOUSE_WHEEL)
     {
-        // LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f\n",
+        // LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f",
         //      event.wheel.x, event.wheel.y);
         if (static_cast<int>(event.wheel.y) == 1)
         {
@@ -563,7 +563,7 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else
     {
-        LOGW("unhandled mouseEvent: %d\n", event.type);
+        LOGW("unhandled mouseEvent: %d", event.type);
     }
 }
 
@@ -573,11 +573,11 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
     int yAxisSensitivity = 8000 / 10 * m_yAxisSensitivity;
     if (event.type == SDL_EVENT_JOYSTICK_ADDED)
     {
-        LOGI("SDL_EVENT_JOYSTICK_ADDED\n");
+        LOGI("SDL_EVENT_JOYSTICK_ADDED");
     }
     else if (event.type == SDL_EVENT_GAMEPAD_REMAPPED)
     {
-        LOGI("SDL_EVENT_GAMEPAD_REMAPPED\n");
+        LOGI("SDL_EVENT_GAMEPAD_REMAPPED");
     }
     else if (event.type == SDL_EVENT_GAMEPAD_ADDED)
     {
@@ -588,12 +588,12 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             if (controller)
             {
                 m_gameControllers.emplace_back(controller);
-                LOGI("Controller ADDED: %s (Index:%d)\n",
+                LOGI("Controller ADDED: %s (Index:%d)",
                      SDL_GetGamepadNameForID(event.cdevice.which), joystick_index);
             }
             else
             {
-                LOGE("Failed to open new controller! SDL_Error: %s\n", SDL_GetError());
+                LOGE("Failed to open new controller! SDL_Error: %s", SDL_GetError());
             }
         }
         if (m_gameControllers.size() != 0 &&
@@ -608,7 +608,7 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
         if (controller)
         {
             std::string controllerName = SDL_GetGamepadNameForID(event.gdevice.which);
-            LOGI("Controller REMOVED: %s\n", controllerName.c_str());
+            LOGI("Controller REMOVED: %s", controllerName.c_str());
             for (auto it = m_gameControllers.begin(); it != m_gameControllers.end(); ++it)
             {
                 if (*it == controller)
@@ -666,7 +666,7 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             m_buttonState[BUTTON_BACK] = buttonState;
             break;
         default:
-            LOGI("Controller: %s - Button %s: %s [%d]\n",
+            LOGI("Controller: %s - Button %s: %s [%d]",
                  SDL_GetGamepadName(controller),
                  buttonState ? "DOWN" : "UP",
                  SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
@@ -716,18 +716,18 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
         // Apply a deadzone to ignore small movements
         else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
         { // Example deadzone
-            LOGI("Controller: %s - Axis MOTION: %s -- Value: %d\n", SDL_GetGamepadName(controller),
+            LOGI("Controller: %s - Axis MOTION: %s -- Value: %d", SDL_GetGamepadName(controller),
                  SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
                  event.gaxis.value);
         }
     }
     else if (event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN)
     {
-        LOGI("SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN\n");
+        LOGI("SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN");
     }
     else
     {
-        LOGW("unhandled gamepad event: %d\n", event.type);
+        LOGW("unhandled gamepad event: %d", event.type);
     }
 }
 
@@ -807,7 +807,7 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
 {
     CFileWrap file;
     if (m_verbose && !m_quiet)
-        LOGI("loading: %s\n", path.c_str());
+        LOGI("loading: %s", path.c_str());
     if (file.open(path.c_str(), "rb"))
     {
         const int size = file.getSize();
@@ -819,13 +819,13 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         file.read(data, size);
         file.close();
         if (!m_quiet)
-            LOGI("-> loaded %s: %d bytes\n", path.c_str(), size);
+            LOGI("-> loaded %s: %d bytes", path.c_str(), size);
         *dest = data;
         return true;
     }
     else
     {
-        LOGE("failed to open %s\n", path.c_str());
+        LOGE("failed to open %s", path.c_str());
         return false;
     }
 }
@@ -849,17 +849,17 @@ void CRuntime::preloadAssets()
         if (!data.empty())
         {
             if (!m_quiet)
-                LOGI("reading %s\n", filename.c_str());
+                LOGI("reading %s", filename.c_str());
             mem.replace(data.data(), data.size());
             if ((*frameSets[i])->extract(mem))
             {
                 if (!m_quiet)
-                    LOGI("extracted: %ld\n", ((*frameSets[i])->getSize()));
+                    LOGI("extracted: %ld", ((*frameSets[i])->getSize()));
             }
         }
         else
         {
-            LOGE("can't read: %s\n", filename.c_str());
+            LOGE("can't read: %s", filename.c_str());
         }
     }
 
@@ -931,7 +931,7 @@ void CRuntime::initMusic()
     m_music = std::make_unique<CMusicSDL>(); //  new CMusicSDL();
     m_music->setVolume(ISound::MAX_VOLUME);
     if (!m_quiet)
-        LOGI("volume: %d\n", m_music->getVolume());
+        LOGI("volume: %d", m_music->getVolume());
 }
 
 void CRuntime::keyReflector(SDL_Keycode key, uint8_t keyState)
@@ -984,7 +984,7 @@ bool CRuntime::loadScores()
 {
     std::string path = m_workspace + HISCORE_FILE;
     if (!m_quiet)
-        LOGI("reading %s\n", path.c_str());
+        LOGI("reading %s", path.c_str());
     CFileWrap file;
     if (file.open(path.c_str(), "rb"))
     {
@@ -995,12 +995,12 @@ bool CRuntime::loadScores()
         }
         else
         {
-            LOGE("hiscore size mismatch. resetting to default.\n");
+            LOGE("hiscore size mismatch. resetting to default.");
             clearScores();
         }
         return true;
     }
-    LOGE("can't read %s\n", path.c_str());
+    LOGE("can't read %s", path.c_str());
     return false;
 }
 
@@ -1021,7 +1021,7 @@ bool CRuntime::saveScores()
 #endif
         return true;
     }
-    LOGE("can't write %s\n", path.c_str());
+    LOGE("can't write %s", path.c_str());
     return false;
 }
 
@@ -1057,7 +1057,7 @@ void CRuntime::save()
     std::string path = m_workspace + SAVEGAME_FILE;
     if (m_game->mode() != CGame::MODE_PLAY)
     {
-        LOGE("cannot save while not playing\n");
+        LOGE("cannot save while not playing");
         return;
     }
     std::string name{"Testing123"};
@@ -1085,7 +1085,7 @@ void CRuntime::load()
 void CRuntime::initSounds()
 {
     if (!m_quiet)
-        LOGI("initSound\n");
+        LOGI("initSound");
     m_sound = std::make_shared<CSndSDL>(); //  new CSndSDL();
     CFileWrap file;
     for (size_t i = 0; i < m_soundFiles.size(); ++i)
@@ -1093,7 +1093,7 @@ void CRuntime::initSounds()
         const auto soundName = AssetMan::getPrefix() + std::string("sounds/") + m_soundFiles[i];
         bool result = m_sound->add(soundName.c_str(), i + 1);
         if (m_verbose && !m_quiet)
-            LOGI("%s %s\n", result ? "loaded" : "failed to load", soundName.c_str());
+            LOGI("%s %s", result ? "loaded" : "failed to load", soundName.c_str());
     }
     m_game->attach(m_sound);
 }
@@ -1107,7 +1107,7 @@ void CRuntime::openMusicForLevel(int i)
 void CRuntime::openMusic(const std::string &filename)
 {
     if (!m_quiet)
-        LOGI("open music: %s\n", filename.c_str());
+        LOGI("open music: %s", filename.c_str());
     const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
@@ -1138,7 +1138,7 @@ bool CRuntime::parseConfig(uint8_t *buf)
                 *pe = 0;
             if (!pe)
             {
-                LOGE("missing section terminator on line %d\n", line);
+                LOGE("missing section terminator on line %d", line);
             }
             section = p;
         }
@@ -1170,12 +1170,12 @@ bool CRuntime::parseConfig(uint8_t *buf)
                 }
                 else
                 {
-                    LOGE("string %s on line %d split into %zu parts\n", p, line, list.size());
+                    LOGE("string %s on line %d split into %zu parts", p, line, list.size());
                 }
             }
             else
             {
-                LOGE("item for unknown section %s on line %d\n", section.c_str(), line);
+                LOGE("item for unknown section %s on line %d", section.c_str(), line);
             }
         }
         p = next;
@@ -1456,11 +1456,11 @@ void CRuntime::takeScreenshot()
         file.write(png.data(), png.size());
         file.close();
         if (!m_quiet)
-            LOGI("screenshot saved: %s\n", path.c_str());
+            LOGI("screenshot saved: %s", path.c_str());
     }
     else
     {
-        LOGE("can't write png: %s\n", path.c_str());
+        LOGE("can't write png: %s", path.c_str());
     }
 }
 
@@ -1507,7 +1507,7 @@ void CRuntime::initOptions()
     if (isTrue(m_config["fullscreen"]))
     {
         if (!m_quiet)
-            LOGI("is full screen?\n");
+            LOGI("is full screen?");
         toggleFullscreen();
     }
 
@@ -1515,18 +1515,18 @@ void CRuntime::initOptions()
     {
         m_cameraMode = CAMERA_MODE_STATIC;
         if (!m_quiet)
-            LOGI("using viewport static\n");
+            LOGI("using viewport static");
     }
     else if (m_config["viewport"] == "dynamic")
     {
         m_cameraMode = CAMERA_MODE_DYNAMIC;
         if (!m_quiet)
-            LOGI("using viewport dynamic\n");
+            LOGI("using viewport dynamic");
     }
     else
     {
         if (!m_quiet)
-            LOGI("using viewport default\n");
+            LOGI("using viewport default");
     }
 
     if (m_config["healthbar"] == "hearts")
@@ -1562,7 +1562,7 @@ void CRuntime::toggleFullscreen()
     {
         if (!SDL_SetWindowFullscreen(m_app.window, m_app.isFullscreen))
         {
-            LOGE("Fullscreen toggle error: %s\n", SDL_GetError());
+            LOGE("Fullscreen toggle error: %s", SDL_GetError());
         }
     }
     else
@@ -1586,27 +1586,27 @@ void CRuntime::toggleFullscreen()
     if (m_app.isFullscreen)
     {
         // Currently in fullscreen, switch to windowed
-        LOGI("Switching to windowed mode.\n");
+        LOGI("Switching to windowed mode.");
         if (!SDL_SetWindowFullscreen(m_app.window, false)) // false means windowed mode
         {
-            LOGE("Switching to windowed mode failed: %s\n", SDL_GetError());
+            LOGE("Switching to windowed mode failed: %s", SDL_GetError());
         }
 
         // Restore original window size and position
         if (!SDL_SetWindowSize(m_app.window, m_app.windowedWidth, m_app.windowedHeigth))
         {
-            LOGE("SDL_SetWindowSize failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetWindowSize failed: %s", SDL_GetError());
         }
 
         if (!SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX))
         {
-            LOGE("SDL_SetWindowPosition failed: %s\n", SDL_GetError());
+            LOGE("SDL_SetWindowPosition failed: %s", SDL_GetError());
         }
     }
     else
     {
         // Currently in windowed, switch to fullscreen
-        LOGI("Switching to fullscreen desktop mode.\n");
+        LOGI("Switching to fullscreen desktop mode.");
 
         // Save current windowed position and size before going fullscreen
         SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
@@ -1614,7 +1614,7 @@ void CRuntime::toggleFullscreen()
 
         if (!SDL_SetWindowFullscreen(m_app.window, true))
         {
-            LOGE("Switching to fullscreen mode failed: %s\n", SDL_GetError());
+            LOGE("Switching to fullscreen mode failed: %s", SDL_GetError());
         }
     }
 #endif
@@ -1623,7 +1623,7 @@ void CRuntime::toggleFullscreen()
         int x, y, w, h;
         SDL_GetWindowPosition(m_app.window, &x, &y);
         SDL_GetWindowSize(m_app.window, &w, &h);
-        LOGI("x:%d, y:%d, w:%d, h:%d\n", x, y, w, h);
+        LOGI("x:%d, y:%d, w:%d, h:%d", x, y, w, h);
     }
     m_app.isFullscreen = !m_app.isFullscreen;
     m_fullscreen = (int)m_app.isFullscreen;
@@ -1903,12 +1903,12 @@ void CRuntime::toggleGameMenu()
 bool CRuntime::initControllers()
 {
     if (!m_quiet)
-        LOGI("initControllers()\n");
+        LOGI("initControllers()");
 
     // Initialize SDL's video and game controller subsystems
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD))
     {
-        LOGE("SDL could not initialize gamepad! SDL_Error: %s\n", SDL_GetError());
+        LOGE("SDL could not initialize gamepad! SDL_Error: %s", SDL_GetError());
         return false;
     }
 
@@ -1924,24 +1924,24 @@ bool CRuntime::initControllers()
             {
                 m_gameControllers.emplace_back(controller);
                 if (!m_quiet)
-                    LOGI("Opened Game Controller: %d: %s\n", i, SDL_GetGamepadName(controller));
+                    LOGI("Opened Game Controller: %d: %s", i, SDL_GetGamepadName(controller));
             }
             else
             {
-                LOGE("Could not open game controller:%d! SDL_Error: %s\n", i, SDL_GetError());
+                LOGE("Could not open game controller:%d! SDL_Error: %s", i, SDL_GetError());
             }
         }
     }
     if (m_gameControllers.empty())
     {
-        LOGW("No game controllers found. Connect one now!\n");
+        LOGW("No game controllers found. Connect one now!");
     }
 
     const std::string controllerDB = AssetMan::getPrefix() + m_config["controllerdb"];
     if (!m_config["controllerdb"].empty() &&
         SDL_AddGamepadMappingsFromFile(controllerDB.c_str()) == -1)
     {
-        LOGW("SDL_AddGamepadMappingsFromFile error: %s\n", SDL_GetError());
+        LOGW("SDL_AddGamepadMappingsFromFile error: %s", SDL_GetError());
     }
 
     return true;
@@ -2055,7 +2055,7 @@ void CRuntime::createResolutionList()
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
     if (numDisplays <= 0)
     {
-        LOGE("No displays found: %s\n", SDL_GetError());
+        LOGE("No displays found: %s", SDL_GetError());
         return;
     }
 
@@ -2064,7 +2064,7 @@ void CRuntime::createResolutionList()
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        LOGE("SDL_GetFullscreenDisplayModes failed: %s\n", SDL_GetError());
+        LOGE("SDL_GetFullscreenDisplayModes failed: %s", SDL_GetError());
         return;
     }
     m_resolutions.clear();
@@ -2098,13 +2098,13 @@ int CRuntime::findResolutionIndex()
         if (rez.h == h && rez.w == w)
         {
             if (!m_quiet)
-                LOGI("found resolution %dx%d: %d\n", w, h, i);
+                LOGI("found resolution %dx%d: %d", w, h, i);
             return i;
         }
         ++i;
     }
     if (!m_quiet)
-        LOGI("new resolution %dx%d: %d\n", w, h, i);
+        LOGI("new resolution %dx%d: %d", w, h, i);
     m_resolutions.emplace_back(Rez{w, h});
     return i;
 }
@@ -2118,7 +2118,7 @@ int CRuntime::findResolutionIndex()
 void CRuntime::resize(int w, int h)
 {
     if (m_verbose && !m_quiet)
-        LOGI("switch to: %dx%d\n", w, h);
+        LOGI("switch to: %dx%d", w, h);
     setWidth(w / 2);
     setHeight(h / 2);
     SDL_SetWindowSize(m_app.window, w, h);
@@ -2128,7 +2128,7 @@ void CRuntime::resize(int w, int h)
         SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
     if (m_app.texture == nullptr)
     {
-        LOGE("Failed to create texture: %s\n", SDL_GetError());
+        LOGE("Failed to create texture: %s", SDL_GetError());
         return;
     }
     SDL_DestroyTexture(oldTexture);
@@ -2154,7 +2154,7 @@ void CRuntime::listResolutions(int displayIndex)
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
     if (numDisplays <= 0)
     {
-        LOGE("No displays found: %s\n", SDL_GetError());
+        LOGE("No displays found: %s", SDL_GetError());
         return;
     }
 
@@ -2162,17 +2162,17 @@ void CRuntime::listResolutions(int displayIndex)
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
     if (numModes < 1)
     {
-        LOGE("SDL_GetFullscreenDisplayModes failed:%s\n", SDL_GetError());
+        LOGE("SDL_GetFullscreenDisplayModes failed:%s", SDL_GetError());
         return;
     }
 
     if (!m_quiet)
-        LOGI("Available display modes:\n");
+        LOGI("Available display modes:");
     for (int i = 0; i < numModes; ++i)
     {
         const SDL_DisplayMode &mode = *modes[i];
         if (!m_quiet)
-            LOGI("Mode %d: %dx%d @ %fHz\n", i, mode.w, mode.h, mode.refresh_rate);
+            LOGI("Mode %d: %dx%d @ %fHz", i, mode.w, mode.h, mode.refresh_rate);
     }
 }
 
@@ -2223,7 +2223,7 @@ bool CRuntime::checkMusicFiles()
         std::string music = getMusicPath(file);
         if (!fileExists(music))
         {
-            LOGE("*** File not found: %s\n", music.c_str());
+            LOGE("*** File not found: %s", music.c_str());
             result = false;
         }
     }
@@ -2263,7 +2263,7 @@ void CRuntime::loadColorMaps(const int userID)
     }
     else
     {
-        LOGE("can't read %s\n", path.c_str());
+        LOGE("can't read %s", path.c_str());
     }
 }
 
@@ -2274,7 +2274,7 @@ void CRuntime::loadColorMaps(const int userID)
 void CRuntime::enterGame()
 {
     if (!m_quiet)
-        LOGI("enterGame()\n");
+        LOGI("enterGame()");
     initMusic();
     initSounds();
     initControllers();
@@ -2408,7 +2408,7 @@ int CRuntime::menuItemAt(int x, int y)
         if (RANGE(y, startY, startY + h))
         {
             if (m_trace && !m_quiet)
-                LOGI("menuItem at: %d %d ==> %zu\n", x, y, i);
+                LOGI("menuItem at: %d %d ==> %zu", x, y, i);
             return i;
         }
         startY += h + menu.paddingY();
@@ -2476,7 +2476,7 @@ Rez CRuntime::getWindowSize()
     int h;
     if (!SDL_GetWindowSizeInPixels(m_app.window, &w, &h))
     {
-        LOGE("SDL_GetWindowSizeInPixels failed ! SDL_Error: %s\n", SDL_GetError());
+        LOGE("SDL_GetWindowSizeInPixels failed ! SDL_Error: %s", SDL_GetError());
     }
     return Rez{w, h};
 }
@@ -2511,7 +2511,7 @@ Rect CRuntime::getSafeAreaWindow()
     SDL_Rect safe;
     if (!SDL_GetWindowSafeArea(m_app.window, &safe))
     {
-        LOGE("SDL_GetWindowSafeArea() failed; error: %s\n", SDL_GetError());
+        LOGE("SDL_GetWindowSafeArea() failed; error: %s", SDL_GetError());
     }
     return Rect{
         safe.x,
@@ -2634,7 +2634,7 @@ void CRuntime::onSDLQuit()
     }
 #endif
     if (!m_quiet)
-        LOGI("SDL_QUIT\n");
+        LOGI("SDL_QUIT");
     m_isRunning = false;
 }
 
@@ -2689,7 +2689,7 @@ void CRuntime::readGamePadJs()
     }
     else if (buttonMask && isTrue(m_config["trace"]))
     {
-        LOGI("buttons: %.4x\n", buttonMask);
+        LOGI("buttons: %.4x", buttonMask);
     }
     for (int i = 0; i < Button_Count; ++i)
     {
@@ -2724,7 +2724,7 @@ void CRuntime::mountFS()
 bool CRuntime::saveToFile(const std::string filepath, const std::string name)
 {
     if (!m_quiet)
-        LOGI("writing: %s\n", filepath.c_str());
+        LOGI("writing: %s", filepath.c_str());
     CFileWrap tfile;
     if (tfile.open(filepath.c_str(), "wb"))
     {
@@ -2744,7 +2744,7 @@ bool CRuntime::saveToFile(const std::string filepath, const std::string name)
     }
     else
     {
-        LOGE("can't write: %s\n", filepath.c_str());
+        LOGE("can't write: %s", filepath.c_str());
         return false;
     }
     return true;
@@ -2753,21 +2753,21 @@ bool CRuntime::saveToFile(const std::string filepath, const std::string name)
 bool CRuntime::loadFromFile(const std::string filepath, std::string &name)
 {
     if (!m_quiet)
-        LOGI("reading: %s\n", filepath.c_str());
+        LOGI("reading: %s", filepath.c_str());
     CFileWrap sfile;
     if (sfile.open(filepath.c_str(), "rb"))
     {
         if (!read(sfile, name))
         {
             sfile.close();
-            LOGE("incompatible file: %s\n", filepath.c_str());
+            LOGE("incompatible file: %s", filepath.c_str());
             return false;
         }
         sfile.close();
     }
     else
     {
-        LOGE("can't read: %s\n", filepath.c_str());
+        LOGE("can't read: %s", filepath.c_str());
         return false;
     }
     return true;

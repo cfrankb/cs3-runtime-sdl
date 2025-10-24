@@ -57,12 +57,12 @@ bool test_map()
     const Size mapSize{10, 15};
     if (!map.resize(mapSize.w, mapSize.h, '\0', true))
     {
-        LOGE("failed to resize map\n");
+        LOGE("failed to resize map");
         return false;
     }
     if (map.len() != mapSize.w || map.hei() != mapSize.h)
     {
-        LOGE("map sized (%dx%d) was expected (%dx%d)\n",
+        LOGE("map sized (%dx%d) was expected (%dx%d)",
              map.len(), map.hei(), mapSize.w, mapSize.h);
         return false;
     }
@@ -70,12 +70,12 @@ bool test_map()
     const Size mapSize2 = Size{20, 25};
     if (!map.resize(mapSize2.w, mapSize2.h, '\0', false))
     {
-        LOGE("failed to resize map\n");
+        LOGE("failed to resize map");
         return false;
     }
     if (map.len() != mapSize2.w || map.hei() != mapSize2.h)
     {
-        LOGE("map sized (%dx%d) was expected (%dx%d)\n",
+        LOGE("map sized (%dx%d) was expected (%dx%d)",
              map.len(), map.hei(), mapSize2.w, mapSize2.h);
         return false;
     }
@@ -83,7 +83,7 @@ bool test_map()
     map.fill(' ');
     if (map.count(' ') != map.size())
     {
-        LOGE("map cound failed. returned %d while expecting %d\n",
+        LOGE("map cound failed. returned %d while expecting %d",
              map.count(' '), map.size());
         return false;
     }
@@ -92,7 +92,7 @@ bool test_map()
     map.set(attr.x, attr.y, attr.a);
     if (map.at(attr.x, attr.y) != attr.a)
     {
-        LOGE("map set failed. map get returned 0x%.x. expecting 0x%.x\n", map.at(attr.x, attr.y), attr.a);
+        LOGE("map set failed. map get returned 0x%.x. expecting 0x%.x", map.at(attr.x, attr.y), attr.a);
         return false;
     }
 
@@ -111,7 +111,7 @@ bool test_map()
     map.set(3, 0, 0x3);
     if (map.count(0x03) != 4)
     {
-        LOGE("map cound failed. returned %d while expecting %d\n",
+        LOGE("map cound failed. returned %d while expecting %d",
              map.count(0x03), 4);
         return false;
     }
@@ -120,14 +120,14 @@ bool test_map()
     map.setAttr(5, 6, 0xf);
     if (map.getAttr(12, 13) != 0xf)
     {
-        LOGE("map getAttr failed. returned %x while expecting %x\n",
+        LOGE("map getAttr failed. returned %x while expecting %x",
              map.getAttr(12, 13), 0xf);
         return false;
     }
 
     if (map.attrs().size() != 2)
     {
-        LOGE("incorrect attrs count:%ld; expecting :%d\n",
+        LOGE("incorrect attrs count:%ld; expecting :%d",
              map.attrs().size(), 2);
         return false;
     }
@@ -136,7 +136,7 @@ bool test_map()
     map.setTitle(title.c_str());
     if (strcmp(map.title(), title.c_str()))
     {
-        LOGE("map getTitle failed. returned %s while expecting %s\n",
+        LOGE("map getTitle failed. returned %s while expecting %s",
              map.title(), title.c_str());
         return false;
     }
@@ -149,45 +149,45 @@ static bool checkMap(CMap &map)
     CStates &states = map.states();
     if (!states.hasS(KEY1))
     {
-        LOGE("map doesn't contains sKey %.4x\n", KEY1);
+        LOGE("map doesn't contains sKey %.4x", KEY1);
         return false;
     }
     if (states.hasS(MISSING_KEY))
     {
-        LOGE("map states contains a U-key that shouldn't have %.4x\n", MISSING_KEY);
+        LOGE("map states contains a U-key that shouldn't have %.4x", MISSING_KEY);
         return false;
     }
     if (states.hasU(KEY1))
     {
-        LOGE("map states contains a U-key that shouldn't have %.4x\n", KEY1);
+        LOGE("map states contains a U-key that shouldn't have %.4x", KEY1);
         return false;
     }
     if (!states.hasU(KEY2))
     {
-        LOGE("map doesn't contains uKey %.4x\n", KEY2);
+        LOGE("map doesn't contains uKey %.4x", KEY2);
         return false;
     }
     if (strcmp(states.getS(KEY1), STRING1))
     {
-        LOGE("stateS %.4x contains `%s`; expecting `%s`\n", KEY1, states.getS(KEY1), STRING1);
+        LOGE("stateS %.4x contains `%s`; expecting `%s`", KEY1, states.getS(KEY1), STRING1);
         return false;
     }
 
     if (states.getU(KEY2) != VALUE2)
     {
-        LOGE("stateU %.4x contains `%x`; expecting %x\n", KEY2, states.getU(KEY2), VALUE2);
+        LOGE("stateU %.4x contains `%x`; expecting %x", KEY2, states.getU(KEY2), VALUE2);
         return false;
     }
 
     if (strcmp(map.title(), TITLE))
     {
-        LOGE("map title wrong: `%s`; expecting `%s`\n", map.title(), TITLE);
+        LOGE("map title wrong: `%s`; expecting `%s`", map.title(), TITLE);
         return false;
     }
 
     if (map.getAttr(ATTRX, ATTRY) != ATTRA)
     {
-        LOGE("attr at %x,%x is 0x%x; expecting 0x%x\n", ATTRX, ATTRY, map.getAttr(ATTRX, ATTRY), ATTRA);
+        LOGE("attr at %x,%x is 0x%x; expecting 0x%x", ATTRX, ATTRY, map.getAttr(ATTRX, ATTRY), ATTRA);
         return false;
     }
 
@@ -199,7 +199,7 @@ bool testSeq(uint16_t len, uint16_t hei)
     CMap map(len, hei);
     if (map.len() != len || map.hei() != hei)
     {
-        LOGE("map sizes are wrong: %dx%d; expecting %dx%d\n", map.len(), map.hei(), len, hei);
+        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map.len(), map.hei(), len, hei);
         return false;
     }
     map.setAttr(ATTRX, ATTRY, ATTRA);
@@ -210,39 +210,39 @@ bool testSeq(uint16_t len, uint16_t hei)
 
     if (!checkMap(map))
     {
-        LOGE("testing test_map_2() original map failed\n");
+        LOGE("testing test_map_2() original map failed");
         return false;
     }
 
     CMap map2{map};
     if (map2.title() == map.title())
     {
-        LOGE("shared ptr\n");
+        LOGE("shared ptr");
         return false;
     }
 
     if (&map2.get(0, 0) == &map.get(0, 0))
     {
-        LOGE("shared ptr\n");
+        LOGE("shared ptr");
         return false;
     }
 
     if (!checkMap(map2))
     {
-        LOGE("testing test_map_2() Constructor failed\n");
+        LOGE("testing test_map_2() Constructor failed");
         return false;
     }
 
     CMap map3 = map;
     if (!checkMap(map3))
     {
-        LOGE("testing test_map_2() Constructor failed\n");
+        LOGE("testing test_map_2() Constructor failed");
         return false;
     }
     map3 = map;
     if (!checkMap(map3))
     {
-        LOGE("testing test_map_2()  Operator= failed\n");
+        LOGE("testing test_map_2()  Operator= failed");
         return false;
     }
 
@@ -251,14 +251,14 @@ bool testSeq(uint16_t len, uint16_t hei)
     map4.read(OUT_FILE1);
     if (!checkMap(map4))
     {
-        LOGE("testing test_map_2() Read(filename) failed\n");
+        LOGE("testing test_map_2() Read(filename) failed");
         return false;
     }
 
     CFileWrap file;
     if (!file.open(OUT_FILE1))
     {
-        LOGE("can't open %s\n", OUT_FILE1);
+        LOGE("can't open %s", OUT_FILE1);
         return false;
     }
     CMap map5;
@@ -266,13 +266,13 @@ bool testSeq(uint16_t len, uint16_t hei)
     file.close();
     if (!checkMap(map5))
     {
-        LOGE("testing test_map_2() Read(IFile&) failed\n");
+        LOGE("testing test_map_2() Read(IFile&) failed");
         return false;
     }
 
     if (!file.open(OUT_FILE1))
     {
-        LOGE("can't open %s\n", OUT_FILE1);
+        LOGE("can't open %s", OUT_FILE1);
         return false;
     }
     int size = file.getSize();
@@ -281,25 +281,25 @@ bool testSeq(uint16_t len, uint16_t hei)
     {
         file.close();
         delete[] buf;
-        LOGE("can't read %s\n", OUT_FILE1);
+        LOGE("can't read %s", OUT_FILE1);
         return false;
     }
     file.close();
     CMap map6;
     if (!map6.fromMemory(reinterpret_cast<uint8_t *>(buf)))
     {
-        LOGE("failed to serialize map fromMemory\n");
+        LOGE("failed to serialize map fromMemory");
         return false;
     }
     delete[] buf;
     if (!checkMap(map6))
     {
-        LOGE("testing test_map_2() fromMemory() failed\n");
+        LOGE("testing test_map_2() fromMemory() failed");
         return false;
     }
     if (map6.len() != len || map6.hei() != hei)
     {
-        LOGE("map sizes are wrong: %dx%d; expecting %dx%d\n", map6.len(), map6.hei(), len, hei);
+        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map6.len(), map6.hei(), len, hei);
         return false;
     }
 

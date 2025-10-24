@@ -40,14 +40,14 @@ bool test_png_magic()
     CFileWrap file;
     if (!file.open(INPUT_FILE, "rb"))
     {
-        LOGE("can't open for reading %s\n", INPUT_FILE);
+        LOGE("can't open for reading %s", INPUT_FILE);
         return false;
     }
 
     if (!parsePNG(fs, file))
     {
         file.close();
-        LOGE("can't decode png: %s; last_error: %s\n", INPUT_FILE, fs.getLastError());
+        LOGE("can't decode png: %s; last_error: %s", INPUT_FILE, fs.getLastError());
         return false;
     }
 
@@ -56,19 +56,19 @@ bool test_png_magic()
     std::vector<uint8_t> png;
     if (!fs.toPng(png))
     {
-        LOGE("cannot convert to png\n");
+        LOGE("cannot convert to png");
         return false;
     }
 
     if (!file.open(OUTPUT_FILE, "wb"))
     {
-        LOGE("can't open for writing %s\n", OUTPUT_FILE);
+        LOGE("can't open for writing %s", OUTPUT_FILE);
         return false;
     }
 
     if (file.write(png.data(), png.size()) != 1)
     {
-        LOGE("failed to write file: %s\n", OUTPUT_FILE);
+        LOGE("failed to write file: %s", OUTPUT_FILE);
         return false;
     }
 

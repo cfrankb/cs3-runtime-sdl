@@ -237,7 +237,7 @@ int test()
         CFrameSet images;
         if (images.extract(sfile))
         {
-            LOGI("images:%lu\n", images.getSize());
+            LOGI("images:%lu", images.getSize());
         }
         int count = images.getSize();
         CFrameSet imagesTiny;
@@ -264,7 +264,7 @@ int test()
         CTileSet tiles(16, 16, count);
         for (int i = 0; i < count; ++i)
         {
-            LOGI("image:%d\n", i);
+            LOGI("image:%d", i);
             CFrame *frame = imagesTiny[i];
             uint32_t *rgb888 = frame->getRGB().data();
             int pixels = frame->width() * frame->height();
@@ -316,7 +316,7 @@ bool parseConfig(Config &conf,
     }
     else
     {
-        LOGE("can't open %s\n", src);
+        LOGE("can't open %s", src);
         return false;
     }
     char *s = ptr;
@@ -375,7 +375,7 @@ bool parseConfig(Config &conf,
                 }
                 else
                 {
-                    LOGW("section head `%s` on line %d missing right bracket.\n", s, line);
+                    LOGW("section head `%s` on line %d missing right bracket.", s, line);
                 }
             }
             else
@@ -386,7 +386,7 @@ bool parseConfig(Config &conf,
                 }
                 else
                 {
-                    LOGW("file def on line %d without section.\n", line);
+                    LOGW("file def on line %d without section.", line);
                 }
             }
         }
@@ -419,7 +419,7 @@ bool processConst(StringVector &rows,
         std::string key = str2upper(list[0]);
         if (list.size() < 2)
         {
-            LOGW("missing second value for: %s\n", key.c_str());
+            LOGW("missing second value for: %s", key.c_str());
             continue;
         }
         u_int8_t val = list[1].substr(0, 2) == "0x" ? std::stoi(list[1], 0, 16) : std::stoi(list[1], 0, 10);
@@ -465,7 +465,7 @@ bool writeConstFile(const AppSettings &appSettings, Config &constLists)
     }
     else
     {
-        LOGE("cannot create %s\n", fname);
+        LOGE("cannot create %s", fname);
         return false;
     }
 }
@@ -532,7 +532,7 @@ bool generateHeader(const AppSettings &appSettings,
     CFileWrap tfileHdr;
     if (!tfileHdr.open(fnameHdr.c_str(), "wb"))
     {
-        LOGE("can't create %s\n", fnameHdr.c_str());
+        LOGE("can't create %s", fnameHdr.c_str());
         return false;
     }
 
@@ -548,7 +548,7 @@ bool generateHeader(const AppSettings &appSettings,
         CFileWrap tfileDef;
         if (!tfileDef.open(defHdr.c_str(), "wb"))
         {
-            LOGE("can't create %s\n", defHdr.c_str());
+            LOGE("can't create %s", defHdr.c_str());
             return false;
         }
 
@@ -617,7 +617,7 @@ bool generateData(const AppSettings &appSettings,
     CFileWrap tfileData;
     if (!tfileData.open(fnameData.c_str(), "wb"))
     {
-        LOGE("failed to create %s\n", fnameData.c_str());
+        LOGE("failed to create %s", fnameData.c_str());
         return false;
     }
 
@@ -654,7 +654,7 @@ bool generateData(const AppSettings &appSettings,
             if (chMap[tile.ch] != '\0')
             {
                 Tile &tileOld = tileDefs[chMap[tile.ch]];
-                LOGE("conflict warning: char `%c` already assigned to %s. \n",
+                LOGE("conflict warning: char `%c` already assigned to %s. ",
                      tile.ch, tileOld.name.c_str());
                 ++warnings;
             }
@@ -702,7 +702,7 @@ bool generateData(const AppSettings &appSettings,
                  "}\n"
                  "\n";
     if (warnings)
-        LOGW(">>>>%d warnings\n", warnings);
+        LOGW(">>>>%d warnings", warnings);
     tfileData.close();
     return true;
 }
@@ -735,7 +735,7 @@ bool generateDebug(const AppSettings &appSettings,
     CFileWrap tfile;
     if (!tfile.open(fnameData.c_str(), "wb"))
     {
-        LOGE("failed to create %s\n", fnameData.c_str());
+        LOGE("failed to create %s", fnameData.c_str());
         return false;
     }
 
@@ -804,7 +804,7 @@ bool generateDebug(const AppSettings &appSettings,
     const std::string fnameHdr = section + "debug.h";
     if (!tfile.open(fnameHdr.c_str(), "wb"))
     {
-        LOGE("failed to create %s\n", fnameHdr.c_str());
+        LOGE("failed to create %s", fnameHdr.c_str());
         return false;
     }
 
@@ -926,7 +926,7 @@ Tile parseFileParams(const StringVector &list,
                 }
                 else
                 {
-                    LOGE("unknown directive: %s\n", ref.c_str());
+                    LOGE("unknown directive: %s", ref.c_str());
                 }
             }
             else if (item[0] == '!')
@@ -949,7 +949,7 @@ Tile parseFileParams(const StringVector &list,
                 }
                 else
                 {
-                    LOGE("can't find %s: %s\n", params.name.c_str(), ref.c_str());
+                    LOGE("can't find %s: %s", params.name.c_str(), ref.c_str());
                 }
             }
             else
@@ -958,7 +958,7 @@ Tile parseFileParams(const StringVector &list,
                 tile.typeName = item;
                 if (constConfig["types"].count(item) == 0)
                 {
-                    LOGE("unknown type: %s\n", ref.c_str());
+                    LOGE("unknown type: %s", ref.c_str());
                 }
                 else
                 {
@@ -1090,14 +1090,14 @@ bool extractImages(const std::string &fname, CFrameSet &images)
     CFileWrap sfile;
     if (fname.ends_with(".zip") && readZipFile(fname, images))
     {
-        LOGI("%s images:%lu (insize zip)\n", fname.c_str(), images.getSize());
+        LOGI("%s images:%lu (insize zip)", fname.c_str(), images.getSize());
         return true;
     }
     else if (sfile.open(fname.c_str(), "rb"))
     {
         if (images.extract(sfile))
         {
-            LOGI("%s images:%lu\n", fname.c_str(), images.getSize());
+            LOGI("%s images:%lu", fname.c_str(), images.getSize());
             return true;
         }
     }
@@ -1214,7 +1214,7 @@ bool processSection(
         }
         else
         {
-            LOGE("failed to open: %s\n", fname);
+            LOGE("failed to open: %s", fname);
             ++errors;
         }
     }
@@ -1222,7 +1222,7 @@ bool processSection(
     CFileWrap tfileTiny;
     if (!tfileTiny.open(fnameTiny.c_str(), "wb"))
     {
-        LOGE("can't open %s\n", fnameTiny.c_str());
+        LOGE("can't open %s", fnameTiny.c_str());
     }
     else if (appSettings.outputPNG)
     {
@@ -1241,7 +1241,7 @@ bool processSection(
         imagesTiny.write(tfileTiny);
     }
 
-    LOGI("tiles: %lu\n", imagesTiny.getSize());
+    LOGI("tiles: %lu", imagesTiny.getSize());
 
     // generate tileset
     CTileSet tiles(16, 16, imagesTiny.getSize(), appSettings.pixelWidth); // create tileset
@@ -1324,12 +1324,12 @@ bool processSection(
 
     if (colors.size())
     {
-        LOGI("palette: %lu\n", colors.size());
+        LOGI("palette: %lu", colors.size());
     }
 
     if (errors)
     {
-        LOGE("\n===>>>>> %d errors\n\n", errors);
+        LOGE("\n===>>>>> %d errors", errors);
     }
 
     return true;
@@ -1356,7 +1356,7 @@ bool writePalette(const std::string &lastTileSet,
         std::string palettePath = lastTileSet + ".pal";
         std::string palettePngPath = lastTileSet + "-pal.png";
         uint32_t palette[colorCount];
-        LOGI("writing palette: %s\n", palettePath.c_str());
+        LOGI("writing palette: %s", palettePath.c_str());
         for (const auto &[color, idx] : colors)
         {
             palette[idx] = color;
@@ -1430,7 +1430,7 @@ bool runJob(const char *src,
             else
             {
                 lastTileSet = sectionName;
-                LOGI("[%s]\n", sectionName.c_str());
+                LOGI("[%s]", sectionName.c_str());
                 processSection(
                     sectionName,
                     files,
@@ -1446,11 +1446,11 @@ bool runJob(const char *src,
     writePalette(lastTileSet, colors);
     if (total_errors)
     {
-        LOGE("\n****>>>> total errors: %d\n", total_errors);
+        LOGE("\n****>>>> total errors: %d", total_errors);
     }
     else
     {
-        LOGI("****>>>> no error found\n");
+        LOGI("****>>>> no error found");
     }
 
     return result && total_errors == 0;
@@ -1520,7 +1520,7 @@ int main(int argc, char *argv[], char *envp[])
                 }
                 else
                 {
-                    LOGE("switch: %s, missing appName\n", src);
+                    LOGE("switch: %s, missing appName", src);
                     return EXIT_FAILURE;
                 }
             }
@@ -1542,18 +1542,18 @@ int main(int argc, char *argv[], char *envp[])
                     continue;
                 else if (src[2] == '\0')
                 {
-                    LOGE("missing encoding value: %s\n", src);
+                    LOGE("missing encoding value: %s", src);
                     return EXIT_FAILURE;
                 }
                 else
                 {
-                    LOGE("invalid encoding: %s\n", src + 2);
+                    LOGE("invalid encoding: %s", src + 2);
                     return EXIT_FAILURE;
                 }
             }
             if (strlen(src) != 2)
             {
-                LOGE("invalid switch: %s\n", src);
+                LOGE("invalid switch: %s", src);
                 return EXIT_FAILURE;
             }
             else if (src[1] == 't')
@@ -1581,20 +1581,20 @@ int main(int argc, char *argv[], char *envp[])
                 appSettings.outputPNG = true;
                 continue;
             }
-            LOGE("invalid switch: %s\n", src);
+            LOGE("invalid switch: %s", src);
             return EXIT_FAILURE;
         }
 
         if (appSettings.flipPixels && appSettings.pixelWidth != CTileSet::pixel16)
         {
-            LOGE("invalid flag combination. cannot flip bytes if not 16bits.\n");
+            LOGE("invalid flag combination. cannot flip bytes if not 16bits.");
             return EXIT_FAILURE;
         }
 
         const std::string t{src};
         if (!t.ends_with(".ini"))
         {
-            LOGE("source %s doesn't end with .ini\n", src);
+            LOGE("source %s doesn't end with .ini", src);
             return EXIT_FAILURE;
         }
         files.push_back(src);

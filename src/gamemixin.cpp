@@ -1881,7 +1881,7 @@ void CGameMixin::recordGame()
     const std::string path = "test.rec";
     if (!m_recorderFile.open(path.c_str(), "wb"))
     {
-        LOGE("cannot create: %s\n", path.c_str());
+        LOGE("cannot create: %s", path.c_str());
         return;
     }
     write(m_recorderFile, name);
@@ -1895,7 +1895,7 @@ void CGameMixin::playbackGame()
     const std::string path = "test.rec";
     if (!m_recorderFile.open(path.c_str()))
     {
-        LOGE("cannot read: %s\n", path.c_str());
+        LOGE("cannot read: %s", path.c_str());
         return;
     }
     read(m_recorderFile, name);
@@ -2111,7 +2111,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     }
     else
     {
-        LOGW("unhandled event: 0x%.2x\n", m_currentEvent);
+        LOGW("unhandled event: 0x%.2x", m_currentEvent);
         return message_t{};
     }
 }

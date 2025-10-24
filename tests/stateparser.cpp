@@ -122,12 +122,12 @@ void CStateParser::parseStates(const char *data, CStates &states)
                 }
                 else
                 {
-                    LOGE("key %s on line %d not found.\n", ks, line);
+                    LOGE("key %s on line %d not found.", ks, line);
                 }
             }
             else
             {
-                LOGE("found %ld args on line %d -- should be 2.\n", list.size(), line);
+                LOGE("found %ld args on line %d -- should be 2.", list.size(), line);
             }
         }
         p = next;
@@ -171,13 +171,13 @@ void CStateParser::parse(const char *data)
                 const auto v = parseStringToUShort(list[1], isNum);
                 if (!isNum)
                 {
-                    LOGE("invalid expression `%s` on line %d\n", list[0].c_str(), line);
+                    LOGE("invalid expression `%s` on line %d", list[0].c_str(), line);
                 }
                 m_defines[k] = v;
             }
             else
             {
-                LOGE("found %ld args on line %d -- should be 2.\n", list.size(), line);
+                LOGE("found %ld args on line %d -- should be 2.", list.size(), line);
             }
         }
         p = next;
@@ -188,9 +188,9 @@ void CStateParser::parse(const char *data)
 
 void CStateParser::debug()
 {
-    LOGI("**** defines\n\n");
+    LOGI("**** defines");
     for (const auto &[k, v] : m_defines)
     {
-        LOGI("[%s] => [0x%.4x %u]\n", k.c_str(), v, v);
+        LOGI("[%s] => [0x%.4x %u]", k.c_str(), v, v);
     }
 }

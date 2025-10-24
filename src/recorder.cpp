@@ -71,13 +71,13 @@ bool CRecorder::start(IFile *file, bool isWrite)
             char oSig[sizeof(SIG) + 1];
             oSig[sizeof(SIG)] = '\0';
             memcpy(oSig, SIG, sizeof(SIG));
-            LOGE("signature mismatch:%s; expecting :%s\n", sig, oSig);
+            LOGE("signature mismatch:%s; expecting :%s", sig, oSig);
             return false;
         }
         readFile(&version, sizeof(version));
         if (version != VERSION)
         {
-            LOGE("version mismatch: 0x%.8x; expecting :0x%.8x\n", version, VERSION);
+            LOGE("version mismatch: 0x%.8x; expecting :0x%.8x", version, VERSION);
             return false;
         }
         readFile(&m_size, sizeof(m_size)); // total datasize of data
@@ -86,7 +86,7 @@ bool CRecorder::start(IFile *file, bool isWrite)
     else
     {
         m_mode = MODE_CLOSED;
-        LOGE("invalid file handle\n");
+        LOGE("invalid file handle");
         return false;
     }
     return true;
@@ -149,7 +149,7 @@ void CRecorder::dump()
     if (m_index)
     {
         if (m_file->write(m_buffer, m_index) != IFILE_OK)
-            LOGE("CRecorder::dump() failed to write\n");
+            LOGE("CRecorder::dump() failed to write");
         m_size += m_index;
     }
     m_index = 0;
@@ -207,7 +207,7 @@ void CRecorder::stop()
         storeData(true);
         m_file->seek(m_offset);
         if (m_file->write(&m_size, sizeof(m_size)) != IFILE_OK)
-            LOGE("CRecorder::stop() write fail\n");
+            LOGE("CRecorder::stop() write fail");
     }
     m_mode = MODE_CLOSED;
     if (m_file)

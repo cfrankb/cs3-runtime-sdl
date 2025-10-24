@@ -32,14 +32,14 @@ static bool checkState(CStates &states, const char *context)
 {
     if (strcmp(states.getS(k1), v1))
     {
-        LOGE("%s: string not matching\n", context);
+        LOGE("%s: string not matching", context);
         return false;
     }
 
     auto a2 = states.getU(k2);
     if (a2 != v2)
     {
-        LOGE("%s: uint8 not matching %d %d\n", context,
+        LOGE("%s: uint8 not matching %d %d", context,
              a2, v2);
         return false;
     }
@@ -67,24 +67,24 @@ bool test_states()
     tfile = fopen(outpath0, "wb");
     if (!tfile)
     {
-        LOGE("fail to create %s\n", outpath0);
+        LOGE("fail to create %s", outpath0);
         return false;
     }
     if (!states.write(tfile))
     {
-        LOGE("fail to write %s\n", outpath0);
+        LOGE("fail to write %s", outpath0);
         return false;
     }
     fclose(tfile);
 
     if (!file.open(outpath1, "wb"))
     {
-        LOGE("fail to create %s\n", outpath1);
+        LOGE("fail to create %s", outpath1);
         return false;
     }
     if (!states.write(file))
     {
-        LOGE("fail to write %s\n", outpath1);
+        LOGE("fail to write %s", outpath1);
         return false;
     }
     file.close();
@@ -94,12 +94,12 @@ bool test_states()
     sfile = fopen(outpath0, "rb");
     if (!sfile)
     {
-        LOGE("fail to open for reading %s\n", outpath0);
+        LOGE("fail to open for reading %s", outpath0);
         return false;
     }
     if (!states.read(sfile))
     {
-        LOGE("fail to read %s\n", outpath0);
+        LOGE("fail to read %s", outpath0);
         return false;
     }
     fclose(sfile);
@@ -108,12 +108,12 @@ bool test_states()
 
     if (!file.open(outpath2, "wb"))
     {
-        LOGE("fail to create %s\n", outpath2);
+        LOGE("fail to create %s", outpath2);
         return false;
     }
     if (!states.write(file))
     {
-        LOGE("fail to write %s\n", outpath2);
+        LOGE("fail to write %s", outpath2);
         return false;
     }
     file.close();
@@ -121,12 +121,12 @@ bool test_states()
     states.clear();
     if (!file.open(outpath0, "rb"))
     {
-        LOGE("fail to open for reading %s\n", outpath0);
+        LOGE("fail to open for reading %s", outpath0);
         return false;
     }
     if (!states.read(file))
     {
-        LOGE("fail to read %s\n", outpath0);
+        LOGE("fail to read %s", outpath0);
         return false;
     }
     file.close();
@@ -135,12 +135,12 @@ bool test_states()
 
     if (!file.open(outpath3, "wb"))
     {
-        LOGE("fail to create %s\n", outpath3);
+        LOGE("fail to create %s", outpath3);
         return false;
     }
     if (!states.write(file))
     {
-        LOGE("fail to write %s\n", outpath3);
+        LOGE("fail to write %s", outpath3);
         return false;
     }
     file.close();

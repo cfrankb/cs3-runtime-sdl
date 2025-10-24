@@ -29,7 +29,7 @@ bool test_recorder()
     constexpr const char *path0 = "tests/out/test0000.rec";
     if (!tfile.open(path0, "wb"))
     {
-        LOGE("can't write file %s\n", path0);
+        LOGE("can't write file %s", path0);
         return false;
     }
     rec.start(&tfile, true);
@@ -64,7 +64,7 @@ bool test_recorder()
     // tfile = fopen("tests/out/test0001.rec", "wb");
     if (!tfile.open(path1, "wb"))
     {
-        LOGE("can't write file %s\n", path1);
+        LOGE("can't write file %s", path1);
         return false;
     }
 
@@ -85,7 +85,7 @@ bool test_recorder()
     CFileWrap sfile;
     if (!sfile.open(path1, "rb"))
     {
-        LOGE("can't read file %s\n", path1);
+        LOGE("can't read file %s", path1);
         return false;
     }
     rec.start(&sfile, false);
@@ -96,7 +96,7 @@ bool test_recorder()
         bool result = rec.get(output);
         if (!result)
         {
-            LOGE("premature exit\n");
+            LOGE("premature exit");
             return false;
         }
         uint8_t k = NA;
@@ -111,7 +111,7 @@ bool test_recorder()
         //    printf("%-2d %.2x %.2x\n", i, data[i], k);
         if (data[i] != k)
         {
-            LOGE("mismatch at %ld [%.2x %.2x]\n", i, data[i], k);
+            LOGE("mismatch at %ld [%.2x %.2x]", i, data[i], k);
             return false;
         }
     }

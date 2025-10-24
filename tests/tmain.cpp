@@ -78,17 +78,17 @@ int main(int argc, char *args[])
     int failed = 0;
     for (size_t i = 0; i < fct.size(); ++i)
     {
-        LOGI("==> %s()\n", fct[i].s);
+        LOGI("==> %s()", fct[i].s);
         failed += !fct[i].f();
     }
 
     if (failed != 0)
     {
-        LOGE("###### failed: %d\n", failed);
+        LOGE("###### failed: %d", failed);
     }
     else
     {
-        LOGI("###### completed\n");
+        LOGI("###### completed");
     }
     return failed != 0;
 }

@@ -51,7 +51,7 @@ CMenuItem &CMenu::at(int i)
     }
     else
     {
-        LOGW("Invalid Menu::at index: %d\n", i);
+        LOGW("Invalid Menu::at index: %d", i);
         return m_items[0]; // Throws if out of bounds
     }
 }
@@ -73,7 +73,7 @@ bool CMenu::up()
         --m_currentItem;
         return true;
     }
-    LOGW("Cannot move up: already at first item\n");
+    LOGW("Cannot move up: already at first item");
     return false;
 }
 
@@ -84,7 +84,7 @@ bool CMenu::down()
         ++m_currentItem;
         return true;
     }
-    LOGW("Cannot move down: already at last item\n");
+    LOGW("Cannot move down: already at last item");
     return false;
 }
 
@@ -112,7 +112,7 @@ void CMenu::setCurrent(const int i)
     }
     else
     {
-        LOGW("Invalid current item index: %d\n", i);
+        LOGW("Invalid current item index: %d", i);
         m_currentItem = 0;
     }
 }

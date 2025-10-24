@@ -25,7 +25,7 @@ bool checkValue(CStateParser &parser, const char *k, const uint16_t v)
     const auto a = parser.get(k);
     if (a != v)
     {
-        LOGE("key %s contains wrong value %.2x -- was expecting %.2x\n",
+        LOGE("key %s contains wrong value %.2x -- was expecting %.2x",
              k, a, v);
         return false;
     }
@@ -37,7 +37,7 @@ bool checkState(CStates &states, const uint16_t k, const uint16_t v)
     const auto a = states.getU(k);
     if (a != v)
     {
-        LOGE("key %u / %.2x contains wrong value %.2x -- was expecting %.2x\n",
+        LOGE("key %u / %.2x contains wrong value %.2x -- was expecting %.2x",
              k, k, a, v);
         return false;
     }
@@ -49,7 +49,7 @@ bool checkState(CStates &states, const uint16_t k, const std::string v)
     const auto a = states.getS(k);
     if (a != v)
     {
-        LOGE("key %u / %.2x contains wrong value `%s` -- was expecting `%s`\n",
+        LOGE("key %u / %.2x contains wrong value `%s` -- was expecting `%s`",
              k, k, a, v.c_str());
         return false;
     }

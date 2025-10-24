@@ -39,7 +39,7 @@ bool compareFiles(const char *f1, const char *f2)
 
     if (size1 != size2)
     {
-        LOGE("file size mismatch: %ld, %ld [%s, %s]\n",
+        LOGE("file size mismatch: %ld, %ld [%s, %s]",
              size1, size2, f1, f2);
         return false;
     }
@@ -47,7 +47,7 @@ bool compareFiles(const char *f1, const char *f2)
     FILE *sfile1 = fopen(f1, "rb");
     if (!sfile1)
     {
-        LOGE("can't read: %s\n", f1);
+        LOGE("can't read: %s", f1);
         return false;
     }
 
@@ -55,7 +55,7 @@ bool compareFiles(const char *f1, const char *f2)
     if (!sfile2)
     {
         fclose(sfile1);
-        LOGE("can't read: %s\n", f2);
+        LOGE("can't read: %s", f2);
         return false;
     }
 

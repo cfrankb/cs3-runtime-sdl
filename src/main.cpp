@@ -72,7 +72,7 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
 {
     if (!e->isFullscreen)
     {
-        LOGI("Exited fullscreen—likely via ESC\n");
+        LOGI("Exited fullscreen—likely via ESC");
         // Trigger your custom logic here
         g_runtime->notifyExitFullScreen();
     }
@@ -90,13 +90,13 @@ void stripMaps(CMapArch &arch)
         if (states.getU(PRIVATE) != 0)
         {
             ++mapRemoved;
-            LOGI("stripping out: level %d - %s\n", i + 1, map->title());
+            LOGI("stripping out: level %d - %s", i + 1, map->title());
             arch.removeAt(i);
         }
     }
     if (mapRemoved)
     {
-        LOGI("removed %d map%s\n", mapRemoved, mapRemoved > 1 ? "s" : "");
+        LOGI("removed %d map%s", mapRemoved, mapRemoved > 1 ? "s" : "");
         LOGI("%lu maps remaining.", arch.size());
     }
 }
@@ -149,13 +149,13 @@ const std::string getPrefix()
     char *appdir_env = std::getenv("APPDIR");
     if (appdir_env)
     {
-        LOGI("APPDIR environment variable found: %s\n", appdir_env);
+        LOGI("APPDIR environment variable found: %s", appdir_env);
         // Construct the full path to your embedded data (e.g., an image)
         return std::string(appdir_env) + "/usr/share/data/";
     }
     else
     {
-        LOGI("APPDIR environment variable not found.\n");
+        LOGI("APPDIR environment variable not found.");
         // Fallback or error handling: If not running as AppImage,
         const std::vector<std::string> paths = {
             "data",
@@ -182,10 +182,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     std::vector<std::string> list;
     if (lpCmdLine[0])
         splitString2(lpCmdLine, list);
-    LOGI("CMD: %s\n", lpCmdLine);
+    LOGI("CMD: %s", lpCmdLine);
     for (size_t i = 0; i < list.size(); ++i)
     {
-        LOGI("%d>>> %s\n", i, list[i].c_str());
+        LOGI("%d>>> %s", i, list[i].c_str());
     }
 #elif !defined(EMSCRIPTEN)
 int main(int argc, char *args[])
@@ -204,7 +204,7 @@ int main(int argc, char *args[])
     std::vector<std::string> list;
 #endif
 
-    LOGI("Starting Game %s: Build [%s]\n", VERSION, BUILD_HASH);
+    LOGI("Starting Game %s: Build [%s]", VERSION, BUILD_HASH);
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
     params_t params;
@@ -224,7 +224,7 @@ int main(int argc, char *args[])
 #elif defined(__EMSCRIPTEN__)
     params.workspace = "/offline/";
 #endif
-    LOGI("workspace: %s\n", params.workspace.c_str());
+    LOGI("workspace: %s", params.workspace.c_str());
 
     bool appExit = false;
     if (!parseArgs(list, params, appExit))
@@ -234,13 +234,13 @@ int main(int argc, char *args[])
 
     LOGI("prefix: %s", params.prefix.c_str());
 
-    LOGI("MapArch: %s\n", params.mapArch.c_str());
+    LOGI("MapArch: %s", params.mapArch.c_str());
     data_t data = AssetMan::read(params.mapArch);
     if (data.empty())
         return EXIT_FAILURE;
     if (!maparch.fromMemory(data.data()))
     {
-        LOGE("mapArch error: %s\n", maparch.lastError());
+        LOGE("mapArch error: %s", maparch.lastError());
         return EXIT_FAILURE;
     }
     if (params.strip_private)
@@ -258,7 +258,7 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     if (!g_runtime->parseConfig(data.data()))
     {
-        LOGE("failed to parse config file: %s\n", configFile.c_str());
+        LOGE("failed to parse config file: %s", configFile.c_str());
         return EXIT_FAILURE;
     }
     data.clear();

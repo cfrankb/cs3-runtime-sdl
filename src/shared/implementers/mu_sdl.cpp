@@ -40,7 +40,7 @@ CMusicSDL::CMusicSDL()
 
     if (!SDL_Init(SDL_INIT_AUDIO))
     {
-        LOGE("SDL_init failed: %s\n", SDL_GetError());
+        LOGE("SDL_init failed: %s", SDL_GetError());
         return;
     }
 
@@ -48,14 +48,14 @@ CMusicSDL::CMusicSDL()
     m_data.audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, nullptr);
     if (!m_data.audioDevice)
     {
-        LOGE("SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+        LOGE("SDL_OpenAudioDevice failed: %s", SDL_GetError());
         return;
     }
 
     // Initialize SDL_mixer with the audio device
     if (!Mix_OpenAudio(m_data.audioDevice, nullptr))
     {
-        LOGE("Mix_OpenAudioDevice failed: %s\n", SDL_GetError());
+        LOGE("Mix_OpenAudioDevice failed: %s", SDL_GetError());
         return;
     }
     m_valid = true;
@@ -94,7 +94,7 @@ bool CMusicSDL::open(const char *file)
     else
     {
         m_type = TYPE_NONE;
-        LOGE("Failed to load music `%s` : %s\n", file, SDL_GetError());
+        LOGE("Failed to load music `%s` : %s", file, SDL_GetError());
     }
     return valid;
 }

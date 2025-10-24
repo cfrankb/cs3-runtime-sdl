@@ -63,7 +63,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
             }
             if (strlen(src) != 2)
             {
-                LOGE("invalid switch: %s\n", src);
+                LOGE("invalid switch: %s", src);
                 return EXIT_FAILURE;
             }
             else if (src[1] == 's')
@@ -76,7 +76,7 @@ int parseParams(int argc, char *argv[], AppParams &appSettings)
                 appSettings.report = true;
                 continue;
             }
-            LOGE("invalid switch: %s\n", src);
+            LOGE("invalid switch: %s", src);
             return EXIT_FAILURE;
         }
         appSettings.files.emplace_back(src);
@@ -217,26 +217,26 @@ bool doActions(CMapArch &arch, const std::string &filepath, const AppParams &par
             {
                 // delete map;
                 ++mapRemoved;
-                printf("stripping out: level %d - %s\n", i + 1, map->title());
+                LOGI("stripping out: level %d - %s", i + 1, map->title());
                 auto map = arch.removeAt(i);
             }
         }
         if (mapRemoved)
         {
-            printf("removed %d map%s\n", mapRemoved, mapRemoved > 1 ? "s" : "");
+            LOGI("removed %d map%s", mapRemoved, mapRemoved > 1 ? "s" : "");
             if (arch.write(filepath.c_str()))
             {
-                printf("replaced done: %s\n", filepath.c_str());
+                LOGI("replaced done: %s", filepath.c_str());
             }
             else
             {
-                LOGE("failed to replace: %s\n", filepath.c_str());
+                LOGE("failed to replace: %s", filepath.c_str());
                 return false;
             }
         }
         else
         {
-            printf("no map removed\n");
+            LOGI("no map removed");
         }
     }
 
@@ -276,14 +276,14 @@ bool processFile(const std::string &filepath, const AppParams &params)
         }
         else
         {
-            LOGE("failed to read arch: %s\n", arch.lastError());
+            LOGE("failed to read arch: %s", arch.lastError());
             file.close();
             return false;
         }
     }
     else
     {
-        LOGE("can't open %s\n", filepath.c_str());
+        LOGE("can't open %s", filepath.c_str());
         return false;
     }
 
@@ -300,7 +300,7 @@ int main(int argc, char *argv[], char *envp[])
         return EXIT_FAILURE;
 
     if (params.files.size() == 0)
-        printf("nothing to do\n");
+        LOGW("nothing to do");
 
     for (const auto &filepath : params.files)
     {

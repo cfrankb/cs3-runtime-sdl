@@ -34,19 +34,19 @@ bool testStats(CGameStats &stats, const char *context)
 {
     if (stats.get(S_SKILL) != Skill)
     {
-        LOGE("[%s] stats.get(S_SKILL) -- Got %d; expecting %d\n", context, stats.get(S_SKILL), Skill);
+        LOGE("[%s] stats.get(S_SKILL) -- Got %d; expecting %d", context, stats.get(S_SKILL), Skill);
         return false;
     }
 
     if (stats.get(S_IDLE_TIME) != IdleTime)
     {
-        LOGE("[%s] stats.get(S_IDLE_TIME) -- Got %d; expecting %d\n", context, stats.get(S_IDLE_TIME), IdleTime);
+        LOGE("[%s] stats.get(S_IDLE_TIME) -- Got %d; expecting %d", context, stats.get(S_IDLE_TIME), IdleTime);
         return false;
     }
 
     if (stats.get(S_SUGAR) != Sugar)
     {
-        LOGE("[%s] stats.get(S_SUGAR) -- Got %d; expecting %d\n", context, stats.get(S_SUGAR), Sugar);
+        LOGE("[%s] stats.get(S_SUGAR) -- Got %d; expecting %d", context, stats.get(S_SUGAR), Sugar);
         return false;
     }
 
@@ -69,7 +69,7 @@ bool test_gamestats()
     CFileWrap fwfile;
     if (!fwfile.open(outFile1, "wb"))
     {
-        LOGE("cannot write %s\n", outFile1);
+        LOGE("cannot write %s", outFile1);
         return false;
     }
     stats.write(fwfile);
@@ -87,7 +87,7 @@ bool test_gamestats()
     CGameStats stats4;
     if (!fwfile.open(outFile1, "rb"))
     {
-        LOGE("cannot read %s\n", outFile1);
+        LOGE("cannot read %s", outFile1);
         return false;
     }
     stats4.read(fwfile);
@@ -101,28 +101,28 @@ bool test_gamestats()
     int skill = stats.inc(S_SKILL);
     if (skill != Skill + 1)
     {
-        LOGE("stats.inc(S_SKILL) returned %d; expecting %d\n", skill, Skill + 1);
+        LOGE("stats.inc(S_SKILL) returned %d; expecting %d", skill, Skill + 1);
         return false;
     }
 
     skill = stats.get(S_SKILL);
     if (skill != Skill + 1)
     {
-        LOGE("stats.get(S_SKILL) returned %d; expecting %d\n", skill, Skill + 1);
+        LOGE("stats.get(S_SKILL) returned %d; expecting %d", skill, Skill + 1);
         return false;
     }
 
     skill = stats.dec(S_SKILL);
     if (skill != Skill)
     {
-        LOGE("stats.dec(S_SKILL) returned %d; expecting %d\n", skill, Skill);
+        LOGE("stats.dec(S_SKILL) returned %d; expecting %d", skill, Skill);
         return false;
     }
 
     skill = stats.get(S_SKILL);
     if (skill != Skill)
     {
-        LOGE("stats.get(S_SKILL) returned %d; expecting %d\n", skill, Skill);
+        LOGE("stats.get(S_SKILL) returned %d; expecting %d", skill, Skill);
         return false;
     }
 

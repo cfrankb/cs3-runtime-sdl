@@ -36,19 +36,19 @@ bool test_runtime()
     std::string name;
     if (!runtime.loadFromFile(IN_FILE, name))
     {
-        LOGE("read error: %s \n", IN_FILE);
+        LOGE("read error: %s ", IN_FILE);
         return false;
     }
 
     if (!runtime.saveToFile(OUT_FILE, name))
     {
-        LOGE("failed write %s\n", OUT_FILE);
+        LOGE("failed write %s", OUT_FILE);
         return false;
     }
 
     if (getFileSize(OUT_FILE) != getFileSize(IN_FILE))
     {
-        LOGE("different disk size for %s and %s; %ld != %ld\n",
+        LOGE("different disk size for %s and %s; %ld != %ld",
              IN_FILE, OUT_FILE, getFileSize(IN_FILE), getFileSize(OUT_FILE));
         return false;
     }

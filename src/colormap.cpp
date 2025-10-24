@@ -25,14 +25,14 @@ bool parseListKV(std::vector<std::string> &list, uint32_t &k, uint32_t &v, const
 {
     if (list.size() != 2)
     {
-        LOGE("Expected 2 items, found %zu on line %d\n", list.size(), line);
+        LOGE("Expected 2 items, found %zu on line %d", list.size(), line);
         return false;
     }
     try
     {
         if (list[0].substr(0, 2) != "0x" || list[1].substr(0, 2) != "0x")
         {
-            LOGE("Invalid hex format on line %d\n", line);
+            LOGE("Invalid hex format on line %d", line);
             return false;
         }
         k = std::stoul(list[0].substr(2), nullptr, 16);
@@ -40,7 +40,7 @@ bool parseListKV(std::vector<std::string> &list, uint32_t &k, uint32_t &v, const
     }
     catch (const std::exception &e)
     {
-        LOGE("Failed to parse hex values on line %d: %s\n", line, e.what());
+        LOGE("Failed to parse hex values on line %d: %s", line, e.what());
         return false;
     }
     return true;
@@ -68,7 +68,7 @@ bool parseColorMaps(const char *tmp, ColorMaps &colorMaps)
 {
     if (!tmp)
     {
-        LOGE("Null input buffer\n");
+        LOGE("Null input buffer");
         return false;
     }
     clearColorMaps(colorMaps);
@@ -89,13 +89,13 @@ bool parseColorMaps(const char *tmp, ColorMaps &colorMaps)
             const size_t end = current.find(']');
             if (end == std::string::npos)
             {
-                LOGE("Missing section terminator on line %d\n", line);
+                LOGE("Missing section terminator on line %d", line);
                 return false;
             }
             section = current.substr(1, end - 1);
             if (section.empty() || (section != "sugarrush" && section != "godmode" && section != "rage"))
             {
-                LOGE("Invalid section '%s' on line %d\n", section.c_str(), line);
+                LOGE("Invalid section '%s' on line %d", section.c_str(), line);
                 return false;
             }
         }
@@ -122,7 +122,7 @@ bool parseColorMaps(const char *tmp, ColorMaps &colorMaps)
             }
             else
             {
-                LOGE("No section defined for key-value pair on line %d\n", line);
+                LOGE("No section defined for key-value pair on line %d", line);
                 return false;
             }
         }

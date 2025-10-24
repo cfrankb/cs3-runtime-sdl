@@ -121,7 +121,7 @@ namespace AssetMan
         uint8_t *ptr = readBinary(filepath.c_str(), size);
         if (!ptr)
         {
-            LOGE("can't fetch asset: %s\n", filepath.c_str());
+            LOGE("can't fetch asset: %s", filepath.c_str());
             return false;
         }
         data.assign(ptr, ptr + size);
@@ -131,14 +131,14 @@ namespace AssetMan
         CFileWrap file;
         if (!file.open(filepath.c_str(), "rb"))
         {
-            LOGE("can't open for reading: %s\n", filepath.c_str());
+            LOGE("can't open for reading: %s", filepath.c_str());
             return {};
         }
         size_t size = file.getSize();
         data.resize(terminator ? size + 1 : size);
         if (file.read(data.data(), size) != IFILE_OK)
         {
-            LOGE("Failed to read data from %s\n", filepath.c_str());
+            LOGE("Failed to read data from %s", filepath.c_str());
             return {};
         }
         if (terminator)

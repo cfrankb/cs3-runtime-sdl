@@ -69,7 +69,7 @@ static bool infuse_create(IFile &file, const std::string outfile, const char *co
 
     if (!file.open(outfile.c_str(), "wb"))
     {
-        LOGE("[%s] fail to create %s\n", context, outfile.c_str());
+        LOGE("[%s] fail to create %s", context, outfile.c_str());
         return false;
     }
     if (!testPtr("origin"))
@@ -125,7 +125,7 @@ static bool infuse_create(IFile &file, const std::string outfile, const char *co
 
     if (file.getSize() != filesize)
     {
-        LOGE("filesize %ld wrong; expecting %d\n", file.getSize(), filesize);
+        LOGE("filesize %ld wrong; expecting %d", file.getSize(), filesize);
         return false;
     }
 
@@ -175,14 +175,14 @@ bool test_ifile_read_write()
     CFileWrap fw;
     if (!fw.open(IN_FILE, "rb"))
     {
-        LOGE("can't open for reading %s\n", IN_FILE);
+        LOGE("can't open for reading %s", IN_FILE);
         return false;
     }
 
     CFrameSet fs;
     if (!fs.extract(fw))
     {
-        LOGE("failed to extract images from %s [%s]\n", IN_FILE, fs.getLastError());
+        LOGE("failed to extract images from %s [%s]", IN_FILE, fs.getLastError());
         return false;
     }
     size_t imageCount = fs.getSize();
@@ -192,19 +192,19 @@ bool test_ifile_read_write()
     uint8_t *buf = new uint8_t[filesize];
     if (fw.read(buf, filesize) != 1)
     {
-        LOGE("failed to read %s\n", IN_FILE);
+        LOGE("failed to read %s", IN_FILE);
         return false;
     }
     fw.close();
 
     if (!fw.open(OUT_FILE1, "wb"))
     {
-        LOGE("can't open for writing %s\n", OUT_FILE1);
+        LOGE("can't open for writing %s", OUT_FILE1);
         return false;
     }
     if (!fs.write(fw))
     {
-        LOGE("can't serialize CFrameSet Object to %s\n", OUT_FILE1);
+        LOGE("can't serialize CFrameSet Object to %s", OUT_FILE1);
         return false;
     }
 
@@ -218,14 +218,14 @@ bool test_ifile_read_write()
     delete[] buf;
     if (!fs.extract(fm))
     {
-        LOGE("failed to extract images from [memfile] size: %d - %s\n", filesize, fs.getLastError());
+        LOGE("failed to extract images from [memfile] size: %d - %s", filesize, fs.getLastError());
         return false;
     }
     fs.setTag("UUID", uuid.c_str());
 
     if (fs.getSize() != imageCount)
     {
-        LOGE("images from [memfile] %ld; expecting %ld\n", fs.getSize(), imageCount);
+        LOGE("images from [memfile] %ld; expecting %ld", fs.getSize(), imageCount);
         return false;
     }
 
@@ -233,19 +233,19 @@ bool test_ifile_read_write()
 
     if (!fw.open(OUT_FILE2, "wb"))
     {
-        LOGE("can't open for writing %s [trace1]\n", OUT_FILE2);
+        LOGE("can't open for writing %s [trace1]", OUT_FILE2);
         return false;
     }
     if (!fs.write(fw))
     {
-        LOGE("can't serialize CFrameSet Object to %s\n", OUT_FILE2);
+        LOGE("can't serialize CFrameSet Object to %s", OUT_FILE2);
         return false;
     }
     fw.close();
 
     if (getFileSize(OUT_FILE1) != getFileSize(OUT_FILE2))
     {
-        LOGE("file size %ld mismatch; expecting: %ld\n",
+        LOGE("file size %ld mismatch; expecting: %ld",
              getFileSize(OUT_FILE2), getFileSize(OUT_FILE1));
         return false;
     }
