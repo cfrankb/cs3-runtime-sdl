@@ -45,7 +45,7 @@ public:
         Hurt,
         Death,
         Hidden,
-        MAX_STATE
+        MAX_STATES
     };
     CBoss(const int16_t x = 0, const int16_t y = 0, const bossData_t *data = nullptr);
     virtual ~CBoss() {};

@@ -91,6 +91,7 @@ public:
     void replaceTile(const uint8_t, const uint8_t);
     const AttrMap &attrs() { return m_attrs; }
     CStates &states();
+    inline const CStates &statesConst() const { return *m_states; };
     static uint16_t toKey(const uint8_t x, const uint8_t y);
     static uint16_t toKey(const Pos &pos);
     static Pos toPos(const uint16_t key);

@@ -485,17 +485,17 @@ void CGameMixin::drawScreen(CFrame &bitmap)
 
     // draw bottom rect
     const bool isFullWidth = _WIDTH >= MIN_WIDTH_FULL;
-    const Color rectBG = isFullWidth && m_currentEvent >= MSG0 ? WHITE : DARKGRAY;
-    const Color rectBorder = isPlayerHurt              ? PINK
-                             : visualcues.livesShimmer ? GREEN
-                                                       : LIGHTGRAY;
 
     if (m_currentEvent >= MSG0)
     {
         drawScroll(bitmap);
     }
-    else if (false)
+    else if (m_currentEvent == EVENT_SUGAR)
     {
+        const Color rectBG = isFullWidth && m_currentEvent >= MSG0 ? WHITE : DARKGRAY;
+        const Color rectBorder = isPlayerHurt              ? PINK
+                                 : visualcues.livesShimmer ? GREEN
+                                                           : LIGHTGRAY;
         drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
         drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
     }
@@ -538,8 +538,8 @@ void CGameMixin::drawScroll(CFrame &bitmap)
 
 void CGameMixin::drawTimeout(CFrame &bitmap)
 {
-    CMap *map = &m_game->getMap();
-    CStates &states = map->states();
+    const CMap *map = &m_game->getMap();
+    const CStates &states = map->statesConst();
     const uint16_t timeout = states.getU(TIMEOUT);
     if (timeout)
     {
@@ -550,11 +550,7 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
         const int scaleY = !lowTime ? 4 : 5;
         const int x = WIDTH - scaleX * FONT_SIZE * strlen(tmp) - FONT_SIZE;
         const int y = 2 * FONT_SIZE;
-        Color color = YELLOW;
-        if (lowTime && (m_ticks >> 3) & 1)
-        {
-            color = ORANGE;
-        }
+        const Color color = lowTime && (m_ticks >> 3) & 1 ? ORANGE : YELLOW;
         drawFont(bitmap, x, y, tmp, color, CLEAR, scaleX, scaleY);
     }
 }
@@ -685,7 +681,7 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
 
 void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 {
-    CMap *map = &m_game->getMap();
+    const CMap *map = &m_game->getMap();
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
@@ -781,16 +777,16 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 
 void CGameMixin::drawViewPortStatic(CFrame &bitmap)
 {
-    CMap *map = &m_game->getMap();
-    CGame &game = *m_game;
+    const CMap *map = &m_game->getMap();
+    const CGame &game = *m_game;
 
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
 
-    const int lmx = std::max(0, game.player().x() - cols / 2);
-    const int lmy = std::max(0, game.player().y() - rows / 2);
+    const int lmx = std::max(0, game.playerConst().x() - cols / 2);
+    const int lmy = std::max(0, game.playerConst().y() - rows / 2);
     const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
     bitmap.fill(BLACK);
@@ -961,13 +957,13 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
 void CGameMixin::centerCamera()
 {
     const CMap *map = &m_game->getMap();
-    CGame &game = *m_game;
+    const CGame &game = *m_game;
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
-    const int lmx = std::max(0, game.player().x() - cols / 2);
-    const int lmy = std::max(0, game.player().y() - rows / 2);
+    const int lmx = std::max(0, game.playerConst().x() - cols / 2);
+    const int lmy = std::max(0, game.playerConst().y() - rows / 2);
     const int mx = std::min(lmx, map->len() > cols ? map->len() - cols : 0);
     const int my = std::min(lmy, map->hei() > rows ? map->hei() - rows : 0);
     m_cx = mx * 2;
@@ -1141,7 +1137,7 @@ void CGameMixin::mainLoop()
 
 void CGameMixin::moveCamera()
 {
-    CMap &map = CGame::getMap();
+    const CMap &map = CGame::getMap();
     const int maxRows = HEIGHT / TILE_SIZE;
     const int maxCols = WIDTH / TILE_SIZE;
     const int rows = std::min(maxRows, map.hei());
@@ -1408,7 +1404,7 @@ bool CGameMixin::isWithin(int val, int min, int max)
 
 int CGameMixin::rankUserScore()
 {
-    int score = m_game->score();
+    const int score = m_game->score();
     if (score <= m_hiscores[MAX_SCORES - 1].score)
     {
         return INVALID;
@@ -2019,8 +2015,8 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     else if (m_currentEvent == EVENT_SUGAR)
     {
         char tmp[40];
-        const auto sugarLevel = m_game->stats().get(S_SUGAR_LEVEL);
-        snprintf(tmp, sizeof(tmp), "YUMMY %d/%d (Lvl %d)", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL, sugarLevel + 1);
+        // const auto sugarLevel = m_game->stats().get(S_SUGAR_LEVEL);
+        snprintf(tmp, sizeof(tmp), "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
         return {
             .scaleX = 2,
             .scaleY = 1,
@@ -2033,9 +2029,9 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     {
         const std::string tmp = m_game->getMap().states().getS(m_currentEvent);
         const auto list = split(tmp, '\n');
-        const std::string line1 = list[0];
-        const std::string line2 = list.size() > 1 ? list[1] : "";
-        const std::string line3 = list.size() > 2 ? list[2] : "";
+        const std::string &line1 = list[0];
+        const std::string &line2 = list.size() > 1 ? list[1] : "";
+        const std::string &line3 = list.size() > 2 ? list[2] : "";
         const int y = list.size() == 0 ? baseY - 14 : baseY + -8 * (std ::min(list.size(), (size_t)3));
         return {
             .scaleX = 1,
@@ -2081,7 +2077,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
         return {
             .scaleX = 2,
             .scaleY = 1,
-            .baseY = baseY - 16,
+            .baseY = baseY - (int)TILE_SIZE,
             .color = SEAGREEN,
             .lines{text},
         };
@@ -2224,13 +2220,11 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
     }
 
     // indicate sugar level
-    /*
     const int x = bx * (int)FONT_SIZE;
     const int y = Y_STATUS + 2 + (int)FONT_SIZE;
     char tmp[20];
-    snprintf(tmp, sizeof(tmp), "Level %d", m_game->stats().get(S_SUGAR_LEVEL) + 1);
+    snprintf(tmp, sizeof(tmp), "Lvl %d", m_game->stats().get(S_SUGAR_LEVEL) + 1);
     drawFont6x6(bitmap, x, y, tmp, WHITE, CLEAR);
-    */
 
     if (updateNow)
     {

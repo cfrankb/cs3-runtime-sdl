@@ -461,7 +461,7 @@ bool CBoss::read(IFile &sfile)
     checkBound(m_hp, MAX_HP);
 
     _R(&m_state, sizeof(m_state)); // uint8_t
-    checkBound((uint8_t)m_state, (uint8_t)BossState::MAX_STATE);
+    checkBound((uint8_t)m_state, (uint8_t)BossState::MAX_STATES);
 
     m_speed = 0;
     _R(&m_speed, DATA_SIZE);

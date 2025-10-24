@@ -47,11 +47,18 @@
       border: 0;
     }
 
-    /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+    /* CSS-only aspect ratio maintenance - FASTEST solution */
     canvas.emscripten {
-      border: 0px none;
+      border: 0;
       background-color: black;
       display: block;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      aspect-ratio: 4 / 3;
+      /* Change to your game's aspect ratio (e.g., 640/480 = 4/3, or 16/9, etc.) */
+      object-fit: contain;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
     }
@@ -171,51 +178,9 @@
         const canvas = document.getElementById('canvas');
         const fsBtn = document.getElementById('fs-btn');
 
-
-/*
-        // Wait a bit for itch.io to inject their UI
-        setTimeout(() => {
-          // Check if itch.io's fullscreen button exists
-          const itchFsBtn = document.querySelector('.icon-fullscreen') ||
-            document.querySelector('[title*="fullscreen"]') ||
-            (window.self !== window.top);
-
-          if (itchFsBtn || window.self !== window.top) {
-            fsBtn.style.display = 'none';
-            console.log("itch.io detected - hiding custom fullscreen button");
-          }
-        }, 500);
-*/
-
-        // Define your game's aspect ratio (adjust these values to match your game)
-        const GAME_WIDTH = 640;
-        const GAME_HEIGHT = 480;
-        const ASPECT_RATIO = GAME_WIDTH / GAME_HEIGHT;
-
-        // Function to resize canvas while maintaining aspect ratio
-        function resizeCanvas() {
-          const container = canvas.parentElement;
-          const containerWidth = container.clientWidth;
-          const containerHeight = container.clientHeight;
-          const containerAspect = containerWidth / containerHeight;
-
-          let displayWidth, displayHeight;
-
-          if (containerAspect > ASPECT_RATIO) {
-            // Container is wider than game aspect ratio (letterbox sides)
-            displayHeight = containerHeight;
-            displayWidth = displayHeight * ASPECT_RATIO;
-          } else {
-            // Container is taller than game aspect ratio (letterbox top/bottom)
-            displayWidth = containerWidth;
-            displayHeight = displayWidth / ASPECT_RATIO;
-          }
-
-          // Set CSS size (display size)
-          canvas.style.width = displayWidth + 'px';
-          canvas.style.height = displayHeight + 'px';
-
-          console.log(`Canvas resized to: ${displayWidth}x${displayHeight}`);
+        // Hide button if running on itch.io (they provide their own)
+        if (window.self !== window.top) {
+          fsBtn.style.display = 'none';
         }
 
         // Fullscreen button click handler
@@ -233,7 +198,7 @@
           }
         });
 
-        // Fullscreen change handler (works with both custom button and itch.io button)
+        // Fullscreen change handler - hide button in fullscreen
         function onFullscreenChange() {
           const isFullscreen = document.fullscreenElement ||
             document.webkitFullscreenElement ||
@@ -241,37 +206,18 @@
             document.msFullscreenElement;
 
           if (isFullscreen) {
-            console.log("Entered fullscreen");
             fsBtn.style.display = 'none';
-            resizeCanvas();
-
-            // Notify C++ code if needed
-            if (typeof Module !== 'undefined' && Module._onFullscreenChange) {
-              Module._onFullscreenChange(1);
-            }
           } else {
-            console.log("Exited fullscreen");
-            fsBtn.style.display = 'block';
-            resizeCanvas();
-
-            // Notify C++ code if needed
-            if (typeof Module !== 'undefined' && Module._onFullscreenChange) {
-              Module._onFullscreenChange(0);
-            }
+            // Only show button if not on itch.io
+            fsBtn.style.display = (window.self !== window.top) ? 'none' : 'block';
           }
         }
 
-        // Listen for all fullscreen change events
+        // Listen for fullscreen change events
         document.addEventListener('fullscreenchange', onFullscreenChange);
         document.addEventListener('webkitfullscreenchange', onFullscreenChange);
         document.addEventListener('mozfullscreenchange', onFullscreenChange);
         document.addEventListener('MSFullscreenChange', onFullscreenChange);
-
-        // Listen for window resize
-        window.addEventListener('resize', resizeCanvas);
-
-        // Initial resize
-        resizeCanvas();
 
         // Start your app
         this._main();
@@ -384,17 +330,6 @@
     window.addEventListener("gamepaddisconnected", (e) => {
       console.log(`Gamepad disconnected from index ${e.gamepad.index}: ${e.gamepad.id}`);
     });
-
-    window.addEventListener("blur", () => {
-      console.log("Lost focus");
-      // Optionally show a message or pause the game
-    });
-
-    window.addEventListener("focus", () => {
-      console.log("Regained focus");
-      // Rebind input if needed
-    });
-
   </script>
   {{{ SCRIPT }}}
 </body>

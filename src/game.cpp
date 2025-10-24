@@ -70,6 +70,8 @@ namespace GamePrivate
         TRAP_DAMAGE = -16,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
+        MAX_SHIELDS = 2,
+        MAX_FACTOR = 4,
     };
 
     const std::set<uint8_t> g_fruits = {
@@ -265,6 +267,9 @@ void CGame::consume()
             m_events.emplace_back(EVENT_SUGAR);
     }
 
+    if (pu == TILES_SHIELD)
+        m_gameStats->inc(S_SHIELD);
+
     if (isOneTimeItem(pu))
         m_usedItems.push_back(m_player.pos());
 
@@ -286,7 +291,7 @@ void CGame::consume()
     {
         if (!m_gameStats->get(S_EXTRA_SPEED_TIMER))
             playSound(SOUND_POWERUP2);
-        const int sugarLevel = m_gameStats->inc(S_SUGAR_LEVEL);
+        const int sugarLevel = std::min(m_gameStats->inc(S_SUGAR_LEVEL), (int)MAX_SUGAR_RUSH_LEVEL);
         m_gameStats->set(S_EXTRA_SPEED_TIMER, (int)EXTRASPEED_TIMER * 1.5 * sugarLevel);
         m_events.emplace_back(EVENT_SUGAR_RUSH);
         m_gameStats->set(S_SUGAR, 0);
@@ -815,7 +820,9 @@ void CGame::addHealth(const int hp)
              !m_gameStats->get(S_GOD_MODE_TIMER) &&
              hurtStage == HurtNone)
     {
-        const int hpToken = hp * (1 + 1 * skill);
+        const int shields = std::min(m_gameStats->get(S_SHIELD), (int)MAX_SHIELDS);
+        const float damageFactor = (MAX_FACTOR - shields) / (float)MAX_FACTOR;
+        const int hpToken = (int)damageFactor * (hp * (1 + 1 * skill));
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
     }
