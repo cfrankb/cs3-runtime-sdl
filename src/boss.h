@@ -73,7 +73,7 @@ public:
     bool isDone() const { return m_state == Hidden; }
     bool isGoal() const { return m_bossData->is_goal; }
 
-    void move(const int16_t x, const int16_t y) override
+    inline void move(const int16_t x, const int16_t y) override
     {
         m_x = x;
         m_y = y;

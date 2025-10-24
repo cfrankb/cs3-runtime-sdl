@@ -50,7 +50,7 @@ Build the game
 
 ```
 $ bin/build.sh mingw
-$ python packages/mksetup.sh
+$ packages/bin/makesetup.sh
 ```
 
 Run game

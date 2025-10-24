@@ -30,6 +30,31 @@ CStateParser::~CStateParser()
 {
 }
 
+/**
+ * @brief parse string into uint16_t. diffentiate between decimal and hex notations
+ *
+ * @param s
+ * @param isValid
+ * @return uint16_t
+ */
+uint16_t CStateParser::parseStringToUShort(const std::string &s, bool &isValid)
+{
+    uint16_t v = 0;
+    isValid = false;
+    if (s.substr(0, 2) == "0x" ||
+        s.substr(0, 2) == "0X")
+    {
+        v = std::stoul(s.substr(2), 0, 16);
+        isValid = true;
+    }
+    else if (isdigit(s[0]) || s[0] == '-')
+    {
+        v = std::stoul(s, 0, 10);
+        isValid = true;
+    }
+    return v;
+}
+
 void CStateParser::clear()
 {
     m_defines.clear();

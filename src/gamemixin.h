@@ -113,14 +113,6 @@ protected:
         HEALTHBAR_HEARTHS = 1,
     };
 
-    enum
-    {
-        Annie,
-        Lisa,
-        Alana,
-        Paul
-    };
-
     enum : int32_t
     {
         MAX_IDLE_CYCLES = 0x100,

@@ -41,5 +41,6 @@ public:
     void debug();
 
 private:
+    uint16_t parseStringToUShort(const std::string &s, bool &isValid);
     std::unordered_map<std::string, uint16_t> m_defines;
 };

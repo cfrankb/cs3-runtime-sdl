@@ -53,8 +53,8 @@ struct boss_seq_t
 struct bossData_t
 {
     const char* name;       // boss name
-    int speed;              // movement speed
-    int speed_anime;        // animation speed
+    int speed;              // movement speed (lower = faster)
+    int speed_anime;        // animation speed (lower = faster)
     int hp;                 // hp
     int type;               // type
     int score;              // score received
@@ -62,14 +62,14 @@ struct bossData_t
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
-    uint8_t bullet_rate;    // boss bullet rate
-    uint8_t bullet_algo;       // bullet algo
+    uint8_t bullet_rate;    // boss bullet rate (lower = faster)
+    uint8_t bullet_algo;    // bullet algo
     uint8_t bullet_sound;   // bullet firing sound
-    int bullet_timeout;     // bullet timeout
+    int bullet_timeout;     // bullet timeout (# of moves)
     uint8_t attack_sound;   // sound during an attack
     int distance_chase;     // distance to engage chase
     int distance_pursuit;   // continue pursuit within distance (chase)
-    int distance_attack;
+    int distance_attack;    // distance within which the boss can attack
     bool is_goal;           // is this boss a map goal?
     bool show_details;      // display hp bar/name
     Color color_hp;         // hp bar color

@@ -17,12 +17,11 @@
 */
 #pragma once
 
-#include <cstdint>
-#include <cstdio>
 #include <unordered_map>
 #include <string>
 #include <functional>
 #include <memory> // For unique_ptr
+#include "IFile.h"
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
 struct Pos
@@ -36,6 +35,23 @@ struct Pos
     bool operator!=(const Pos &other) const
     {
         return x != other.x || y != other.y;
+    }
+
+    bool write(IFile &tfile) const
+    {
+        if (tfile.write(&x, sizeof(x)) != IFILE_OK)
+            return false;
+        if (tfile.write(&y, sizeof(y)) != IFILE_OK)
+            return false;
+        return true;
+    }
+    bool read(IFile &sfile)
+    {
+        if (sfile.read(&x, sizeof(x)) != IFILE_OK)
+            return false;
+        if (sfile.read(&y, sizeof(y)) != IFILE_OK)
+            return false;
+        return true;
     }
 };
 

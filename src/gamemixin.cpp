@@ -2018,8 +2018,9 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     }
     else if (m_currentEvent == EVENT_SUGAR)
     {
-        char tmp[16];
-        snprintf(tmp, sizeof(tmp), "YUMMY %d/%d", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL);
+        char tmp[40];
+        const auto sugarLevel = m_game->stats().get(S_SUGAR_LEVEL);
+        snprintf(tmp, sizeof(tmp), "YUMMY %d/%d (Lvl %d)", m_game->sugar(), CGame::MAX_SUGAR_RUSH_LEVEL, sugarLevel + 1);
         return {
             .scaleX = 2,
             .scaleY = 1,
@@ -2221,6 +2222,16 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
             drawRect(bitmap, rect, WHITE, false);
         }
     }
+
+    // indicate sugar level
+    /*
+    const int x = bx * (int)FONT_SIZE;
+    const int y = Y_STATUS + 2 + (int)FONT_SIZE;
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "Level %d", m_game->stats().get(S_SUGAR_LEVEL) + 1);
+    drawFont6x6(bitmap, x, y, tmp, WHITE, CLEAR);
+    */
+
     if (updateNow)
     {
         for (int i = 0; i < SUGAR_CUBES; ++i)
@@ -2239,7 +2250,7 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
  */
 CFrame *CGameMixin::calcSpecialFrame(const sprite_t &sprite)
 {
-    if (RANGE(sprite.attr, ATTR_WAIT_MIN, ATTR_WAIT_MAX))
+    if (RANGE(sprite.attr, ATTR_IDLE_MIN, ATTR_IDLE_MAX))
     {
         CFrameSet &tiles = *m_tiles;
         return tiles[sprite.tileID];

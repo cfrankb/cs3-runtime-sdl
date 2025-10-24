@@ -1,11 +1,15 @@
 #!/usr/bin/python
 import glob
 import ntpath
+import os
 
 TAB = " " * 4
 
 
 def generate_file(folder, sub_folders):
+    if not os.path.isdir(folder):
+        print(f"not a directory: {folder}")
+        return
     excluded = ["main.cpp"]
 
     file_path = folder + "/CMakeLists.txt"
@@ -16,6 +20,9 @@ def generate_file(folder, sub_folders):
     lines.append("")
 
     for sf in sub_folders:
+        if not os.path.isdir(sf):
+            print(f"not a directory {sf}")
+            continue
         path = "/".join(sf.split("/")[1:])
         basename = ntpath.basename(sf)
         lib = f"{basename}_lib"
@@ -83,6 +90,10 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
 
 
 def generate_tests(folder):
+    if not os.path.isdir(folder):
+        print(f"not a directory: {folder}")
+        return
+
     file_path = folder + "/CMakeLists.txt"
     lines = []
 
@@ -104,7 +115,6 @@ def generate_tests(folder):
         "target_link_libraries(cs3-tests PRIVATE src_lib SDL3::SDL3 SDL3_mixer::SDL3_mixer z)"
     )
 
-    # prefix = "../" * len(folder.split("/"))
     lines.append(
         """
 target_include_directories(cs3-tests PRIVATE

@@ -553,7 +553,6 @@ bool CActor::startPath(const Pos &playerPos, const uint8_t algo, const int timeo
     auto pathAlgo = CPath::getPathAlgo(algo);
     if (!pathAlgo)
         return false;
-
     if (!m_path)
         m_path = std::make_unique<CPath>();
     if (timeout != 0)

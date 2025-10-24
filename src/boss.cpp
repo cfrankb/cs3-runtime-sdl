@@ -29,10 +29,15 @@
 #include "filemacros.h"
 #include "map.h"
 
-constexpr int16_t MAX_POS = 512;
-constexpr int MAX_HP = 4096;
-constexpr int MAX_SPEED = 10;
-constexpr int MAX_FRAME = 16;
+namespace BossPrivate
+{
+    constexpr int16_t MAX_POS = 512;
+    constexpr int MAX_HP = 4096;
+    constexpr int MAX_SPEED = 10;
+    constexpr int MAX_FRAME = 16;
+};
+
+using namespace BossPrivate;
 
 CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossData(data)
 {
@@ -462,7 +467,7 @@ bool CBoss::read(IFile &sfile)
     _R(&m_speed, DATA_SIZE);
     checkBound(m_speed, MAX_SPEED);
 
-    _R(&m_aim, sizeof(m_aim));
+    _R(&m_aim, sizeof(m_aim)); // uint8_t
     checkBound(static_cast<uint8_t>(m_aim), JoyAim::TOTAL_AIMS);
 
     // read path
@@ -487,7 +492,7 @@ bool CBoss::write(IFile &tfile)
     _W(&m_hp, DATA_SIZE);
     _W(&m_state, sizeof(m_state)); // uint8_t
     _W(&m_speed, DATA_SIZE);
-    _W(&m_aim, sizeof(m_aim));
+    _W(&m_aim, sizeof(m_aim)); // uint8_t
 
     // write path
     m_path.write(tfile);

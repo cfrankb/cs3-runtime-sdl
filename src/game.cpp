@@ -45,13 +45,12 @@
 #include "randomz.h"
 #include "filemacros.h"
 
-CMap CGame::m_map(30, 30);
 CGame::userKeys_t CGame::m_keys;
 
-namespace Game
+namespace GamePrivate
 {
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0007;
-    static constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0008;
+    constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     CGame *g_game = nullptr;
     Random g_randomz(12345, 0);
 
@@ -107,9 +106,19 @@ namespace Game
         TILES_SMALL_MUSH3,
         TILES_REDBOOK,
     };
+
+    const std::set<uint8_t> g_oneTimeItems = {
+        TILES_SHIELD,
+        TILES_SMALL_MUSH0,
+        TILES_SMALL_MUSH1,
+        TILES_SMALL_MUSH2,
+        TILES_SMALL_MUSH3,
+        TILES_JELLYJAR,
+        TILES_TRIFORCE,
+    };
 }
 
-using namespace Game;
+using namespace GamePrivate;
 
 /**
  * @brief Construct a new CGame::CGame object
@@ -256,6 +265,9 @@ void CGame::consume()
             m_events.emplace_back(EVENT_SUGAR);
     }
 
+    if (isOneTimeItem(pu))
+        m_usedItems.push_back(m_player.pos());
+
     // apply flags
     if (def.flags & FLAG_EXTRA_LIFE)
     {
@@ -274,7 +286,8 @@ void CGame::consume()
     {
         if (!m_gameStats->get(S_EXTRA_SPEED_TIMER))
             playSound(SOUND_POWERUP2);
-        m_gameStats->set(S_EXTRA_SPEED_TIMER, EXTRASPEED_TIMER);
+        const int sugarLevel = m_gameStats->inc(S_SUGAR_LEVEL);
+        m_gameStats->set(S_EXTRA_SPEED_TIMER, (int)EXTRASPEED_TIMER * 1.5 * sugarLevel);
         m_events.emplace_back(EVENT_SUGAR_RUSH);
         m_gameStats->set(S_SUGAR, 0);
     }
@@ -332,15 +345,23 @@ bool CGame::loadLevel(const GameMode mode)
         LOGI("loading level: %d ...\n", m_level + 1);
     setMode(mode);
 
+    // clear used items list when entering a new level
+    if (mode == MODE_CHUTE || mode == MODE_LEVEL_INTRO)
+        m_usedItems.clear();
+
     // extract level from MapArch
     m_map = *(m_mapArch->at(m_level));
 
+    // remove used item
+    for (const auto &pos : m_usedItems)
+        m_map.set(pos.x, pos.y, TILES_BLANK);
+
     if (!m_quiet)
         LOGI("level loaded\n");
+
     if (m_hints.size() == 0)
-    {
-        LOGW("hints not loaded\n");
-    }
+        LOGW("hints not loaded -- not available???\n");
+
     m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
     m_events.clear();
 
@@ -433,6 +454,7 @@ void CGame::restartGame()
 void CGame::resetSugar()
 {
     m_gameStats->set(S_SUGAR, 0);
+    m_gameStats->set(S_SUGAR_LEVEL, 0);
 }
 
 /**
@@ -454,7 +476,7 @@ void CGame::decTimers()
 }
 
 /**
- * @brief reset player state
+ * @brief reset player stats - called to clear stats when the level is loaded
  *
  */
 void CGame::resetStats()
@@ -516,7 +538,8 @@ bool CGame::isMonsterType(const uint8_t typeID) const
         TYPE_ICECUBE,
         TYPE_BOULDER,
         TYPE_FIREBALL,
-        TYPE_LIGHTNING_BOLT};
+        TYPE_LIGHTNING_BOLT,
+    };
 
     for (size_t i = 0; i < monsterTypes.size(); ++i)
         if (monsterTypes[i] == typeID)
@@ -1140,6 +1163,16 @@ bool CGame::read(IFile &sfile)
         }
     }
 
+    // used items
+    size_t usedItemCount = 0;
+    _R(&usedItemCount, sizeof(uint32_t));
+    for (size_t i = 0; i < usedItemCount; ++i)
+    {
+        Pos pos;
+        pos.read(sfile);
+        m_usedItems.push_back(pos);
+    }
+
     // clear events and sfx
     m_events.clear();
     m_sfx.clear();
@@ -1220,6 +1253,12 @@ bool CGame::write(IFile &tfile)
             return false;
         }
     }
+
+    // used items
+    size_t usedItemCount = m_usedItems.size();
+    _W(&usedItemCount, sizeof(uint32_t));
+    for (const Pos &pos : m_usedItems)
+        pos.write(tfile);
 
     return true;
 }
@@ -1662,4 +1701,9 @@ bool CGame::isBulletType(const uint8_t typeID)
 bool CGame::isMoveableType(const uint8_t typeID)
 {
     return typeID == TYPE_BOULDER || typeID == TYPE_ICECUBE;
+}
+
+bool CGame::isOneTimeItem(const uint8_t tileID)
+{
+    return g_oneTimeItems.find(tileID) != g_oneTimeItems.end();
 }

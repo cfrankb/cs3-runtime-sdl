@@ -172,6 +172,7 @@ public:
     static bool isBonusItem(const uint8_t tileID);
     static bool isBulletType(const uint8_t typeID);
     static bool isMoveableType(const uint8_t typeID);
+    static bool isOneTimeItem(const uint8_t tileID);
 
     enum
     {
@@ -198,6 +199,7 @@ private:
     std::shared_ptr<ISound> m_sound;
     std::vector<std::string> m_hints;
     std::unique_ptr<CGameStats> m_gameStats;
+    std::vector<Pos> m_usedItems;
     MapReport m_report;
     int m_defaultLives;
     bool m_quiet = false;
@@ -229,12 +231,11 @@ private:
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
     void handleBossPath(CBoss &boss);
     bool handleBossBullet(CBoss &boss);
-
     inline bool between(int a1, int a2, int b1, int b2) const
     {
         return a1 < b2 && a2 > b1;
     };
 
-    static CMap m_map;
+    inline static CMap m_map;
     friend class CGameMixin;
 };

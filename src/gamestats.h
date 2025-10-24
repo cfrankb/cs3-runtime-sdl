@@ -39,6 +39,8 @@ enum GameStat : uint16_t
     S_TIME_TAKEN,
     S_PLAYER_HURT,
     S_CHUTE,
+    S_SUGAR_LEVEL,
+    S_SHIELD,
 };
 
 class CGameStats

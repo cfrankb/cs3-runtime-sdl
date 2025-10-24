@@ -56,7 +56,8 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
     const uint8_t pu = m_map.at(x, y);
     CActor actor(x, y, def.type, aim);
     actor.setPU(pu);
-    if (pu == TILES_BLANK || pu == TILES_STOP)
+    const TileDef &defPU = getTileDef(pu);
+    if (defPU.type == TYPE_BACKGROUND || defPU.type == TYPE_STOP)
     {
         m_map.set(x, y, tile);
         m_monsters.emplace_back(std::move(actor));
@@ -233,9 +234,7 @@ void CGame::manageMonsters(const int ticks)
     constexpr int speedCount = 9;
     bool speeds[speedCount];
     for (uint32_t i = 0; i < sizeof(speeds); ++i)
-    {
         speeds[i] = i ? (ticks % i) == 0 : true;
-    }
 
     for (size_t i = 0; i < m_monsters.size(); ++i)
     {
@@ -243,9 +242,9 @@ void CGame::manageMonsters(const int ticks)
             continue;
         CActor &actor = m_monsters[i];
         const Pos pos = actor.pos();
-        const uint8_t cs = m_map.at(pos.x, pos.y);
+        const uint8_t tileID = m_map.at(pos.x, pos.y);
         const uint8_t attr = m_map.getAttr(pos.x, pos.y);
-        if (RANGE(attr, ATTR_WAIT_MIN, ATTR_WAIT_MAX))
+        if (RANGE(attr, ATTR_IDLE_MIN, ATTR_IDLE_MAX))
         {
             const uint8_t distance = (attr & 0xf) + 1;
             if (actor.distance(m_player) <= distance)
@@ -254,11 +253,10 @@ void CGame::manageMonsters(const int ticks)
                 continue;
         }
 
-        const TileDef &def = getTileDef(cs);
+        const TileDef &def = getTileDef(tileID);
         if (!speeds[def.speed])
-        {
             continue;
-        }
+
         if (actor.type() == TYPE_MONSTER)
         {
             handleMonster(actor, def);

@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <algorithm>
 #include <stdexcept>
+#include <functional>
 #include "map.h"
 #include "shared/IFile.h"
 #include "states.h"
