@@ -21,7 +21,7 @@
 #include <string>
 #include <functional>
 #include <memory> // For unique_ptr
-#include "IFile.h"
+#include "shared/IFile.h"
 
 typedef std::unordered_map<uint16_t, uint8_t> AttrMap;
 struct Pos
