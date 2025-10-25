@@ -97,7 +97,7 @@ void CRuntime::paint()
 {
     if (!m_bitmap)
     {
-        m_bitmap = new CFrame(WIDTH, HEIGHT);
+        m_bitmap = new CFrame(getWidth(), getHeight());
     }
 
     CFrame &bitmap = *m_bitmap;
@@ -117,7 +117,7 @@ void CRuntime::paint()
         {
             fazeScreen(bitmap, 2);
             resizeGameMenu();
-            drawMenu(bitmap, *m_gameMenu, -1, (_HEIGHT - m_gameMenu->height()) / 2);
+            drawMenu(bitmap, *m_gameMenu, -1, (getHeight() - m_gameMenu->height()) / 2);
         }
         break;
     case CGame::MODE_HISCORES:
@@ -148,9 +148,12 @@ void CRuntime::paint()
         break;
     case CGame::MODE_NEW_INPUTNAME:
         drawVirtualKeyboard(bitmap, "ENTER YOUR NAME", m_input);
+        break;
+    case CGame::MODE_TEST:
+        drawTest(bitmap);
     };
 
-    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), WIDTH * sizeof(uint32_t));
+    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), getWidth() * sizeof(uint32_t));
 #if defined(__ANDROID__)
     Rect safeArea = getSafeAreaWindow();
     SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
@@ -194,8 +197,8 @@ bool CRuntime::createSDLWindow()
     windowFlags |= SDL_WINDOW_BORDERLESS;
 #endif
     atexit(cleanup);
-    const int width = PIXEL_SCALE * WIDTH;
-    const int height = PIXEL_SCALE * HEIGHT;
+    const int width = PIXEL_SCALE * getWidth();
+    const int height = PIXEL_SCALE * getHeight();
     m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
     if (m_app.window == nullptr)
     {
@@ -218,14 +221,14 @@ bool CRuntime::createSDLWindow()
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
             m_app.renderer,
-            SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+            SDL_PIXELFORMAT_XBGR8888, SDL_TEXTUREACCESS_STREAMING, getWidth(), getHeight());
         if (m_app.texture == nullptr)
         {
             LOGE("Failed to create texture: %s", SDL_GetError());
             return false;
         }
         if (!m_quiet)
-            LOGI("texture created: %dx%d", WIDTH, HEIGHT);
+            LOGI("texture created: %dx%d", getWidth(), getHeight());
 
         // this prevents the pixelart from looking fuzy
         if (!SDL_SetTextureScaleMode(m_app.texture, SDL_SCALEMODE_NEAREST))
@@ -916,7 +919,11 @@ void CRuntime::parseHelp(char *text)
 
 void CRuntime::preRun()
 {
-    if (isTrue(m_config["clickstart"]))
+    if (isTrue(m_config["test"]))
+    {
+        m_game->setMode(CGame::MODE_TEST);
+    }
+    else if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);
     }
@@ -1229,7 +1236,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
     {
         const CMenuItem &item = menu.at(i);
         const std::string &text = item.str();
-        const int bx = baseX == -1 ? (WIDTH - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
+        const int bx = baseX == -1 ? (getWidth() - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
         const bool selected = static_cast<int>(i) == menu.index();
         Color color = selected ? YELLOW : BLUE;
         if (item.isDisabled())
@@ -1253,7 +1260,7 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
             for (size_t j = 0; j < item.size(); ++j)
                 len += item.option(j).size() + (size_t)(j != 0);
 
-            x = (WIDTH - len * FONT_SIZE * scaleX) / 2;
+            x = (getWidth() - len * FONT_SIZE * scaleX) / 2;
             for (size_t j = 0; j < item.size(); ++j)
             {
                 const Color color = selected && (j == (size_t)item.value()) ? YELLOW : BLUE;
@@ -1294,8 +1301,8 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     const Rect rect{
         8,
         baseY,
-        WIDTH - 16,
-        HEIGHT - baseY - 24};
+        getWidth() - 16,
+        getHeight() - baseY - 24};
     drawRect(bitmap, rect, DARKRED, false);
 
     CMenu &menu = *m_mainMenu;
@@ -1332,7 +1339,7 @@ void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
  */
 void CRuntime::drawScroller(CFrame &bitmap)
 {
-    drawFont(bitmap, 0, HEIGHT - FONT_SIZE * 2, m_scroll, YELLOW);
+    drawFont(bitmap, 0, getHeight() - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1 && !m_credits.empty())
     {
         for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
@@ -1367,11 +1374,11 @@ void CRuntime::setupTitleScreen()
     m_skill = m_game->skill();
     CMenu &menu = *m_mainMenu;
     menu.clear();
-    if (_WIDTH > 450)
+    if (getWidth() > 450)
     {
         menu.setScaleX(4);
     }
-    else if (_WIDTH > 350)
+    else if (getWidth() > 350)
     {
         menu.setScaleX(3);
     }
@@ -1380,15 +1387,15 @@ void CRuntime::setupTitleScreen()
         menu.setScaleX(2);
     }
 
-    if (_HEIGHT >= 450)
+    if (getHeight() >= 450)
     {
         menu.setScaleY(6);
     }
-    else if (_HEIGHT >= 350)
+    else if (getHeight() >= 350)
     {
         menu.setScaleY(5);
     }
-    else if (_HEIGHT >= 300)
+    else if (getHeight() >= 300)
     {
         menu.setScaleY(3);
     }
@@ -1421,7 +1428,7 @@ void CRuntime::setupTitleScreen()
  */
 void CRuntime::takeScreenshot()
 {
-    CFrame bitmap(WIDTH, HEIGHT);
+    CFrame bitmap(getWidth(), getHeight());
     if (m_bitmap)
         bitmap.copy(m_bitmap);
     else
@@ -1863,7 +1870,7 @@ const std::string CRuntime::getSavePath() const
 void CRuntime::resizeGameMenu()
 {
     CMenu &menu = *m_gameMenu;
-    if (WIDTH > MIN_WIDTH_FULL)
+    if (getWidth() > MIN_WIDTH_FULL)
     {
         menu.setScaleX(2);
     }
@@ -1964,7 +1971,7 @@ void CRuntime::init(CMapArch *maparch, int index)
 
 size_t CRuntime::scrollerBufSize()
 {
-    return WIDTH / FONT_SIZE;
+    return getWidth() / FONT_SIZE;
 }
 
 /**
@@ -2090,8 +2097,8 @@ void CRuntime::createResolutionList()
  */
 int CRuntime::findResolutionIndex()
 {
-    const int w = _WIDTH * 2;
-    const int h = _HEIGHT * 2;
+    const int w = getWidth() * 2;
+    const int h = getHeight() * 2;
     int i = 0;
     for (const auto &rez : m_resolutions)
     {
@@ -2125,7 +2132,7 @@ void CRuntime::resize(int w, int h)
     auto oldTexture = m_app.texture;
     m_app.texture = SDL_CreateTexture(
         m_app.renderer,
-        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+        SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, getWidth(), getHeight());
     if (m_app.texture == nullptr)
     {
         LOGE("Failed to create texture: %s", SDL_GetError());
@@ -2136,7 +2143,7 @@ void CRuntime::resize(int w, int h)
     {
         delete m_bitmap;
     }
-    m_bitmap = new CFrame(WIDTH, HEIGHT);
+    m_bitmap = new CFrame(getWidth(), getHeight());
     resizeScroller();
     m_app.windowedWidth = w;
     m_app.windowedHeigth = h;
@@ -2203,7 +2210,7 @@ void CRuntime::notifyExitFullScreen()
  */
 void CRuntime::drawUserMenu(CFrame &bitmap)
 {
-    int baseY = (_HEIGHT - m_userMenu->height()) / 2;
+    int baseY = (getHeight() - m_userMenu->height()) / 2;
     drawFont(bitmap, 32, baseY - 32, "SELECT DIAMOND HUNTER", GRAY, BLACK, 1, 2);
     drawMenu(bitmap, *m_userMenu, 48, baseY);
 }
@@ -2298,7 +2305,7 @@ void CRuntime::drawLevelSummary(CFrame &bitmap)
     std::vector<Text> listStr;
     char tmp[128];
     snprintf(tmp, sizeof(tmp), "LEVEL %.2d COMPLETED", m_game->level() + 1);
-    if (_WIDTH < MIN_WIDTH_FULL)
+    if (getWidth() < MIN_WIDTH_FULL)
         listStr.emplace_back(Text{tmp, YELLOW, 1, 2});
     else
         listStr.emplace_back(Text{tmp, YELLOW, 2, 2});
@@ -2328,11 +2335,11 @@ void CRuntime::drawLevelSummary(CFrame &bitmap)
         height += FONT_SIZE * item.scaleY + FONT_SIZE;
     }
 
-    int y = (_HEIGHT - height) / 2;
+    int y = (getHeight() - height) / 2;
     for (const auto &item : listStr)
     {
         const auto &str = item.text;
-        const int x = (_WIDTH - str.length() * FONT_SIZE * item.scaleX) / 2;
+        const int x = (getWidth() - str.length() * FONT_SIZE * item.scaleX) / 2;
         drawFont(bitmap, x, y, str.c_str(), item.color, BLACK, item.scaleX, item.scaleY);
         y += FONT_SIZE * item.scaleY + FONT_SIZE;
     }
@@ -2429,9 +2436,9 @@ void CRuntime::followPointer(int x, int y)
 
 void CRuntime::drawSkillMenu(CFrame &bitmap)
 {
-    const int baseY = (_HEIGHT - m_userMenu->height()) / 2;
+    const int baseY = (getHeight() - m_userMenu->height()) / 2;
     const char *t = "GAME DIFFICULTY";
-    int x = (_WIDTH - strlen(t) * FONT_SIZE * 2) / 2;
+    int x = (getWidth() - strlen(t) * FONT_SIZE * 2) / 2;
     drawFont(bitmap, x, baseY - 32, t, GRAY, BLACK, 2, 2);
     drawMenu(bitmap, *m_skillMenu, -1, baseY);
 }
@@ -2487,8 +2494,8 @@ CRuntime::pos_t CRuntime::windowPos2texturePos(posF_t pos)
     Rect safeRect = getSafeAreaWindow();
     pos.x -= safeRect.x;
     pos.y -= safeRect.y;
-    float w = _WIDTH;
-    float h = _HEIGHT;
+    float w = getWidth();
+    float h = getHeight();
     return {.x = static_cast<int>(w * pos.x / safeRect.width), .y = static_cast<int>(h * pos.y / safeRect.height)};
 #else
     return {
@@ -2524,8 +2531,8 @@ Rect CRuntime::getSafeAreaWindow()
 Rect CRuntime::windowRect2textureRect(const Rect &wRect)
 {
     Rez rez = getWindowSize();
-    float w = (float)_WIDTH * 2;
-    // float h = (float)_HEIGHT * 2;
+    float w = (float)getWidth() * 2;
+    // float h = (float)getHeight() * 2;
     auto _c = [rez, w](auto u)
     {
         return static_cast<int>(w * (float)u / rez.w);
@@ -2615,10 +2622,10 @@ void CRuntime::drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std
     const char end = (m_ticks >> 4) & 1 ? (char)CHARS_CARET : ' ';
     drawUI(bitmap, ui);
     std::string t = title;
-    int x = (_WIDTH - t.length() * FONT_SIZE * scaleX) / 2;
+    int x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
     drawFont(bitmap, x, FONT_SIZE, t.c_str(), LIGHTGRAY, CLEAR, scaleX, scaleY);
     t = buffer + end;
-    x = (_WIDTH - t.length() * FONT_SIZE * scaleX) / 2;
+    x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
     drawFont(bitmap, x, 48, t.c_str(), YELLOW, CLEAR, scaleX, scaleY);
 }
 
@@ -2802,4 +2809,9 @@ bool CRuntime::isValidSavegame(const std::string &filepath)
 
     LOGE("couldn't read %s", filepath.c_str());
     return false;
+}
+
+void CRuntime::drawTest(CFrame &bitmap)
+{
+    drawFont(bitmap, 16, 16, "COMING SOON 2025", YELLOW, BLACK, 2, 2);
 }

@@ -33,9 +33,6 @@
 #include "color.h"
 #include "shared/FileWrap.h"
 
-#define WIDTH getWidth()
-#define HEIGHT getHeight()
-
 class CActor;
 class CFrameSet;
 class CFrame;
@@ -56,11 +53,6 @@ public:
     static int tickRate();
     void setWidth(int w);
     void setHeight(int h);
-    enum : int32_t
-    {
-        DEFAULT_WIDTH = 320,
-        DEFAULT_HEIGHT = 240,
-    };
 
 #ifdef USE_QFILE
 protected slots:
@@ -288,8 +280,8 @@ protected:
     int m_currentEvent;
     int m_eventCountdown;
     int m_timer;
-    int _WIDTH = DEFAULT_WIDTH;
-    int _HEIGHT = DEFAULT_HEIGHT;
+    int _WIDTH;
+    int _HEIGHT;
     ColorMaps m_colormaps;
     visualStates_t m_visualStates;
     CGameUI m_ui;

@@ -19,8 +19,8 @@
 #include <cstring>
 #include "parseargs.h"
 #include "skills.h"
-#include "runtime.h"
 #include "logger.h"
+#include "defaults.h"
 
 void showHelp()
 {
@@ -52,8 +52,8 @@ void initArgs(params_t &params)
     params.skill = SKILL_NORMAL;
     params.hardcore = false;
     params.verbose = false;
-    params.width = CRuntime::DEFAULT_WIDTH;
-    params.height = CRuntime::DEFAULT_HEIGHT;
+    params.width = DEFAULT_WIDTH;
+    params.height = DEFAULT_HEIGHT;
     params.strip_private = false;
 }
 

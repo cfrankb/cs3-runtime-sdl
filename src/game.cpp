@@ -45,8 +45,6 @@
 #include "randomz.h"
 #include "filemacros.h"
 
-CGame::userKeys_t CGame::m_keys;
-
 namespace GamePrivate
 {
     constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0008;

@@ -68,6 +68,7 @@ public:
         MODE_SKLLSELECT,
         MODE_NEW_INPUTNAME,
         MODE_CHUTE,
+        MODE_TEST,
     };
 
     enum : uint32_t
@@ -187,7 +188,7 @@ private:
     int m_score = 0;
     int m_nextLife;
     int m_diamonds = 0;
-    static userKeys_t m_keys;
+    inline static userKeys_t m_keys;
     GameMode m_mode;
     int m_introHint = 0;
     std::vector<Event> m_events;

@@ -266,6 +266,7 @@ private:
     void handleVKEY(int x, int y);
     bool loadAppIcon();
     void addGamePadOptions(CMenu &menu);
+    void drawTest(CFrame &bitmap);
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

@@ -38,6 +38,7 @@
 #include "logger.h"
 #include "strhelper.h"
 #include "filemacros.h"
+#include "defaults.h"
 
 // Check windows
 #ifdef _WIN64
@@ -70,6 +71,8 @@ CGameMixin::CGameMixin()
     m_eventCountdown = 0;
     m_currentEvent = EVENT_NONE;
     initUI();
+    _WIDTH = DEFAULT_WIDTH;
+    _HEIGHT = DEFAULT_HEIGHT;
 }
 
 CGameMixin::~CGameMixin()
@@ -435,8 +438,8 @@ void CGameMixin::drawKeys(CFrame &bitmap)
 {
     CGame &game = *m_game;
     CFrameSet &tiles = *m_tiles;
-    const int y = HEIGHT - TILE_SIZE;
-    int x = WIDTH - TILE_SIZE;
+    const int y = getHeight() - TILE_SIZE;
+    int x = getWidth() - TILE_SIZE;
     const CGame::userKeys_t &keys = game.keys();
     for (size_t i = 0; i < CGame::MAX_KEYS; ++i)
     {
@@ -484,7 +487,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     drawGameStatus(bitmap, visualcues);
 
     // draw bottom rect
-    const bool isFullWidth = _WIDTH >= MIN_WIDTH_FULL;
+    const bool isFullWidth = getWidth() >= MIN_WIDTH_FULL;
 
     if (m_currentEvent >= MSG0)
     {
@@ -496,8 +499,8 @@ void CGameMixin::drawScreen(CFrame &bitmap)
         const Color rectBorder = isPlayerHurt              ? PINK
                                  : visualcues.livesShimmer ? GREEN
                                                            : LIGHTGRAY;
-        drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBG, true);
-        drawRect(bitmap, Rect{0, bitmap.height() - 16, WIDTH, TILE_SIZE}, rectBorder, false);
+        drawRect(bitmap, Rect{0, bitmap.height() - 16, getWidth(), TILE_SIZE}, rectBG, true);
+        drawRect(bitmap, Rect{0, bitmap.height() - 16, getWidth(), TILE_SIZE}, rectBorder, false);
     }
 
     // draw current event text
@@ -548,7 +551,7 @@ void CGameMixin::drawTimeout(CFrame &bitmap)
         const bool lowTime = timeout <= 15;
         const int scaleX = !lowTime ? 3 : 5;
         const int scaleY = !lowTime ? 4 : 5;
-        const int x = WIDTH - scaleX * FONT_SIZE * strlen(tmp) - FONT_SIZE;
+        const int x = getWidth() - scaleX * FONT_SIZE * strlen(tmp) - FONT_SIZE;
         const int y = 2 * FONT_SIZE;
         const Color color = lowTime && (m_ticks >> 3) & 1 ? ORANGE : YELLOW;
         drawFont(bitmap, x, y, tmp, color, CLEAR, scaleX, scaleY);
@@ -642,8 +645,8 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
 {
     CGame &game = *m_game;
     CMap *map = &m_game->getMap();
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
     const int &mx = context.mx;
@@ -687,8 +690,8 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
 void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 {
     const CMap *map = &m_game->getMap();
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
     const int mx = m_cx / 2;
@@ -785,8 +788,8 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
     const CMap *map = &m_game->getMap();
     const CGame &game = *m_game;
 
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
 
@@ -963,8 +966,8 @@ void CGameMixin::centerCamera()
 {
     const CMap *map = &m_game->getMap();
     const CGame &game = *m_game;
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
     const int rows = std::min(maxRows, map->hei());
     const int cols = std::min(maxCols, map->len());
     const int lmx = std::max(0, game.playerConst().x() - cols / 2);
@@ -1004,23 +1007,23 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         snprintf(t, sizeof(t), "DROP TO LEVEL %.2d", m_game->level() + 1);
     };
 
-    const int x = (WIDTH - strlen(t) * 2 * FONT_SIZE) / 2;
-    const int y = (HEIGHT - FONT_SIZE * 2) / 2;
+    const int x = (getWidth() - strlen(t) * 2 * FONT_SIZE) / 2;
+    const int y = (getHeight() - FONT_SIZE * 2) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, YELLOW, BLACK, 2, 2);
 
     if (mode == CGame::MODE_LEVEL_INTRO || mode == CGame::MODE_CHUTE)
     {
         const char *t = m_game->getMap().title();
-        const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+        const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
         drawFont(bitmap, x, y + 3 * FONT_SIZE, t, WHITE);
     }
 
-    if (mode != CGame::MODE_GAMEOVER && _WIDTH >= MIN_WIDTH_FULL)
+    if (mode != CGame::MODE_GAMEOVER && getWidth() >= MIN_WIDTH_FULL)
     {
         const char *hint = m_game->getHintText();
-        const int x = (WIDTH - strlen(hint) * FONT_SIZE) / 2;
-        const int y = HEIGHT - FONT_SIZE * 4;
+        const int x = (getWidth() - strlen(hint) * FONT_SIZE) / 2;
+        const int y = getHeight() - FONT_SIZE * 4;
         drawFont(bitmap, x, y, hint, CYAN);
     }
     m_currentEvent = EVENT_NONE;
@@ -1137,14 +1140,16 @@ void CGameMixin::mainLoop()
         return;
     case CGame::MODE_NEW_INPUTNAME:
         return;
+    case CGame::MODE_TEST:
+        return;
     }
 }
 
 void CGameMixin::moveCamera()
 {
     const CMap &map = CGame::getMap();
-    const int maxRows = HEIGHT / TILE_SIZE;
-    const int maxCols = WIDTH / TILE_SIZE;
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
     const int rows = std::min(maxRows, map.hei());
     const int cols = std::min(maxCols, map.len());
 
@@ -1439,23 +1444,23 @@ void CGameMixin::drawScores(CFrame &bitmap)
 {
     int scaleX = 2;
     int scaleY = 2;
-    if (_WIDTH > 450)
+    if (getWidth() > 450)
     {
         scaleX = 4;
     }
-    else if (_WIDTH > 350)
+    else if (getWidth() > 350)
     {
         scaleX = 3;
     }
-    if (_HEIGHT >= 450)
+    if (getHeight() >= 450)
     {
         scaleY = 3;
     }
-    if (_HEIGHT >= 350)
+    if (getHeight() >= 350)
     {
         scaleY = 3;
     }
-    else if (_HEIGHT >= 300)
+    else if (getHeight() >= 300)
     {
         scaleY = 2;
     }
@@ -1464,11 +1469,11 @@ void CGameMixin::drawScores(CFrame &bitmap)
     char t[50];
     int y = 1;
     strncpy(t, "HALL OF HEROES", sizeof(t));
-    int x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
+    int x = (getWidth() - strlen(t) * scaleX * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
     strncpy(t, std::string(strlen(t), '=').c_str(), sizeof(t) - 1);
-    x = (WIDTH - strlen(t) * scaleX * FONT_SIZE) / 2;
+    x = (getWidth() - strlen(t) * scaleX * FONT_SIZE) / 2;
     drawFont(bitmap, x, y * FONT_SIZE, t, WHITE, BLACK, scaleX, scaleY);
     y += scaleX;
 
@@ -1502,7 +1507,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
     else if (m_recordScore)
     {
         strncpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.", sizeof(t));
-        x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
+        x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
         drawFont(bitmap, x, y++ * FONT_SIZE, t, YELLOW, BLACK, scaleX / 2, scaleY / 2);
     }
 }
@@ -1524,7 +1529,7 @@ void CGameMixin::drawHelpScreen(CFrame &bitmap)
         else if (p[0] == '!')
         {
             ++p;
-            x = (WIDTH - strlen(p) * FONT_SIZE) / 2;
+            x = (getWidth() - strlen(p) * FONT_SIZE) / 2;
         }
         drawFont(bitmap, x, y * FONT_SIZE, p, color);
         ++y;
@@ -1835,8 +1840,8 @@ bool CGameMixin::write(IFile &tfile, const std::string &name)
 void CGameMixin::drawPreScreen(CFrame &bitmap)
 {
     const char t[] = "CLICK TO START";
-    const int x = (WIDTH - strlen(t) * FONT_SIZE) / 2;
-    const int y = (HEIGHT - FONT_SIZE) / 2;
+    const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
+    const int y = (getHeight() - FONT_SIZE) / 2;
     bitmap.fill(BLACK);
     drawFont(bitmap, x, y, t, WHITE);
 }
@@ -1953,7 +1958,7 @@ void CGameMixin::drawEventText(CFrame &bitmap)
             const auto &line = std::move(message.lines[i]);
             if (line.size() == 0)
                 break;
-            const int x = (WIDTH - line.size() * FONT_SIZE * message.scaleX) / 2;
+            const int x = (getWidth() - line.size() * FONT_SIZE * message.scaleX) / 2;
             const int y = message.baseY - FONT_SIZE * message.scaleY + i * 10;
             drawFont(bitmap, x, y, line.c_str(), message.color, CLEAR, message.scaleX, message.scaleY);
         }
@@ -2426,7 +2431,7 @@ void CGameMixin::drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues)
         {
             drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
         }
-        if (_WIDTH >= MIN_WIDTH_FULL)
+        if (getWidth() >= MIN_WIDTH_FULL)
             drawSugarMeter(bitmap, bx);
     }
 }
@@ -2475,8 +2480,8 @@ void CGameMixin::initUI()
 
 void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 {
-    const int baseX = _WIDTH - ui.width() - ui.margin();
-    const int baseY = _HEIGHT - ui.height() - ui.margin();
+    const int baseX = getWidth() - ui.width() - ui.margin();
+    const int baseY = getWidth() - ui.height() - ui.margin();
     for (const auto &btn : ui.buttons())
     {
         int x = baseX + btn.x;
@@ -2489,8 +2494,8 @@ void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 
 int CGameMixin::whichButton(CGameUI &ui, int x, int y)
 {
-    const int baseX = _WIDTH - ui.width() - ui.margin();
-    const int baseY = _HEIGHT - ui.height() - ui.margin();
+    const int baseX = getWidth() - ui.width() - ui.margin();
+    const int baseY = getHeight() - ui.height() - ui.margin();
     for (const auto &btn : ui.buttons())
     {
         if (RANGE(x, baseX + btn.x, baseX + btn.x + btn.width) &&
