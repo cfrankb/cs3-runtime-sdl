@@ -93,6 +93,7 @@ public:
         uint8_t indicators[MAX_KEYS];
     };
 
+    ~CGame();
     bool loadLevel(const GameMode mode);
     bool move(const JoyAim dir);
     void manageMonsters(const int ticks);
@@ -142,6 +143,7 @@ public:
     int getEvent();
     void purgeSfx();
     static CGame *getGame();
+    static void destroy();
     bool isClosure() const;
     bool isLevelCompleted() const;
     int closusureTimer() const;
@@ -149,7 +151,6 @@ public:
     void decClosure();
     bool isFrozen() const;
     int maxHealth() const;
-    static void destroy();
     int getUserID() const;
     void setUserID(const int userID) const;
     static MapReport generateMapReport(CMap &map);
@@ -174,6 +175,7 @@ public:
     static bool isBulletType(const uint8_t typeID);
     static bool isMoveableType(const uint8_t typeID);
     static bool isOneTimeItem(const uint8_t tileID);
+    static bool isPushable(const uint8_t typeID);
 
     enum
     {
@@ -201,15 +203,18 @@ private:
     std::vector<std::string> m_hints;
     std::unique_ptr<CGameStats> m_gameStats;
     std::vector<Pos> m_usedItems;
+    std::unordered_map<uint16_t, int> m_monsterGrid;
     MapReport m_report;
     int m_defaultLives;
     bool m_quiet = false;
     void resetKeys();
     void clearKeyIndicators();
     void setQuiet(bool state);
+    bool shadowActorMove(CActor &actor, const JoyAim aim);
+    void rebuildMonsterGrid();
+    void updateMonsterGrid(const CActor &actor, const int index);
 
     CGame();
-    ~CGame();
     int clearAttr(const uint8_t attr);
     bool spawnMonsters();
     void addHealth(const int hp);
@@ -227,16 +232,14 @@ private:
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
     void handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters);
+    bool pushChain(const int x, const int y, const JoyAim aim);
 
     // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
     void handleBossPath(CBoss &boss);
     bool handleBossBullet(CBoss &boss);
-    inline bool between(int a1, int a2, int b1, int b2) const
-    {
-        return a1 < b2 && a2 > b1;
-    };
 
     inline static CMap m_map;
     friend class CGameMixin;
+    friend CGame *getGame();
 };

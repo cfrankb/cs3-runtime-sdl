@@ -18,7 +18,6 @@
 
 #include "game.h"
 #include <vector>
-#include <queue>
 #include "map.h"
 #include "boss.h"
 #include "attr.h"
@@ -61,7 +60,9 @@ CActor *CGame::spawnBullet(int x, int y, JoyAim aim, uint8_t tile)
     {
         m_map.set(x, y, tile);
         m_monsters.emplace_back(std::move(actor));
-        return &m_monsters[m_monsters.size() - 1];
+        int index = m_monsters.size() - 1;
+        updateMonsterGrid(m_monsters[index], index);
+        return &m_monsters[index];
     }
     return nullptr;
 }
@@ -299,6 +300,8 @@ void CGame::manageMonsters(const int ticks)
     for (auto &monster : newMonsters)
     {
         m_monsters.emplace_back(std::move(monster));
+        int index = m_monsters.size() - 1;
+        updateMonsterGrid(m_monsters[index], index); // Safe
     }
 
     // remove deleted monsters
@@ -306,11 +309,15 @@ void CGame::manageMonsters(const int ticks)
     {
         m_monsters.erase(m_monsters.begin() + i);
     }
+
+    // rebuild monster grid if needed
+    if (!deletedMonsters.empty())
+        rebuildMonsterGrid();
 }
 
 void CGame::handleMonster(CActor &actor, const TileDef &def)
 {
-    constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
 
     if (actor.isPlayerThere(actor.getAim()))
     {
@@ -325,7 +332,7 @@ void CGame::handleMonster(CActor &actor, const TileDef &def)
     JoyAim aim = actor.findNextDir(reverse);
     if (aim != AIM_NONE)
     {
-        actor.move(aim);
+        shadowActorMove(actor, aim);
         if (!(def.ai & AI_ROUND))
         {
             return;
@@ -365,7 +372,7 @@ void CGame::handleDrone(CActor &actor, const TileDef &def)
     }
     if (actor.canMove(aim))
     {
-        actor.move(aim);
+        shadowActorMove(actor, aim);
     }
     else if (aim == AIM_LEFT)
         aim = AIM_RIGHT;
@@ -376,7 +383,7 @@ void CGame::handleDrone(CActor &actor, const TileDef &def)
 
 void CGame::handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters)
 {
-    constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
 
     for (uint8_t i = 0; i < sizeof(g_dirs); ++i)
     {
@@ -422,7 +429,7 @@ void CGame::handleCrusher(CActor &actor, const bool speeds[])
         addHealth(AUTOKILL);
     }
     if (actor.canMove(aim) && !(isPlayerThere && isGodMode()))
-        actor.move(aim);
+        shadowActorMove(actor, aim);
     else if (aim == AIM_LEFT)
         aim = AIM_RIGHT;
     else if (aim == AIM_RIGHT)
@@ -437,13 +444,52 @@ void CGame::handleCrusher(CActor &actor, const bool speeds[])
 void CGame::handleIceCube(CActor &actor)
 {
     JoyAim aim = actor.getAim();
+    if (aim == AIM_NONE)
+        return;
+
+    Pos nextPos = translate(actor.pos(), aim);
+    if (!m_map.isValid(nextPos.x, nextPos.y))
+    {
+        actor.setAim(AIM_NONE);
+        return;
+    }
+
+    // Check player
+    if (actor.isPlayerThere(aim) && !isGodMode())
+    {
+        addHealth(AUTOKILL);
+        actor.setAim(AIM_NONE);
+        return;
+    }
+
+    int targetIdx = findMonsterAt(nextPos.x, nextPos.y);
+    if (targetIdx != INVALID)
+    {
+        if (!pushChain(nextPos.x, nextPos.y, aim))
+        {
+            actor.setAim(AIM_NONE);
+            return;
+        }
+    }
+    else if (!actor.canMove(aim))
+    {
+        actor.setAim(AIM_NONE);
+        return;
+    }
+
+    // Move one tile
+    shadowActorMove(actor, aim);
+
+    /*
+    JoyAim aim = actor.getAim();
     if (aim != JoyAim::AIM_NONE)
     {
         if (actor.canMove(aim))
-            actor.move(aim);
+            shadowActorMove(actor, aim);
         else
             actor.setAim(JoyAim::AIM_NONE);
     }
+    */
 }
 
 void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters)
@@ -458,7 +504,7 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
     {
         isMoving = actor.canMove(aim);
         if (isMoving)
-            actor.move(aim);
+            shadowActorMove(actor, aim);
     }
 
     if (!isMoving)
@@ -491,4 +537,38 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             addHealth(def.health);
         }
     }
+}
+
+bool CGame::isPushable(const uint8_t typeID)
+{
+    return typeID == TYPE_BOULDER || typeID == TYPE_ICECUBE;
+}
+
+bool CGame::pushChain(const int x, const int y, const JoyAim aim)
+{
+    if (!m_map.isValid(x, y))
+        return false;
+
+    int i = findMonsterAt(x, y);
+    if (i == INVALID)
+        return true;
+    if (!isPushable(m_monsters[i].type()))
+        return false;
+
+    // CRITICAL: Check canMove() BEFORE pushing
+    if (!m_monsters[i].canMove(aim))
+        return false;
+
+    Pos next = translate({(int16_t)x, (int16_t)y}, aim);
+    if (next.x == x && next.y == y)
+        return false; // translate failed
+    if (!m_map.isValid(next.x, next.y))
+        return false; // out of bounds
+
+    if (!pushChain(next.x, next.y, aim))
+        return false;
+
+    m_monsters[i].setAim(aim);
+    shadowActorMove(m_monsters[i], aim);
+    return true;
 }

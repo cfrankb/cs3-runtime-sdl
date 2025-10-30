@@ -19,7 +19,6 @@
 #define SDL_MAIN_HANDLED
 #endif
 #include <SDL3/SDL_main.h>
-#include <algorithm>
 #include <unistd.h>
 #include <cstdlib>
 #include <ctime>
@@ -29,7 +28,6 @@
 #include "maparch.h"
 #include "parseargs.h"
 #include "game.h"
-#include "strhelper.h"
 #include "assetman.h"
 #include "logger.h"
 #include "build.h"

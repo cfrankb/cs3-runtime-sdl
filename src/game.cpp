@@ -49,7 +49,6 @@ namespace GamePrivate
 {
     constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0008;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
-    CGame *g_game = nullptr;
     Random g_randomz(12345, 0);
 
     enum
@@ -143,9 +142,7 @@ CGame::CGame()
  */
 CGame::~CGame()
 {
-    // delete m_sound;
-    if (m_sound != nullptr)
-        m_sound->forget();
+    m_sound.reset();
 }
 
 /**
@@ -195,17 +192,26 @@ bool CGame::move(const JoyAim aim)
         consume();
         return true;
     }
-    else if (def.type == TYPE_ICECUBE || def.type == TYPE_BOULDER)
+    else if (isPushable(def.type))
     {
+        Pos pushPos = translate(m_player.pos(), aim);
+        if (pushChain(pushPos.x, pushPos.y, aim))
+        {
+            m_player.move(aim);
+            return true;
+        }
+
+        /*
         const Pos pos = CGame::translate(m_player.pos(), aim);
         const int i = findMonsterAt(pos.x, pos.y);
         if (i != INVALID && m_monsters[i].canMove(aim))
         {
             m_monsters[i].setAim(aim);
-            m_monsters[i].move(aim);
+            shadowActorMove(m_monsters[i], aim);
             m_player.move(aim);
             return true;
         }
+            */
     }
     return false;
 }
@@ -579,7 +585,7 @@ bool CGame::spawnMonsters()
             const TileDef &def = getTileDef(c);
             if (isMonsterType(def.type))
             {
-                if (def.type == TYPE_ICECUBE)
+                if (isPushable(def.type))
                     m_monsters.emplace_back(std::move(CActor(x, y, def.type, JoyAim::AIM_NONE)));
                 else
                     m_monsters.emplace_back(std::move(CActor(x, y, def.type)));
@@ -595,7 +601,6 @@ bool CGame::spawnMonsters()
             const Pos &pos = CMap::toPos(key);
             const JoyAim aim = attr < ATTR_CRUSHERH_MIN ? AIM_UP : AIM_LEFT;
             m_monsters.emplace_back(std::move(CActor(pos, attr, aim)));
-
             removed.emplace_back(pos);
         }
         else if (RANGE(attr, ATTR_BOSS_MIN, ATTR_BOSS_MAX))
@@ -616,7 +621,6 @@ bool CGame::spawnMonsters()
                 LOGW("ignored spawn point for unhandled boss type: 0x%.2x", attr);
             }
             removed.emplace_back(pos);
-            // Rect hitbox{.x = 16 / 8, .y = 48 / 8, .width = 32 / 8, .height = 16 / 8};
         }
     }
 
@@ -624,6 +628,9 @@ bool CGame::spawnMonsters()
     {
         m_map.setAttr(pos.x, pos.y, 0);
     }
+
+    // create a map of all monsters
+    rebuildMonsterGrid();
 
     if (!m_quiet)
     {
@@ -642,15 +649,11 @@ bool CGame::spawnMonsters()
  */
 int CGame::findMonsterAt(const int x, const int y) const
 {
-    for (size_t i = 0; i < m_monsters.size(); ++i)
-    {
-        const CActor &actor = m_monsters[i];
-        if (actor.x() == x && actor.y() == y)
-        {
-            return (int)i;
-        }
-    }
-    return INVALID;
+    if (!m_map.isValid(x, y))
+        return INVALID;
+    uint16_t key = CMap::toKey(x, y);
+    auto it = m_monsterGrid.find(key);
+    return it != m_monsterGrid.end() ? it->second : INVALID;
 }
 
 /**
@@ -1189,6 +1192,8 @@ bool CGame::read(IFile &sfile)
         m_usedItems.push_back(pos);
     }
 
+    rebuildMonsterGrid();
+
     // clear events and sfx
     m_events.clear();
     m_sfx.clear();
@@ -1543,9 +1548,8 @@ bool CGame::isRageMode() const
 
 CGame *CGame::getGame()
 {
-    if (!g_game)
-        g_game = new CGame;
-    return g_game;
+    static std::unique_ptr<CGame> instance(new CGame);
+    return instance.get();
 }
 
 /**
@@ -1595,9 +1599,7 @@ bool CGame::isFrozen() const
  */
 void CGame::destroy()
 {
-    if (g_game)
-        delete g_game;
-    g_game = nullptr;
+    getGame();
 }
 
 /**
@@ -1701,7 +1703,14 @@ const std::vector<CBoss> &CGame::bosses()
 
 void CGame::deleteMonster(const int i)
 {
+    if (i < 0 || i >= (int)m_monsters.size())
+        return;
+
+    // Remove from vector
     m_monsters.erase(m_monsters.begin() + i);
+
+    // Rebuild indices
+    rebuildMonsterGrid();
 }
 
 Random &CGame::getRandom()
@@ -1722,4 +1731,43 @@ bool CGame::isMoveableType(const uint8_t typeID)
 bool CGame::isOneTimeItem(const uint8_t tileID)
 {
     return g_oneTimeItems.find(tileID) != g_oneTimeItems.end();
+}
+
+bool CGame::shadowActorMove(CActor &actor, const JoyAim aim)
+{
+    uint16_t oldKey = CMap::toKey(actor.x(), actor.y());
+    auto it = m_monsterGrid.find(oldKey);
+    int monsterIndex = INVALID;
+    if (it != m_monsterGrid.end())
+    {
+        monsterIndex = it->second;
+        m_monsterGrid.erase(it);
+    }
+
+    const Pos newPos = CGame::translate(actor.pos(), aim);
+    if (monsterIndex != INVALID && m_map.isValid(newPos.x, newPos.y))
+    {
+        m_monsterGrid[CMap::toKey(newPos.x, newPos.y)] = monsterIndex;
+        actor.move(aim);
+        return true;
+    }
+    return false;
+}
+
+void CGame::rebuildMonsterGrid()
+{
+    m_monsterGrid.clear();
+    for (size_t i = 0; i < m_monsters.size(); ++i)
+    {
+        const CActor &m = m_monsters[i];
+        if (m_map.isValid(m.x(), m.y()))
+            updateMonsterGrid(m, i);
+    }
+}
+
+void CGame::updateMonsterGrid(const CActor &actor, const int monsterIndex)
+{
+    const Pos pos = actor.pos();
+    if (monsterIndex != INVALID && m_map.isValid(pos.x, pos.y))
+        m_monsterGrid[CMap::toKey(pos.x, pos.y)] = monsterIndex;
 }

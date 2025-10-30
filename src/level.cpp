@@ -22,7 +22,6 @@
 #include "tilesdata.h"
 #include "tilesdefs.h"
 #include "logger.h"
-#include "shared/FileWrap.h"
 #include "strhelper.h"
 #include "shared/helper.h"
 

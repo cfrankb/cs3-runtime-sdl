@@ -21,7 +21,6 @@
 #include "joyaim.h"
 #include "isprite.h"
 #include "ai_path.h"
-#include "color.h"
 
 class IFile;
 class IPath;

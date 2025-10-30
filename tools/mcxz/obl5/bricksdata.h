@@ -20,37 +20,39 @@
 
 #pragma once
 
-#define BRICKS_BRICK40_LEN        0x01
-#define BRICKS_BRICK39_LEN        0x01
-#define BRICKS_BRICK04_LEN        0x01
-#define BRICKS_BRICK08_LEN        0x01
-#define BRICKS_BRICK09_LEN        0x01
-#define BRICKS_BRICK29_LEN        0x01
-#define BRICKS_BRICK30_LEN        0x01
-#define BRICKS_BRICK13_LEN        0x01
-#define BRICKS_BRICK23_LEN        0x01
-#define BRICKS_BRICK15_LEN        0x01
-#define BRICKS_BRICK16_LEN        0x01
-#define BRICKS_BRICK17_LEN        0x01
-#define BRICKS_BRICK18_LEN        0x01
-#define BRICKS_BRICK19_LEN        0x01
-#define BRICKS_BRICK20_LEN        0x01
-#define BRICKS_BRICK28_LEN        0x01
-
-#define BRICKS_BRICK40            0x00
-#define BRICKS_BRICK39            0x01
-#define BRICKS_BRICK04            0x02
-#define BRICKS_BRICK08            0x03
-#define BRICKS_BRICK09            0x04
-#define BRICKS_BRICK29            0x05
-#define BRICKS_BRICK30            0x06
-#define BRICKS_BRICK13            0x07
-#define BRICKS_BRICK23            0x08
-#define BRICKS_BRICK15            0x09
-#define BRICKS_BRICK16            0x0a
-#define BRICKS_BRICK17            0x0b
-#define BRICKS_BRICK18            0x0c
-#define BRICKS_BRICK19            0x0d
-#define BRICKS_BRICK20            0x0e
-#define BRICKS_BRICK28            0x0f
-#define BRICKS_TOTAL_COUNT        0x10
+enum Bricks
+{
+    BRICKS_BRICK40            = 0x00,
+    BRICKS_BRICK39            = 0x01,
+    BRICKS_BRICK04            = 0x02,
+    BRICKS_BRICK08            = 0x03,
+    BRICKS_BRICK09            = 0x04,
+    BRICKS_BRICK29            = 0x05,
+    BRICKS_BRICK30            = 0x06,
+    BRICKS_BRICK13            = 0x07,
+    BRICKS_BRICK23            = 0x08,
+    BRICKS_BRICK15            = 0x09,
+    BRICKS_BRICK16            = 0x0a,
+    BRICKS_BRICK17            = 0x0b,
+    BRICKS_BRICK18            = 0x0c,
+    BRICKS_BRICK19            = 0x0d,
+    BRICKS_BRICK20            = 0x0e,
+    BRICKS_BRICK28            = 0x0f,
+    BRICKS_BRICK40_LEN        = 0x01,
+    BRICKS_BRICK39_LEN        = 0x01,
+    BRICKS_BRICK04_LEN        = 0x01,
+    BRICKS_BRICK08_LEN        = 0x01,
+    BRICKS_BRICK09_LEN        = 0x01,
+    BRICKS_BRICK29_LEN        = 0x01,
+    BRICKS_BRICK30_LEN        = 0x01,
+    BRICKS_BRICK13_LEN        = 0x01,
+    BRICKS_BRICK23_LEN        = 0x01,
+    BRICKS_BRICK15_LEN        = 0x01,
+    BRICKS_BRICK16_LEN        = 0x01,
+    BRICKS_BRICK17_LEN        = 0x01,
+    BRICKS_BRICK18_LEN        = 0x01,
+    BRICKS_BRICK19_LEN        = 0x01,
+    BRICKS_BRICK20_LEN        = 0x01,
+    BRICKS_BRICK28_LEN        = 0x01,
+    BRICKS_TOTAL_COUNT        = 0x10,
+};
