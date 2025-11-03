@@ -257,34 +257,47 @@ void CBoss::move(const Pos pos)
     move(pos.x, pos.y);
 }
 
-void CBoss::animate()
+const boss_seq_t *CBoss::getCurrentSeq() const
 {
-    int maxFrames = 0;
+    const boss_seq_t *seq = nullptr;
+
     if (m_state == BossState::Patrol)
     {
-        maxFrames = m_bossData->idle.lenght;
+        seq = &m_bossData->idle;
     }
     else if (m_state == BossState::Chase)
     {
-        maxFrames = m_bossData->moving.lenght;
+        seq = &m_bossData->moving;
     }
     else if (m_state == BossState::Attack)
     {
-        maxFrames = m_bossData->attack.lenght;
+        seq = &m_bossData->attack;
     }
     else if (m_state == BossState::Hurt)
     {
-        maxFrames = m_bossData->hurt.lenght;
+        seq = &m_bossData->hurt;
     }
     else if (m_state == BossState::Death)
     {
-        maxFrames = m_bossData->death.lenght;
+        seq = &m_bossData->death;
     }
     else
     {
-        LOGW("animated - unknown state: %d", m_state);
+        return nullptr;
+    }
+    return seq;
+}
+
+void CBoss::animate()
+{
+    const boss_seq_t *seq = getCurrentSeq();
+    if (seq == nullptr)
+    {
+        m_framePtr = 0;
+        return;
     }
 
+    int maxFrames = seq->lenght;
     // sanity check
     if (maxFrames == 0)
     {
@@ -293,7 +306,7 @@ void CBoss::animate()
     }
 
     ++m_framePtr;
-    if (m_framePtr == maxFrames)
+    if (m_framePtr >= maxFrames)
     {
         m_framePtr = 0;
         if (m_state == BossState::Hurt)
@@ -307,32 +320,11 @@ void CBoss::animate()
 
 int CBoss::currentFrame() const
 {
-    int baseFrame = 0;
-    if (m_state == BossState::Patrol)
-    {
-        baseFrame = m_bossData->idle.base;
-    }
-    else if (m_state == BossState::Chase)
-    {
-        baseFrame = m_bossData->moving.base;
-    }
-    else if (m_state == BossState::Attack)
-    {
-        baseFrame = m_bossData->attack.base;
-    }
-    else if (m_state == BossState::Hurt)
-    {
-        baseFrame = m_bossData->hurt.base;
-    }
-    else if (m_state == BossState::Death)
-    {
-        baseFrame = m_bossData->death.base;
-    }
-    else
-    {
-        LOGW("currentFrame - unknown state: %d", m_state);
-    }
-
+    const boss_seq_t *seq = getCurrentSeq();
+    if (seq == nullptr)
+        return 0;
+    const int normalizedAim = m_aim % m_bossData->aims;
+    const int baseFrame = seq->base + seq->lenght * normalizedAim;
     return baseFrame + m_framePtr;
 }
 

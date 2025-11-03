@@ -839,7 +839,8 @@ void CRuntime::preloadAssets()
         &m_tiles,
         &m_animz,
         &m_users,
-        &m_bosses,
+        &m_sheet0,
+        &m_sheet1,
         &m_uisheet,
         &m_titlePix,
     };

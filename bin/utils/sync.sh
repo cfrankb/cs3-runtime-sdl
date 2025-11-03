@@ -69,7 +69,7 @@ elif [[ "$1" == "-m" ]] ; then
 elif [[ "$1" == "-u" ]] ; then
     cp data/pixels/animz.obl $TARGET_EDITOR/src/data
     cp data/pixels/tiles.obl $TARGET_EDITOR/src/data
-    cp data/pixels/bosses.obl $TARGET_EDITOR/src/data
+    #cp data/pixels/bosses.obl $TARGET_EDITOR/src/data
     cp data/pixels/uisheet.png $TARGET_EDITOR/src/data
 elif [ -z "$1" ]; then
     echo "nothing to do"

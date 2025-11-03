@@ -15,6 +15,12 @@
 #include <minizip/unzip.h>
 #include <filesystem>
 
+struct image_index_t
+{
+    size_t i;
+    std::string name;
+};
+
 namespace SpriteSheet
 {
     constexpr int NOT_FOUND = -1;
@@ -34,6 +40,7 @@ namespace SpriteSheet
         sorted = 1,
         nocolor = 2,
         sorted_noColor = 3,
+        all_frames = 4,
     };
 }
 
@@ -61,6 +68,8 @@ struct Size
     int sx;
     int sy;
 };
+
+using namespace SpriteSheet;
 
 void appendBytes(std::vector<uint8_t> &vec, const uint8_t *data, size_t size)
 {
@@ -268,20 +277,28 @@ std::string parseItem(const std::string &item, int &splitH, int &splitV)
     return filename;
 }
 
-bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordered_map<std::string, int> &lookupTable, std::vector<int> &index)
+bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordered_map<std::string, size_t> &lookupTable, std::vector<image_index_t> &index, Flag flags)
 {
     int totalImages = 0;
     int totalDupes = 0;
 
-    auto addImage = [&lookupTable, &index, &set, &totalImages, &totalDupes](CFrame *frame)
+    auto addImage = [&lookupTable, &index, &set, &totalImages, &totalDupes, flags](CFrame *frame, const std::string &item)
     {
-        ++totalImages;
         size_t imageID;
+        ++totalImages;
+        if (flags & Flag::all_frames)
+        {
+            index.push_back({set.getSize(), item});
+            imageID = set.getSize();
+            set.add(frame);
+            return imageID;
+        }
+
         std::string sha1 = generateSHA1(frame);
         if (lookupTable.count(sha1) == 0)
         {
             lookupTable[sha1] = set.getSize();
-            index.push_back(set.getSize());
+            index.push_back({set.getSize(), item});
             imageID = set.getSize();
             set.add(frame);
         }
@@ -290,7 +307,7 @@ bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordere
             ++totalDupes;
             // LOGI("duplicated frame");
             imageID = lookupTable[sha1];
-            index.push_back(lookupTable[sha1]);
+            index.push_back({imageID, item});
         }
         return imageID;
     };
@@ -338,7 +355,7 @@ bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordere
             {
                 if (splitH == 0)
                 {
-                    size_t imageID = addImage(frame);
+                    size_t imageID = addImage(frame, item);
                     LOGI("   imageID: %lu", imageID);
                 }
                 else
@@ -353,7 +370,7 @@ bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordere
 
                     for (auto &piece : splitSet->frames())
                     {
-                        size_t imageID = addImage(piece);
+                        size_t imageID = addImage(piece, item);
                         LOGI("   imageID: %lu", imageID);
                     }
                     splitSet->removeAll();
@@ -1137,7 +1154,7 @@ const std::string getOutPath(const std::string &in_filepath, const char *ext)
     return std::string(out_filepath);
 }
 
-bool saveIndex(std::string outpath, std::vector<int> index)
+bool saveIndex(const std::string &outpath, const std::vector<image_index_t> &index)
 {
     FILE *file = fopen(outpath.c_str(), "wb");
     if (!file)
@@ -1145,10 +1162,10 @@ bool saveIndex(std::string outpath, std::vector<int> index)
         LOGE("can't create %s", outpath.c_str());
         return false;
     }
-    char tmp[16];
-    for (auto const &i : index)
+    char tmp[128];
+    for (auto const &t : index)
     {
-        snprintf(tmp, sizeof(tmp), "%d\n", i);
+        snprintf(tmp, sizeof(tmp), "%-8lu# %s\n", t.i, t.name.c_str());
         if (fwrite(tmp, strlen(tmp), 1, file) != 1)
         {
             LOGE("can't wrote to %s", outpath.c_str());
@@ -1161,8 +1178,8 @@ bool saveIndex(std::string outpath, std::vector<int> index)
 
 bool generateSheet(std::string in_filepath, SpriteSheet::Flag flags, int imagesLimit)
 {
-    std::unordered_map<std::string, int> lookupTable;
-    std::vector<int> index;
+    std::unordered_map<std::string, size_t> lookupTable;
+    std::vector<image_index_t> index;
 
     LOGI("generating sheet for: %s", in_filepath.c_str());
 
@@ -1172,7 +1189,7 @@ bool generateSheet(std::string in_filepath, SpriteSheet::Flag flags, int imagesL
     const std::string out_filepath_idx = getOutPath(in_filepath, ".idx");
 
     CFrameSet set;
-    if (!getConfData(set, in_filepath, lookupTable, index))
+    if (!getConfData(set, in_filepath, lookupTable, index, flags))
     {
         LOGE("error occured");
         return EXIT_FAILURE;
@@ -1238,7 +1255,9 @@ int main(int argc, char *argv[], char *envp[])
 
     // int imagesLimit = argc > 2 ? std::stoi(argv[2]) : 0;
     std::string in_filepath = argc > 1 ? argv[1] : "list.txt";
-    generateSheet(in_filepath, SpriteSheet::Flag::sorted_noColor, 0);
+
+    int flags = Flag::sorted_noColor | Flag::all_frames;
+    generateSheet(in_filepath, static_cast<Flag>(flags), 0);
 
     return EXIT_SUCCESS;
 }

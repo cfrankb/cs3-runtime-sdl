@@ -101,8 +101,10 @@ public:
     void patrol();
     bool read(IFile &file);
     bool write(IFile &file);
+    void setAim(const JoyAim aim) override { m_aim = aim; };
 
 private:
+    const boss_seq_t *getCurrentSeq() const;
     const bossData_t *m_bossData;
     int m_framePtr;
     int16_t m_x;

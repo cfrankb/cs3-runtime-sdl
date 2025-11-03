@@ -56,7 +56,8 @@ def sync_code(sync_list):
 def sync_pixels(sync_list):
     paths = [
         "data/pixels/animz.obl",
-        "data/pixels/bosses.obl",
+        "data/pixels/sheet0.obl",
+        "data/pixels/sheet1.obl",
         "data/pixels/tiles.obl",
         "data/pixels/uisheet.png",
     ]

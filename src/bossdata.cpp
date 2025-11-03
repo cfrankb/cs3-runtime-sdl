@@ -23,7 +23,6 @@
 #include "tilesdata.h"
 #include "sounds.h"
 #include "bossdata.h"
-#include "logger.h"
 
 namespace BossData
 {
@@ -55,7 +54,15 @@ namespace BossData
     constexpr int HARPY_IDLE_LEN = 4;
     constexpr int HARPY_HURT_BASE = 62;
     constexpr int HARPY_HURT_LEN = 3;
-    constexpr size_t BOSS_COUNT = 3;
+    constexpr int BEHOLDER_ATTACK_BASE = 0;
+    constexpr int BEHOLDER_ATTACK_LEN = 12;
+    constexpr int BEHOLDER_DEATH_BASE = 48;
+    constexpr int BEHOLDER_DEATH_LEN = 9;
+    constexpr int BEHOLDER_HURT_BASE = 84;
+    constexpr int BEHOLDER_HURT_LEN = 6;
+    constexpr int BEHOLDER_MOVING_BASE = 108;
+    constexpr int BEHOLDER_MOVING_LEN = 8;
+    constexpr size_t BOSS_COUNT = 4;
 };
 
 using namespace BossData;
@@ -84,6 +91,7 @@ bossData_t g_bosses[] = {
         .show_details = true,
         .color_hp = ORANGE,
         .color_name = RED,
+        .aims = 1,
         .moving = {MR_DEMON_MOVING_BASE, MR_DEMON_MOVING_LEN},
         .attack = {MR_DEMON_ATTACK_BASE, MR_DEMON_ATTACK_LEN},
         .hurt = {MR_DEMON_HURT_BASE, MR_DEMON_HURT_LEN},
@@ -115,6 +123,7 @@ bossData_t g_bosses[] = {
         .show_details = false,
         .color_hp = ORANGE,
         .color_name = RED,
+        .aims = 1,
         .moving = {GHOST_MOVING_BASE, GHOST_MOVING_LEN},
         .attack = {GHOST_ATTACK_BASE, GHOST_ATTACK_LEN},
         .hurt = {GHOST_HURT_BASE, GHOST_HURT_LEN},
@@ -146,6 +155,7 @@ bossData_t g_bosses[] = {
         .show_details = true,
         .color_hp = ORANGE,
         .color_name = RED,
+        .aims = 1,
         .moving = {HARPY_IDLE_BASE, HARPY_IDLE_LEN},
         .attack = {HARPY_ATTACK_BASE, HARPY_ATTACK_LEN},
         .hurt = {HARPY_HURT_BASE, HARPY_HURT_LEN},
@@ -153,6 +163,38 @@ bossData_t g_bosses[] = {
         .idle = {HARPY_IDLE_BASE, HARPY_IDLE_LEN},
         .hitbox = {2, 6, 2, 2},
         .sheet = 0,
+    },
+    {
+        .name = "Beholder",
+        .speed = 3,
+        .speed_anime = 3,
+        .hp = 128,
+        .type = 0xb3,
+        .score = 1250,
+        .damage = 9,
+        .flags = BOSS_PROXIMITY_ATTACK,
+        .path = Path::BFS,
+        .bullet = TILES_BLANK,
+        .bullet_rate = 7,
+        .bullet_algo = Path::LOS,
+        .bullet_sound = SOUND_NONE,
+        .bullet_timeout = 20,
+        .attack_sound = SOUND_NONE,
+        .distance_chase = 10,
+        .distance_pursuit = 20,
+        .distance_attack = 2,
+        .is_goal = true,
+        .show_details = true,
+        .color_hp = ORANGE,
+        .color_name = RED,
+        .aims = 4,
+        .moving = {BEHOLDER_MOVING_BASE, BEHOLDER_MOVING_LEN},
+        .attack = {BEHOLDER_ATTACK_BASE, BEHOLDER_ATTACK_LEN},
+        .hurt = {BEHOLDER_HURT_BASE, BEHOLDER_HURT_LEN},
+        .death = {BEHOLDER_DEATH_BASE, BEHOLDER_DEATH_LEN},
+        .idle = {BEHOLDER_MOVING_BASE, BEHOLDER_MOVING_LEN},
+        .hitbox = {3, 5, 2, 2},
+        .sheet = 1,
     },
 };
 
@@ -165,3 +207,4 @@ bossData_t *getBossData(const uint8_t type)
     }
     return nullptr;
 }
+

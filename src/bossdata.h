@@ -26,11 +26,13 @@
 
 #include "color.h"
 #define FLAG_FIREBALL 0x00000001
+#define BOSS_PROXIMITY_ATTACK 0x40000000
 #define BOSS_FLAG_ICE_DAMAGE 0x80000000
 
 #define BOSS_MR_DEMON 0xb0
 #define BOSS_GHOST 0xb1
 #define BOSS_HARPY 0xb2
+#define BOSS_BEHOLDER 0xb3
 
 
 namespace BossData
@@ -74,6 +76,7 @@ struct bossData_t
     bool show_details;      // display hp bar/name
     Color color_hp;         // hp bar color
     Color color_name;       // namr color
+    int aims;               // aim count (typically 1 or 4)
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt

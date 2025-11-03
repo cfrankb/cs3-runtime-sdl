@@ -66,6 +66,7 @@ struct bossData_t
     bool show_details;      // display hp bar/name
     Color color_hp;         // hp bar color
     Color color_name;       // namr color
+    int aims;               // aim count (typically 1 or 4)
     boss_seq_t moving;      // animation seq: moving
     boss_seq_t attack;      // animation seq: attack
     boss_seq_t hurt;        // animation seq: hurt
@@ -141,6 +142,7 @@ attr_names = [
     "show_details",
     "color_hp",
     "color_name",
+    "aims",
 ]
 seq_names = ["moving", "attack", "hurt", "death", "idle"]
 misc_names = ["hitbox", "sheet"]
@@ -220,7 +222,7 @@ for t in data.split("\n"):
                     if "=" in e[i]:
                         v = e[i].split("=")
                         if len(v) != 2:
-                            print(f"too separators on line {line} for: {e[i]}")
+                            print(f"too many separators on line {line} for: {e[i]}")
                             continue
                         elif len(v[0].strip()) == 0:
                             print(f"empty suffix on {line} for: {e[i]}")
@@ -236,7 +238,7 @@ for t in data.split("\n"):
             if len(e) == 5:
                 seq[item_name] = " ".join(e[1:])
             else:
-                print(f"{item_name} must have 4 dimensions")
+                print(f"{item_name} on line {line} must have 4 dimensions: {t}")
             continue
         if len(e) != 2:
             print(f"missing qualifier on line {line}: {t}")
@@ -257,7 +259,12 @@ for t in data.split("\n"):
                 var_name = f"{prefix}_{suffix}_LEN"
                 vars.append(var_name)
                 g_vars.append(f"constexpr int {var_name} = {frame_count};")
-                frame += frame_count
+                if not "aims" in seq:
+                    print(f"aims must be defined before animation on line {line}")
+                    exit(EXIT_FAILURE)
+                # print(f'aims: {seq["aims"]}')
+                aims = int(seq["aims"])
+                frame += frame_count * aims
             seq[seq_name] = vars  # [frame, frame_count]
         elif item_name == "flags":
             seq[item_name] = " ".join(e[1:]).replace(",", " |")

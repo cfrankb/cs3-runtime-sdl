@@ -515,6 +515,7 @@ bool CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar
     if (sprite.canMove(aim))
     {
         sprite.move(aim);
+        sprite.setAim(aim);
         ++m_pathIndex;
         --m_pathTimeout;
         return true;

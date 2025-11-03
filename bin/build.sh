@@ -32,7 +32,9 @@ elif [[ "$1" == "clean" ]] ; then
 elif [[ "$1" == "bosses" ]] ; then
     cd tools/sheet
     make && build/sheet config/bosses.txt
-    cp out/bosses.png ../../data/pixels/bosses.obl
+    make && build/sheet config/beholder1.txt
+    cp out/bosses.png ../../data/pixels/sheet0.obl
+    cp out/beholder1.png ../../data/pixels/sheet1.obl
     cd ../..
     cd techdocs/bosses
     python parse.py

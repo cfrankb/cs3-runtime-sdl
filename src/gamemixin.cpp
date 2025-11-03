@@ -874,14 +874,29 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
     constexpr int HP_BAR_SPACING = 2;
 
     // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
-    auto &frames = (m_bosses.get())->frames();
     for (const auto &boss : m_game->bosses())
     {
         // don't process completed bosses
         if (boss.isDone())
             continue;
+
+        const std::vector<CFrame *> *frames = nullptr;
+        if (boss.data()->sheet == 0)
+        {
+            frames = &(m_sheet0.get())->frames();
+        }
+        else if (boss.data()->sheet == 1)
+        {
+            frames = &(m_sheet1.get())->frames();
+        }
+        else
+        {
+            LOGE("invalid sheet: %d", boss.data()->sheet);
+            continue;
+        }
+
         const int num = boss.currentFrame();
-        auto &frame = *frames[num];
+        CFrame &frame = *(*frames)[num];
         const Rect &hitbox = boss.hitbox();
 
         // Logical coordonates comverted to screen positions

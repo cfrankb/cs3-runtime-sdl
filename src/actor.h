@@ -59,7 +59,7 @@ public:
     void setPU(const uint8_t c);
     void setPos(const Pos &pos);
     JoyAim getAim() const;
-    void setAim(const JoyAim aim);
+    void setAim(const JoyAim aim) override;
     JoyAim findNextDir(const bool reverse = false) const;
     bool isPlayerThere(JoyAim aim) const;
     uint8_t tileAt(JoyAim aim) const;
