@@ -21,6 +21,7 @@
 #pragma once
 #include <cstdint>
 
+// @enum
 enum TileAI:uint8_t
 {
     AI_STICKY                 = 0x01,
@@ -33,6 +34,7 @@ enum TileAI:uint8_t
 };
 
 
+// @enum
 enum TileFlag:uint8_t
 {
     FLAG_GODMODE              = 0x01,
@@ -42,6 +44,7 @@ enum TileFlag:uint8_t
 };
 
 
+// @enum
 enum TileSpeed:uint8_t
 {
     SPEED_VERYFAST            = 0x02,
@@ -52,6 +55,7 @@ enum TileSpeed:uint8_t
 };
 
 
+// @enum
 enum TileType:uint8_t
 {
     TYPE_BACKGROUND           = 0x00,

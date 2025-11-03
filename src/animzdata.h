@@ -20,6 +20,7 @@
 
 #pragma once
 
+// @enum
 enum Animz
 {
     ANIMZ_SWAMP               = 0x00,

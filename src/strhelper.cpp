@@ -67,7 +67,7 @@ std::string processLine(const std::string &input, size_t &pos)
         ++pos;
         return "";
     }
-    std::string_view line = (end == std::string::npos) ? input.substr(pos) : input.substr(pos, end - pos);
+    std::string line = (end == std::string::npos) ? input.substr(pos) : input.substr(pos, end - pos);
     pos = (end == std::string::npos) ? input.size() : end + 1;
     size_t comment = line.find('#');
     if (comment == 0)

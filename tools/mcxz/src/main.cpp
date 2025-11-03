@@ -463,6 +463,7 @@ bool writeConstFile(const AppSettings &appSettings,
             if (list.empty())
                 continue;
             tfile += "\n";
+            tfile += "// @enum\n";
             const std::string enum_start = std::format("enum {}:uint8_t\n{{\n", sectionRefs[k].enumPrefix);
             tfile += enum_start;
             for (const auto &line : list)
@@ -586,6 +587,7 @@ bool generateHeader(const AppSettings &appSettings,
     size_t j = section.find_last_of("/");
     std::string enumName = j != std::string::npos ? section.substr(j + 1, section.size() - j - 1) : section;
     enumName[0] = toupper(enumName[0]);
+    tfileHdr += "// @enum\n";
     tfileHdr += std::format("enum {}\n{{\n", enumName);
     int i = 0;
     for (const auto &tile : tileDefs)

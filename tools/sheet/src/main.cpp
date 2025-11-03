@@ -32,6 +32,8 @@ namespace SpriteSheet
     {
         noflag = 0,
         sorted = 1,
+        nocolor = 2,
+        sorted_noColor = 3,
     };
 }
 
@@ -212,9 +214,12 @@ bool parseList(const std::string_view &filepath, std::vector<std::string> &list)
     if (file.open(filepath))
     {
         size_t size = file.getSize();
-        std::vector<char> buf(size);
+        std::vector<char> buf(size + 1);
+        buf[size] = 0;
         file.read(buf.data(), size);
         file.close();
+
+        // LOGI("config: %s", buf.data());
 
         std::string data;
         data.assign(reinterpret_cast<char *>(buf.data()), buf.size());
@@ -228,6 +233,7 @@ bool parseList(const std::string_view &filepath, std::vector<std::string> &list)
             if (current.empty())
                 continue;
             list.push_back(current);
+            LOGI("item: %s", current.c_str());
         }
         return true;
     }
@@ -299,6 +305,8 @@ bool getConfData(CFrameSet &set, const std::string_view &filepath, std::unordere
     {
         if (item.ends_with(".txt"))
             continue;
+
+        LOGI("file: %s", item.c_str());
 
         int splitH = 0;
         int splitV = 0;
@@ -517,7 +525,7 @@ bool checkPixmap(CFrame &bitmap, std::vector<Sprite> &sprites)
     return true;
 }
 
-void createSheet(CFrame &bitmap, const std::vector<Sprite> &sprites, const std::vector<Rect> &rects)
+void createSheet(CFrame &bitmap, const std::vector<Sprite> &sprites, const std::vector<Rect> &rects, const SpriteSheet::Flag flags)
 {
     int i = 0;
     for (const auto &sprite : sprites)
@@ -549,6 +557,9 @@ void createSheet(CFrame &bitmap, const std::vector<Sprite> &sprites, const std::
         }
         ++i;
     }
+
+    if (flags & SpriteSheet::Flag::nocolor)
+        return;
 
     i = 0;
     for (const auto &rect : rects)
@@ -1067,7 +1078,7 @@ bool toSpriteSheet(CFrameSet &set, std::vector<uint8_t> &png, const SpriteSheet:
     // LOGI("size: %d %d", size.sx, size.sy);
     CFrame sheet(size.sx, size.sy);
     // rects.clear();
-    createSheet(sheet, sprites, rects);
+    createSheet(sheet, sprites, rects, flags);
 
     // generate oblt data
     std::vector<uint8_t> obltdata;
@@ -1148,23 +1159,16 @@ bool saveIndex(std::string outpath, std::vector<int> index)
     return true;
 }
 
-int main(int argc, char *argv[], char *envp[])
+bool generateSheet(std::string in_filepath, SpriteSheet::Flag flags, int imagesLimit)
 {
-    (void)envp;
-    (void)argc;
-    (void)argv;
-
-    srand(time(nullptr));
-
     std::unordered_map<std::string, int> lookupTable;
     std::vector<int> index;
-    int imagesLimit = argc > 2 ? std::stoi(argv[2]) : 0;
-    std::string in_filepath = argc > 1 ? argv[1] : "list.txt";
 
     LOGI("generating sheet for: %s", in_filepath.c_str());
 
     // find the out_filepath
     const std::string out_filepath_png = getOutPath(in_filepath, ".png");
+    const std::string out_filepath_obl = getOutPath(in_filepath, ".obl");
     const std::string out_filepath_idx = getOutPath(in_filepath, ".idx");
 
     CFrameSet set;
@@ -1180,7 +1184,7 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     std::vector<uint8_t> png;
-    if (!toSpriteSheet(set, png, SpriteSheet::sorted))
+    if (!toSpriteSheet(set, png, flags)) // SpriteSheet::sorted))
     {
         LOGE("failed to build sprite sheet");
         return EXIT_FAILURE;
@@ -1213,6 +1217,28 @@ int main(int argc, char *argv[], char *envp[])
     }
 
     LOGI("sheet contains %lu sprites", set2.getSize());
+
+    CFileWrap file;
+    if (file.open(out_filepath_obl, "wb"))
+    {
+        set.write(file);
+        file.close();
+    }
+
+    return 0;
+}
+
+int main(int argc, char *argv[], char *envp[])
+{
+    (void)envp;
+    (void)argc;
+    (void)argv;
+
+    srand(time(nullptr));
+
+    // int imagesLimit = argc > 2 ? std::stoi(argv[2]) : 0;
+    std::string in_filepath = argc > 1 ? argv[1] : "list.txt";
+    generateSheet(in_filepath, SpriteSheet::Flag::sorted_noColor, 0);
 
     return EXIT_SUCCESS;
 }

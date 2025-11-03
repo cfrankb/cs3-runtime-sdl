@@ -20,6 +20,7 @@
 
 #pragma once
 
+// @enum
 enum Tiles
 {
     TILES_BLANK               = 0x00,

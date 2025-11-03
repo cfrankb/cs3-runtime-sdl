@@ -20,6 +20,7 @@
 
 #pragma once
 
+// @enum
 enum Bricks
 {
     BRICKS_BRICK40            = 0x00,
