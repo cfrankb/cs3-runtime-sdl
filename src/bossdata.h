@@ -35,6 +35,8 @@
 #define BOSS_BEHOLDER 0xb3
 
 
+#define MAX_HITBOX_PER_FRAME 4
+
 namespace BossData
 {
     enum Path:uint8_t {
@@ -44,12 +46,35 @@ namespace BossData
         LOS,
         ASTAR_SMOOTH
     };
+
+    enum HitBoxType:uint8_t {
+        MAIN,
+        ATTACK,
+        SPECIAL1,
+        SPECIAL2,
+    };
 }
 
 struct boss_seq_t
 {
     int base;
     int lenght;
+};
+
+struct hitbox_t
+{
+    int x;
+    int y;
+    int width;
+    int height;
+    int type;
+};
+
+struct sprite_hitbox_t
+{
+    int spriteID;
+    int count;
+    hitbox_t hitboxes[MAX_HITBOX_PER_FRAME];
 };
 
 struct bossData_t
@@ -82,8 +107,9 @@ struct bossData_t
     boss_seq_t hurt;        // animation seq: hurt
     boss_seq_t death;       // animation seq: death
     boss_seq_t idle;        // animation seq: idle
-    Rect hitbox;            // boss hitbox
+    hitbox_t hitbox;        // boss hitbox
     int sheet;              // sprite sheet used
 };
 
-bossData_t *getBossData(const uint8_t type);
+const bossData_t *getBossData(const uint8_t type);
+const sprite_hitbox_t *getHitbox(const int sheet, const int frameID);

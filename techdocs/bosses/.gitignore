@@ -1,2 +1,5 @@
 bossdata.cpp
 bossdata.h
+rect.h
+color.h
+random.py

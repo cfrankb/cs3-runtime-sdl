@@ -897,7 +897,7 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
 
         const int num = boss.currentFrame();
         CFrame &frame = *(*frames)[num];
-        const Rect &hitbox = boss.hitbox();
+        const hitbox_t &hitbox = boss.hitbox();
 
         // Logical coordonates comverted to screen positions
         // (using GRID_SIZE)

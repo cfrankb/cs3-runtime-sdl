@@ -98,17 +98,41 @@ bool CBoss::isGhostBlocked(const Pos &pos)
 
 bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
 {
+    // add primary hitbox
+    const auto &hbMain = m_bossData->hitbox; // primary hitbox
     const int x = m_x / BOSS_GRANULAR_FACTOR;
     const int y = m_y / BOSS_GRANULAR_FACTOR;
-    const int w = m_bossData->hitbox.width / BOSS_GRANULAR_FACTOR;
-    const int h = m_bossData->hitbox.height / BOSS_GRANULAR_FACTOR;
-    for (int ay = 0; ay < h; ++ay)
+    const int w = hbMain.width / BOSS_GRANULAR_FACTOR;
+    const int h = hbMain.height / BOSS_GRANULAR_FACTOR;
+    std::vector<hitbox_t> hitboxes;
+    hitboxes.push_back({x, y, w, h, 0});
+
+    const sprite_hitbox_t *hbData = getHitbox(m_bossData->sheet, currentFrame());
+    for (int i = 0; hbData != nullptr && i < hbData->count; ++i)
     {
-        for (int ax = 0; ax < w; ++ax)
+        // add secondary hitbox - relative to primary
+        const hitbox_t &c = hbData->hitboxes[i];
+        const hitbox_t hb{
+            (m_x + c.x - hbMain.x) / BOSS_GRANULAR_FACTOR,
+            (m_y + c.y - hbMain.y) / BOSS_GRANULAR_FACTOR,
+            c.width / BOSS_GRANULAR_FACTOR,
+            c.height / BOSS_GRANULAR_FACTOR,
+            c.type,
+        };
+        hitboxes.push_back(hb);
+    }
+
+    // test all hitboxes
+    for (const auto &hb : hitboxes)
+    {
+        for (int ay = 0; ay < hb.height; ++ay)
         {
-            const Pos pos{static_cast<int16_t>(x + ax), static_cast<int16_t>(y + ay)};
-            if (testCallback(pos))
-                return actionCallback ? actionCallback(pos) : true;
+            for (int ax = 0; ax < hb.width; ++ax)
+            {
+                const Pos pos{static_cast<int16_t>(hb.x + ax), static_cast<int16_t>(hb.y + ay)};
+                if (testCallback(pos))
+                    return actionCallback ? actionCallback(pos) : true;
+            }
         }
     }
     return false;

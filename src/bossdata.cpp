@@ -63,11 +63,38 @@ namespace BossData
     constexpr int BEHOLDER_MOVING_BASE = 108;
     constexpr int BEHOLDER_MOVING_LEN = 8;
     constexpr size_t BOSS_COUNT = 4;
+    constexpr size_t HITBOX_COUNT = 22;
+    constexpr size_t SHEET_SPACER = 1000;
 };
 
 using namespace BossData;
 
-bossData_t g_bosses[] = {
+const sprite_hitbox_t g_hitboxes[] = {
+    { 1005, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1004, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1027, 1, {{ 1, 4, 3, 3, 2 }, }},
+    { 1040, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1039, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1041, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1044, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1032, 1, {{ 1, 5, 2, 2, 2 }, }},
+    { 1043, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1042, 1, {{ 5, 5, 2, 2, 2 }, }},
+    { 1031, 1, {{ 1, 5, 2, 2, 2 }, }},
+    { 1030, 1, {{ 1, 5, 2, 2, 2 }, }},
+    { 1016, 1, {{ 3, 6, 2, 2, 2 }, }},
+    { 1017, 1, {{ 3, 6, 2, 2, 2 }, }},
+    { 1018, 1, {{ 3, 6, 2, 2, 2 }, }},
+    { 1019, 1, {{ 3, 6, 2, 2, 2 }, }},
+    { 1020, 1, {{ 3, 6, 2, 2, 2 }, }},
+    { 1007, 1, {{ 3, 5, 2, 2, 2 }, }},
+    { 1008, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1028, 1, {{ 1, 4, 2, 3, 2 }, }},
+    { 1029, 1, {{ 1, 3, 2, 4, 2 }, }},
+    { 1006, 1, {{ 3, 4, 2, 3, 2 }, }},
+};
+
+const bossData_t g_bosses[] = {
     {
         .name = "Mr. Demon",
         .speed = 3,
@@ -97,7 +124,7 @@ bossData_t g_bosses[] = {
         .hurt = {MR_DEMON_HURT_BASE, MR_DEMON_HURT_LEN},
         .death = {MR_DEMON_DEATH_BASE, MR_DEMON_DEATH_LEN},
         .idle = {MR_DEMON_MOVING_BASE, MR_DEMON_MOVING_LEN},
-        .hitbox = {2, 6, 4, 2},
+        .hitbox = {2, 6, 4, 2 , 0},
         .sheet = 0,
     },
     {
@@ -129,7 +156,7 @@ bossData_t g_bosses[] = {
         .hurt = {GHOST_HURT_BASE, GHOST_HURT_LEN},
         .death = {GHOST_DEATH_BASE, GHOST_DEATH_LEN},
         .idle = {GHOST_IDLE_BASE, GHOST_IDLE_LEN},
-        .hitbox = {0, 2, 4, 3},
+        .hitbox = {0, 2, 4, 3 , 0},
         .sheet = 0,
     },
     {
@@ -161,7 +188,7 @@ bossData_t g_bosses[] = {
         .hurt = {HARPY_HURT_BASE, HARPY_HURT_LEN},
         .death = {HARPY_DEATH_BASE, HARPY_DEATH_LEN},
         .idle = {HARPY_IDLE_BASE, HARPY_IDLE_LEN},
-        .hitbox = {2, 6, 2, 2},
+        .hitbox = {2, 6, 2, 2 , 0},
         .sheet = 0,
     },
     {
@@ -193,17 +220,28 @@ bossData_t g_bosses[] = {
         .hurt = {BEHOLDER_HURT_BASE, BEHOLDER_HURT_LEN},
         .death = {BEHOLDER_DEATH_BASE, BEHOLDER_DEATH_LEN},
         .idle = {BEHOLDER_MOVING_BASE, BEHOLDER_MOVING_LEN},
-        .hitbox = {3, 5, 2, 2},
+        .hitbox = {3, 5, 2, 2 , 0},
         .sheet = 1,
     },
 };
 
-bossData_t *getBossData(const uint8_t type)
+const bossData_t *getBossData(const uint8_t type)
 {
     for (size_t i = 0; i < BOSS_COUNT; ++i)
     {
         if (g_bosses[i].type == type)
             return &g_bosses[i];
+    }
+    return nullptr;
+}
+
+const sprite_hitbox_t *getHitbox(const int sheet, const int frameID)
+{
+    const int spriteID = sheet * SHEET_SPACER + frameID;
+    for (size_t i = 0; i < HITBOX_COUNT; ++i)
+    {
+        if (g_hitboxes[i].spriteID == spriteID)
+            return &g_hitboxes[i];
     }
     return nullptr;
 }

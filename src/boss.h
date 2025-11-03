@@ -51,7 +51,7 @@ public:
     virtual ~CBoss() {};
     inline int16_t x() const override { return m_x; }
     inline int16_t y() const override { return m_y; }
-    inline const Rect &hitbox() const { return m_bossData->hitbox; }
+    inline const hitbox_t &hitbox() const { return m_bossData->hitbox; }
     uint8_t type() const override { return m_bossData->type; }
     bool testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const;
     static bool isPlayer(const Pos &pos);
