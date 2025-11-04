@@ -54,7 +54,7 @@ jobs:
       - name: Build mapzutil
         run: |
           echo "Preparing mapzutil"
-          cd tools/mapzutil
+          cd itools/mapzutil
           mkdir -p build
           python3 bin/gen.py
           make
