@@ -151,17 +151,21 @@ bool CGame::handleBossBullet(CBoss &boss)
 
 void CGame::handleBossHitboxContact(CBoss &boss)
 {
+    int playerDamage = 0;
+
     //  Attack hitbox: Affect all player tiles it overlaps
     boss.testHitbox1(m_map, [](const Pos &p, auto type)
                      {
                          (void)type;
                          return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
                      },
-                     [boss, this](const HitResult &r)
+                     [boss, this, &playerDamage](const HitResult &r)
                      {
-                         (void)r;
-                         addHealth(-boss.damage()); // hurtPlayer
+                         playerDamage = std::max(boss.damage(r.type), playerDamage); // find player damage
                      });
+
+    if (playerDamage)
+        addHealth(-playerDamage); // hurtPlayer
 
     const uint32_t boss_flags = boss.data()->flags;
     if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
@@ -257,6 +261,26 @@ void CGame::manageBosses(const int ticks)
                 (boss.distance(player) <= boss.data()->distance_attack) &&
                 rng.range(0, boss.data()->bullet_rate) == 0)
             {
+                // NEW: Compute direction to player
+                const Pos boss_pos = boss.worldPos(); // Full-tile position (m_x/2, m_y/2)
+                const Pos player_pos = player.pos();
+
+                const int deltaX = player_pos.x - boss_pos.x;
+                const int deltaY = player_pos.y - boss_pos.y;
+
+                // Determine facing direction (8-dir or 4-dir)
+                JoyAim facing = boss.getAim(); // JoyAim::AIM_RIGHT; // Default
+                if (abs(deltaX) > abs(deltaY))
+                {
+                    // Horizontal priority
+                    facing = (deltaX > 0) ? JoyAim::AIM_RIGHT : JoyAim::AIM_LEFT;
+                }
+                else
+                {
+                    // Vertical priority
+                    facing = (deltaY > 0) ? JoyAim::AIM_DOWN : JoyAim::AIM_UP;
+                }
+                boss.setAim(facing);
                 boss.setState(CBoss::BossState::Attack);
             }
         }

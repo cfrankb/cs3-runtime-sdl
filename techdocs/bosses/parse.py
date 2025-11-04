@@ -89,7 +89,10 @@ struct bossData_t
     int hp;                 // hp
     uint8_t type;           // type
     int score;              // score received
-    int damage;             // damage given
+    int damage;             // damage given (primary)
+    int damage_attack;      // damage given (attack)
+    int damage_special1;    // damage given (special1)
+    int damage_special2;    // damage given (special2)
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
@@ -111,25 +114,29 @@ struct bossData_t
     boss_seq_t hurt;        // animation seq: hurt
     boss_seq_t death;       // animation seq: death
     boss_seq_t idle;        // animation seq: idle
-    hitbox_t hitbox;        // boss hitbox
+    hitbox_t hitbox;        // primary hitbox
     int sheet;              // sprite sheet used
 };
 """.replace(
     "{MAX_HITBOX_PER_FRAME}", str(MAX_HITBOX_PER_FRAME).strip()
 )
 
-CPP_BODY = """
-const bossData_t *getBossData(const uint8_t type)
+CPP_INLINE_BODY = """
+
+extern const bossData_t g_bossData[];
+extern const sprite_hitbox_t g_hitboxes[];
+
+inline constexpr const bossData_t *getBossData(const uint8_t type)
 {
     for (size_t i = 0; i < BOSS_COUNT; ++i)
     {
-        if (g_bosses[i].type == type)
-            return &g_bosses[i];
+        if (g_bossData[i].type == type)
+            return &g_bossData[i];
     }
     return nullptr;
 }
 
-const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
+inline constexpr const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
 {
     const int spriteID = sheet * SHEET_SPACER + frameID;
     for (size_t i = 0; i < HITBOX_COUNT; ++i)
@@ -298,12 +305,12 @@ def write_cpp(file_path):
         tfile.write("};\n\n")
         tfile.write("using namespace BossData;\n\n")
 
-        tfile.write("const sprite_hitbox_t g_hitboxes[] = {\n")
+        tfile.write("constexpr const sprite_hitbox_t g_hitboxes[] = {\n")
         for k, frame in all_frames.items():
             tfile.write(f"{TAB}{frame},\n")
         tfile.write(f"}};\n\n")
 
-        tfile.write("const bossData_t g_bosses[] = {\n")
+        tfile.write("constexpr const bossData_t g_bossData[] = {\n")
         for seq in all_seqs:
             tfile.write(f"{TAB}{{\n")
             code = f"{TAB*2}.name = \"{seq['name']}\",\n"
@@ -320,7 +327,6 @@ def write_cpp(file_path):
             tfile.write(code)
             tfile.write(f"{TAB}}},\n")
         tfile.write(f"}};\n")
-        tfile.write("\n" + CPP_BODY + "\n\n")
 
 
 def write_header(file_path: str):
@@ -336,10 +342,20 @@ def write_header(file_path: str):
         tfile.write("\n".join(defines) + "\n\n")
         tfile.write("\n".join(boss_types) + "\n\n")
         tfile.write(HEADER_STRUCT)
-        tfile.write("\nconst bossData_t *getBossData(const uint8_t type);")
-        tfile.write(
-            "\nconst sprite_hitbox_t *getHitboxes(const int sheet, const int frameID);\n"
-        )
+        tfile.write(CPP_INLINE_BODY)
+
+
+def prepare_defines():
+    for seq in all_seqs:
+        if not sanity_check(seq):
+            print("please fix config")
+            exit(EXIT_FAILURE)
+        name = clean_name(seq["name"])
+        boss_types.append(f"#define BOSS_{name} {seq['type']}")
+
+    boss_types.append(f"#define BOSS_COUNT {len(all_seqs)}")
+    boss_types.append(f"#define HITBOX_COUNT  {len(all_frames)}")
+    boss_types.append(f"#define SHEET_SPACER  {SHEET_SPACER}")
 
 
 attr_names = [
@@ -349,6 +365,9 @@ attr_names = [
     "type",
     "score",
     "damage",
+    "damage_attack",
+    "damage_special1",
+    "damage_special2",
     "flags",
     "path",
     "bullet",
@@ -368,7 +387,7 @@ attr_names = [
 ]
 seq_names = ["moving", "attack", "hurt", "death", "idle"]
 misc_names = ["hitbox", "sheet"]
-composite_fields = ["bullet", "distance", "speed", "color"]
+composite_fields = ["bullet", "distance", "speed", "color", "damage"]
 all_fields = ["name"] + attr_names + seq_names + misc_names
 in_file = "bosses.ini"
 
@@ -407,9 +426,9 @@ for t in data.split("\n"):
         seq["name"] = section
         seq["sheet"] = sheet
     elif t[0] == "[":
+        print(f"section header not terminated on line {line}")
         # save previous boss
         save_seq(all_seqs, seq)
-        print(f"section header not terminated on line {line}")
         section = t[1:].strip()
         if not section:
             print(f"section header empty on line {line}")
@@ -506,18 +525,7 @@ for t in data.split("\n"):
 save_seq(all_seqs, seq)
 
 
-for seq in all_seqs:
-    if not sanity_check(seq):
-        print("please fix config")
-        exit(EXIT_FAILURE)
-    name = clean_name(seq["name"])
-    boss_types.append(f"#define BOSS_{name} {seq['type']}")
-
-g_vars.append(f"constexpr size_t BOSS_COUNT = {len(all_seqs)};")
-g_vars.append(f"constexpr size_t HITBOX_COUNT = {len(all_frames)};")
-g_vars.append(f"constexpr size_t SHEET_SPACER = {SHEET_SPACER};")
-
-
+prepare_defines()
 write_header(H_FILE)
 write_cpp(CPP_FILE)
 

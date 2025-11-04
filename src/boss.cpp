@@ -50,7 +50,7 @@ CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossD
     setSolidOperator();
 }
 
-bool CBoss::isSolid(const Pos &pos)
+bool CBoss::isSolid(const Pos &pos) const
 {
     CMap &map = CGame::getMap();
     const auto c = map.at(pos.x, pos.y);
@@ -58,7 +58,7 @@ bool CBoss::isSolid(const Pos &pos)
     return def.type != TYPE_BACKGROUND && def.type != TYPE_PLAYER;
 }
 
-bool CBoss::isGhostBlocked(const Pos &pos)
+bool CBoss::isGhostBlocked(const Pos &pos) const
 {
     CMap &map = CGame::getMap();
     const auto c = map.at(pos.x, pos.y);
@@ -275,7 +275,7 @@ bool CBoss::canMove(const JoyAim aim) const
             if (ax < 0 || ax >= mapLen)
                 continue;
             const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y - 1)};
-            if (m_isSolidOperator(pos))
+            if ((this->*m_solidCheck)(pos))
                 return false;
         }
         break;
@@ -288,7 +288,7 @@ bool CBoss::canMove(const JoyAim aim) const
             if (ax < 0 || ax >= mapLen)
                 continue;
             const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y + h)};
-            if (m_isSolidOperator(pos))
+            if ((this->*m_solidCheck)(pos))
                 return false;
         }
         break;
@@ -301,7 +301,7 @@ bool CBoss::canMove(const JoyAim aim) const
             if (ay < 0 || ay >= mapHei)
                 continue;
             const Pos pos{static_cast<int16_t>(x - 1), static_cast<int16_t>(ay)};
-            if (m_isSolidOperator(pos))
+            if ((this->*m_solidCheck)(pos))
                 return false;
         }
         break;
@@ -314,7 +314,7 @@ bool CBoss::canMove(const JoyAim aim) const
             if (ay < 0 || ay >= mapHei)
                 continue;
             const Pos pos{static_cast<int16_t>(x + w), static_cast<int16_t>(ay)};
-            if (m_isSolidOperator(pos))
+            if ((this->*m_solidCheck)(pos))
                 return false;
         }
         break;
@@ -368,33 +368,26 @@ void CBoss::move(const Pos pos)
 
 const boss_seq_t *CBoss::getCurrentSeq() const
 {
-    const boss_seq_t *seq = nullptr;
+    switch (m_state)
+    {
+    case BossState::Patrol:
+        return &m_bossData->idle;
 
-    if (m_state == BossState::Patrol)
-    {
-        seq = &m_bossData->idle;
-    }
-    else if (m_state == BossState::Chase)
-    {
-        seq = &m_bossData->moving;
-    }
-    else if (m_state == BossState::Attack)
-    {
-        seq = &m_bossData->attack;
-    }
-    else if (m_state == BossState::Hurt)
-    {
-        seq = &m_bossData->hurt;
-    }
-    else if (m_state == BossState::Death)
-    {
-        seq = &m_bossData->death;
-    }
-    else
-    {
+    case BossState::Chase:
+        return &m_bossData->moving;
+
+    case BossState::Attack:
+        return &m_bossData->attack;
+
+    case BossState::Hurt:
+        return &m_bossData->hurt;
+
+    case BossState::Death:
+        return &m_bossData->death;
+
+    default:
         return nullptr;
     }
-    return seq;
 }
 
 void CBoss::animate()
@@ -468,9 +461,21 @@ bool CBoss::subtainDamage(const int lostHP)
     return justDied;
 }
 
-int CBoss::damage() const
+int CBoss::damage(const BossData::HitBoxType hbType) const
 {
-    return m_bossData->damage;
+    switch (hbType)
+    {
+    case BossData::HitBoxType::MAIN:
+        return m_bossData->damage;
+    case BossData::HitBoxType::ATTACK:
+        return m_bossData->damage_attack;
+    case BossData::HitBoxType::SPECIAL1:
+        return m_bossData->damage_special1;
+    case BossData::HitBoxType::SPECIAL2:
+        return m_bossData->damage_special2;
+    default:
+        return m_bossData->damage;
+    }
 }
 
 const Pos CBoss::toPos(int x, int y)
@@ -605,14 +610,14 @@ void CBoss::setSolidOperator()
 {
     LOGI("set solidOperator for boss %.2x", m_bossData->type);
     if (m_bossData->type == BOSS_MR_DEMON)
-        m_isSolidOperator = isSolid;
+        m_solidCheck = &CBoss::isSolid;
     else if (m_bossData->type == BOSS_GHOST)
-        m_isSolidOperator = isGhostBlocked;
+        m_solidCheck = &CBoss::isGhostBlocked;
     else if (m_bossData->type == BOSS_HARPY)
-        m_isSolidOperator = isSolid;
+        m_solidCheck = &CBoss::isSolid;
     else
     {
         LOGW("No custom solidOperator for this boss");
-        m_isSolidOperator = isSolid;
+        m_solidCheck = &CBoss::isSolid;
     }
 }

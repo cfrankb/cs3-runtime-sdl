@@ -40,7 +40,6 @@ struct HitResult
 using hitboxTestCallback_t = std::function<bool(const Pos &, BossData::HitBoxType)>; // Return true to skip/abort this pos
 using hitboxActionCallback_t = std::function<void(const HitResult &)>;               // Collect/process each hit
 
-// typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
 using BossTileCheck = bool (CBoss::*)(const Pos &) const;
 typedef std::function<bool(const Pos &)> canWalkCallback_t;
 
@@ -67,8 +66,8 @@ public:
     std::vector<HitResult> testHitbox1(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
     std::vector<HitResult> testHitbox2(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
 
-    static bool isSolid(const Pos &pos);
-    static bool isGhostBlocked(const Pos &pos);
+    bool isSolid(const Pos &pos) const;
+    bool isGhostBlocked(const Pos &pos) const;
     static const Pos toPos(int x, int y);
     bool canMove(const JoyAim aim) const override;
     void move(const JoyAim aim) override;
@@ -82,6 +81,13 @@ public:
     bool isHidden() const { return m_state == Hidden; }
     bool isDone() const { return m_state == Hidden; }
     bool isGoal() const { return m_bossData->is_goal; }
+    Pos worldPos() const
+    {
+        constexpr int16_t granular = static_cast<int16_t>(BOSS_GRANULAR_FACTOR);
+        return {
+            static_cast<int16_t>(m_x / granular),
+            static_cast<int16_t>(m_y / granular)};
+    }
 
     inline void move(const int16_t x, const int16_t y) override
     {
@@ -98,7 +104,7 @@ public:
     inline const Pos pos() const override { return Pos{m_x, m_y}; };
     void animate();
     int currentFrame() const;
-    int damage() const;
+    int damage(const BossData::HitBoxType hbType) const;
     int sheet() const { return m_bossData->sheet; }
     int score() const { return m_bossData->score; }
     const char *name() const { return m_bossData->name; }
@@ -112,6 +118,7 @@ public:
     bool read(IFile &file);
     bool write(IFile &file);
     void setAim(const JoyAim aim) override { m_aim = aim; };
+    JoyAim getAim() const { return m_aim; }
 
 private:
     const boss_seq_t *getCurrentSeq() const;
@@ -123,7 +130,7 @@ private:
     BossState m_state;
     int m_speed;
     JoyAim m_aim;
-    canWalkCallback_t m_isSolidOperator;
+    BossTileCheck m_solidCheck = nullptr;
     void setSolidOperator();
     CPath m_path;
 };

@@ -33,6 +33,9 @@
 #define BOSS_GHOST 0xb1
 #define BOSS_HARPY 0xb2
 #define BOSS_BEHOLDER 0xb3
+#define BOSS_COUNT 4
+#define HITBOX_COUNT  22
+#define SHEET_SPACER  1000
 
 
 #define MAX_HITBOX_PER_FRAME 4
@@ -85,7 +88,10 @@ struct bossData_t
     int hp;                 // hp
     uint8_t type;           // type
     int score;              // score received
-    int damage;             // damage given
+    int damage;             // damage given (primary)
+    int damage_attack;      // damage given (attack)
+    int damage_special1;    // damage given (special1)
+    int damage_special2;    // damage given (special2)
     uint32_t flags;         // custom flags
     uint32_t path;          // path finding algo
     uint8_t bullet;         // boss bullet
@@ -107,9 +113,29 @@ struct bossData_t
     boss_seq_t hurt;        // animation seq: hurt
     boss_seq_t death;       // animation seq: death
     boss_seq_t idle;        // animation seq: idle
-    hitbox_t hitbox;        // boss hitbox
+    hitbox_t hitbox;        // primary hitbox
     int sheet;              // sprite sheet used
 };
+extern const bossData_t g_bossData[];
+extern const sprite_hitbox_t g_hitboxes[];
 
-const bossData_t *getBossData(const uint8_t type);
-const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID);
+inline constexpr const bossData_t *getBossData(const uint8_t type)
+{
+    for (size_t i = 0; i < BOSS_COUNT; ++i)
+    {
+        if (g_bossData[i].type == type)
+            return &g_bossData[i];
+    }
+    return nullptr;
+}
+
+inline constexpr const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
+{
+    const int spriteID = sheet * SHEET_SPACER + frameID;
+    for (size_t i = 0; i < HITBOX_COUNT; ++i)
+    {
+        if (g_hitboxes[i].spriteID == spriteID)
+            return &g_hitboxes[i];
+    }
+    return nullptr;
+}

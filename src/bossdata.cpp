@@ -62,14 +62,11 @@ namespace BossData
     constexpr int BEHOLDER_HURT_LEN = 6;
     constexpr int BEHOLDER_MOVING_BASE = 108;
     constexpr int BEHOLDER_MOVING_LEN = 8;
-    constexpr size_t BOSS_COUNT = 4;
-    constexpr size_t HITBOX_COUNT = 22;
-    constexpr size_t SHEET_SPACER = 1000;
 };
 
 using namespace BossData;
 
-const sprite_hitbox_t g_hitboxes[] = {
+constexpr const sprite_hitbox_t g_hitboxes[] = {
     { 1005, 1, {{ 3, 4, 2, 3, 2 }, }},
     { 1004, 1, {{ 3, 4, 2, 3, 2 }, }},
     { 1027, 1, {{ 1, 4, 3, 3, 2 }, }},
@@ -94,7 +91,7 @@ const sprite_hitbox_t g_hitboxes[] = {
     { 1006, 1, {{ 3, 4, 2, 3, 2 }, }},
 };
 
-const bossData_t g_bosses[] = {
+constexpr const bossData_t g_bossData[] = {
     {
         .name = "Mr. Demon",
         .speed = 3,
@@ -103,6 +100,9 @@ const bossData_t g_bosses[] = {
         .type = 0xb0,
         .score = 1000,
         .damage = 16,
+        .damage_attack = 16,
+        .damage_special1 = 16,
+        .damage_special2 = 16,
         .flags = BOSS_FLAG_ICE_DAMAGE,
         .path = Path::ASTAR,
         .bullet = TILES_FIREBALL,
@@ -135,6 +135,9 @@ const bossData_t g_bosses[] = {
         .type = 0xb1,
         .score = 500,
         .damage = 5,
+        .damage_attack = 5,
+        .damage_special1 = 5,
+        .damage_special2 = 5,
         .flags = 0,
         .path = Path::LOS,
         .bullet = TILES_BLANK,
@@ -167,6 +170,9 @@ const bossData_t g_bosses[] = {
         .type = 0xb2,
         .score = 1250,
         .damage = 5,
+        .damage_attack = 5,
+        .damage_special1 = 5,
+        .damage_special2 = 5,
         .flags = 0,
         .path = Path::BFS,
         .bullet = TILES_BULLETY1,
@@ -199,6 +205,9 @@ const bossData_t g_bosses[] = {
         .type = 0xb3,
         .score = 1250,
         .damage = 9,
+        .damage_attack = 9,
+        .damage_special1 = 20,
+        .damage_special2 = 20,
         .flags = BOSS_FLAG_PROXIMITY_ATTACK,
         .path = Path::BFS,
         .bullet = TILES_BLANK,
@@ -224,25 +233,3 @@ const bossData_t g_bosses[] = {
         .sheet = 1,
     },
 };
-
-const bossData_t *getBossData(const uint8_t type)
-{
-    for (size_t i = 0; i < BOSS_COUNT; ++i)
-    {
-        if (g_bosses[i].type == type)
-            return &g_bosses[i];
-    }
-    return nullptr;
-}
-
-const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
-{
-    const int spriteID = sheet * SHEET_SPACER + frameID;
-    for (size_t i = 0; i < HITBOX_COUNT; ++i)
-    {
-        if (g_hitboxes[i].spriteID == spriteID)
-            return &g_hitboxes[i];
-    }
-    return nullptr;
-}
-
