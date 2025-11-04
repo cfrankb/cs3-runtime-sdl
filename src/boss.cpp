@@ -105,9 +105,9 @@ bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t act
     const int w = hbMain.width / BOSS_GRANULAR_FACTOR;
     const int h = hbMain.height / BOSS_GRANULAR_FACTOR;
     std::vector<hitbox_t> hitboxes;
-    hitboxes.push_back({x, y, w, h, 0});
+    hitboxes.push_back({x, y, w, h, BossData::HitBoxType::MAIN});
 
-    const sprite_hitbox_t *hbData = getHitbox(m_bossData->sheet, currentFrame());
+    const sprite_hitbox_t *hbData = getHitboxes(m_bossData->sheet, currentFrame());
     for (int i = 0; hbData != nullptr && i < hbData->count; ++i)
     {
         // add secondary hitbox - relative to primary

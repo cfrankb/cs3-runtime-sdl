@@ -199,7 +199,7 @@ const bossData_t g_bosses[] = {
         .type = 0xb3,
         .score = 1250,
         .damage = 9,
-        .flags = BOSS_PROXIMITY_ATTACK,
+        .flags = BOSS_FLAG_PROXIMITY_ATTACK,
         .path = Path::BFS,
         .bullet = TILES_BLANK,
         .bullet_rate = 7,
@@ -235,7 +235,7 @@ const bossData_t *getBossData(const uint8_t type)
     return nullptr;
 }
 
-const sprite_hitbox_t *getHitbox(const int sheet, const int frameID)
+const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
 {
     const int spriteID = sheet * SHEET_SPACER + frameID;
     for (size_t i = 0; i < HITBOX_COUNT; ++i)

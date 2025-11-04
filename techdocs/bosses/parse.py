@@ -129,7 +129,7 @@ const bossData_t *getBossData(const uint8_t type)
     return nullptr;
 }
 
-const sprite_hitbox_t *getHitbox(const int sheet, const int frameID)
+const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID)
 {
     const int spriteID = sheet * SHEET_SPACER + frameID;
     for (size_t i = 0; i < HITBOX_COUNT; ++i)
@@ -253,17 +253,6 @@ class Frame:
     def addBox(self, grid_box: GridBox):
         self.hitboxes.append(grid_box)
 
-        """
-        sprite_hitbox_t hb[] = {
-            1005,
-            1,
-            {3, 4, 2, 3, 2},
-            {0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0},
-            {0, 0, 0, 0, 0},
-        };
-        """
-
     def __str__(self) -> str:
         r = f"{{ {self.frame_id}, {len(self.hitboxes)}, {{"
 
@@ -283,7 +272,6 @@ class Frame:
 def handle_hitboxes(hitbox_file: str, sheet: int, base_frame: int):
     global all_frames
 
-    # global hitbox_index
     sprites = read_hitbox_file(hitbox_file)
     for sprite_id, sprite_hitboxes in sprites.items():
         for hitbox in sprite_hitboxes:
@@ -350,7 +338,7 @@ def write_header(file_path: str):
         tfile.write(HEADER_STRUCT)
         tfile.write("\nconst bossData_t *getBossData(const uint8_t type);")
         tfile.write(
-            "\nconst sprite_hitbox_t *getHitbox(const int sheet, const int frameID);\n"
+            "\nconst sprite_hitbox_t *getHitboxes(const int sheet, const int frameID);\n"
         )
 
 
@@ -503,7 +491,6 @@ for t in data.split("\n"):
                 if not "aims" in seq:
                     print(f"aims must be defined before animation on line {line}")
                     exit(EXIT_FAILURE)
-                # print(f'aims: {seq["aims"]}')
                 aims = int(seq["aims"])
                 frame += frame_count * aims
             seq[seq_name] = vars  # [frame, frame_count]

@@ -26,7 +26,7 @@
 
 #include "color.h"
 #define FLAG_FIREBALL 0x00000001
-#define BOSS_PROXIMITY_ATTACK 0x40000000
+#define BOSS_FLAG_PROXIMITY_ATTACK 0x40000000
 #define BOSS_FLAG_ICE_DAMAGE 0x80000000
 
 #define BOSS_MR_DEMON 0xb0
@@ -112,4 +112,4 @@ struct bossData_t
 };
 
 const bossData_t *getBossData(const uint8_t type);
-const sprite_hitbox_t *getHitbox(const int sheet, const int frameID);
+const sprite_hitbox_t *getHitboxes(const int sheet, const int frameID);

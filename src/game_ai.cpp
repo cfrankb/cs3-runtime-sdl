@@ -183,14 +183,6 @@ void CGame::manageBosses(const int ticks)
                     addPoints(boss.data()->score);
             }
 
-        if ((boss_flags & BOSS_PROXIMITY_ATTACK) &&
-            boss.state() != CBoss::BossState::Attack &&
-            (boss.distance(player) <= boss.data()->distance_attack) &&
-            rng.range(0, boss.data()->bullet_rate) == 0)
-        {
-            boss.setState(CBoss::BossState::Attack);
-        }
-
         if (boss.speed() != 0 && (ticks % boss.speed() != 0))
             continue;
 
@@ -220,6 +212,14 @@ void CGame::manageBosses(const int ticks)
                 }
             }
             handleBossPath(boss);
+
+            if ((boss_flags & BOSS_FLAG_PROXIMITY_ATTACK) &&
+                boss.state() != CBoss::BossState::Attack &&
+                (boss.distance(player) <= boss.data()->distance_attack) &&
+                rng.range(0, boss.data()->bullet_rate) == 0)
+            {
+                boss.setState(CBoss::BossState::Attack);
+            }
         }
     }
 }
