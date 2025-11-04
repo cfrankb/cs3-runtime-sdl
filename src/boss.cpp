@@ -50,36 +50,6 @@ CBoss::CBoss(const int16_t x, const int16_t y, const bossData_t *data) : m_bossD
     setSolidOperator();
 }
 
-bool CBoss::isPlayer(const Pos &pos)
-{
-    const CMap &map = CGame::getMap();
-    const auto c = map.at(pos.x, pos.y);
-    const TileDef &def = getTileDef(c);
-    return def.type == TYPE_PLAYER;
-}
-
-bool CBoss::isIceCube(const Pos &pos)
-{
-    const CMap &map = CGame::getMap();
-    const auto c = map.at(pos.x, pos.y);
-    const TileDef &def = getTileDef(c);
-    return def.type == TYPE_ICECUBE;
-}
-
-bool CBoss::meltIceCube(const Pos &pos)
-{
-    CGame *game = CGame::getGame();
-    CMap &map = CGame::getMap();
-    int i = game->findMonsterAt(pos.x, pos.y);
-    if (i != CGame::INVALID)
-    {
-        game->deleteMonster(i);
-        game->getSfx().emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION6, SFX_EXPLOSION6_TIMEOUT});
-        map.set(pos.x, pos.y, TILES_BLANK);
-    }
-    return true;
-}
-
 bool CBoss::isSolid(const Pos &pos)
 {
     CMap &map = CGame::getMap();
@@ -96,46 +66,161 @@ bool CBoss::isGhostBlocked(const Pos &pos)
     return def.type == TYPE_SWAMP || def.type == TYPE_ICECUBE || c == TILES_WALLS93_3;
 }
 
-bool CBoss::testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const
+std::vector<HitResult> CBoss::testHitbox2(const CMap &map,
+                                          hitboxTestCallback_t testCallback,
+                                          hitboxActionCallback_t actionCallback) const
 {
-    // add primary hitbox
-    const auto &hbMain = m_bossData->hitbox; // primary hitbox
-    const int x = m_x / BOSS_GRANULAR_FACTOR;
-    const int y = m_y / BOSS_GRANULAR_FACTOR;
-    const int w = hbMain.width / BOSS_GRANULAR_FACTOR;
-    const int h = hbMain.height / BOSS_GRANULAR_FACTOR;
-    std::vector<hitbox_t> hitboxes;
-    hitboxes.push_back({x, y, w, h, BossData::HitBoxType::MAIN});
+    std::vector<HitResult> results;
 
+    // Build hitboxes in HALF-TILE units ===
+    std::vector<hitbox_t> hitboxes; // now in half-tiles
+
+    // Primary
+    hitboxes.push_back({m_x,
+                        m_y,
+                        m_bossData->hitbox.width,
+                        m_bossData->hitbox.height,
+                        static_cast<int>(BossData::HitBoxType::MAIN)});
+
+    // Secondary (frame-specific)
     const sprite_hitbox_t *hbData = getHitboxes(m_bossData->sheet, currentFrame());
-    for (int i = 0; hbData != nullptr && i < hbData->count; ++i)
+    for (int i = 0; hbData && i < hbData->count; ++i)
     {
-        // add secondary hitbox - relative to primary
-        const hitbox_t &c = hbData->hitboxes[i];
-        const hitbox_t hb{
-            (m_x + c.x - hbMain.x) / BOSS_GRANULAR_FACTOR,
-            (m_y + c.y - hbMain.y) / BOSS_GRANULAR_FACTOR,
-            c.width / BOSS_GRANULAR_FACTOR,
-            c.height / BOSS_GRANULAR_FACTOR,
-            c.type,
-        };
-        hitboxes.push_back(hb);
+        const auto &c = hbData->hitboxes[i];
+        hitboxes.push_back({m_x + c.x - m_bossData->hitbox.x,
+                            m_y + c.y - m_bossData->hitbox.y,
+                            c.width,
+                            c.height,
+                            c.type});
     }
 
-    // test all hitboxes
+    // === 2. For each hitbox, scan WORLD TILES it covers ===
     for (const auto &hb : hitboxes)
     {
-        for (int ay = 0; ay < hb.height; ++ay)
+        const int left = hb.x;
+        const int top = hb.y;
+        const int right = left + hb.width - 1;
+        const int bottom = top + hb.height - 1;
+
+        const int wx1 = left >> 1;
+        const int wy1 = top >> 1;
+        const int wx2 = right >> 1;
+        const int wy2 = bottom >> 1;
+
+        BossData::HitBoxType type = static_cast<BossData::HitBoxType>(hb.type);
+
+        for (int wy = wy1; wy <= wy2; ++wy)
         {
-            for (int ax = 0; ax < hb.width; ++ax)
+            for (int wx = wx1; wx <= wx2; ++wx)
             {
-                const Pos pos{static_cast<int16_t>(hb.x + ax), static_cast<int16_t>(hb.y + ay)};
-                if (testCallback(pos))
-                    return actionCallback ? actionCallback(pos) : true;
+                // Out-of-map?
+                if (!map.isValid(wx, wy))
+                    continue;
+
+                Pos pos{static_cast<int16_t>(wx), static_cast<int16_t>(wy)};
+
+                // Does this world tile actually overlap the hitbox?
+                // (Optional: skip if no overlap — but usually yes)
+                const int tileLeft = wx << 1; // wx * 2
+                const int tileRight = tileLeft + 1;
+                const int tileTop = wy << 1;
+                const int tileBottom = tileTop + 1;
+
+                if (right < tileLeft || left > tileRight ||
+                    bottom < tileTop || top > tileBottom)
+                    continue; // no overlap
+
+                // Test callback
+                if (testCallback && !testCallback(pos, type))
+                    continue;
+
+                // HIT!
+                HitResult r{pos, type};
+                if (actionCallback)
+                    actionCallback(r);
+                results.push_back(r);
             }
         }
     }
-    return false;
+
+    return results;
+}
+
+std::vector<HitResult> CBoss::testHitbox1(const CMap &map,
+                                          hitboxTestCallback_t testCallback,
+                                          hitboxActionCallback_t actionCallback) const
+{
+    std::vector<HitResult> results;
+
+    // Primary hitbox (half-tiles)
+    const auto &hbMain = m_bossData->hitbox;
+    std::vector<hitbox_t> hitboxes;
+    hitboxes.push_back({m_x, m_y, // Keep half-tile coords
+                        hbMain.width, hbMain.height,
+                        static_cast<int>(BossData::HitBoxType::MAIN)});
+
+    // Secondary hitboxes (relative to main, half-tiles)
+    const sprite_hitbox_t *hbData = getHitboxes(m_bossData->sheet, currentFrame());
+    for (int i = 0; hbData != nullptr && i < hbData->count; ++i)
+    {
+        const hitbox_t &c = hbData->hitboxes[i];
+        const hitbox_t hb{
+            m_x + c.x - hbMain.x,
+            m_y + c.y - hbMain.y,
+            c.width,
+            c.height,
+            c.type};
+        hitboxes.push_back(hb);
+    }
+
+    // Test each hitbox
+    for (const auto &hb : hitboxes)
+    {
+        BossData::HitBoxType hbType = static_cast<BossData::HitBoxType>(hb.type);
+
+        // Compute world tile bounds (half-tiles to full tiles)
+        const int left = hb.x;               // Half-tile x
+        const int right = hb.x + hb.width;   // Half-tile x+width
+        const int top = hb.y;                // Half-tile y
+        const int bottom = hb.y + hb.height; // Half-tile y+height
+
+        // World tile range (inclusive)
+        const int x_start = left / BOSS_GRANULAR_FACTOR;       // floor(left/2)
+        const int x_end = (right - 1) / BOSS_GRANULAR_FACTOR;  // floor((right-1)/2)
+        const int y_start = top / BOSS_GRANULAR_FACTOR;        // floor(top/2)
+        const int y_end = (bottom - 1) / BOSS_GRANULAR_FACTOR; // floor((bottom-1)/2)
+
+        // Scan all world tiles in range
+        for (int wy = y_start; wy <= y_end; ++wy)
+        {
+            for (int wx = x_start; wx <= x_end; ++wx)
+            {
+                // Out-of-map check
+                if (!map.isValid(wx, wy))
+                {
+                    continue;
+                }
+
+                const Pos pos{static_cast<int16_t>(wx), static_cast<int16_t>(wy)};
+
+                // Test with type
+                if (testCallback && !testCallback(pos, hbType))
+                {
+                    continue;
+                }
+
+                // Collect hit
+                HitResult result{pos, hbType};
+                if (actionCallback)
+                {
+                    actionCallback(result);
+                }
+                results.emplace_back(std::move(result));
+            }
+        }
+    }
+
+    return results;
 }
 
 bool CBoss::canMove(const JoyAim aim) const

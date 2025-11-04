@@ -29,8 +29,19 @@ class IPath;
 class IFile;
 class CActor;
 class CPath;
+class CBoss;
 
-typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
+struct HitResult
+{
+    Pos pos;                   // World tile (full-tile)
+    BossData::HitBoxType type; // e.g., MAIN, VULNERABLE, HURTBOX
+};
+
+using hitboxTestCallback_t = std::function<bool(const Pos &, BossData::HitBoxType)>; // Return true to skip/abort this pos
+using hitboxActionCallback_t = std::function<void(const HitResult &)>;               // Collect/process each hit
+
+// typedef std::function<bool(const Pos &)> hitboxPosCallback_t;
+using BossTileCheck = bool (CBoss::*)(const Pos &) const;
 typedef std::function<bool(const Pos &)> canWalkCallback_t;
 
 class CBoss : public ISprite
@@ -53,12 +64,11 @@ public:
     inline int16_t y() const override { return m_y; }
     inline const hitbox_t &hitbox() const { return m_bossData->hitbox; }
     uint8_t type() const override { return m_bossData->type; }
-    bool testHitbox(hitboxPosCallback_t testCallback, hitboxPosCallback_t actionCallback) const;
-    static bool isPlayer(const Pos &pos);
-    static bool isIceCube(const Pos &pos);
+    std::vector<HitResult> testHitbox1(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
+    std::vector<HitResult> testHitbox2(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
+
     static bool isSolid(const Pos &pos);
     static bool isGhostBlocked(const Pos &pos);
-    static bool meltIceCube(const Pos &pos);
     static const Pos toPos(int x, int y);
     bool canMove(const JoyAim aim) const override;
     void move(const JoyAim aim) override;

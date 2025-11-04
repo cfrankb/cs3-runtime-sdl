@@ -149,6 +149,52 @@ bool CGame::handleBossBullet(CBoss &boss)
     return false;
 }
 
+void CGame::handleBossHitboxContact(CBoss &boss)
+{
+    //  Attack hitbox: Affect all player tiles it overlaps
+    boss.testHitbox1(m_map, [](const Pos &p, auto type)
+                     {
+                         (void)type;
+                         return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
+                     },
+                     [boss, this](const HitResult &r)
+                     {
+                         (void)r;
+                         addHealth(-boss.damage()); // hurtPlayer
+                     });
+
+    const uint32_t boss_flags = boss.data()->flags;
+    if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
+    {
+        boss.testHitbox1(m_map, [](const Pos &pos, auto type)
+                         {
+                             (void)type;
+                             const CMap &map = CGame::getMap();
+                             const auto c = map.at(pos.x, pos.y);
+                             const TileDef &def = getTileDef(c);
+                             return def.type == TYPE_ICECUBE; // check if IceCube
+                         },
+                         [&boss, this](const HitResult &r)
+                         {
+                             const Pos &pos = r.pos;
+                             playSound(SOUND_SPLASH01);
+                             const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
+                             if (justDied)
+                                 addPoints(boss.data()->score);
+
+                             // meltIceCube
+                             CGame *game = CGame::getGame();
+                             CMap &map = CGame::getMap();
+                             int i = game->findMonsterAt(pos.x, pos.y);
+                             if (i != CGame::INVALID)
+                             {
+                                 game->deleteMonster(i);
+                                 game->getSfx().emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION6, SFX_EXPLOSION6_TIMEOUT});
+                                 map.set(pos.x, pos.y, TILES_BLANK);
+                             } });
+    }
+}
+
 void CGame::manageBosses(const int ticks)
 {
     auto &rng = getRandom();
@@ -172,16 +218,9 @@ void CGame::manageBosses(const int ticks)
 
         const int bx = boss.x() / 2;
         const int by = boss.y() / 2;
-        if (boss.testHitbox(CBoss::isPlayer, nullptr))
-            addHealth(-boss.damage());
-        if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
-            if (boss.testHitbox(CBoss::isIceCube, CBoss::meltIceCube))
-            {
-                playSound(SOUND_SPLASH01);
-                const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
-                if (justDied)
-                    addPoints(boss.data()->score);
-            }
+
+        // hitbox attack
+        handleBossHitboxContact(boss);
 
         if (boss.speed() != 0 && (ticks % boss.speed() != 0))
             continue;
