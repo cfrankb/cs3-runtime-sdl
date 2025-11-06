@@ -177,6 +177,8 @@ public:
     static bool isOneTimeItem(const uint8_t tileID);
     static bool isPushable(const uint8_t typeID);
 
+    bool shadowActorMove(CActor &actor, const JoyAim aim);
+
     enum
     {
         INVALID = -1,
@@ -210,7 +212,6 @@ private:
     void resetKeys();
     void clearKeyIndicators();
     void setQuiet(bool state);
-    bool shadowActorMove(CActor &actor, const JoyAim aim);
     void rebuildMonsterGrid();
     void updateMonsterGrid(const CActor &actor, const int index);
 

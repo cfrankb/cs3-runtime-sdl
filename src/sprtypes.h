@@ -22,7 +22,7 @@
 #include <cstdint>
 
 // @enum
-enum TileAI:uint8_t
+enum TileAI:uint16_t
 {
     AI_STICKY                 = 0x01,
     AI_ROUND                  = 0x02,
@@ -35,17 +35,21 @@ enum TileAI:uint8_t
 
 
 // @enum
-enum TileFlag:uint8_t
+enum TileFlag:uint16_t
 {
     FLAG_GODMODE              = 0x01,
     FLAG_EXTRA_LIFE           = 0x02,
     FLAG_EXTRA_SPEED          = 0x04,
     FLAG_RAGE                 = 0x08,
+    FLAG_FRUIT                = 0x1000,
+    FLAG_TREASURE             = 0x2000,
+    FLAG_ONE_TIME             = 0x4000,
+    FLAG_HIDDEN               = 0x8000,
 };
 
 
 // @enum
-enum TileSpeed:uint8_t
+enum TileSpeed:uint16_t
 {
     SPEED_VERYFAST            = 0x02,
     SPEED_FAST                = 0x03,

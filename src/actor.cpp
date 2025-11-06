@@ -537,6 +537,7 @@ bool CActor::followPath(const Pos &playerPos)
         bool result = m_path->followPath(*this, playerPos, *pathAlgo);
         if (!result && CGame::isBulletType(m_type))
             m_path.reset(); // replaces delete + nullptr
+
         return result;
     }
     return false;

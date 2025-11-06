@@ -55,40 +55,42 @@ namespace BossData
     constexpr int HARPY_HURT_BASE = 62;
     constexpr int HARPY_HURT_LEN = 3;
     constexpr int BEHOLDER_ATTACK_BASE = 0;
-    constexpr int BEHOLDER_ATTACK_LEN = 12;
-    constexpr int BEHOLDER_DEATH_BASE = 48;
-    constexpr int BEHOLDER_DEATH_LEN = 9;
-    constexpr int BEHOLDER_HURT_BASE = 84;
-    constexpr int BEHOLDER_HURT_LEN = 6;
-    constexpr int BEHOLDER_MOVING_BASE = 108;
+    constexpr int BEHOLDER_ATTACK_LEN = 8;
+    constexpr int BEHOLDER_DEATH_BASE = 32;
+    constexpr int BEHOLDER_DEATH_LEN = 5;
+    constexpr int BEHOLDER_HURT_BASE = 52;
+    constexpr int BEHOLDER_HURT_LEN = 4;
+    constexpr int BEHOLDER_MOVING_BASE = 68;
     constexpr int BEHOLDER_MOVING_LEN = 8;
 };
 
 using namespace BossData;
 
 constexpr const sprite_hitbox_t g_hitboxes[] = {
+    { 1028, 1, {{ 5, 5, 3, 3, 2 }, }},
+    { 1029, 1, {{ 5, 5, 3, 3, 2 }, }},
+    { 1027, 1, {{ 5, 4, 2, 3, 2 }, }},
+    { 1026, 1, {{ 5, 4, 2, 3, 2 }, }},
+    { 1025, 1, {{ 5, 4, 2, 3, 2 }, }},
+    { 1024, 1, {{ 5, 4, 2, 3, 2 }, }},
+    { 1020, 1, {{ 1, 5, 2, 3, 2 }, }},
+    { 1019, 1, {{ 1, 5, 2, 2, 2 }, }},
+    { 1018, 1, {{ 1, 3, 2, 4, 2 }, }},
+    { 1017, 1, {{ 1, 3, 3, 4, 2 }, }},
+    { 1016, 1, {{ 1, 4, 3, 3, 2 }, }},
+    { 1013, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1012, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1011, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1010, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1009, 1, {{ 3, 3, 2, 4, 2 }, }},
+    { 1008, 1, {{ 3, 4, 2, 3, 2 }, }},
     { 1005, 1, {{ 3, 4, 2, 3, 2 }, }},
     { 1004, 1, {{ 3, 4, 2, 3, 2 }, }},
-    { 1027, 1, {{ 1, 4, 3, 3, 2 }, }},
-    { 1040, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1039, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1041, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1044, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1032, 1, {{ 1, 5, 2, 2, 2 }, }},
-    { 1043, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1042, 1, {{ 5, 5, 2, 2, 2 }, }},
-    { 1031, 1, {{ 1, 5, 2, 2, 2 }, }},
-    { 1030, 1, {{ 1, 5, 2, 2, 2 }, }},
-    { 1016, 1, {{ 3, 6, 2, 2, 2 }, }},
-    { 1017, 1, {{ 3, 6, 2, 2, 2 }, }},
-    { 1018, 1, {{ 3, 6, 2, 2, 2 }, }},
-    { 1019, 1, {{ 3, 6, 2, 2, 2 }, }},
-    { 1020, 1, {{ 3, 6, 2, 2, 2 }, }},
-    { 1007, 1, {{ 3, 5, 2, 2, 2 }, }},
-    { 1008, 1, {{ 3, 4, 2, 3, 2 }, }},
-    { 1028, 1, {{ 1, 4, 2, 3, 2 }, }},
-    { 1029, 1, {{ 1, 3, 2, 4, 2 }, }},
-    { 1006, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1003, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1002, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1001, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1000, 1, {{ 3, 4, 2, 3, 2 }, }},
+    { 1021, 1, {{ 1, 5, 3, 3, 2 }, }},
 };
 
 constexpr const bossData_t g_bossData[] = {
@@ -211,7 +213,7 @@ constexpr const bossData_t g_bossData[] = {
         .flags = BOSS_FLAG_PROXIMITY_ATTACK,
         .path = Path::BFS,
         .bullet = TILES_BLANK,
-        .bullet_rate = 7,
+        .bullet_rate = 5,
         .bullet_algo = Path::LOS,
         .bullet_sound = SOUND_NONE,
         .bullet_timeout = 20,

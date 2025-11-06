@@ -58,7 +58,7 @@ public:
     uint8_t getPU() const;
     void setPU(const uint8_t c);
     void setPos(const Pos &pos);
-    JoyAim getAim() const;
+    JoyAim getAim() const override;
     void setAim(const JoyAim aim) override;
     JoyAim findNextDir(const bool reverse = false) const;
     bool isPlayerThere(JoyAim aim) const;
@@ -76,6 +76,8 @@ public:
     bool followPath(const Pos &playerPos);
     bool startPath(const Pos &playerPos, const uint8_t algo, const int timeout);
     bool isFollowingPath();
+    bool isBoss() const override { return false; }
+    const CPath *path() const { return m_path.get(); };
 
 private:
     uint8_t m_x;

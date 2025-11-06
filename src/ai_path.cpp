@@ -497,31 +497,49 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
 ////////////////////////////////////////////////
 bool CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar)
 {
+    if (!sprite.isBoss())
+        LOGI("sprite: %p[%d,%d] aim:%d  p[%d,%d] ptr=%d timeout=%d cache:%lu",
+             &sprite, sprite.x(), sprite.y(), sprite.getAim(),
+             playerPos.x, playerPos.y,
+             m_pathIndex, m_pathTimeout, m_cachedDirections.size());
+
     // Check if path is invalid or timed out
     if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
     {
         // CBoss tmp{*this};
         m_cachedDirections = astar.findPath(sprite, playerPos);
         m_pathIndex = 0;
-        m_pathTimeout = PATH_TIMEOUT_MAX;
+        if (!m_pathTimeout)
+            m_pathTimeout = PATH_TIMEOUT_MAX;
         if (m_cachedDirections.empty())
         {
+            if (!sprite.isBoss())
+                LOGI("sprite: %p -- path empty", &sprite);
             return false; // No valid path
         }
     }
 
     // Try the next direction
     const JoyAim aim = m_cachedDirections[m_pathIndex];
+    sprite.setAim(aim);
     if (sprite.canMove(aim))
     {
-        sprite.move(aim);
-        sprite.setAim(aim);
+        if (sprite.isBoss())
+        {
+            sprite.move(aim);
+        }
+        else
+        {
+            CGame::getGame()->shadowActorMove(*static_cast<CActor *>(&sprite), aim);
+        }
         ++m_pathIndex;
         --m_pathTimeout;
         return true;
     }
 
     // Move failed, invalidate cache and recompute next turn
+    if (!sprite.isBoss())
+        LOGI("sprite: %p -- cannot move", &sprite);
     m_cachedDirections.clear();
     m_pathIndex = 0;
     m_pathTimeout = 0;

@@ -118,7 +118,8 @@ public:
     bool read(IFile &file);
     bool write(IFile &file);
     void setAim(const JoyAim aim) override { m_aim = aim; };
-    JoyAim getAim() const { return m_aim; }
+    JoyAim getAim() const override { return m_aim; }
+    bool isBoss() const override { return true; }
 
 private:
     const boss_seq_t *getCurrentSeq() const;

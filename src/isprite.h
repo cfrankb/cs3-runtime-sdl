@@ -39,4 +39,6 @@ public:
     virtual inline int16_t getGranularFactor() const = 0;
     virtual const Pos pos() const = 0;
     virtual void setAim(const JoyAim aim) = 0;
+    virtual JoyAim getAim() const = 0;
+    virtual bool isBoss() const = 0;
 };

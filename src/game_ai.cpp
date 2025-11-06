@@ -119,22 +119,23 @@ bool CGame::handleBossBullet(CBoss &boss)
     const CActor &player = m_player;
     CActor *bullet = nullptr;
     const auto tileID = boss.data()->bullet;
+    const auto &hitbox = boss.hitbox();
 
-    if (player.y() < by - boss.hitbox().height)
+    if (player.y() < by - hitbox.height)
     {
-        bullet = spawnBullet(bx, by - boss.hitbox().height, JoyAim::AIM_UP, tileID);
+        bullet = spawnBullet(bx, by - hitbox.height, JoyAim::AIM_UP, tileID);
     }
-    else if (player.y() > by + boss.hitbox().height)
+    else if (player.y() > by + hitbox.height)
     {
-        bullet = spawnBullet(bx, by + boss.hitbox().height, JoyAim::AIM_DOWN, tileID);
+        bullet = spawnBullet(bx, by + hitbox.height, JoyAim::AIM_DOWN, tileID);
     }
     else if (player.x() < bx)
     {
         bullet = spawnBullet(bx - 1, by - 1, JoyAim::AIM_LEFT, tileID);
     }
-    else if (player.x() > bx + boss.hitbox().width)
+    else if (player.x() > bx + hitbox.width)
     {
-        bullet = spawnBullet(bx + boss.hitbox().width, by - 1, JoyAim::AIM_RIGHT, tileID);
+        bullet = spawnBullet(bx + hitbox.width, by - 1, JoyAim::AIM_RIGHT, tileID);
     }
     if (bullet != nullptr)
     {
@@ -157,6 +158,8 @@ void CGame::handleBossHitboxContact(CBoss &boss)
     boss.testHitbox1(m_map, [](const Pos &p, auto type)
                      {
                          (void)type;
+                         // if (type == BossData::HitBoxType::MAIN)
+                         //     return false;
                          return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
                      },
                      [boss, this, &playerDamage](const HitResult &r)
@@ -550,17 +553,6 @@ void CGame::handleIceCube(CActor &actor)
 
     // Move one tile
     shadowActorMove(actor, aim);
-
-    /*
-    JoyAim aim = actor.getAim();
-    if (aim != JoyAim::AIM_NONE)
-    {
-        if (actor.canMove(aim))
-            shadowActorMove(actor, aim);
-        else
-            actor.setAim(JoyAim::AIM_NONE);
-    }
-    */
 }
 
 void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters)
@@ -570,6 +562,10 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
     if (actor.isFollowingPath())
     {
         isMoving = actor.followPath(m_player.pos());
+        if (isMoving)
+            return;
+        aim = actor.getAim();
+        LOGI("sprite: %p not moving; aim=[%d] isPlayerThere=[%d] [%p]", &actor, actor.getAim(), actor.isPlayerThere(aim), actor.path());
     }
     else
     {

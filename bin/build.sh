@@ -30,14 +30,18 @@ elif [[ "$1" == "run_ems" ]] ; then
 elif [[ "$1" == "clean" ]] ; then
     rm -rf build
 elif [[ "$1" == "bosses" ]] ; then
+    DEST=/home/cfrankb/toolkit/gcc/cs3-runtime-sdl/data/pixels
+    cd techdocs/bosses
+    python parse.py
+    cd ../..
     cd tools/sheet
     make && build/sheet config/bosses.txt
     make && build/sheet config/beholder1.txt
-    cp out/bosses.png ../../data/pixels/sheet0.obl
-    cp out/beholder1.png ../../data/pixels/sheet1.obl
-    cd ../..
-    cd techdocs/bosses
-    python parse.py
+    #build/sheet config/beholder1.txt
+    #cp out/bosses.png ../../data/pixels/sheet0.obl
+    #cp out/beholder1.png ../../data/pixels/sheet1.obl
+    cp out/bosses.png ${DEST}/sheet0.obl
+    cp out/beholder1.png ${DEST}//sheet1.obl
 elif [[ "$1" == "tests" ]] ; then
     cmake -S . -B build
     cmake --build build --target cs3-tests

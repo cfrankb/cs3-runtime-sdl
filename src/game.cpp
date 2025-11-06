@@ -70,51 +70,6 @@ namespace GamePrivate
         MAX_SHIELDS = 2,
         MAX_FACTOR = 4,
     };
-
-    const std::set<uint8_t> g_fruits = {
-        TILES_APPLE,
-        TILES_POMEGRENADE,
-        TILES_WATERMELON,
-        TILES_PEAR,
-        TILES_CHERRY,
-        TILES_STRAWBERRY,
-        TILES_KIWI,
-        TILES_JELLYJAR,
-    };
-
-    const std::set<uint8_t> g_treasures = {
-        TILES_AMULET1,
-        TILES_CHEST,
-        TILES_GIFTBOX,
-        TILES_LIGHTBUL,
-        TILES_SCROLL,
-        TILES_SHIELD,
-        TILES_CLOVER,
-        TILES_1ST_AID,
-        TILES_POTION1,
-        TILES_POTION2,
-        TILES_POTION3,
-        TILES_FLOWERS,
-        TILES_FLOWERS_2,
-        TILES_TRIFORCE,
-        TILES_ORB,
-        TILES_TNTSTICK,
-        TILES_SMALL_MUSH0,
-        TILES_SMALL_MUSH1,
-        TILES_SMALL_MUSH2,
-        TILES_SMALL_MUSH3,
-        TILES_REDBOOK,
-    };
-
-    const std::set<uint8_t> g_oneTimeItems = {
-        TILES_SHIELD,
-        TILES_SMALL_MUSH0,
-        TILES_SMALL_MUSH1,
-        TILES_SMALL_MUSH2,
-        TILES_SMALL_MUSH3,
-        TILES_JELLYJAR,
-        TILES_TRIFORCE,
-    };
 }
 
 using namespace GamePrivate;
@@ -475,6 +430,7 @@ void CGame::resetStatsUponDeath()
     m_gameStats->set(S_SUGAR, 0);
     m_gameStats->set(S_SUGAR_LEVEL, 0);
     m_gameStats->set(S_SHIELD, 0);
+    m_gameStats->set(S_BOAT, 0);
 }
 
 /**
@@ -733,7 +689,7 @@ Pos CGame::translate(const Pos &p, const int aim)
  */
 bool CGame::hasKey(const uint8_t c)
 {
-    for (uint32_t i = 0; i < sizeof(m_keys); ++i)
+    for (uint32_t i = 0; i < MAX_KEYS; ++i)
     {
         if (m_keys.tiles[i] == c)
         {
@@ -1167,6 +1123,7 @@ bool CGame::read(IFile &sfile)
             return false;
         }
     }
+    rebuildMonsterGrid();
 
     // bosses
     uint32_t bossCount = 0;
@@ -1191,8 +1148,6 @@ bool CGame::read(IFile &sfile)
         pos.read(sfile);
         m_usedItems.push_back(pos);
     }
-
-    rebuildMonsterGrid();
 
     // clear events and sfx
     m_events.clear();
@@ -1433,7 +1388,7 @@ int CGame::getEvent()
  */
 bool CGame::isFruit(const uint8_t tileID)
 {
-    return g_fruits.find(tileID) != g_fruits.end();
+    return getTileDef(tileID).flags & FLAG_FRUIT;
 }
 
 /**
@@ -1445,7 +1400,7 @@ bool CGame::isFruit(const uint8_t tileID)
  */
 bool CGame::isBonusItem(const uint8_t tileID)
 {
-    return g_treasures.find(tileID) != g_treasures.end();
+    return getTileDef(tileID).flags & FLAG_TREASURE;
 }
 
 /**
@@ -1730,7 +1685,7 @@ bool CGame::isMoveableType(const uint8_t typeID)
 
 bool CGame::isOneTimeItem(const uint8_t tileID)
 {
-    return g_oneTimeItems.find(tileID) != g_oneTimeItems.end();
+    return getTileDef(tileID).flags & FLAG_ONE_TIME;
 }
 
 bool CGame::shadowActorMove(CActor &actor, const JoyAim aim)

@@ -39,8 +39,6 @@ TAB = " " * 4
 
 
 HEADER_STRUCT = """
-#define MAX_HITBOX_PER_FRAME {MAX_HITBOX_PER_FRAME}
-
 namespace BossData
 {
     enum Path:uint8_t {
@@ -117,9 +115,8 @@ struct bossData_t
     hitbox_t hitbox;        // primary hitbox
     int sheet;              // sprite sheet used
 };
-""".replace(
-    "{MAX_HITBOX_PER_FRAME}", str(MAX_HITBOX_PER_FRAME).strip()
-)
+""".strip()
+
 
 CPP_INLINE_BODY = """
 
@@ -341,7 +338,7 @@ def write_header(file_path: str):
         tfile.write('#include "color.h"\n')
         tfile.write("\n".join(defines) + "\n\n")
         tfile.write("\n".join(boss_types) + "\n\n")
-        tfile.write(HEADER_STRUCT)
+        tfile.write(HEADER_STRUCT + "\n")
         tfile.write(CPP_INLINE_BODY)
 
 
@@ -356,6 +353,7 @@ def prepare_defines():
     boss_types.append(f"#define BOSS_COUNT {len(all_seqs)}")
     boss_types.append(f"#define HITBOX_COUNT  {len(all_frames)}")
     boss_types.append(f"#define SHEET_SPACER  {SHEET_SPACER}")
+    boss_types.append(f"#define MAX_HITBOX_PER_FRAME {MAX_HITBOX_PER_FRAME}")
 
 
 attr_names = [

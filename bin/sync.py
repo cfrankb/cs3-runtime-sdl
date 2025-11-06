@@ -27,9 +27,8 @@ def is_excluded(f: str):
     ]
     f = ntpath.basename(f)
     for e in excluded:
-        if e.endswith("*"):
-            if f.startswith(e[0:-1]):
-                return True
+        if e.endswith("*") and f.startswith(e[0:-1]):
+            return True
         elif f == e:
             return True
     return False
