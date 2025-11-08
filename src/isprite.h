@@ -41,4 +41,5 @@ public:
     virtual void setAim(const JoyAim aim) = 0;
     virtual JoyAim getAim() const = 0;
     virtual bool isBoss() const = 0;
+    virtual int getTTL() const = 0;
 };

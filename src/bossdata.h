@@ -54,6 +54,10 @@ namespace BossData
         SPECIAL1,
         SPECIAL2,
     };
+
+    enum {
+        NoTTL = -1
+    };
 }
 
 struct boss_seq_t
@@ -96,7 +100,7 @@ struct bossData_t
     uint8_t bullet_rate;    // boss bullet rate (lower = faster)
     uint8_t bullet_algo;    // bullet algo
     uint8_t bullet_sound;   // bullet firing sound
-    int bullet_timeout;     // bullet timeout (# of moves)
+    int bullet_ttl;         // bullet timeout (# of moves)
     uint8_t attack_sound;   // sound during an attack
     int distance_chase;     // distance to engage chase
     int distance_pursuit;   // continue pursuit within distance (chase)

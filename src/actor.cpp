@@ -76,6 +76,7 @@ CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAi
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
+    m_ttl = BossData::NoTTL;
 }
 
 CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
@@ -87,6 +88,7 @@ CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
+    m_ttl = BossData::NoTTL;
 }
 
 CActor::CActor(CActor &&other) noexcept
@@ -96,6 +98,7 @@ CActor::CActor(CActor &&other) noexcept
       m_algo(other.m_algo),
       m_aim(other.m_aim),
       m_pu(other.m_pu),
+      m_ttl(other.m_ttl),
       m_path(std::move(other.m_path))
 {
     // You can't move ISprite, but its state is already constructed
@@ -106,6 +109,7 @@ CActor::CActor(CActor &&other) noexcept
     other.m_aim = AIM_UP;
     other.m_pu = 0;
     other.m_algo = BossData::Path::NONE;
+    other.m_ttl = BossData::NoTTL;
 }
 
 CActor &CActor::operator=(CActor &&other) noexcept
@@ -120,6 +124,7 @@ CActor &CActor::operator=(CActor &&other) noexcept
         m_pu = other.m_pu;
         m_algo = other.m_algo;
         m_path = std::move(other.m_path);
+        m_ttl = other.m_ttl;
 
         other.m_x = 0;
         other.m_y = 0;
@@ -127,6 +132,7 @@ CActor &CActor::operator=(CActor &&other) noexcept
         other.m_aim = AIM_UP;
         other.m_pu = 0;
         other.m_algo = BossData::Path::NONE;
+        other.m_ttl = BossData::NoTTL;
     }
     return *this;
 }
@@ -419,6 +425,8 @@ bool CActor::readCommon(ReadFunc readfile)
         return false;
     if (!readfile(&m_algo, sizeof(m_algo)))
         return false;
+    if (!readfile(&m_ttl, sizeof(m_ttl)))
+        return false;
 
     return true;
 }
@@ -470,6 +478,8 @@ bool CActor::writeCommon(WriteFunc writefile) const
     if (!writefile(&m_pu, sizeof(m_pu)))
         return false;
     if (!writefile(&m_algo, sizeof(m_algo)))
+        return false;
+    if (!writefile(&m_ttl, sizeof(m_ttl)))
         return false;
 
     return true;
@@ -527,20 +537,23 @@ void CActor::move(const Pos pos)
     move(pos.x, pos.y);
 }
 
-bool CActor::followPath(const Pos &playerPos)
+CPath::Result CActor::followPath(const Pos &playerPos)
 {
     auto pathAlgo = CPath::getPathAlgo(m_algo);
     if (!pathAlgo)
-        return false;
+        return CPath::Result::NotConfigured;
     if (m_path)
     {
-        bool result = m_path->followPath(*this, playerPos, *pathAlgo);
-        if (!result && CGame::isBulletType(m_type))
+        if (m_ttl > 0)
+            --m_ttl;
+
+        auto result = m_path->followPath(*this, playerPos, *pathAlgo);
+        if (m_ttl == 0 && CGame::isBulletType(m_type))
             m_path.reset(); // replaces delete + nullptr
 
         return result;
     }
-    return false;
+    return CPath::Result::NotConfigured;
 }
 
 bool CActor::isFollowingPath()
@@ -548,7 +561,7 @@ bool CActor::isFollowingPath()
     return m_path != nullptr;
 }
 
-bool CActor::startPath(const Pos &playerPos, const uint8_t algo, const int timeout)
+bool CActor::startPath(const Pos &playerPos, const uint8_t algo, const int ttl)
 {
     m_algo = algo;
     auto pathAlgo = CPath::getPathAlgo(algo);
@@ -556,7 +569,6 @@ bool CActor::startPath(const Pos &playerPos, const uint8_t algo, const int timeo
         return false;
     if (!m_path)
         m_path = std::make_unique<CPath>();
-    if (timeout != 0)
-        m_path->setTimeout(timeout);
+    m_ttl = ttl;
     return m_path->followPath(*this, playerPos, *pathAlgo);
 }

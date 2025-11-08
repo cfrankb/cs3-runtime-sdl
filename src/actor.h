@@ -73,11 +73,12 @@ public:
     void move(const int16_t x, const int16_t y) override;
     void move(const Pos pos) override;
     inline int16_t getGranularFactor() const override { return ACTOR_GRANULAR_FACTOR; };
-    bool followPath(const Pos &playerPos);
+    CPath::Result followPath(const Pos &playerPos);
     bool startPath(const Pos &playerPos, const uint8_t algo, const int timeout);
     bool isFollowingPath();
     bool isBoss() const override { return false; }
     const CPath *path() const { return m_path.get(); };
+    int getTTL() const override { return m_ttl; };
 
 private:
     uint8_t m_x;
@@ -86,6 +87,7 @@ private:
     uint8_t m_algo;
     JoyAim m_aim;
     uint8_t m_pu;
+    int m_ttl;
     template <typename ReadFunc>
     bool readCommon(ReadFunc readfile);
     template <typename WriteFunc>

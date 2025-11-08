@@ -143,7 +143,7 @@ bool CGame::handleBossBullet(CBoss &boss)
         boss.setState(CBoss::BossState::Attack);
         playSound(boss.data()->attack_sound);
         if (boss.data()->bullet_algo != BossData::Path::NONE)
-            bullet->startPath(m_player.pos(), boss.data()->bullet_algo, boss.data()->bullet_timeout);
+            bullet->startPath(m_player.pos(), boss.data()->bullet_algo, boss.data()->bullet_ttl);
 
         return true;
     }
@@ -561,11 +561,15 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
     JoyAim aim = actor.getAim();
     if (actor.isFollowingPath())
     {
-        isMoving = actor.followPath(m_player.pos());
-        if (isMoving)
+        auto result = actor.followPath(m_player.pos());
+        if (result == CPath::Result::MoveSuccesful)
             return;
+
+        isMoving = result != CPath::Result::Blocked && actor.getTTL() != 0;
         aim = actor.getAim();
-        LOGI("sprite: %p not moving; aim=[%d] isPlayerThere=[%d] [%p]", &actor, actor.getAim(), actor.isPlayerThere(aim), actor.path());
+        // if (actor.canMove(aim) && actor.getTTL() != 0)
+        //     return;
+        LOGI("sprite: %p not moving result:[%d]; aim=[%d] isPlayerThere=[%d] [%p]", &actor, result, actor.getAim(), actor.isPlayerThere(aim), actor.path());
     }
     else
     {
@@ -574,11 +578,12 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             shadowActorMove(actor, aim);
     }
 
-    if (!isMoving)
+    if (!isMoving || !actor.getTTL() == 0)
     {
         playSound(bullet.sound);
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
+        // LOGI("sprite: %p, delete itself", &actor);
         deletedMonsters.insert(i);
         m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = bullet.sfxID, .timeout = bullet.sfxTimeOut});
 

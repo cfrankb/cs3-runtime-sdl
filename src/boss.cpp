@@ -485,7 +485,7 @@ const Pos CBoss::toPos(int x, int y)
 
 bool CBoss::followPath(const Pos &playerPos, const IPath &astar)
 {
-    return m_path.followPath(*this, playerPos, astar);
+    return m_path.followPath(*this, playerPos, astar) == CPath::Result::MoveSuccesful;
 }
 
 void CBoss::patrol()

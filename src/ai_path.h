@@ -73,7 +73,15 @@ public:
     CPath();
     ~CPath() {};
 
-    bool followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar);
+    enum Result
+    {
+        Blocked, // Blocked
+        MoveSuccesful,
+        NoValidPath,
+        NotConfigured
+    };
+
+    Result followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar);
     bool read(IFile &file);
     bool write(IFile &file);
     void setTimeout(int timeout);
