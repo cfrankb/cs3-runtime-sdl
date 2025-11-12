@@ -233,7 +233,10 @@ private:
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
     void handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters);
+    void handleBarrel(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters);
     bool pushChain(const int x, const int y, const JoyAim aim);
+    bool fuseBarrel(const Pos &pos);
+    void blastRadius(const Pos &pos, const size_t radius, const int damage, std::set<int, std::greater<int>> &deletedMonsters);
 
     // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);

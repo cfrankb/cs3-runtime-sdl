@@ -67,6 +67,9 @@ namespace BossData
 using namespace BossData;
 
 constexpr const sprite_hitbox_t g_hitboxes[] = {
+    { 47, 1, {{ 0, 5, 3, 3, 2 }, }},
+    { 46, 1, {{ 0, 5, 3, 3, 2 }, }},
+    { 48, 1, {{ 0, 4, 3, 4, 2 }, }},
     { 1028, 1, {{ 5, 5, 3, 3, 2 }, }},
     { 1029, 1, {{ 5, 5, 3, 3, 2 }, }},
     { 1027, 1, {{ 5, 4, 2, 3, 2 }, }},

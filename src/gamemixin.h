@@ -205,7 +205,7 @@ protected:
     {
         int16_t x;
         int16_t y;
-        uint8_t tileID;
+        uint16_t tileID;
         uint8_t aim;
         uint8_t attr;
     };
@@ -293,6 +293,7 @@ protected:
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);
     void fazeScreen(CFrame &bitmap, const int bitShift);
+    void flashScreen(CFrame &bitmap);
     void drawViewPortDynamic(CFrame &bitmap);
     void drawViewPortStatic(CFrame &bitmap);
     void drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy);

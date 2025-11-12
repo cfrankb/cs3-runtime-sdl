@@ -34,7 +34,7 @@
 #define BOSS_HARPY 0xb2
 #define BOSS_BEHOLDER 0xb3
 #define BOSS_COUNT 4
-#define HITBOX_COUNT  24
+#define HITBOX_COUNT  27
 #define SHEET_SPACER  1000
 #define MAX_HITBOX_PER_FRAME 4
 

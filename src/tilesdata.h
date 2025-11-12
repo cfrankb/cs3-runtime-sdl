@@ -177,7 +177,7 @@ enum Tiles
     TILES_FIRE                = 0x97,
     TILES_BULLETY1            = 0x98,
     TILES_BOAT                = 0x99,
-    TILES_BARREL              = 0x9a,
+    TILES_BARREL2EX           = 0x9a,
     TILES_BARREL2             = 0x9b,
     TILES_FLAME               = 0x9c,
     TILES_TOTAL_COUNT         = 0x9d,

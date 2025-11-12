@@ -39,9 +39,7 @@ struct HitResult
 
 using hitboxTestCallback_t = std::function<bool(const Pos &, BossData::HitBoxType)>; // Return true to skip/abort this pos
 using hitboxActionCallback_t = std::function<void(const HitResult &)>;               // Collect/process each hit
-
 using BossTileCheck = bool (CBoss::*)(const Pos &) const;
-typedef std::function<bool(const Pos &)> canWalkCallback_t;
 
 class CBoss : public ISprite
 {

@@ -4,6 +4,7 @@ import copy
 import os
 import filecmp
 import json
+from dataclasses import dataclass
 
 
 COPYRIGHT_NOTICE = """
@@ -26,7 +27,7 @@ COPYRIGHT_NOTICE = """
 */
 """.strip()
 
-
+GRID_SIZE = 8
 SHEET_SPACER = 1000
 EXIT_FAILURE = 1
 EXIT_SUCCESS = 0
@@ -151,8 +152,8 @@ inline constexpr const sprite_hitbox_t *getHitboxes(const int sheet, const int f
 """.strip()
 
 
+@dataclass
 class GridBox:
-    GRID_SIZE = 8
     x: int = 0
     y: int = 0
     w: int = 0
@@ -160,17 +161,14 @@ class GridBox:
     type: int = 0
 
     def __init__(self, x: int, y: int, w: int, h: int, type: int):
-        self.x = int(x / self.GRID_SIZE)
-        self.y = int(y / self.GRID_SIZE)
-        self.w = int(w / self.GRID_SIZE)
-        self.h = int(h / self.GRID_SIZE)
+        self.x = int(x / GRID_SIZE)
+        self.y = int(y / GRID_SIZE)
+        self.w = int(w / GRID_SIZE)
+        self.h = int(h / GRID_SIZE)
         self.type = type
 
     def __str__(self) -> str:
         return f"{{ {self.x}, {self.y}, {self.w}, {self.h}, {self.type} }}"
-
-    def __repr__(self) -> str:
-        return f"Box({self.x}, {self.y}, {self.w}, {self.h}, {self.type})"
 
 
 def read_hitbox_file(input_file: str) -> dict[list[GridBox]]:
@@ -181,10 +179,10 @@ def read_hitbox_file(input_file: str) -> dict[list[GridBox]]:
         with open(input_file, "r") as file:
             data = json.load(file)
     except FileNotFoundError:
-        print("Error: 'data.json' not found.")
+        print(f"Error: '{input_file}' not found.")
         return {}
     except json.JSONDecodeError:
-        print("Error: Invalid JSON format in 'data.json'.")
+        print(f"Error: Invalid JSON format in '{input_file}'.")
         return {}
 
     frame_width, frame_heigth = [data["frame"]["width"], data["frame"]["height"]]
@@ -250,13 +248,10 @@ def copyfile(src, dfolder):
         shutil.copy(src, "../../src")
 
 
+@dataclass
 class Frame:
     hitboxes: list[GridBox]
     frame_id: int
-
-    def __init__(self, frame_id):
-        self.hitboxes: list[GridBox] = []
-        self.frame_id = frame_id
 
     def addBox(self, grid_box: GridBox):
         self.hitboxes.append(grid_box)
@@ -270,12 +265,6 @@ class Frame:
         r += "}}"
         return r
 
-    def __repr__(self) -> str:
-        r = f"[frame:{self.frame_id}][{len(self.hitboxes)}]"
-        for hb in self.hitboxes:
-            r += f"({hb})"
-        return r
-
 
 def handle_hitboxes(hitbox_file: str, sheet: int, base_frame: int):
     global all_frames
@@ -285,7 +274,7 @@ def handle_hitboxes(hitbox_file: str, sheet: int, base_frame: int):
         for hitbox in sprite_hitboxes:
             frame_id = base_frame + sprite_id + sheet * SHEET_SPACER
             if frame_id not in all_frames:
-                all_frames[frame_id] = Frame(frame_id=frame_id)
+                all_frames[frame_id] = Frame([], frame_id)
             all_frames[frame_id].addBox(hitbox)
             # print(all_frames[frame_id])
 

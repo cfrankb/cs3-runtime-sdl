@@ -69,6 +69,7 @@ namespace GamePrivate
         FAST_PLAYER_SPEED = 2,
         MAX_SHIELDS = 2,
         MAX_FACTOR = 4,
+        BARREL_TTL = 20,
     };
 }
 
@@ -130,6 +131,29 @@ const CActor &CGame::playerConst() const
     return m_player;
 }
 
+bool CGame::fuseBarrel(const Pos &pos)
+{
+    const int i = findMonsterAt(pos.x, pos.y);
+    if (i != INVALID)
+    {
+        // arm the fuse
+        CActor &barrel = m_monsters[i];
+        if (barrel.getTTL() == CActor::NoTTL)
+        {
+            barrel.setTTL(BARREL_TTL);
+            if (pos.y > 0)
+                m_sfx.emplace_back(sfx_t{
+                    .x = pos.x,
+                    .y = static_cast<int16_t>(pos.y - 1),
+                    .sfxID = SFX_FLAME,
+                    .timeout = SFX_FLAME_TIMEOUT,
+                });
+        }
+        return true;
+    }
+    return false;
+}
+
 /**
  * @brief move player in a give direction
  *
@@ -155,18 +179,11 @@ bool CGame::move(const JoyAim aim)
             m_player.move(aim);
             return true;
         }
-
-        /*
+    }
+    else if (def.type == TYPE_BARREL)
+    {
         const Pos pos = CGame::translate(m_player.pos(), aim);
-        const int i = findMonsterAt(pos.x, pos.y);
-        if (i != INVALID && m_monsters[i].canMove(aim))
-        {
-            m_monsters[i].setAim(aim);
-            shadowActorMove(m_monsters[i], aim);
-            m_player.move(aim);
-            return true;
-        }
-            */
+        fuseBarrel(pos);
     }
     return false;
 }
@@ -444,6 +461,7 @@ void CGame::decTimers()
         S_EXTRA_SPEED_TIMER,
         S_RAGE_TIMER,
         S_FREEZE_TIMER,
+        S_FLASH,
     };
     for (const auto &stat : stats)
     {
@@ -468,6 +486,7 @@ void CGame::resetStats()
         S_FREEZE_TIMER,
         S_TIME_TAKEN,
         S_CHUTE,
+        S_FLASH,
     };
     for (const auto &stat : stats)
     {
@@ -507,7 +526,7 @@ void CGame::setMapArch(CMapArch *arch)
 
 bool CGame::isMonsterType(const uint8_t typeID) const
 {
-    std::array<uint8_t, 7> monsterTypes = {
+    std::array<uint8_t, 8> monsterTypes = {
         TYPE_MONSTER,
         TYPE_VAMPLANT,
         TYPE_DRONE,
@@ -515,6 +534,7 @@ bool CGame::isMonsterType(const uint8_t typeID) const
         TYPE_BOULDER,
         TYPE_FIREBALL,
         TYPE_LIGHTNING_BOLT,
+        TYPE_BARREL,
     };
 
     for (size_t i = 0; i < monsterTypes.size(); ++i)
@@ -621,10 +641,15 @@ int CGame::findMonsterAt(const int x, const int y) const
 uint8_t CGame::managePlayer(const uint8_t *joystate)
 {
     auto const pu = m_player.getPU();
+    const TileDef &def = getTileDef(pu);
     if (pu == TILES_SWAMP && m_gameStats->get(S_BOAT) == 0)
     {
         // apply health damage
-        const TileDef &def = getTileDef(pu);
+        addHealth(def.health);
+    }
+    else if (pu == TILES_FLAME)
+    {
+        // apply health damage
         addHealth(def.health);
     }
     const JoyAim aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
@@ -1140,18 +1165,30 @@ bool CGame::read(IFile &sfile)
     }
 
     // used items
+    m_usedItems.clear();
     size_t usedItemCount = 0;
     _R(&usedItemCount, sizeof(uint32_t));
     for (size_t i = 0; i < usedItemCount; ++i)
     {
         Pos pos;
         pos.read(sfile);
-        m_usedItems.push_back(pos);
+        m_usedItems.emplace_back(pos);
     }
 
-    // clear events and sfx
-    m_events.clear();
+    // load sfx
     m_sfx.clear();
+    uint16_t sfxCount = 0;
+    _R(&sfxCount, sizeof(sfxCount));
+    for (uint16_t i = 0; i < sfxCount; ++i)
+    {
+        sfx_t sfx;
+        _R(&sfx, sizeof(sfx));
+        m_sfx.emplace_back(std::move(sfx));
+    }
+
+    // clear events
+    m_events.clear();
+
     return true;
 }
 
@@ -1235,6 +1272,12 @@ bool CGame::write(IFile &tfile)
     _W(&usedItemCount, sizeof(uint32_t));
     for (const Pos &pos : m_usedItems)
         pos.write(tfile);
+
+    // save sfx
+    uint16_t sfxCount = (uint16_t)m_sfx.size();
+    _W(&sfxCount, sizeof(sfxCount));
+    for (const auto &sfx : m_sfx)
+        _W(&sfx, sizeof(sfx));
 
     return true;
 }

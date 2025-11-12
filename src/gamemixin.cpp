@@ -469,6 +469,10 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     else if (m_cameraMode == CAMERA_MODE_STATIC)
         drawViewPortStatic(bitmap);
 
+    const int flash = game.statsConst().at(S_FLASH);
+    if (flash)
+        flashScreen(bitmap);
+
     const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
     const bool isPlayerHurt = hurtStage != CGame::HurtNone;
     if (isPlayerHurt)
@@ -1884,6 +1888,20 @@ void CGameMixin::fazeScreen(CFrame &bitmap, const int bitShift)
     }
 }
 
+void CGameMixin::flashScreen(CFrame &bitmap)
+{
+    for (int y = 0; y < bitmap.height(); ++y)
+    {
+        for (int x = 0; x < bitmap.width(); ++x)
+        {
+            const auto &rgba = bitmap.at(x, y);
+            if (rgba & 0xffffff)
+                bitmap.at(x, y) =
+                    rgba | 0xffffff;
+        }
+    }
+}
+
 void CGameMixin::stopRecorder()
 {
     if (!m_recorder->isStopped())
@@ -2309,6 +2327,10 @@ CFrame *CGameMixin::calcSpecialFrame(const sprite_t &sprite)
     }
     CFrameSet &animz = *m_animz;
     const animzInfo_t info = m_animator->getSpecialInfo(sprite.tileID);
+    if (sprite.tileID == SFX_FLAME)
+    {
+        // LOGI("info.base=%u", info.base);
+    }
     return animz[saim * info.frames + info.base + info.offset];
 }
 

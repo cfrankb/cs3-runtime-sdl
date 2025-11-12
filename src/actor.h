@@ -30,6 +30,11 @@ class CActor : public ISprite
 {
 
 public:
+    enum
+    {
+        NoTTL = -1
+    };
+
     CActor(const uint8_t x = 0, const uint8_t y = 0, const uint8_t type = 0, const JoyAim aim = AIM_UP);
     CActor(const Pos &pos, uint8_t type = 0, JoyAim aim = AIM_UP);
 
@@ -79,6 +84,13 @@ public:
     bool isBoss() const override { return false; }
     const CPath *path() const { return m_path.get(); };
     int getTTL() const override { return m_ttl; };
+    void setTTL(int ttl) { m_ttl = ttl; };
+    int decTTL()
+    {
+        if (m_ttl > 0)
+            --m_ttl;
+        return m_ttl;
+    }
 
 private:
     uint8_t m_x;

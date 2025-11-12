@@ -28,6 +28,7 @@
 #include "randomz.h"
 #include "ai_path.h"
 #include "sounds.h"
+#include "gamestats.h"
 
 namespace Game
 {
@@ -158,8 +159,6 @@ void CGame::handleBossHitboxContact(CBoss &boss)
     boss.testHitbox1(m_map, [](const Pos &p, auto type)
                      {
                          (void)type;
-                         // if (type == BossData::HitBoxType::MAIN)
-                         //     return false;
                          return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
                      },
                      [boss, this, &playerDamage](const HitResult &r)
@@ -185,9 +184,12 @@ void CGame::handleBossHitboxContact(CBoss &boss)
                          {
                              const Pos &pos = r.pos;
                              playSound(SOUND_SPLASH01);
-                             const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
-                             if (justDied)
-                                 addPoints(boss.data()->score);
+                             if (r.type != BossData::HitBoxType::SPECIAL1)
+                             {
+                                 const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
+                                 if (justDied)
+                                     addPoints(boss.data()->score);
+                             }
 
                              // meltIceCube
                              CGame *game = CGame::getGame();
@@ -198,8 +200,24 @@ void CGame::handleBossHitboxContact(CBoss &boss)
                                  game->deleteMonster(i);
                                  game->getSfx().emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION6, SFX_EXPLOSION6_TIMEOUT});
                                  map.set(pos.x, pos.y, TILES_BLANK);
-                             } });
+                             } //
+                         });
     }
+
+    // test if boss has set off barrel
+    boss.testHitbox1(m_map, [](const Pos &pos, auto type)
+                     {
+                         if (type == BossData::HitBoxType::MAIN)
+                             return false;
+                         const CMap &map = CGame::getMap();
+                         const auto c = map.at(pos.x, pos.y);
+                         const TileDef &def = getTileDef(c);
+                         return def.type == TYPE_BARREL; // check if barrel
+                     },
+                     [&boss, this](const HitResult &r)
+                     {
+                         fuseBarrel(r.pos); // lit barrel
+                     });
 }
 
 void CGame::manageBosses(const int ticks)
@@ -271,8 +289,8 @@ void CGame::manageBosses(const int ticks)
                 const int deltaX = player_pos.x - boss_pos.x;
                 const int deltaY = player_pos.y - boss_pos.y;
 
-                // Determine facing direction (8-dir or 4-dir)
-                JoyAim facing = boss.getAim(); // JoyAim::AIM_RIGHT; // Default
+                // Determine facing direction
+                JoyAim facing = boss.getAim();
                 if (abs(deltaX) > abs(deltaY))
                 {
                     // Horizontal priority
@@ -363,6 +381,10 @@ void CGame::manageMonsters(const int ticks)
         else if (actor.type() == TYPE_LIGHTNING_BOLT)
         {
             handleBullet(actor, def, i, {.sound = SOUND_HIT2, .sfxID = SFX_EXPLOSION7, .sfxTimeOut = SFX_EXPLOSION7_TIMEOUT}, deletedMonsters);
+        }
+        else if (actor.type() == TYPE_BARREL)
+        {
+            handleBarrel(actor, def, i, deletedMonsters);
         }
         else
         {
@@ -555,6 +577,118 @@ void CGame::handleIceCube(CActor &actor)
     shadowActorMove(actor, aim);
 }
 
+void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, std::set<int, std::greater<int>> &deletedMonsters)
+{
+    // compute blast radius
+    std::vector<int> index;
+    index.reserve(radius * 2 + 1);
+    for (size_t i = 0; i < radius; ++i)
+        index.emplace_back(-radius + i);
+    index.emplace_back(0);
+    for (size_t i = 0; i < radius; ++i)
+        index.emplace_back(i + 1);
+
+    struct blastPos_t
+    {
+        Pos pos;
+        int damage;
+        const Pos &toPos() const { return pos; }
+    };
+    std::vector<blastPos_t> blastPositions;
+
+    // apply blast radius
+    for (size_t i = 0; i < index.size(); ++i)
+    {
+        const auto &ty = index[i];
+        for (size_t j = 0; j < index.size(); ++j)
+        {
+            const auto &tx = index[j];
+            const int16_t x = pos.x + tx;
+            const int16_t y = pos.y + ty;
+            if (m_map.isValid(x, y))
+            {
+                int distance = (std::abs(tx) + std::abs(ty)) / 2;
+                int radiusDamage = distance ? damage / std::abs(distance) : damage;
+                blastPositions.emplace_back(blastPos_t{Pos{x, y}, std::abs(radiusDamage)});
+
+                // check player for splash danage
+                if (m_player.pos() == Pos{x, y})
+                {
+                    addHealth(radiusDamage);
+                    continue;
+                }
+
+                if (tx == 0 && ty == 0)
+                    continue;
+
+                // check for intersection with mob monster and other actors
+                const int id = findMonsterAt(x, y);
+                if (id != INVALID && !deletedMonsters.count(id))
+                {
+                    CActor &actor = m_monsters[id];
+                    if (actor.type() == TYPE_BARREL)
+                    {
+                        // light other barrels
+                        fuseBarrel({x, y});
+                    }
+                    else if (actor.type() == TYPE_MONSTER || actor.type() == TYPE_DRONE || actor.type() == TYPE_VAMPLANT)
+                    {
+                        // kill mob monsters
+                        deletedMonsters.emplace(id);
+                        m_sfx.emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION0, SFX_EXPLOSION0_TIMEOUT});
+                    }
+                    else if (actor.type() == TYPE_ICECUBE)
+                    {
+                        // melt icecubes
+                        deletedMonsters.emplace(id);
+                        m_sfx.emplace_back(sfx_t{pos.x, pos.y, SFX_EXPLOSION6, SFX_EXPLOSION6_TIMEOUT});
+                    }
+                }
+            }
+        }
+    }
+
+    // test boss hitbox
+    for (auto &boss : m_bosses)
+    {
+        int bossDamage = 0;
+        for (const auto &bp : blastPositions)
+        {
+            boss.testHitbox1(m_map, [&bp](const Pos &p, auto type) { //
+                // check if damage can occur
+                return type != BossData::HitBoxType::SPECIAL1 && p == bp.toPos();
+            },
+                             [boss, &bp, &bossDamage](const HitResult &)
+                             {
+                                 // compute maximum damage
+                                 bossDamage = std::max(bp.damage, bossDamage); //
+                             });
+        }
+        if (bossDamage)
+            boss.subtainDamage(bossDamage);
+    }
+}
+
+void CGame::handleBarrel(CActor &actor, const TileDef &def, const int i, std::set<int, std::greater<int>> &deletedMonsters)
+{
+    if (actor.decTTL() == 0)
+    {
+        // if barrel is exploding
+        const Pos pos = actor.pos();
+        m_sfx.emplace_back(sfx_t{
+            .x = pos.x,
+            .y = pos.y,
+            .sfxID = SFX_EXPLOSION5,
+            .timeout = SFX_EXPLOSION5_TIMEOUT,
+        });
+        deletedMonsters.emplace(i);
+        m_map.set(pos.x, pos.y, TILES_BARREL2EX);
+        playSound(SOUND_EXPLOSION1);
+        m_gameStats->set(S_FLASH, 1);
+        blastRadius(pos, 2, def.health, deletedMonsters);
+    }
+}
+
 void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters)
 {
     bool isMoving;
@@ -583,10 +717,8 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
         playSound(bullet.sound);
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
-        // LOGI("sprite: %p, delete itself", &actor);
         deletedMonsters.insert(i);
         m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = bullet.sfxID, .timeout = bullet.sfxTimeOut});
-
         if (CGame::translate(Pos{actor.x(), actor.y()}, aim) == actor.pos())
             // coordonate outside map bounds
             return;
@@ -607,6 +739,11 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
         else if (actor.isPlayerThere(aim) && !isGodMode())
         {
             addHealth(def.health);
+        }
+        else if (defX.type == TYPE_BARREL)
+        {
+            const Pos &pos = translate(actor.pos(), aim);
+            fuseBarrel(pos);
         }
     }
 }

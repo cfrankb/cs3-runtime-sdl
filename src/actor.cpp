@@ -544,9 +544,7 @@ CPath::Result CActor::followPath(const Pos &playerPos)
         return CPath::Result::NotConfigured;
     if (m_path)
     {
-        if (m_ttl > 0)
-            --m_ttl;
-
+        decTTL();
         auto result = m_path->followPath(*this, playerPos, *pathAlgo);
         if (m_ttl == 0 && CGame::isBulletType(m_type))
             m_path.reset(); // replaces delete + nullptr

@@ -22,7 +22,7 @@ struct sfx_t
 {
     int16_t x;
     int16_t y;
-    uint8_t sfxID;
+    uint16_t sfxID;
     uint16_t timeout;
 
     bool isWithin(const int x1, const int y1, const int x2, const int y2) const
@@ -31,11 +31,21 @@ struct sfx_t
     }
 };
 
-#define SFX_SPARKLE 0xf0
+enum Sfx
+{
+    SFX_SPARKLE = 0xf0,
+    SFX_EXPLOSION1, // fireball explosion
+    SFX_EXPLOSION5, // barrel explosion
+    SFX_EXPLOSION6, // icecube melting
+    SFX_EXPLOSION7, // thunderbolt destruction (yellow)
+    SFX_EXPLOSION0, // placeholder for mob
+    SFX_FLAME,      // barrel flame
+};
+
 #define SFX_SPARKLE_TIMEOUT 200
-#define SFX_EXPLOSION1 0xf1
 #define SFX_EXPLOSION1_TIMEOUT 10
-#define SFX_EXPLOSION6 0xf2
 #define SFX_EXPLOSION6_TIMEOUT 10
-#define SFX_EXPLOSION7 0xf3
 #define SFX_EXPLOSION7_TIMEOUT 10
+#define SFX_EXPLOSION0_TIMEOUT 10
+#define SFX_EXPLOSION5_TIMEOUT 10
+#define SFX_FLAME_TIMEOUT 20
