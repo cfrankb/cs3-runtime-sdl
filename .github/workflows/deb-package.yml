@@ -38,7 +38,9 @@ jobs:
             lintian \
             zlib1g-dev \
             pkg-config \
-            licensecheck
+            licensecheck \
+            libx11-dev libxext-dev libxrandr-dev libxi-dev libxinerama-dev libxcursor-dev \
+            mesa-common-dev libgl1-mesa-dev libglu1-mesa-dev
 
       - name: Build mapzutil
         run: |
