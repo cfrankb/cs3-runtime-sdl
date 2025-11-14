@@ -28,6 +28,7 @@
 #include "bossdata.h"
 #include "filemacros.h"
 #include "map.h"
+#include "tilesdefs.h"
 
 namespace BossPrivate
 {

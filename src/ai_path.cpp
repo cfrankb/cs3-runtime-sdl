@@ -26,6 +26,7 @@
 #include "ai_path.h"
 #include "isprite.h"
 #include "filemacros.h"
+#include "bossdata.h"
 #include "shared/IFile.h"
 
 namespace PathData

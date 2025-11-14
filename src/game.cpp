@@ -44,6 +44,9 @@
 #include "bossdata.h"
 #include "randomz.h"
 #include "filemacros.h"
+#include "gamesfx.h"
+#include "boss.h"
+#include "tilesdefs.h"
 
 namespace GamePrivate
 {

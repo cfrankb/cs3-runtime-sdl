@@ -29,6 +29,8 @@
 #include "ai_path.h"
 #include "sounds.h"
 #include "gamestats.h"
+#include "tilesdefs.h"
+#include "gamesfx.h"
 
 namespace Game
 {
@@ -207,7 +209,7 @@ void CGame::handleBossHitboxContact(CBoss &boss)
     // test if boss has set off barrel
     boss.testHitbox1(m_map, [](const Pos &pos, auto type)
                      {
-                         if (type == BossData::HitBoxType::MAIN)
+                         if (type != BossData::HitBoxType::SPECIAL1)
                              return false;
                          const CMap &map = CGame::getMap();
                          const auto c = map.at(pos.x, pos.y);
@@ -216,7 +218,7 @@ void CGame::handleBossHitboxContact(CBoss &boss)
                      },
                      [&boss, this](const HitResult &r)
                      {
-                         fuseBarrel(r.pos); // lit barrel
+                         fuseBarrel(r.pos); // lit fuse for barrel
                      });
 }
 
@@ -414,7 +416,6 @@ void CGame::manageMonsters(const int ticks)
 void CGame::handleMonster(CActor &actor, const TileDef &def)
 {
     static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
-
     if (actor.isPlayerThere(actor.getAim()))
     {
         // apply health damages
@@ -654,7 +655,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
         int bossDamage = 0;
         for (const auto &bp : blastPositions)
         {
-            boss.testHitbox1(m_map, [&bp](const Pos &p, auto type) { //
+            boss.testHitbox1(m_map, [&bp](const Pos &p, const auto type) { //
                 // check if damage can occur
                 return type != BossData::HitBoxType::SPECIAL1 && p == bp.toPos();
             },
@@ -698,12 +699,11 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
         auto result = actor.followPath(m_player.pos());
         if (result == CPath::Result::MoveSuccesful)
             return;
-
         isMoving = result != CPath::Result::Blocked && actor.getTTL() != 0;
         aim = actor.getAim();
         // if (actor.canMove(aim) && actor.getTTL() != 0)
         //     return;
-        LOGI("sprite: %p not moving result:[%d]; aim=[%d] isPlayerThere=[%d] [%p]", &actor, result, actor.getAim(), actor.isPlayerThere(aim), actor.path());
+        // LOGI("sprite: %p not moving result:[%d]; aim=[%d] isPlayerThere=[%d] [%p]", &actor, result, actor.getAim(), actor.isPlayerThere(aim), actor.path());
     }
     else
     {
@@ -718,7 +718,12 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
         // remove actor/ set to be deleted
         m_map.set(actor.x(), actor.y(), actor.getPU());
         deletedMonsters.insert(i);
-        m_sfx.emplace_back(sfx_t{.x = actor.x(), .y = actor.y(), .sfxID = bullet.sfxID, .timeout = bullet.sfxTimeOut});
+        m_sfx.emplace_back(sfx_t{
+            .x = actor.x(),
+            .y = actor.y(),
+            .sfxID = bullet.sfxID,
+            .timeout = bullet.sfxTimeOut,
+        });
         if (CGame::translate(Pos{actor.x(), actor.y()}, aim) == actor.pos())
             // coordonate outside map bounds
             return;

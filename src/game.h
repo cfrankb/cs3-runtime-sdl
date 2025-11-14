@@ -18,20 +18,24 @@
 #pragma once
 #include <vector>
 #include <cstdint>
-#include <cstdio>
+#include <string>
 #include <set>
+#include <unordered_map>
+#include <memory>
 #include "actor.h"
-#include "boss.h"
 #include "map.h"
-#include "gamesfx.h"
 #include "events.h"
-#include "tilesdefs.h"
 
 class CGameStats;
 class CMapArch;
 class ISound;
 class CBoss;
 class Random;
+class IFile;
+struct TileDef;
+enum Event;
+enum Sfx : uint16_t;
+struct sfx_t;
 
 struct MapReport
 {
@@ -43,7 +47,7 @@ struct MapReport
 struct bulletData_t
 {
     uint8_t sound;
-    uint8_t sfxID;
+    Sfx sfxID;
     uint16_t sfxTimeOut;
 };
 
@@ -246,5 +250,4 @@ private:
 
     inline static CMap m_map;
     friend class CGameMixin;
-    friend CGame *getGame();
 };

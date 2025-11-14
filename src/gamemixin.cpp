@@ -39,6 +39,9 @@
 #include "strhelper.h"
 #include "filemacros.h"
 #include "defaults.h"
+#include "boss.h"
+#include "gamesfx.h"
+#include "tilesdefs.h"
 
 // Check windows
 #ifdef _WIN64

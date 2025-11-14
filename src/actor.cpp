@@ -27,6 +27,7 @@
 #include <memory>
 #include "shared/IFile.h"
 #include "logger.h"
+#include "bossdata.h"
 
 namespace ActorData
 {
@@ -76,7 +77,7 @@ CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAi
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
-    m_ttl = BossData::NoTTL;
+    m_ttl = CActor::NoTTL;
 }
 
 CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
@@ -88,7 +89,7 @@ CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
-    m_ttl = BossData::NoTTL;
+    m_ttl = CActor::NoTTL;
 }
 
 CActor::CActor(CActor &&other) noexcept
@@ -109,7 +110,7 @@ CActor::CActor(CActor &&other) noexcept
     other.m_aim = AIM_UP;
     other.m_pu = 0;
     other.m_algo = BossData::Path::NONE;
-    other.m_ttl = BossData::NoTTL;
+    other.m_ttl = CActor::NoTTL;
 }
 
 CActor &CActor::operator=(CActor &&other) noexcept
@@ -132,7 +133,7 @@ CActor &CActor::operator=(CActor &&other) noexcept
         other.m_aim = AIM_UP;
         other.m_pu = 0;
         other.m_algo = BossData::Path::NONE;
-        other.m_ttl = BossData::NoTTL;
+        other.m_ttl = CActor::NoTTL;
     }
     return *this;
 }
