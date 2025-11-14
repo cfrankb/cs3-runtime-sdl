@@ -139,7 +139,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     f'set(GAME_NAME "{APP_LONG_NAME}")',
     f'set(GAME_EXEC "{APP_NAME}")',
     f'set(GAME_ICON "{APP_NAME}.png")  # source icon',
-    'set(GAME_ICON_PATH "${CMAKE_SOURCE_DIR}/packages/data/${GAME_ICON}")',
+    'set(GAME_ICON_PATH "${CMAKE_SOURCE_DIR}/packages/data/debian/${GAME_ICON}")',
     "",
     "# Create desktop entry content",
     "set(DESKTOP_FILE_CONTENT",
