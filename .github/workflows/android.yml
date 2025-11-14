@@ -34,6 +34,10 @@ jobs:
           bin/setbuild.sh
           cat src/build.h
 
+      - name: Update CMakeLists.txt
+        run: |
+          python3 bin/refresh.py
+
       - name: Patch source
         run: |
           printf "\nbetaui        true\n" >> data/game.cfg

@@ -52,7 +52,7 @@ with open("packages/data/debian/changelog", "w") as t:
 MAN_PAGE = f"""
 .TH YOURGAME 6 "{now.strftime("%B %Y")}" "{APP_LONG_NAME} {VERSION}" "User Commands"
 .SH NAME
-{APP_NAME} \- {DESCRIPTION}
+{APP_NAME} - {DESCRIPTION}
 .SH SYNOPSIS
 .B {APP_NAME}
 .SH DESCRIPTION

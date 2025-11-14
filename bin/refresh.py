@@ -5,6 +5,9 @@ import os
 
 TAB = " " * 4
 
+########################################################
+# vanilla application
+
 
 def generate_file(folder, sub_folders):
     if not os.path.isdir(folder):
@@ -89,6 +92,10 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
         tfile.write("\n".join(lines) + "\n")
 
 
+################################################
+# tests
+
+
 def generate_tests(folder):
     if not os.path.isdir(folder):
         print(f"not a directory: {folder}")
@@ -133,7 +140,55 @@ target_include_directories(cs3-tests PRIVATE
         tfile.write("\n".join(lines) + "\n")
 
 
+#########################################################
+# android port
+
+
+def generate_android_cmake():
+    file_path = "android-project/app/jni/CMakeLists.txt"
+
+    lines = [
+        """
+cmake_minimum_required(VERSION 3.6)
+
+project(GAME)
+
+add_subdirectory(../../../external/SDL3 SDL3)
+add_subdirectory(../../../external/SDL3_mixer SDL3_mixer)
+
+add_library(main SHARED
+             """.strip()
+    ]
+
+    sub_folders = ["src", "src/shared", "src/shared/implementers"]
+    files = []
+
+    for folder in sub_folders:
+        files += glob.glob(f"{folder}/*.cpp")
+
+    files.sort()
+    lines += [
+        f"{TAB*2}../../../{file}" for file in files if "tilesdebug.cpp" not in file
+    ]
+    lines += [
+        """
+)
+target_link_libraries(main
+    PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer
+    z
+    android
+    log
+)
+
+""".strip()
+    ]
+
+    with open(file_path, "w") as tfile:
+        tfile.write("\n".join(lines) + "\n")
+
+
 generate_file("src", ["src/shared", "src/shared/implementers"])
 generate_file("src/shared", [])
 generate_file("src/shared/implementers", [])
 generate_tests("tests")
+generate_android_cmake()
