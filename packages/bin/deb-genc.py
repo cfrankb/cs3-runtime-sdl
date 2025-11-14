@@ -67,7 +67,7 @@ with open(f"packages/data/debian/{APP_NAME}.6", "w") as t:
     t.write(MAN_PAGE)
 
 
-DEPENDS = ", ".join(["libc6 (>= 2.27)", "libsdl2", "libsdl2-mixer", "libxmp", "libz"])
+DEPENDS = ", ".join(["libc6 (>= 2.27)", "libsdl3", "libsdl3-mixer", "libxmp", "libz"])
 
 paths = ["src/*.cpp", "src/**/*.cpp", "src/**/**/*.cpp"]
 src = []

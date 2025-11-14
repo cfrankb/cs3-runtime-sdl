@@ -4,7 +4,7 @@ DATAPATH = ../data/*
 APPDIR = $(APP_NAME).AppDir
 APP_DATA = $(APPDIR)/usr/share/data
 APP_ID = com.cfrankb.$(APP_NAME)
-APP_ICON = data/${APP_NAME}.png
+APP_ICON = data/appimage/${APP_NAME}.png
 DESKTOP_FILE = data/$(APP_ID).desktop
 APP_DESKTOP_FILE = $(APPDIR)/usr/share/applications/$(APP_ID).desktop
 

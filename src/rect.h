@@ -18,7 +18,7 @@
 
 #pragma once
 
-struct Rect
+struct rect_t
 {
     int x;
     int y;

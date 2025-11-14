@@ -33,6 +33,7 @@
 #include "build.h"
 #include "statedata.h"
 #include "states.h"
+#include "strhelper.h"
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;

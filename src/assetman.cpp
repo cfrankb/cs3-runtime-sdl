@@ -122,11 +122,11 @@ namespace AssetMan
         if (!ptr)
         {
             LOGE("can't fetch asset: %s", filepath.c_str());
-            return false;
+            return {};
         }
         data.assign(ptr, ptr + size);
         delete[] ptr;
-        return true;
+        return data;
 #else
         CFileWrap file;
         if (!file.open(filepath.c_str(), "rb"))

@@ -155,7 +155,7 @@ void CRuntime::paint()
 
     SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), getWidth() * sizeof(uint32_t));
 #if defined(__ANDROID__)
-    Rect safeArea = getSafeAreaWindow();
+    rect_t safeArea = getSafeAreaWindow();
     SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
 #else
     int width;
@@ -265,9 +265,9 @@ void CRuntime::debugSDL()
     const Rez rezScreen = getScreenSize();
     LOGI("SCREENSIZE: %d x %d; Orientation: %d", rezScreen.w, rezScreen.h, currentOrientation);
 
-    Rect safeAreaWmd = getSafeAreaWindow();
+    rect_t safeAreaWmd = getSafeAreaWindow();
     LOGI("safeAreaWnd: x: %d, y: %d, w: %d, h: %d", safeAreaWmd.x, safeAreaWmd.y, safeAreaWmd.width, safeAreaWmd.height);
-    Rect safeAreaTexture = windowRect2textureRect(safeAreaWmd);
+    rect_t safeAreaTexture = windowRect2textureRect(safeAreaWmd);
     LOGI("safeAreaTexture: x: %d, y: %d, w: %d, h: %d", safeAreaTexture.x, safeAreaTexture.y, safeAreaTexture.width, safeAreaTexture.height);
 
     int pixelW = 0, pixelH = 0;
@@ -1299,7 +1299,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
     drawTitlePix(bitmap, offsetY);
 
     const int baseY = 2 * offsetY + title.height();
-    const Rect rect{
+    const rect_t rect{
         8,
         baseY,
         getWidth() - 16,
@@ -2492,7 +2492,7 @@ Rez CRuntime::getWindowSize()
 CRuntime::pos_t CRuntime::windowPos2texturePos(posF_t pos)
 {
 #if defined(__ANDROID__)
-    Rect safeRect = getSafeAreaWindow();
+    rect_t safeRect = getSafeAreaWindow();
     pos.x -= safeRect.x;
     pos.y -= safeRect.y;
     float w = getWidth();
@@ -2514,14 +2514,14 @@ void CRuntime::onOrientationChange()
         LOGI("Orientation changed - %s mode", isLandscape ? "Landscape" : "Portrait");
 }
 
-Rect CRuntime::getSafeAreaWindow()
+rect_t CRuntime::getSafeAreaWindow()
 {
     SDL_Rect safe;
     if (!SDL_GetWindowSafeArea(m_app.window, &safe))
     {
         LOGE("SDL_GetWindowSafeArea() failed; error: %s", SDL_GetError());
     }
-    return Rect{
+    return rect_t{
         safe.x,
         safe.y,
         safe.w,
@@ -2529,7 +2529,7 @@ Rect CRuntime::getSafeAreaWindow()
     };
 }
 
-Rect CRuntime::windowRect2textureRect(const Rect &wRect)
+rect_t CRuntime::windowRect2textureRect(const rect_t &wRect)
 {
     Rez rez = getWindowSize();
     float w = (float)getWidth() * 2;
@@ -2538,7 +2538,7 @@ Rect CRuntime::windowRect2textureRect(const Rect &wRect)
     {
         return static_cast<int>(w * (float)u / rez.w);
     };
-    return Rect{
+    return rect_t{
         _c(wRect.x),
         _c(wRect.y),
         _c(wRect.width),

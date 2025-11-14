@@ -67,8 +67,8 @@ public:
     bool createSDLWindow();
     Rez getScreenSize();
     Rez getWindowSize();
-    Rect getSafeAreaWindow();
-    Rect windowRect2textureRect(const Rect &wRect);
+    rect_t getSafeAreaWindow();
+    rect_t windowRect2textureRect(const rect_t &wRect);
     void debugSDL();
     bool saveToFile(const std::string filepath, const std::string name);
     bool loadFromFile(const std::string filepath, std::string &name);
