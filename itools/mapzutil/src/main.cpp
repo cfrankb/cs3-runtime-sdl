@@ -21,7 +21,7 @@
 #include "../../../src/logger.h"
 #include "../../../src/tilesdata.h"
 #include "../../../src/sprtypes.h"
-
+#include "../../../src/tilesdefs.h"
 struct AppParams
 {
     std::vector<std::string> files;
