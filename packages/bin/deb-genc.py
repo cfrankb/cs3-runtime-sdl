@@ -67,7 +67,7 @@ with open(f"packages/data/debian/{APP_NAME}.6", "w") as t:
     t.write(MAN_PAGE)
 
 
-DEPENDS = ", ".join(["libc6 (>= 2.27)", "libsdl3", "libsdl3-mixer", "libxmp", "libz"])
+DEPENDS = ", ".join(["libc6 (>= 2.27)", "libz"])
 
 paths = ["src/*.cpp", "src/**/*.cpp", "src/**/**/*.cpp"]
 src = []
@@ -89,8 +89,8 @@ lines = [
     #'find_package(SDL2_mixer REQUIRED)',
     "find_package(ZLIB REQUIRED)",
     "find_package(PkgConfig REQUIRED)",
-    "add_subdirectory(../external/SDL3 SDL3)",
-    "add_subdirectory(../external/SDL3_mixer SDL3_mixer)",
+    "add_subdirectory(external/SDL3 SDL3)",
+    "add_subdirectory(external/SDL3_mixer SDL3_mixer)",
     "",
     # "# SDL2",
     # "pkg_check_modules(SDL2 REQUIRED sdl2)",
@@ -114,10 +114,10 @@ lines = [
     ")",
     """
 target_include_directories(${PROJECT_NAME} PRIVATE
-    ${CMAKE_SOURCE_DIR}/../src
-    ${CMAKE_SOURCE_DIR}/../external/SDL3/include
-    ${CMAKE_SOURCE_DIR}/../external/SDL3_mixer/include
-    ${CMAKE_SOURCE_DIR}/../external/zlib
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/external/SDL3/include
+    ${CMAKE_SOURCE_DIR}/external/SDL3_mixer/include
+    ${CMAKE_SOURCE_DIR}/external/zlib
 )""",
     "",
     "# Install binary to standard games location",
