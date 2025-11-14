@@ -43,14 +43,14 @@ void Logger::log(Level level, const char *tag, const char *format, ...)
     va_list args;
     va_start(args, format);
 #if defined(__ANDROID__) && defined(SDL_MAJOR_VERSION)
-    SDL_LogPriority priority = level == INFO ? SDL_LOG_PRIORITY_INFO : level == WARN ? SDL_LOG_PRIORITY_WARN
-                                                                   : level == ERROR  ? SDL_LOG_PRIORITY_ERROR
-                                                                                     : SDL_LOG_PRIORITY_CRITICAL;
+    SDL_LogPriority priority = level == L_INFO ? SDL_LOG_PRIORITY_INFO : level == L_WARN ? SDL_LOG_PRIORITY_WARN
+                                                                     : level == L_ERROR  ? SDL_LOG_PRIORITY_ERROR
+                                                                                         : SDL_LOG_PRIORITY_CRITICAL;
     SDL_LogMessageV(SDL_LOG_CATEGORY_APPLICATION, priority, format, args);
 #elif defined(__ANDROID__)
-    int priority = level == INFO ? ANDROID_LOG_INFO : level == WARN ? ANDROID_LOG_WARN
-                                                  : level == ERROR  ? ANDROID_LOG_ERROR
-                                                                    : ANDROID_LOG_FATAL;
+    int priority = level == L_INFO ? ANDROID_LOG_INFO : level == L_WARN ? ANDROID_LOG_WARN
+                                                    : level == L_ERROR  ? ANDROID_LOG_ERROR
+                                                                        : ANDROID_LOG_FATAL;
     __android_log_vprint(priority, tag, format, args);
 #else
     FILE *out = m_output ? m_output : (level == L_ERROR || level == L_FATAL) ? stderr

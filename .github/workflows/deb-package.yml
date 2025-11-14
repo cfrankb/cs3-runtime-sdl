@@ -37,8 +37,8 @@ jobs:
             fakeroot \
             lintian \
             zlib1g-dev \
-            libsdl2-dev \
-            libsdl2-mixer-dev \
+            libsdl3-dev \
+            libsdl3-mixer-dev \
             libxmp-dev \
             pkg-config \
             licensecheck
