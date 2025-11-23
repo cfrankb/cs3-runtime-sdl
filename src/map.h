@@ -100,16 +100,16 @@ public:
         return x >= 0 && x < m_len && y >= 0 && y < m_hei;
     }
 
-    void shift(Direction aim);
+    bool shift(const Direction aim);
     void debug();
     inline uint8_t &get(const int x, const int y)
     {
-        return m_mainLayer.get(x, y);
+        return getMainLayer()->get(x, y);
     }
 
     inline uint8_t at(const int x, const int y) const
     {
-        return m_mainLayer.at(x, y);
+        return getMainLayer()->at(x, y);
     }
 
     inline void set(const int x, const int y, const uint8_t t)
@@ -117,17 +117,47 @@ public:
         get(x, y) = t;
     }
 
+    inline std::vector<std::unique_ptr<CLayer>> &layers()
+    {
+        return m_layers;
+    }
+
+    inline CLayer *getMainLayer() const
+    {
+        return m_layers[0].get();
+    }
+
+    inline size_t layerCount()
+    {
+        return m_layers.size();
+    }
+
+    CLayer *addLayer(const CLayer::LayerType lt, const std::string_view &name);
+    CLayer *getLayer(const size_t index);
+
+    enum : int16_t
+    {
+        NOT_FOUND = -1,
+    };
+
+    enum MapVersion : uint16_t
+    {
+        VERSION0 = 0,
+        VERSION1 = 1,
+    };
+
 private:
+    void addMainLayer();
     template <typename WriteFunc>
     bool writeCommon(WriteFunc writefile) const;
     template <typename ReadFunc>
-    bool readImpl(ReadFunc &&readfile, std::function<size_t()> tell, std::function<bool(size_t)> seek, std::function<bool()> readStates);
+    bool readCommon(ReadFunc &&readfile, std::function<size_t()> tell, std::function<bool(size_t)> seek, std::function<bool()> readStates);
 
     uint16_t m_len;
     uint16_t m_hei;
-    CLayer m_mainLayer;
     attrMap_t m_attrs;
     std::string m_lastError;
     std::string m_title;
     std::unique_ptr<CStates> m_states;
+    std::vector<std::unique_ptr<CLayer>> m_layers;
 };

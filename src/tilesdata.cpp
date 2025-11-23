@@ -178,7 +178,7 @@ constexpr const TileDef tileDefs[] = {
     {0x00, TYPE_LIGHTNING_BOLT, 0, -10, 3, 0, false, "bullety1.zip"},       // 98 TILES_BULLETY1
     {0x2000, TYPE_PICKUP, 125, 0, 0, 0, false, "boat.png"},                 // 99 TILES_BOAT
     {0x00, TYPE_WALLS, 0, 0, 0, 0, false, "barrel2ex.png"},                 // 9a TILES_BARREL2EX
-    {0x00, TYPE_BARREL, 0, -16, 0, 0, false, "barrel2.png"},                // 9b TILES_BARREL2
+    {0x00, TYPE_BARREL, 0, -20, 0, 0, false, "barrel2.png"},                // 9b TILES_BARREL2
     {0x00, TYPE_FIRE, 0, -1, 0, 0, false, "flame16x16.zip"}                 // 9c TILES_FLAME
 };
 

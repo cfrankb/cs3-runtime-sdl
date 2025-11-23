@@ -19,6 +19,7 @@ add_library(main SHARED
         ../../../src/gamemixin.cpp
         ../../../src/gamestats.cpp
         ../../../src/gameui.cpp
+        ../../../src/layer.cpp
         ../../../src/level.cpp
         ../../../src/logger.cpp
         ../../../src/main.cpp
