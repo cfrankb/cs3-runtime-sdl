@@ -36,7 +36,7 @@ namespace MapPrivate
     constexpr char SIG[]{'M', 'A', 'P', 'Z'};
     constexpr char XTR_SIG[]{"XTR"};
 
-    constexpr uint16_t VERSION = CMap::VERSION1;
+    constexpr uint16_t VERSION = CMap::VERSION2;
     constexpr uint16_t MAX_SIZE = 256;
     constexpr uint16_t MAX_TITLE = 255;
 };
@@ -77,7 +77,7 @@ CMap::~CMap() {
 
 void CMap::addMainLayer()
 {
-    m_layers.emplace_back(std::make_unique<CLayer>(m_len, m_hei, CLayer::LayerType::LAYER_MAIN, "main"));
+    m_layers.emplace_back(std::make_unique<CLayer>(m_len, m_hei, CLayer::LayerType::LAYER_MAIN, 0, "main"));
 }
 
 void CMap::clear()
@@ -200,6 +200,8 @@ bool CMap::readCommon(ReadFunc &&readfile, std::function<size_t()> tell, std::fu
         return false;
     }
 
+    m_layers.clear();
+
     // read layers
     if (ver >= VERSION1)
     {
@@ -210,38 +212,35 @@ bool CMap::readCommon(ReadFunc &&readfile, std::function<size_t()> tell, std::fu
             LOGE("%s", m_lastError.c_str());
             return false;
         }
-        m_layers.resize(layerCount);
-
+        m_layers.reserve(layerCount);
         for (size_t i = 0; i < layerCount; ++i)
         {
-            std::unique_ptr<CLayer> &layer = m_layers[i];
-            if (!layer)
-                layer = std::make_unique<CLayer>(m_len, m_hei);
+            // LOGI("layer %lu", i);
+            std::unique_ptr<CLayer> layer = std::make_unique<CLayer>(m_len, m_hei);
             if (!layer->readCommon(readfile, ver))
             {
                 m_lastError = std::string("failed read Layer: ") + layer->lastError();
                 LOGE("%s", m_lastError.c_str());
                 return false;
             }
+            m_layers.emplace_back(std::move(layer));
         }
     }
     else
     {
         // add main layer for compatibility w/ older versions
-        m_layers.resize(1);
-        std::unique_ptr<CLayer> &layer = m_layers[0];
-        if (!layer)
-            layer = std::make_unique<CLayer>(m_len, m_hei);
+        std::unique_ptr<CLayer> layer = std::make_unique<CLayer>(m_len, m_hei);
         if (!layer->readCommon(readfile, ver))
         {
             m_lastError = std::string("failed read MainLayer: ") + getMainLayer()->lastError();
             LOGE("%s", m_lastError.c_str());
             return false;
         }
+        m_layers.emplace_back(std::move(layer));
     }
 
-    m_len = getMainLayer()->len();
-    m_hei = getMainLayer()->hei();
+    m_len = getMainLayer()->width();
+    m_hei = getMainLayer()->height();
 
     // Read attributes
     m_attrs.clear();
@@ -617,7 +616,7 @@ const char *CMap::title()
     return m_title.c_str();
 }
 
-void CMap::setTitle(const char *title)
+void CMap::setTitle(const std::string_view &title)
 {
     m_title = title;
 }
@@ -656,9 +655,9 @@ void CMap::replaceTile(const uint8_t src, const uint8_t repl)
     getMainLayer()->replaceTile(src, repl);
 }
 
-CLayer *CMap::addLayer(const CLayer::LayerType lt, const std::string_view &name)
+CLayer *CMap::addLayer(const CLayer::LayerType lt, const std::string_view &name, uint16_t baseID)
 {
-    return m_layers.emplace_back(new CLayer(m_len, m_hei, lt, name.data())).get();
+    return m_layers.emplace_back(new CLayer(m_len, m_hei, lt, baseID, name.data())).get();
 }
 
 CLayer *CMap::getLayer(const size_t index)
@@ -667,4 +666,20 @@ CLayer *CMap::getLayer(const size_t index)
         return m_layers[index].get();
     else
         return nullptr;
+}
+
+std::unique_ptr<CLayer> CMap::popLayer()
+{
+    if (m_layers.empty())
+        return nullptr;
+
+    // Move out the last element
+    std::unique_ptr<CLayer> layer = std::move(m_layers.back());
+    m_layers.pop_back(); // cleaner than resize(size-1)
+    return layer;
+}
+
+void CMap::pushLayer(std::unique_ptr<CLayer> &layer)
+{
+    m_layers.emplace_back(std::move(layer));
 }

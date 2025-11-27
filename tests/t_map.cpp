@@ -60,10 +60,10 @@ bool test_map()
         LOGE("failed to resize map");
         return false;
     }
-    if (map.len() != mapSize.w || map.hei() != mapSize.h)
+    if (map.width() != mapSize.w || map.height() != mapSize.h)
     {
         LOGE("map sized (%dx%d) was expected (%dx%d)",
-             map.len(), map.hei(), mapSize.w, mapSize.h);
+             map.width(), map.hei(), mapSize.w, mapSize.h);
         return false;
     }
 
@@ -73,10 +73,10 @@ bool test_map()
         LOGE("failed to resize map");
         return false;
     }
-    if (map.len() != mapSize2.w || map.hei() != mapSize2.h)
+    if (map.width() != mapSize2.w || map.height() != mapSize2.h)
     {
         LOGE("map sized (%dx%d) was expected (%dx%d)",
-             map.len(), map.hei(), mapSize2.w, mapSize2.h);
+             map.width(), map.hei(), mapSize2.w, mapSize2.h);
         return false;
     }
 
@@ -197,9 +197,9 @@ static bool checkMap(CMap &map)
 bool testSeq(uint16_t len, uint16_t hei)
 {
     CMap map(len, hei);
-    if (map.len() != len || map.hei() != hei)
+    if (map.width() != len || map.height() != hei)
     {
-        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map.len(), map.hei(), len, hei);
+        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map.width(), map.height(), len, hei);
         return false;
     }
     map.setAttr(ATTRX, ATTRY, ATTRA);
@@ -297,9 +297,9 @@ bool testSeq(uint16_t len, uint16_t hei)
         LOGE("testing test_map_2() fromMemory() failed");
         return false;
     }
-    if (map6.len() != len || map6.hei() != hei)
+    if (map6.width() != len || map6.height() != hei)
     {
-        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map6.len(), map6.hei(), len, hei);
+        LOGE("map sizes are wrong: %dx%d; expecting %dx%d", map6.width(), map6.height(), len, hei);
         return false;
     }
 

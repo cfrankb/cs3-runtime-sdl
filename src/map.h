@@ -25,6 +25,9 @@
 #include "dirs.h"
 #include "layer.h"
 
+#ifndef ___POS_T
+#define ___POS_T
+
 typedef std::unordered_map<uint16_t, uint8_t> attrMap_t;
 struct Pos
 {
@@ -56,6 +59,7 @@ struct Pos
         return true;
     }
 };
+#endif
 
 class IFile;
 class CStates;
@@ -74,8 +78,8 @@ public:
     bool write(FILE *tfile) const;
     bool write(IFile &tfile) const;
     void clear();
-    inline int len() const { return m_len; };
-    inline int hei() const { return m_hei; };
+    inline int width() const { return m_len; };
+    inline int height() const { return m_hei; };
     bool resize(uint16_t in_len, uint16_t in_hei, uint8_t t, bool fast);
     const Pos findFirst(const uint8_t tileId) const;
     size_t count(const uint8_t tileId) const;
@@ -87,7 +91,7 @@ public:
     CMap &operator=(const CMap &map);
     bool fromMemory(uint8_t *mem);
     const char *title();
-    void setTitle(const char *title);
+    void setTitle(const std::string_view &title);
     void replaceTile(const uint8_t, const uint8_t);
     const attrMap_t &attrs() { return m_attrs; }
     CStates &states();
@@ -132,8 +136,10 @@ public:
         return m_layers.size();
     }
 
-    CLayer *addLayer(const CLayer::LayerType lt, const std::string_view &name);
+    CLayer *addLayer(const CLayer::LayerType lt, const std::string_view &name, uint16_t baseID);
     CLayer *getLayer(const size_t index);
+    std::unique_ptr<CLayer> popLayer();
+    void pushLayer(std::unique_ptr<CLayer> &layer);
 
     enum : int16_t
     {
@@ -144,6 +150,7 @@ public:
     {
         VERSION0 = 0,
         VERSION1 = 1,
+        VERSION2 = 2,
     };
 
 private:

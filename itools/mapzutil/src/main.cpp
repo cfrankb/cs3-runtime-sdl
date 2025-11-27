@@ -128,9 +128,9 @@ bool report(CMapArch &mf, IFile &file)
         StatMap usage;
         int monsters = 0;
         int stops = 0;
-        for (int y = 0; y < map->hei(); ++y)
+        for (int y = 0; y < map->height(); ++y)
         {
-            for (int x = 0; x < map->len(); ++x)
+            for (int x = 0; x < map->width(); ++x)
             {
                 const auto &c = map->at(x, y);
                 ++usage[c];
@@ -153,7 +153,7 @@ bool report(CMapArch &mf, IFile &file)
         writeItem("Monsters", monsters);
         writeItem("Attributes", map->attrs().size());
         writeItem("Stops", stops);
-        sprintf(tmp, "  -- Size: %d x %d\n", map->len(), map->hei());
+        sprintf(tmp, "  -- Size: %d x %d\n", map->width(), map->height());
         file += tmp;
         writeItem("fruits", report.fruits);
         writeItem("treasures", report.bonuses);

@@ -42,13 +42,14 @@ public:
         LAYER_DECOR,
     };
 
-    CLayer(const uint16_t len, const uint16_t hei, const LayerType layerType = LAYER_MAIN, const char *name = "untitled")
+    CLayer(const uint16_t len, const uint16_t hei, const LayerType layerType = LAYER_MAIN, uint16_t baseID = 0, const char *name = "untitled")
     {
         m_len = len;
         m_hei = hei;
         m_tiles.resize(len * hei);
         m_layerType = layerType;
         m_name = name;
+        m_baseID = baseID;
     };
     ~CLayer() = default;
 
@@ -63,8 +64,8 @@ public:
     void fill(uint8_t ch = 0);
     size_t size() const { return m_tiles.size(); }
     void replaceTile(const uint8_t, const uint8_t);
-    int len() const { return m_len; };
-    int hei() const { return m_hei; };
+    inline int width() const { return m_len; };
+    inline int height() const { return m_hei; };
     const char *lastError() { return m_lastError.c_str(); }
 
     inline uint8_t &get(const int x, const int y)
@@ -103,6 +104,12 @@ public:
     }
 
     LayerType layerType() { return m_layerType; }
+    inline uint16_t baseID() { return m_baseID; }
+    void setBaseID(int baseID) { m_baseID = baseID; };
+
+    std::vector<uint8_t> &tiles() { return m_tiles; };
+    const std::vector<uint8_t> &tilesConst() const { return m_tiles; };
+    void tilesFrom(const std::vector<uint8_t> &tiles) { m_tiles = tiles; };
 
 protected:
     enum : uint16_t
@@ -149,6 +156,13 @@ protected:
         {
             return false;
         }
+
+        // save baseID;
+        if (!writefile(&m_baseID, sizeof(m_baseID)))
+        {
+            return false;
+        }
+
         return true;
     }
     template <typename ReadFunc>
@@ -173,6 +187,7 @@ protected:
         {
             VERSION0,
             VERSION1,
+            VERSION2,
         };
 
         if (version == VERSION0)
@@ -186,7 +201,7 @@ protected:
             }
             m_name = "main";
         }
-        else if (version == VERSION1)
+        else if (version == VERSION1 || version == VERSION2)
         {
             if (!readfile(&m_layerType, sizeof(m_layerType)))
             {
@@ -231,6 +246,15 @@ protected:
                 return false;
             }
             m_name.assign(nameBuffer.data(), nameBuffer.size());
+
+            if (version == VERSION2)
+            {
+                // load baseID;
+                if (!readfile(&m_baseID, sizeof(m_baseID)))
+                {
+                    return false;
+                }
+            }
         }
         else
         {
@@ -247,6 +271,7 @@ private:
     std::vector<uint8_t> m_tiles;
     uint16_t m_len;
     uint16_t m_hei;
+    uint16_t m_baseID;
     LayerType m_layerType;
 
     friend class CMap;
