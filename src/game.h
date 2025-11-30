@@ -250,4 +250,5 @@ private:
 
     inline static CMap m_map;
     friend class CGameMixin;
+    friend class CRuntime;
 };

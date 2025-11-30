@@ -24,6 +24,7 @@
 #include <vector>
 #include <unordered_map>
 #include "shared/interfaces/ISound.h"
+#include "tileset_tex.h"
 
 class ISound;
 class CFrameSet;
@@ -267,6 +268,24 @@ private:
     bool loadAppIcon();
     void addGamePadOptions(CMenu &menu);
     void drawTest(CFrame &bitmap);
+
+    void drawScreen();
+    void drawGameStatus(const visualCues_t &visualcues);
+    void drawSugarMeter(const int bx);
+    void drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL_Color &color, const bool filled);
+
+    void drawPreScreen();
+    void drawLevelIntro();
+    SDL_Texture *createTexture(SDL_Renderer *renderer, CFrame *frame);
+    void drawTile(const Tile *tile, const int x, const int y, const ColorMask &colorMask, const std::unordered_map<uint32_t, uint32_t> *colorMap);
+    void drawViewPortStatic();
+    Tile *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
+    Tile *calcSpecialFrame(const sprite_t &sprite);
+
+    SDL_Texture *m_textureTitlePix;
+    TileSet m_tileset_tiles;
+    TileSet m_tileset_animz;
+    TileSet m_tileset_users;
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

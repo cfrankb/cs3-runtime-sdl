@@ -41,6 +41,14 @@
 #include "attr.h"
 #include "color.h"
 #include "filemacros.h"
+#include "font8x8.h"
+#include "statedata.h"
+#include "recorder.h"
+#include "gamestats.h"
+#include "tilesdata.h"
+#include "tilesdefs.h"
+#include "animator.h"
+#include "gamesfx.h"
 
 #define _f(x) static_cast<float>(x)
 
@@ -50,6 +58,33 @@
 #endif
 const char HISCORE_FILE[] = "hiscores-cs3.dat";
 const char SAVEGAME_FILE[] = "savegame-cs3.dat";
+
+constexpr const int SCALE = 2;
+constexpr const float SCALEF = 2.0f;
+constexpr const int SCALE_2X = 4;
+
+BitmapFont8x8 g_font;
+
+namespace SColor
+{
+    constexpr SDL_Color WHITE{255, 255, 255, 255};
+    constexpr SDL_Color YELLOW{255, 255, 0, 255};
+    constexpr SDL_Color CYAN{0, 255, 255, 255};
+    constexpr SDL_Color GREEN{0, 255, 0, 255};
+    constexpr SDL_Color PURPLE{255, 0, 255, 255};
+    constexpr SDL_Color LIGHTGRAY{0xa9, 0xa9, 0xa9, 0xff};
+    constexpr SDL_Color DEEPSKYBLUE(0x00, 0xBF, 0xFF, 0xff);
+    constexpr SDL_Color BLACK(0x00, 0x00, 0x00, 0xff);
+    constexpr SDL_Color DARKGREEN(0, 128, 0, 255);
+    constexpr SDL_Color RED(255, 0, 0, 255);
+    constexpr SDL_Color ORANGE(0xf5, 0x9b, 0x14, 255);     // #f59b14
+    constexpr SDL_Color DARKORANGE(0xff, 0x8c, 0x00, 255); // #ff8c00
+    constexpr SDL_Color CORAL(0xff, 0x7f, 0x50, 255);      // #ff7f50
+    constexpr SDL_Color PINK(0xff, 0xc0, 0xcb, 255);       // #ffc0cb
+    constexpr SDL_Color HOTPINK(0xff, 0x69, 0xb4, 255);    // #ff69b4
+    constexpr SDL_Color DEEPPINK(0xff, 0x14, 0x93, 255);
+    constexpr SDL_Color DARKGRAY(0x44, 0x44, 0x44, 255);
+};
 
 CRuntime::CRuntime() : CGameMixin()
 {
@@ -100,8 +135,13 @@ void CRuntime::paint()
         m_bitmap = new CFrame(getWidth(), getHeight());
     }
 
+    SDL_SetRenderDrawColor(m_app.renderer, 0, 0, 0, 255);
+    SDL_RenderClear(m_app.renderer);
+    bool renderBitmap = true;
+
     CFrame &bitmap = *m_bitmap;
     bitmap.fill(BLACK);
+
     switch (m_game->mode())
     {
     case CGame::MODE_LEVEL_INTRO:
@@ -109,22 +149,20 @@ void CRuntime::paint()
     case CGame::MODE_GAMEOVER:
     case CGame::MODE_TIMEOUT:
     case CGame::MODE_CHUTE:
-        drawLevelIntro(bitmap);
+        drawLevelIntro();
+        renderBitmap = false;
         break;
     case CGame::MODE_PLAY:
-        drawScreen(bitmap);
-        if (m_gameMenuActive)
-        {
-            fazeScreen(bitmap, 2);
-            resizeGameMenu();
-            drawMenu(bitmap, *m_gameMenu, -1, (getHeight() - m_gameMenu->height()) / 2);
-        }
+        // drawScreen(bitmap);
+        drawScreen();
+        renderBitmap = false;
         break;
     case CGame::MODE_HISCORES:
         drawScores(bitmap);
         break;
     case CGame::MODE_CLICKSTART:
-        drawPreScreen(bitmap);
+        drawPreScreen();
+        renderBitmap = false;
         break;
     case CGame::MODE_HELP:
         drawHelpScreen(bitmap);
@@ -153,19 +191,20 @@ void CRuntime::paint()
         drawTest(bitmap);
     };
 
-    SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), getWidth() * sizeof(uint32_t));
+    if (renderBitmap)
+    {
+        SDL_UpdateTexture(m_app.texture, nullptr, bitmap.getRGB().data(), getWidth() * sizeof(uint32_t));
 #if defined(__ANDROID__)
-    rect_t safeArea = getSafeAreaWindow();
-    SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
+        rect_t safeArea = getSafeAreaWindow();
+        SDL_FRect rectDest{.x = _f(safeArea.x), .y = _f(safeArea.y), .w = _f(safeArea.width), .h = _f(safeArea.height)};
 #else
-    int width;
-    int height;
-    SDL_GetWindowSize(m_app.window, &width, &height);
-    SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
+        int width;
+        int height;
+        SDL_GetWindowSize(m_app.window, &width, &height);
+        SDL_FRect rectDest{0, 0, static_cast<float>(width), static_cast<float>(height)};
 #endif
-    SDL_SetRenderDrawColor(m_app.renderer, 0, 0, 0, 255);
-    SDL_RenderClear(m_app.renderer);
-    SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
+        SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
+    }
     SDL_RenderPresent(m_app.renderer);
 }
 
@@ -217,6 +256,9 @@ bool CRuntime::createSDLWindow()
         }
         if (!m_quiet)
             LOGI("SDL Rendered created");
+
+        // SDL_SetRenderIntegerScale(renderer, SDL_TRUE);
+        // SDL_SetRenderScale(renderer, scale, scale);
 
         // create streaming texture used to composite the screen
         m_app.texture = SDL_CreateTexture(
@@ -896,6 +938,24 @@ void CRuntime::preloadAssets()
     {
         parseHelp(reinterpret_cast<char *>(data.data()));
     }
+
+    // SDL3 hardware
+
+    if (!g_font.loadRawFont("data/bitfont.bin"))
+    {
+        LOGE("cannot load font");
+    }
+    g_font.buildAtlas(m_app.renderer);
+
+    m_textureTitlePix = createTexture(m_app.renderer, (*m_titlePix)[0]);
+    if (!m_textureTitlePix)
+    {
+        LOGE("failed to create titlepix texture");
+    }
+
+    m_tileset_tiles.load(m_app.renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[0], TILE_SIZE, TILE_SIZE);
+    m_tileset_animz.load(m_app.renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[1], TILE_SIZE, TILE_SIZE);
+    m_tileset_users.load(m_app.renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[2], TILE_SIZE, TILE_SIZE);
 }
 
 void CRuntime::parseHelp(char *text)
@@ -1304,7 +1364,7 @@ void CRuntime::drawTitleScreen(CFrame &bitmap)
         baseY,
         getWidth() - 16,
         getHeight() - baseY - 24};
-    drawRect(bitmap, rect, DARKRED, false);
+    CGameMixin::drawRect(bitmap, rect, DARKRED, false);
 
     CMenu &menu = *m_mainMenu;
     const int menuBaseY = 100 - 8;
@@ -2815,4 +2875,560 @@ bool CRuntime::isValidSavegame(const std::string &filepath)
 void CRuntime::drawTest(CFrame &bitmap)
 {
     drawFont(bitmap, 16, 16, "COMING SOON 2025", YELLOW, BLACK, 2, 2);
+}
+
+SDL_Texture *CRuntime::createTexture(SDL_Renderer *renderer, CFrame *frame)
+{
+    // --- Create a texture with SDL_PIXELFORMAT_ABGR8888 pixels ---
+    SDL_PropertiesID texProps = SDL_CreateProperties();
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width());
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height());
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_ABGR8888);
+    SDL_Texture *texture = SDL_CreateTextureWithProperties(renderer, texProps);
+    SDL_DestroyProperties(texProps);
+
+    if (!texture)
+        return nullptr;
+
+    int pitch = frame->width() * sizeof(uint32_t); // 4 bytes per pixel
+    if (!SDL_UpdateTexture(texture, nullptr, frame->getRGB().data(), pitch))
+    {
+        std::cerr << "SDL_UpdateTexture failed: " << SDL_GetError() << "\n";
+    }
+    return texture;
+}
+
+void CRuntime::drawPreScreen()
+{
+    const char t[] = "CLICK TO START";
+    const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
+    const int y = (getHeight() - FONT_SIZE) / 2;
+    g_font.drawText(m_app.renderer, t, SColor::WHITE, nullptr, x * SCALE, y * SCALE, SCALE, SCALE);
+}
+
+void CRuntime::drawLevelIntro()
+{
+    const int mode = m_game->mode();
+    char t[32];
+    switch (mode)
+    {
+    case CGame::MODE_LEVEL_INTRO:
+        snprintf(t, sizeof(t), "LEVEL %.2d", m_game->level() + 1);
+        break;
+    case CGame::MODE_RESTART:
+        if (m_game->lives() > 1)
+        {
+            snprintf(t, sizeof(t), "LIVES LEFT %.2d", m_game->lives());
+        }
+        else
+        {
+            strncpy(t, "LAST LIFE !", sizeof(t));
+        }
+        break;
+    case CGame::MODE_GAMEOVER:
+        strncpy(t, "GAME OVER", sizeof(t));
+        break;
+    case CGame::MODE_TIMEOUT:
+        strncpy(t, "OUT OF TIME", sizeof(t));
+        break;
+    case CGame::MODE_CHUTE:
+        snprintf(t, sizeof(t), "DROP TO LEVEL %.2d", m_game->level() + 1);
+    };
+
+    const int x = (getWidth() - strlen(t) * 2 * FONT_SIZE) / 2;
+    const int y = (getHeight() - FONT_SIZE * 2) / 2;
+    // drawFont(bitmap, x, y, t, YELLOW, BLACK, 2, 2);
+    g_font.drawText(m_app.renderer, t, SColor::YELLOW, nullptr, x * SCALE, y * SCALE, SCALE_2X, SCALE_2X);
+
+    if (mode == CGame::MODE_LEVEL_INTRO || mode == CGame::MODE_CHUTE)
+    {
+        const char *t = m_game->getMap().title();
+        const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
+        // drawFont(bitmap, x, y + 3 * FONT_SIZE, t, WHITE);
+        g_font.drawText(m_app.renderer, t, SColor::WHITE, nullptr, x * SCALE, (y + 3 * FONT_SIZE) * SCALE, SCALE, SCALE);
+    }
+
+    if (mode != CGame::MODE_GAMEOVER && getWidth() >= MIN_WIDTH_FULL)
+    {
+        const char *hint = m_game->getHintText();
+        const int x = (getWidth() - strlen(hint) * FONT_SIZE) / 2;
+        const int y = getHeight() - FONT_SIZE * 4;
+        // drawFont(bitmap, x, y, hint, CYAN);
+        g_font.drawText(m_app.renderer, hint, SColor::CYAN, nullptr, x * SCALE, y * SCALE, SCALE, SCALE);
+    }
+    m_currentEvent = EVENT_NONE;
+    m_timer = TICK_RATE;
+}
+
+void CRuntime::drawScreen()
+{
+    const CGame &game = *m_game;
+
+    // draw viewport
+    if (m_cameraMode == CAMERA_MODE_DYNAMIC)
+    {
+        //   drawViewPortDynamic(bitmap);
+    }
+    else if (m_cameraMode == CAMERA_MODE_STATIC)
+    {
+        //  drawViewPortStatic(bitmap);
+    }
+    drawViewPortStatic();
+
+    // const int flash = game.statsConst().at(S_FLASH);
+    // if (flash)
+    //     flashScreen(bitmap);
+
+    const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
+    const bool isPlayerHurt = hurtStage != CGame::HurtNone;
+    //  if (isPlayerHurt)
+    //      for (int i = 0; i < SCREEN_SHAKES; ++i)
+    //          bitmap.shiftLEFT(false);
+
+    // visual cues
+    const visualCues_t visualcues{
+        .diamondShimmer = game.goalCount() < m_visualStates.rGoalCount,
+        .livesShimmer = game.lives() > m_visualStates.rLives,
+    };
+    m_visualStates.rGoalCount = game.goalCount();
+    m_visualStates.rLives = game.lives();
+
+    // draw game status
+    drawGameStatus(visualcues);
+
+    // draw bottom rect
+    const bool isFullWidth = getWidth() >= MIN_WIDTH_FULL;
+
+    if (m_currentEvent >= MSG0)
+    {
+        // drawScroll(bitmap);
+    }
+    else if (m_currentEvent == EVENT_SUGAR)
+    {
+        const SDL_Color bgColor = isFullWidth && m_currentEvent >= MSG0 ? SColor::WHITE : SColor::DARKGRAY;
+        const SDL_Color borderColor = isPlayerHurt              ? SColor::PINK
+                                      : visualcues.livesShimmer ? SColor::GREEN
+                                                                : SColor::LIGHTGRAY;
+
+        SDL_FRect rect{0, SCALEF * (getHeight() - 16), SCALEF * getWidth(), TILE_SIZE};
+        drawRect(m_app.renderer, rect, bgColor, true);
+        drawRect(m_app.renderer, rect, borderColor, false);
+    }
+
+    // draw current event text
+    // drawEventText(bitmap);
+
+    if (!isFullWidth || m_currentEvent < MSG0)
+    {
+        // draw Healthbar
+        //  drawHealthBar(bitmap, isPlayerHurt);
+
+        // draw keys
+        /// drawKeys(bitmap);
+    }
+
+    // drawButtons
+    // if (m_ui.isVisible())
+    //    drawUI(bitmap, m_ui);
+
+    // draw timeout
+    // drawTimeout(bitmap);
+
+    /*
+    if (m_gameMenuActive)
+    {
+        fazeScreen(bitmap, 2);
+        resizeGameMenu();
+        drawMenu(bitmap, *m_gameMenu, -1, (getHeight() - m_gameMenu->height()) / 2);
+    }
+        */
+}
+
+void CRuntime::drawGameStatus(const visualCues_t &visualcues)
+{
+    CGame &game = *m_game;
+    char tmp[32];
+
+    std::string_view msg;
+    if (m_paused)
+    {
+        msg = "PRESS [F4] TO RESUME PLAYING...";
+    }
+    else if (m_prompt == PROMPT_ERASE_SCORES)
+    {
+        msg = "ERASE HIGH SCORES, CONFIRM (Y/N)?";
+    }
+    else if (m_prompt == PROMPT_RESTART_GAME)
+    {
+        msg = "RESTART GAME, CONFIRM (Y/N)?";
+    }
+    else if (m_prompt == PROMPT_LOAD)
+    {
+        msg = "LOAD PREVIOUS SAVEGAME, CONFIRM (Y/N)?";
+    }
+    else if (m_prompt == PROMPT_SAVE)
+    {
+        msg = "SAVE GAME, CONFIRM (Y/N)?";
+    }
+    else if (m_prompt == PROMPT_HARDCORE)
+    {
+        msg = "HARDCORE MODE, CONFIRM (Y/N)?";
+    }
+    else if (m_prompt == PROMPT_TOGGLE_MUSIC)
+    {
+        msg = m_musicMuted ? "PLAY MUSIC, CONFIRM (Y/N)?"
+                           : "MUTE MUSIC, CONFIRM (Y/N)?";
+    }
+
+    if (!msg.empty())
+    {
+        g_font.drawText(m_app.renderer, msg.data(), SColor::LIGHTGRAY, &SColor::BLACK, 0, Y_STATUS * SCALE, SCALE, SCALE);
+    }
+    else
+    {
+        int tx;
+        int bx = 0;
+        tx = snprintf(tmp, sizeof(tmp), "%.8d ", game.score());
+        // drawFont(bitmap, 0, Y_STATUS, tmp, WHITE);
+        g_font.drawText(m_app.renderer, tmp, SColor::WHITE, &SColor::BLACK, 0, Y_STATUS * SCALE, SCALE, SCALE);
+        bx += tx;
+        tx = snprintf(tmp, sizeof(tmp), "DIAMONDS %.2d ", game.goalCount());
+        // drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.diamondShimmer ? DEEPSKYBLUE : YELLOW);
+        g_font.drawText(m_app.renderer, tmp, visualcues.diamondShimmer ? SColor::DEEPSKYBLUE : SColor::YELLOW, &SColor::BLACK, bx * FONT_SIZE * SCALE, Y_STATUS * SCALE, SCALE, SCALE);
+        bx += tx;
+        tx = snprintf(tmp, sizeof(tmp), "LIVES %.2d ", game.lives());
+        // drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, tmp, visualcues.livesShimmer ? GREEN : PURPLE);
+        g_font.drawText(m_app.renderer, tmp, visualcues.livesShimmer ? SColor::GREEN : SColor::PURPLE, &SColor::BLACK, bx * FONT_SIZE * SCALE, Y_STATUS * SCALE, SCALE, SCALE);
+        bx += tx;
+        if (m_recorder->isRecording())
+        {
+            // drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "REC!", WHITE, RED);
+            g_font.drawText(
+                m_app.renderer,
+                "REC!",
+                SColor::RED,
+                &SColor::WHITE,
+                bx * FONT_SIZE * SCALE,
+                Y_STATUS * SCALE, SCALE, SCALE);
+        }
+        else if (m_recorder->isReading())
+        {
+            // drawFont(bitmap, bx * FONT_SIZE, Y_STATUS, "PLAY", WHITE, DARKGREEN);
+            g_font.drawText(
+                m_app.renderer,
+                "PLAY",
+                SColor::WHITE,
+                &SColor::DARKGREEN,
+                bx * FONT_SIZE * SCALE,
+                Y_STATUS * SCALE, SCALE, SCALE);
+        }
+        if (getWidth() >= MIN_WIDTH_FULL)
+            drawSugarMeter(bx);
+    }
+}
+
+void CRuntime::drawSugarMeter(const int bx)
+{
+    constexpr const SDL_Color sugarColors[] = {
+        SColor::RED,
+        SColor::DEEPPINK,
+        SColor::HOTPINK,
+        SColor::ORANGE,
+        SColor::PINK,
+        SColor::BLACK,
+        SColor::BLACK,
+        SColor::YELLOW,
+    };
+    const bool updateNow = ((m_ticks >> 1) & 1);
+    const int MAX_FX_COLOR = sizeof(sugarColors) / sizeof(sugarColors[0]) - 1;
+    CGame &game = *m_game;
+    const int sugar = game.sugar();
+    if ((sugar > m_visualStates.rSugar || game.hasExtraSpeed()) &&
+        !m_visualStates.sugarFx)
+    {
+        if (sugar > 0)
+            m_visualStates.sugarCubes[sugar - 1] = MAX_FX_COLOR;
+        m_visualStates.sugarFx = MAX_FX_COLOR;
+    }
+    else if (m_visualStates.sugarFx && updateNow)
+    {
+        --m_visualStates.sugarFx;
+    }
+    m_visualStates.rSugar = sugar;
+    for (int i = 0; i < (int)CGame::MAX_SUGAR_RUSH_LEVEL; ++i)
+    {
+        const SDL_FRect rect{
+            .x = SCALEF * bx * (int)FONT_SIZE + SCALEF * i * 5,
+            .y = SCALEF * (Y_STATUS + 2),
+            .w = SCALEF * 4,
+            .h = SCALEF * 4};
+        if (static_cast<int>(i) < sugar || game.hasExtraSpeed())
+        {
+            if (sugar < SUGAR_CUBES && !game.hasExtraSpeed())
+            {
+                const uint8_t &idx = m_visualStates.sugarCubes[i];
+                drawRect(m_app.renderer, rect, sugarColors[idx], true);
+            }
+            else
+            {
+                drawRect(m_app.renderer, rect, sugarColors[m_visualStates.sugarFx], true);
+            }
+        }
+        else
+        {
+            drawRect(m_app.renderer, rect, SColor::WHITE, false);
+        }
+    }
+
+    // indicate sugar level
+    const int x = bx * (int)FONT_SIZE;
+    const int y = Y_STATUS + 2 + (int)FONT_SIZE;
+    char tmp[20];
+    snprintf(tmp, sizeof(tmp), "Lvl %d", m_game->stats().get(S_SUGAR_LEVEL) + 1);
+    // drawFont6x6(bitmap, x, y, tmp, WHITE, CLEAR);
+    g_font.drawText(
+        m_app.renderer,
+        tmp,
+        SColor::WHITE,
+        nullptr,
+        x * SCALE,
+        y * SCALE);
+
+    if (updateNow)
+    {
+        for (int i = 0; i < SUGAR_CUBES; ++i)
+        {
+            if (m_visualStates.sugarCubes[i])
+                --m_visualStates.sugarCubes[i];
+        }
+    }
+}
+
+void CRuntime::drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL_Color &color, const bool filled)
+{
+    // Save current draw color
+    Uint8 oldR, oldG, oldB, oldA;
+    SDL_GetRenderDrawColor(renderer, &oldR, &oldG, &oldB, &oldA);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    if (filled)
+    {
+        // filled  rectangle
+        SDL_RenderFillRect(renderer, &rect);
+    }
+    else
+    {
+        // outlined rectangle
+        SDL_RenderRect(renderer, &rect);
+    }
+
+    // Restore old draw color
+    SDL_SetRenderDrawColor(renderer, oldR, oldG, oldB, oldA);
+}
+
+void CRuntime::drawTile(const Tile *tile, const int x, const int y, const ColorMask &colorMask, const std::unordered_map<uint32_t, uint32_t> *colorMap)
+{
+    if (colorMask & COLOR_ALL_WHITE)
+    {
+    }
+
+    else if (colorMask & COLOR_INVERTED)
+    {
+    }
+
+    else if (colorMask & COLOR_GRAYSCALE)
+    {
+        SDL_SetTextureColorMod(tile->texture, 128, 128, 128);
+    }
+
+    else if (colorMask & COLOR_FADE)
+    {
+        SDL_SetTextureColorMod(tile->texture, 64, 64, 64);
+    }
+
+    SDL_FRect dst = {
+        (float)x * SCALE,
+        (float)y * SCALE,
+        tile->rect.w * SCALE,
+        tile->rect.h * SCALE};
+    SDL_RenderTexture(m_app.renderer, tile->texture, &tile->rect, &dst);
+
+    if (colorMask)
+    {
+        SDL_SetTextureColorMod(tile->texture, 255, 255, 255);
+    }
+}
+
+Tile *CRuntime::tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap)
+{
+    const CGame &game = *m_game;
+    Tile *tile;
+    if (tileID == TILES_STOP || tileID == TILES_BLANK || m_animator->isSpecialCase(tileID))
+    {
+        // skip blank tiles and special cases
+        tile = nullptr;
+    }
+    else if (tileID == TILES_ANNIE2)
+    {
+        const uint8_t userID = game.getUserID();
+        const uint32_t userBaseFrame = PLAYER_TOTAL_FRAMES * userID;
+        const int aim = game.playerConst().getAim();
+        // const CFrameSet &annie = *m_users;
+        if (!game.health())
+        {
+            // tile = annie[INDEX_PLAYER_DEAD * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
+            tile = m_tileset_users.getTile(INDEX_PLAYER_DEAD * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame);
+        }
+        else if (!game.goalCount() && game.isClosure())
+        {
+            // tile = annie[static_cast<uint8_t>(AIM_DOWN) * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
+            tile = m_tileset_users.getTile(static_cast<uint8_t>(AIM_DOWN) * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame);
+        }
+        else if (aim == AIM_DOWN && game.m_gameStats->get(S_IDLE_TIME) > IDLE_ACTIVATION)
+        {
+            const int idleTime = game.m_gameStats->get(S_IDLE_TIME);
+            const int idleFrame = PLAYER_IDLE_BASE + ((idleTime >> 4) & 3);
+            const int frame = idleTime & 0x08 ? idleFrame : static_cast<int>(PLAYER_DOWN_INDEX);
+            // tile = annie[frame + userBaseFrame];
+            tile = m_tileset_users.getTile(frame + userBaseFrame);
+        }
+        else if (game.m_gameStats->get(S_BOAT) != 0 && game.playerConst().getPU() == TILES_SWAMP)
+        {
+            // tile = annie[PLAYER_BOAT_FRAME + userBaseFrame];
+            tile = m_tileset_users.getTile(PLAYER_BOAT_FRAME + userBaseFrame);
+        }
+        else
+        {
+            // tile = annie[aim * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame];
+            tile = m_tileset_users.getTile(aim * PLAYER_FRAMES + m_playerFrameOffset + userBaseFrame);
+        }
+
+        const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
+        if (hurtStage == CGame::HurtFlash)
+            colorMask = COLOR_ALL_WHITE;
+        else if (hurtStage == CGame::HurtInv)
+            colorMask = COLOR_INVERTED;
+        else if (hurtStage == CGame::HurtFaz)
+            colorMask = COLOR_FADE;
+        else
+            colorMask = COLOR_NOCHANGE;
+
+        if (m_game->isFrozen())
+        {
+            colorMask = COLOR_GRAYSCALE;
+        }
+        else if (m_game->hasExtraSpeed())
+        {
+            colorMap = &m_colormaps.sugarRush;
+        }
+        else if (m_game->isGodMode())
+        {
+            colorMap = &m_colormaps.godMode;
+        }
+        else if (m_game->isRageMode())
+        {
+            colorMap = &m_colormaps.rage;
+        }
+    }
+    else
+    {
+        const uint16_t j = m_animator->at(tileID);
+        if (j == NO_ANIMZ)
+        {
+            //  const CFrameSet &tiles = *m_tiles;
+            // tile = tiles[tileID];
+            tile = m_tileset_tiles.getTile(tileID);
+        }
+        else
+        {
+            // const CFrameSet &animz = *m_animz;
+            // tile = animz[j];
+            tile = m_tileset_animz.getTile(j);
+        }
+    }
+    return tile;
+}
+
+void CRuntime::drawViewPortStatic()
+{
+    const CMap *map = &m_game->getMap();
+    const CGame &game = *m_game;
+
+    const int maxRows = getHeight() / TILE_SIZE;
+    const int maxCols = getWidth() / TILE_SIZE;
+    const int rows = std::min(maxRows, map->height());
+    const int cols = std::min(maxCols, map->width());
+
+    const int lmx = std::max(0, game.playerConst().x() - cols / 2);
+    const int lmy = std::max(0, game.playerConst().y() - rows / 2);
+    const int mx = std::min(lmx, map->width() > cols ? map->width() - cols : 0);
+    const int my = std::min(lmy, map->height() > rows ? map->height() - rows : 0);
+
+    //  bitmap.fill(BLACK);
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            uint8_t tileID = map->at(x + mx, y + my);
+            ColorMask colorMask = COLOR_NOCHANGE;
+            std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr;
+            // CFrame *tile = tile2Frame(tileID, inverted, colorMap);
+            Tile *tile = tile2Frame(tileID, colorMask, colorMap);
+            // LOGI("Tile: %p", tile);
+            if (tile)
+                drawTile(tile, x * TILE_SIZE, y * TILE_SIZE, colorMask, colorMap);
+        }
+    }
+
+    std::vector<sprite_t> sprites;
+    gatherSprites(sprites, {.mx = mx, .ox = 0, .my = my, .oy = 0});
+
+    ColorMask colorMask = COLOR_NOCHANGE;
+    for (const auto &sprite : sprites)
+    {
+        // special case animations
+        const int x = sprite.x - mx;
+        const int y = sprite.y - my;
+        // CFrame *tile = calcSpecialFrame(sprite);
+        Tile *tile = calcSpecialFrame(sprite);
+        // drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, true);
+        drawTile(tile, x * TILE_SIZE, y * TILE_SIZE, colorMask, nullptr);
+    }
+
+    // draw Bosses
+    /*
+    drawBossses(bitmap,
+                mx * CBoss::BOSS_GRANULAR_FACTOR,
+                my * CBoss::BOSS_GRANULAR_FACTOR,
+                maxCols * CBoss::BOSS_GRANULAR_FACTOR,
+                maxRows * CBoss::BOSS_GRANULAR_FACTOR);
+                */
+}
+
+Tile *CRuntime::calcSpecialFrame(const sprite_t &sprite)
+{
+    if (RANGE(sprite.attr, ATTR_IDLE_MIN, ATTR_IDLE_MAX))
+    {
+        // CFrameSet &tiles = *m_tiles;
+        // return tiles[sprite.tileID];
+        return m_tileset_tiles.getTile(sprite.tileID);
+    }
+    int saim = 0;
+    if (sprite.tileID < TILES_TOTAL_COUNT)
+    {
+        // safeguard
+        saim = sprite.aim;
+        const TileDef &def = getTileDef(sprite.tileID);
+        if (def.type == TYPE_DRONE)
+        {
+            saim &= 1;
+        }
+    }
+    /// CFrameSet &animz = *m_animz;
+    const animzInfo_t &info = m_animator->getSpecialInfo(sprite.tileID);
+    // if (sprite.tileID == SFX_FLAME)
+    {
+        // LOGI("info.base=%u", info.base);
+    }
+    // return animz[saim * info.frames + info.base + info.offset];
+    return m_tileset_animz.getTile(saim * info.frames + info.base + info.offset);
 }

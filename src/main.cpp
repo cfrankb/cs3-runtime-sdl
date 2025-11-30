@@ -264,7 +264,6 @@ int main(int argc, char *args[])
 
     g_runtime->setSkill(params.skill);
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
-    g_runtime->init(&maparch, startLevel);
     g_runtime->setStartLevel(startLevel);
     if (params.fullscreen)
     {
@@ -282,6 +281,7 @@ int main(int argc, char *args[])
     g_runtime->setHeight(params.height);
     if (!g_runtime->createSDLWindow())
         return EXIT_FAILURE;
+    g_runtime->init(&maparch, startLevel);
     g_runtime->debugSDL();
     g_runtime->initOptions();
     g_runtime->preRun();
