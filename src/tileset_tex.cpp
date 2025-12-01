@@ -6,14 +6,22 @@
 #include "logger.h"
 
 TileSet::TileSet()
+    : m_texture(nullptr), m_frame{nullptr}
 {
-    m_texture = nullptr;
 }
 
-TileSet ::~TileSet()
+TileSet::~TileSet()
 {
     if (m_texture)
         SDL_DestroyTexture(m_texture);
+
+    if (m_frame)
+        delete m_frame;
+
+    for (auto &[mask, texture] : m_textures)
+    {
+        SDL_DestroyTexture(texture);
+    }
 }
 
 bool TileSet::load(SDL_Renderer *renderer, const std::string_view &filename, const int sx, const int sy)
@@ -34,36 +42,56 @@ bool TileSet::load(SDL_Renderer *renderer, const std::string_view &filename, con
     }
     file.close();
 
-    return load(renderer, set[0], sx, sy);
+    if (set.getSize() == 0)
+        return false;
+
+    m_frame = set.removeAt(0); // detach frame
+
+    return load(renderer, m_frame, sx, sy);
 }
 
 bool TileSet::load(SDL_Renderer *renderer, CFrame *frame, const int sx, const int sy)
 {
-    m_tiles.clear();
-    m_texture = createTexture(renderer, frame);
+    m_frame = frame;
+    m_sx = sx;
+    m_sy = sy;
+    m_texture = createTexture(renderer, m_frame);
     if (!m_texture)
-        return false;
-
-    int rows = frame->height() / sy;
-    int cols = frame->width() / sx;
-    m_tiles.reserve(rows * cols);
-    for (float y = 0; y < rows; ++y)
     {
-        for (float x = 0; x < cols; ++x)
-        {
-            SDL_FRect rect{x * sx, y * sy, static_cast<float>(sx), static_cast<float>(sy)};
-            m_tiles.emplace_back(std::move(Tile{m_texture, rect}));
-        }
+        LOGE("create texture failed. sx: %d sy: %d", sx, sy);
+        return false;
     }
 
-    LOGI("TileSet::load() count %lu", m_tiles.size());
+    SDL_SetTextureScaleMode(m_texture, SDL_SCALEMODE_NEAREST);
 
+    return saveTiles(m_texture, m_tiles, m_frame);
+}
+
+bool TileSet::saveTiles(SDL_Texture *texture, std::vector<Tile> &tiles, CFrame *frame)
+{
+    int rows = frame->height() / m_sy;
+    int cols = frame->width() / m_sx;
+    tiles.clear();
+    tiles.reserve(rows * cols);
+    for (int y = 0; y < rows; ++y)
+    {
+        for (int x = 0; x < cols; ++x)
+        {
+            SDL_FRect rect{float(x * m_sx), float(y * m_sy),
+                           static_cast<float>(m_sx), static_cast<float>(m_sy)};
+            tiles.emplace_back(Tile{texture, rect});
+        }
+    }
+    LOGI("TileSet::load() count %zu", m_tiles.size());
     return true;
 }
 
 SDL_Texture *TileSet::createTexture(SDL_Renderer *renderer, CFrame *frame)
 {
-    // --- Create a texture with SDL_PIXELFORMAT_ABGR8888 pixels ---
+    if (!renderer || !frame)
+        return nullptr;
+
+    // --- Create a single texture for the whole frame ---
     SDL_PropertiesID texProps = SDL_CreateProperties();
     SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width());
     SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height());
@@ -74,10 +102,13 @@ SDL_Texture *TileSet::createTexture(SDL_Renderer *renderer, CFrame *frame)
     if (!texture)
         return nullptr;
 
-    int pitch = frame->width() * sizeof(uint32_t); // 4 bytes per pixel
+    const int pitch = frame->width() * sizeof(uint32_t); // 4 bytes per pixel
     if (!SDL_UpdateTexture(texture, nullptr, frame->getRGB().data(), pitch))
     {
         LOGE("SDL_UpdateTexture failed: %s", SDL_GetError());
+        SDL_DestroyTexture(texture);
+        return nullptr;
     }
+
     return texture;
 }

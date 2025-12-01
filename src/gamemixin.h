@@ -31,6 +31,7 @@
 #include "gameui.h"
 #include "rect.h"
 #include "color.h"
+#include "colormasks.h"
 #include "shared/FileWrap.h"
 
 class CActor;
@@ -113,15 +114,6 @@ protected:
         MIN_WIDTH_FULL = 320,
         SUGAR_CUBES = 5,
         SCREEN_SHAKES = 4,
-    };
-
-    enum ColorMask : uint8_t
-    {
-        COLOR_NOCHANGE,
-        COLOR_FADE,
-        COLOR_INVERTED,
-        COLOR_GRAYSCALE,
-        COLOR_ALL_WHITE,
     };
 
     enum KeyCode : uint8_t

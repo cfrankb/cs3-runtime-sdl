@@ -277,15 +277,34 @@ private:
     void drawPreScreen();
     void drawLevelIntro();
     SDL_Texture *createTexture(SDL_Renderer *renderer, CFrame *frame);
-    void drawTile(const Tile *tile, const int x, const int y, const ColorMask &colorMask, const std::unordered_map<uint32_t, uint32_t> *colorMap);
     void drawViewPortStatic();
-    Tile *tile2Frame(const uint8_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
-    Tile *calcSpecialFrame(const sprite_t &sprite);
+    void drawViewPortDynamic();
+    void drawScroll();
+    void drawEventText();
+    void drawTimeout();
+    void preloadHearts();
+    void drawHealthBar(const bool isPlayerHurt);
+    void drawKeys();
+    const Tile *tile2Frame(const uint8_t tileID);
+    const Tile *calcSpecialFrame(const sprite_t &sprite);
+
+    inline void drawTile(const Tile *tile, const int x, const int y)
+    {
+        constexpr const int SCALE = 2;
+        SDL_FRect dst = {
+            (float)x * SCALE,
+            (float)y * SCALE,
+            tile->rect.w * SCALE,
+            tile->rect.h * SCALE};
+        SDL_RenderTexture(m_app.renderer, tile->texture, &tile->rect, &dst);
+    }
 
     SDL_Texture *m_textureTitlePix;
     TileSet m_tileset_tiles;
     TileSet m_tileset_animz;
     TileSet m_tileset_users;
+    TileSet m_tileset_scroll;
+    TileSet m_tileset_hearts;
 
 #ifdef __EMSCRIPTEN__
     void mountFS();
