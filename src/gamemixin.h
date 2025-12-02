@@ -242,7 +242,6 @@ protected:
     std::unique_ptr<CFrameSet> m_tiles;
     std::unique_ptr<CFrameSet> m_animz;
     std::unique_ptr<CFrameSet> m_users;
-    // std::unique_ptr<CFrameSet> m_bosses;
     std::unique_ptr<CFrameSet> m_sheet0;
     std::unique_ptr<CFrameSet> m_sheet1;
     std::unique_ptr<CFrameSet> m_uisheet;

@@ -70,23 +70,23 @@ BitmapFont8x8 g_font;
 
 namespace SColor
 {
-    constexpr SDL_Color WHITE{255, 255, 255, 255};
-    constexpr SDL_Color YELLOW{255, 255, 0, 255};
-    constexpr SDL_Color CYAN{0, 255, 255, 255};
-    constexpr SDL_Color GREEN{0, 255, 0, 255};
-    constexpr SDL_Color PURPLE{255, 0, 255, 255};
-    constexpr SDL_Color LIGHTGRAY{0xa9, 0xa9, 0xa9, 0xff};
-    constexpr SDL_Color DEEPSKYBLUE(0x00, 0xBF, 0xFF, 0xff);
-    constexpr SDL_Color BLACK(0x00, 0x00, 0x00, 0xff);
-    constexpr SDL_Color DARKGREEN(0, 128, 0, 255);
-    constexpr SDL_Color RED(255, 0, 0, 255);
-    constexpr SDL_Color ORANGE(0xf5, 0x9b, 0x14, 255);     // #f59b14
-    constexpr SDL_Color DARKORANGE(0xff, 0x8c, 0x00, 255); // #ff8c00
-    constexpr SDL_Color CORAL(0xff, 0x7f, 0x50, 255);      // #ff7f50
-    constexpr SDL_Color PINK(0xff, 0xc0, 0xcb, 255);       // #ffc0cb
-    constexpr SDL_Color HOTPINK(0xff, 0x69, 0xb4, 255);    // #ff69b4
-    constexpr SDL_Color DEEPPINK(0xff, 0x14, 0x93, 255);
-    constexpr SDL_Color DARKGRAY(0x44, 0x44, 0x44, 255);
+    constexpr SDL_Color WHITE{255, 255, 255, 255};           // #ffffff
+    constexpr SDL_Color YELLOW{255, 255, 0, 255};            // #ffff00
+    constexpr SDL_Color CYAN{0, 255, 255, 255};              // #00ffff
+    constexpr SDL_Color GREEN{0, 255, 0, 255};               // #00ff00
+    constexpr SDL_Color PURPLE{255, 0, 255, 255};            // #ff00ff
+    constexpr SDL_Color LIGHTGRAY{0xa9, 0xa9, 0xa9, 0xff};   // #a9a9a9
+    constexpr SDL_Color DEEPSKYBLUE(0x00, 0xBF, 0xFF, 0xff); // #00bfff
+    constexpr SDL_Color BLACK(0x00, 0x00, 0x00, 0xff);       // #000000
+    constexpr SDL_Color DARKGREEN(0, 128, 0, 255);           // #008000
+    constexpr SDL_Color RED(255, 0, 0, 255);                 // #ff0000
+    constexpr SDL_Color ORANGE(0xf5, 0x9b, 0x14, 255);       // #f59b14
+    constexpr SDL_Color DARKORANGE(0xff, 0x8c, 0x00, 255);   // #ff8c00
+    constexpr SDL_Color CORAL(0xff, 0x7f, 0x50, 255);        // #ff7f50
+    constexpr SDL_Color PINK(0xff, 0xc0, 0xcb, 255);         // #ffc0cb
+    constexpr SDL_Color HOTPINK(0xff, 0x69, 0xb4, 255);      // #ff69b4
+    constexpr SDL_Color DEEPPINK(0xff, 0x14, 0x93, 255);     // #ff1493
+    constexpr SDL_Color DARKGRAY(0x44, 0x44, 0x44, 255);     // #444444
 
     auto toSColor = [](const uint32_t c) -> SDL_Color
     {
