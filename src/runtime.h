@@ -273,29 +273,34 @@ private:
     void drawGameStatus(const visualCues_t &visualcues);
     void drawSugarMeter(const int bx);
     void drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL_Color &color, const bool filled);
+    void drawMenu(CMenu &menu, const int baseX, const int baseY);
 
     void drawPreScreen();
     void drawLevelIntro();
     SDL_Texture *createTexture(SDL_Renderer *renderer, CFrame *frame);
     void drawViewPortStatic();
     void drawViewPortDynamic();
+    void drawBossses(const int mx, const int my, const int sx, const int sy);
     void drawScroll();
     void drawEventText();
     void drawTimeout();
     void preloadHearts();
     void drawHealthBar(const bool isPlayerHurt);
+    void fazeScreen();
+    void flashScreen();
     void drawKeys();
     const Tile *tile2Frame(const uint8_t tileID);
     const Tile *calcSpecialFrame(const sprite_t &sprite);
 
     inline void drawTile(const Tile *tile, const int x, const int y)
     {
-        constexpr const int SCALE = 2;
+        constexpr const float SCALE = 2;
         SDL_FRect dst = {
             (float)x * SCALE,
             (float)y * SCALE,
-            tile->rect.w * SCALE,
-            tile->rect.h * SCALE};
+            tile->sw, //  tile->rect.w * SCALE,
+            tile->sh, // tile->rect.h * SCALE
+        };
         SDL_RenderTexture(m_app.renderer, tile->texture, &tile->rect, &dst);
     }
 
@@ -305,6 +310,8 @@ private:
     TileSet m_tileset_users;
     TileSet m_tileset_scroll;
     TileSet m_tileset_hearts;
+    TileSet m_tileset_sheet0;
+    TileSet m_tileset_sheet1;
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

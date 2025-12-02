@@ -1,3 +1,21 @@
+/*
+    cs3-runtime-sdl
+    Copyright (C) 2025  Francois Blanchette
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "tileset_tex.h"
 #include "shared/Frame.h"
 #include "shared/FrameSet.h"
@@ -8,6 +26,9 @@
 TileSet::TileSet()
     : m_texture(nullptr), m_frame{nullptr}
 {
+    m_sx = 0;
+    m_sy = 0;
+    m_scale = 2;
 }
 
 TileSet::~TileSet()
@@ -67,6 +88,49 @@ bool TileSet::load(SDL_Renderer *renderer, CFrame *frame, const int sx, const in
     return saveTiles(m_texture, m_tiles, m_frame);
 }
 
+bool TileSet::load(SDL_Renderer *renderer, const std::string_view &filename, std::vector<tileinfo_t> tiledata)
+{
+    LOGI("extracting texture from %s", filename.data());
+    CFileWrap file;
+    if (!file.open(filename, "rb"))
+    {
+        LOGE("can't open %s", filename.data());
+        return false;
+    }
+
+    CFrameSet set;
+    if (!parsePNG(set, file, 0, true))
+    {
+        LOGE("fail to parse %s", filename.data());
+        return false;
+    }
+    file.close();
+
+    if (set.getSize() == 0)
+        return false;
+
+    m_frame = set.removeAt(0); // detach frame
+
+    m_texture = createTexture(renderer, m_frame);
+    if (!m_texture)
+    {
+        LOGE("create texture failed.");
+        return false;
+    }
+
+    SDL_SetTextureScaleMode(m_texture, SDL_SCALEMODE_NEAREST);
+
+    for (const auto &data : tiledata)
+    {
+        SDL_FRect rect{float(data.x), float(data.y),
+                       static_cast<float>(data.w), static_cast<float>(data.h)};
+        m_tiles.emplace_back(Tile{
+            m_texture, rect, rect.w * m_scale, rect.h * m_scale});
+    }
+
+    return true;
+}
+
 bool TileSet::saveTiles(SDL_Texture *texture, std::vector<Tile> &tiles, CFrame *frame)
 {
     int rows = frame->height() / m_sy;
@@ -79,7 +143,7 @@ bool TileSet::saveTiles(SDL_Texture *texture, std::vector<Tile> &tiles, CFrame *
         {
             SDL_FRect rect{float(x * m_sx), float(y * m_sy),
                            static_cast<float>(m_sx), static_cast<float>(m_sy)};
-            tiles.emplace_back(Tile{texture, rect});
+            tiles.emplace_back(Tile{texture, rect, rect.w * m_scale, rect.h * m_scale});
         }
     }
     LOGI("TileSet::load() count %zu", m_tiles.size());

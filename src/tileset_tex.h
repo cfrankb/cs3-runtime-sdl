@@ -1,3 +1,21 @@
+/*
+    cs3-runtime-sdl
+    Copyright (C) 2025  Francois Blanchette
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 #include <cstdint>
 #include <vector>
@@ -7,6 +25,7 @@
 #include "logger.h"
 #include "colormasks.h"
 #include "shared/Frame.h"
+#include "sheetdata.h"
 
 class CFrame;
 
@@ -14,8 +33,8 @@ struct Tile
 {
     SDL_Texture *texture;
     SDL_FRect rect;
-
-    Tile(SDL_Texture *t, SDL_FRect r) : texture(t), rect(r) {}
+    float sw;
+    float sh;
 };
 
 struct bgra_t
@@ -34,6 +53,7 @@ public:
 
     bool load(SDL_Renderer *renderer, const std::string_view &filename, const int sx, const int sy);
     bool load(SDL_Renderer *renderer, CFrame *frame, const int sx, const int sy);
+    bool load(SDL_Renderer *renderer, const std::string_view &filename, std::vector<tileinfo_t>);
 
     inline const Tile *getTile(size_t id, const ColorMask colorMask = ColorMask::COLOR_NOCHANGE)
     {
@@ -83,10 +103,11 @@ private:
     bool saveTiles(SDL_Texture *texture, std::vector<Tile> &tiles, CFrame *frame);
 
 private:
+    int m_scale;
     int m_sx;
     int m_sy;
-    CFrame *m_frame;
     SDL_Texture *m_texture;
+    CFrame *m_frame;
     std::vector<Tile> m_tiles;
     std::unordered_map<ColorMask, std::vector<Tile>> m_cache;
     std::unordered_map<ColorMask, SDL_Texture *> m_textures;

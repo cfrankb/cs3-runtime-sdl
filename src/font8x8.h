@@ -153,7 +153,7 @@ private:
         COLS = 16,
         ROWS = 16,
         FONT_SIZE = 8,
-        CHARS = 95
+        CHARS = 128
     };
     uint8_t raw[CHARS][FONT_SIZE]{};
     SDL_Texture *m_texture = nullptr;

@@ -50,6 +50,8 @@
 #include "animator.h"
 #include "gamesfx.h"
 #include "states.h"
+#include "sheetdata.h"
+#include "boss.h"
 
 #define _f(x) static_cast<float>(x)
 
@@ -950,6 +952,7 @@ void CRuntime::preloadAssets()
         parseHelp(reinterpret_cast<char *>(data.data()));
     }
 
+    /////////////////////////////////////////////////////////////////////////////////
     // SDL3 hardware
 
     if (!g_font.loadRawFont("data/bitfont.bin"))
@@ -1000,6 +1003,9 @@ void CRuntime::preloadAssets()
                                       color = WHITE;
                                   //
                               });
+
+    m_tileset_sheet0.load(m_app.renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[3], sheet0_data);
+    m_tileset_sheet1.load(m_app.renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[4], sheet1_data);
 
     preloadHearts();
 }
@@ -3044,11 +3050,10 @@ void CRuntime::drawScreen()
     {
         drawViewPortStatic();
     }
-    // drawViewPortStatic();
 
-    // const int flash = game.statsConst().at(S_FLASH);
-    // if (flash)
-    //     flashScreen(bitmap);
+    const int flash = game.statsConst().at(S_FLASH);
+    if (flash)
+        flashScreen();
 
     const int hurtStage = game.statsConst().at(S_PLAYER_HURT);
     const bool isPlayerHurt = hurtStage != CGame::HurtNone;
@@ -3076,11 +3081,12 @@ void CRuntime::drawScreen()
     }
     else if (m_currentEvent == EVENT_SUGAR)
     {
+        constexpr const float tileSize = TILE_SIZE;
         const SDL_Color bgColor = isFullWidth && m_currentEvent >= MSG0 ? SColor::WHITE : SColor::DARKGRAY;
         const SDL_Color borderColor = isPlayerHurt              ? SColor::PINK
                                       : visualcues.livesShimmer ? SColor::GREEN
                                                                 : SColor::LIGHTGRAY;
-        SDL_FRect rect{0, SCALEF * (getHeight() - TILE_SIZE), SCALEF * getWidth(), SCALEF * TILE_SIZE};
+        SDL_FRect rect{0, SCALEF * (getHeight() - tileSize), SCALEF * getWidth(), SCALEF * tileSize};
         drawRect(m_app.renderer, rect, bgColor, true);
         drawRect(m_app.renderer, rect, borderColor, false);
     }
@@ -3104,14 +3110,12 @@ void CRuntime::drawScreen()
     // draw timeout
     drawTimeout();
 
-    /*
     if (m_gameMenuActive)
     {
-        fazeScreen(bitmap, 2);
+        fazeScreen();
         resizeGameMenu();
-        drawMenu(bitmap, *m_gameMenu, -1, (getHeight() - m_gameMenu->height()) / 2);
+        drawMenu(*m_gameMenu, -1, (getHeight() - m_gameMenu->height()) / 2);
     }
-        */
 }
 
 void CRuntime::drawGameStatus(const visualCues_t &visualcues)
@@ -3426,13 +3430,11 @@ void CRuntime::drawViewPortStatic()
     }
 
     // draw Bosses
-    /*
-    drawBossses(bitmap,
-                mx * CBoss::BOSS_GRANULAR_FACTOR,
-                my * CBoss::BOSS_GRANULAR_FACTOR,
-                maxCols * CBoss::BOSS_GRANULAR_FACTOR,
-                maxRows * CBoss::BOSS_GRANULAR_FACTOR);
-                */
+    drawBossses(
+        mx * CBoss::BOSS_GRANULAR_FACTOR,
+        my * CBoss::BOSS_GRANULAR_FACTOR,
+        maxCols * CBoss::BOSS_GRANULAR_FACTOR,
+        maxRows * CBoss::BOSS_GRANULAR_FACTOR);
 }
 
 const Tile *CRuntime::calcSpecialFrame(const sprite_t &sprite)
@@ -3515,11 +3517,14 @@ void CRuntime::drawTimeout()
 
 void CRuntime::preloadHearts()
 {
+    LOGI("preloadHearts");
+
     CFrame *bitmap = new CFrame((FONT_SIZE + 1) * FONT_SIZE, 3 * FONT_SIZE);
 
-    auto drawHeart = [&bitmap](auto bx, auto by, auto health, auto color)
+    auto drawHeart = [&bitmap, this](auto bx, auto by, auto health, auto color)
     {
-        const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
+        //      const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
+        const uint8_t *heart = m_fontData.data() + (CHARS_HEART - CHARS_CUSTOM + CHARS_CUSTOM_BASE) * FONT_SIZE;
         for (uint32_t y = 0; y < FONT_SIZE; ++y)
         {
             for (uint32_t x = 0; x < FONT_SIZE; ++x)
@@ -3543,9 +3548,9 @@ void CRuntime::preloadHearts()
 
 void CRuntime::drawHealthBar(const bool isPlayerHurt)
 {
-    const int RED_HEARTS = 0;
-    const int PINK_HEARTS = FONT_SIZE + 1;
-    const int WHITE_HEARTS = PINK_HEARTS * 2;
+    constexpr const int RED_HEARTS = 0;
+    constexpr const int PINK_HEARTS = FONT_SIZE + 1;
+    constexpr const int WHITE_HEARTS = PINK_HEARTS * 2;
 
     uint32_t baseID = RED_HEARTS;
     if (m_game->isGodMode())
@@ -3566,7 +3571,7 @@ void CRuntime::drawHealthBar(const bool isPlayerHurt)
     int by = getHeight() - 12;
     for (int i = 0; i < maxHealth; ++i)
     {
-        auto hearts = std::min(health, static_cast<int>(FONT_SIZE));
+        auto hearts = health > 0 ? std::min(health, static_cast<int>(FONT_SIZE)) : 0;
         const Tile *tile = m_tileset_hearts.getTile(hearts + baseID);
         if (tile)
             drawTile(tile, bx, by);
@@ -3624,7 +3629,6 @@ void CRuntime::drawKeys()
 
 void CRuntime::drawViewPortDynamic()
 {
-
     const CMap *map = &m_game->getMap();
     const int maxRows = getHeight() / TILE_SIZE;
     const int maxCols = getWidth() / TILE_SIZE;
@@ -3674,5 +3678,219 @@ void CRuntime::drawViewPortDynamic()
     }
 
     // draw Bosses
-    //  drawBossses(bitmap, m_cx, m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
+    drawBossses(m_cx, m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
+}
+
+void CRuntime::drawBossses(const int mx, const int my, const int sx, const int sy)
+{
+    auto between = [](int a1, int a2, int b1, int b2)
+    {
+        return a1 < b2 && a2 > b1;
+    };
+
+    auto betweenRect = [&between](const rect_t &bRect, const rect_t &sRect)
+    {
+        return between(bRect.x, bRect.x + bRect.width, sRect.x, sRect.x + sRect.width) &&
+               between(bRect.y, bRect.y + bRect.height, sRect.y, sRect.y + sRect.height);
+    };
+
+    auto printRect = [](const rect_t &rect, const std::string_view &name)
+    {
+        LOGI("%s (%d, %d) w:%d h: %d", name.data(), rect.x, rect.y, rect.width, rect.height);
+    };
+
+    (void)printRect;
+
+    constexpr int MAX_HP_GAUGE = 64;
+    constexpr int GRID_SIZE = 8;
+    constexpr int HP_BAR_HEIGHT = 8;
+    constexpr int HP_BAR_SPACING = 2;
+
+    // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
+    for (const auto &boss : m_game->bosses())
+    {
+        // don't process completed bosses
+        if (boss.isDone())
+            continue;
+
+        TileSet *tileset = nullptr;
+        if (boss.data()->sheet == 0)
+        {
+            tileset = &m_tileset_sheet0;
+        }
+        else if (boss.data()->sheet == 1)
+        {
+            tileset = &m_tileset_sheet1;
+        }
+        else
+        {
+            LOGE("invalid sheet: %d", boss.data()->sheet);
+            continue;
+        }
+
+        const int num = boss.currentFrame();
+        const Tile *tile = tileset->getTile(num);
+        if (!tile)
+            continue;
+        const hitbox_t &hitbox = boss.hitbox();
+
+        // Logical coordonates comverted to screen positions
+        // (using GRID_SIZE)
+
+        // Boss Rect
+        const rect_t bRect{
+            GRID_SIZE * (boss.x() - hitbox.x),
+            GRID_SIZE * (boss.y() - hitbox.y),
+            (int)tile->rect.w,
+            (int)tile->rect.h};
+
+        // Screen Rect
+        const rect_t sRect{
+            .x = GRID_SIZE * mx,
+            .y = GRID_SIZE * my,
+            .width = GRID_SIZE * sx,
+            .height = GRID_SIZE * sy,
+        };
+
+        if (betweenRect(bRect, sRect))
+        {
+            const int x = bRect.x - sRect.x;
+            const int y = bRect.y - sRect.y;
+            // draw boss
+            drawTile(tile, x, y);
+        }
+
+        // skip drawing the healthbar and name
+        if (!boss.data()->show_details)
+            continue;
+
+        // Hp Rect
+        const float hpRatio = (float)boss.maxHp() / MAX_HP_GAUGE;
+        const rect_t hRect{
+            .x = bRect.x,
+            .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
+            .width = MAX_HP_GAUGE, // boss.maxHp(),
+            .height = HP_BAR_HEIGHT,
+        };
+        if (betweenRect(hRect, sRect))
+        {
+            const float x = hRect.x - sRect.x;
+            const float y = hRect.y - sRect.y;
+            SDL_FRect rect{x * SCALEF, y * SCALEF, hRect.width * SCALEF, hRect.height * SCALEF};
+            SDL_FRect rectH{x * SCALEF, y * SCALEF, static_cast<int>(boss.hp() / hpRatio) * SCALEF, hRect.height * SCALEF};
+            drawRect(m_app.renderer, rect, SColor::BLACK, true);
+            drawRect(m_app.renderer, rectH, SColor::ORANGE, true);
+            drawRect(m_app.renderer, rect, SColor::WHITE, false);
+        }
+
+        // draw Boss Name
+        const int x = hRect.x - sRect.x;
+        const int y = hRect.y - sRect.y - FONT_SIZE;
+        g_font.drawText(m_app.renderer, boss.name(), SColor::ORANGE, nullptr, x * SCALE, y * SCALE, 1, 1);
+    }
+}
+
+void CRuntime::fazeScreen()
+{
+    // save default
+    SDL_BlendMode oldMode = 0;
+    SDL_GetRenderDrawBlendMode(m_app.renderer, &oldMode);
+
+    SDL_SetRenderDrawBlendMode(m_app.renderer, SDL_BLENDMODE_BLEND);
+    SDL_Color color{0, 0, 0, 0xe0};
+    SDL_FRect rect{0, 0, getWidth() * SCALEF, getHeight() * SCALEF};
+    drawRect(m_app.renderer, rect, color, true);
+
+    // restore
+    SDL_SetRenderDrawBlendMode(m_app.renderer, oldMode);
+}
+
+void CRuntime::flashScreen()
+{
+    // save default
+    SDL_BlendMode oldMode;
+    SDL_GetRenderDrawBlendMode(m_app.renderer, &oldMode);
+
+    SDL_SetRenderDrawBlendMode(m_app.renderer, SDL_BLENDMODE_ADD);
+    SDL_SetRenderDrawColor(m_app.renderer, 255, 255, 255, 255);
+
+    SDL_FRect rect{0, 0, getWidth() * SCALEF, getHeight() * SCALEF};
+    SDL_RenderFillRect(m_app.renderer, &rect);
+
+    // restore
+    SDL_SetRenderDrawBlendMode(m_app.renderer, oldMode);
+}
+
+/**
+ * @brief Draw Menu at coordinates baseX, baseY
+ *
+ * @param bitmap
+ * @param menu
+ * @param baseX
+ * @param baseY
+ */
+void CRuntime::drawMenu(CMenu &menu, const int baseX, const int baseY)
+{
+    m_lastMenu = &menu;
+    m_lastMenuBaseY = baseY;
+    m_lastMenuBaseX = baseX;
+
+    const int scaleX = menu.scaleX();
+    const int scaleY = menu.scaleY();
+    const int paddingY = menu.paddingY();
+    const int spacingY = scaleY * FONT_SIZE + paddingY;
+    for (size_t i = 0; i < menu.size(); ++i)
+    {
+        const CMenuItem &item = menu.at(i);
+        const std::string &text = item.str();
+        const int bx = baseX == -1 ? (getWidth() - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
+        const bool selected = static_cast<int>(i) == menu.index();
+        Color color = selected ? YELLOW : BLUE;
+        if (item.isDisabled())
+        {
+            color = LIGHTGRAY;
+        }
+        int x = bx;
+        const int y = baseY + i * spacingY;
+        if (static_cast<int>(i) == menu.index() && !menu.isCaretDisabled())
+        {
+            // draw red triangle
+            uint8_t tmp[2];
+            tmp[0] = CHARS_TRIGHT - CHARS_CUSTOM + CHARS_CUSTOM_BASE + ' ';
+            tmp[1] = '\0';
+            g_font.drawText(m_app.renderer, (char *)tmp, SColor::RED, nullptr, 32 * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
+            // drawFont(bitmap, 32, y, (char *)tmp, RED, CLEAR, scaleX, scaleY);
+        }
+        if (item.type() == CMenuItem::ITEM_BAR)
+        {
+            const int scaleX = 1;
+            size_t len = 0;
+            for (size_t j = 0; j < item.size(); ++j)
+                len += item.option(j).size() + (size_t)(j != 0);
+
+            x = (getWidth() - len * FONT_SIZE * scaleX) / 2;
+            for (size_t j = 0; j < item.size(); ++j)
+            {
+                const Color color = selected && (j == (size_t)item.value()) ? YELLOW : BLUE;
+                const std::string option = item.option(j);
+                //                drawFont(bitmap, x, y, option.c_str(), BLACK, color, scaleX, scaleY);
+                g_font.drawText(m_app.renderer, option.c_str(), SColor::toSColor(color), nullptr, x * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
+                x += (FONT_SIZE + 1) * option.size() * scaleX;
+            }
+            continue;
+        }
+        else if (item.role() == MENU_ITEM_SELECT_USER)
+        {
+            const uint16_t animeOffset = selected ? (m_ticks / 3) & 0x1f : 0;
+            // const CFrameSet &users = *m_users;
+            // CFrame &frame = *users[PLAYER_TOTAL_FRAMES * item.userData() + PLAYER_DOWN_INDEX + animeOffset];
+            // drawTileFaz(bitmap, x, y, frame, 0, selected ? COLOR_NOCHANGE : COLOR_GRAYSCALE);
+            const Tile *tile = m_tileset_users.getTile(PLAYER_TOTAL_FRAMES * item.userData() + PLAYER_DOWN_INDEX + animeOffset,
+                                                       selected ? COLOR_NOCHANGE : COLOR_GRAYSCALE);
+            drawTile(tile, x, y);
+            x += 32;
+        }
+        // drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
+        g_font.drawText(m_app.renderer, text.c_str(), SColor::toSColor(color), nullptr, x * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
+    }
 }

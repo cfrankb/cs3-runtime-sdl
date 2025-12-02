@@ -104,8 +104,12 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
     for (int i = 0; i < textSize; ++i)
     {
         uint8_t c = static_cast<uint8_t>(text[i]);
-        const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+        // const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+        //                                       : m_fontData.data() + (c - ' ') * fontOffset;
+
+        const uint8_t *font = c >= CHARS_CUSTOM ? m_fontData.data() + (c - CHARS_CUSTOM + CHARS_CUSTOM_BASE) * fontOffset
                                                 : m_fontData.data() + (c - ' ') * fontOffset;
+
         for (int yy = 0; yy < fontSize; ++yy)
         {
             for (int xx = 0; xx < fontSize; ++xx)
@@ -153,7 +157,10 @@ void CGameMixin::drawFont6x6(CFrame &bitmap, int x, int y, const char *text, con
     for (int i = 0; i < textSize; ++i)
     {
         const uint8_t c = static_cast<uint8_t>(text[i]);
-        const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+        //   const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
+        //                                         : m_fontData.data() + (c - ' ') * fontOffset;
+
+        const uint8_t *font = c >= CHARS_CUSTOM ? m_fontData.data() + (c - CHARS_CUSTOM + CHARS_CUSTOM_BASE) * fontOffset
                                                 : m_fontData.data() + (c - ' ') * fontOffset;
 
         for (int row = 0; row < fontSize; ++row)
@@ -2367,9 +2374,10 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
 {
     const uint32_t color = m_game->isGodMode() ? WHITE : isPlayerHurt ? PINK
                                                                       : RED;
-    auto drawHearth = [&bitmap, color](auto bx, auto by, auto health)
+    auto drawHearth = [&bitmap, color, this](auto bx, auto by, auto health)
     {
-        const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
+        // const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
+        const uint8_t *heart = m_fontData.data() + (CHARS_CUSTOM_BASE + CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
         for (uint32_t y = 0; y < FONT_SIZE; ++y)
         {
             for (uint32_t x = 0; x < FONT_SIZE; ++x)
