@@ -42,6 +42,7 @@
 #include "boss.h"
 #include "gamesfx.h"
 #include "tilesdefs.h"
+#include "menumanager.h"
 
 // Check windows
 #ifdef _WIN64
@@ -76,6 +77,7 @@ CGameMixin::CGameMixin()
     initUI();
     _WIDTH = DEFAULT_WIDTH;
     _HEIGHT = DEFAULT_HEIGHT;
+    m_menus = std::make_unique<MenuManager>();
 }
 
 CGameMixin::~CGameMixin()
@@ -1239,7 +1241,8 @@ void CGameMixin::manageGamePlay()
         return;
     }
 
-    if (m_gameMenuActive)
+    // if (m_gameMenuActive)
+    if (m_menus->isMenuActive(MENUID_GAMEMENU))
     {
         // disable loop while menu is active
         manageGameMenu();

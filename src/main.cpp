@@ -281,6 +281,7 @@ int main(int argc, char *args[])
     g_runtime->setHeight(params.height);
     if (!g_runtime->createSDLWindow())
         return EXIT_FAILURE;
+    g_runtime->initEngine();
     g_runtime->init(&maparch, startLevel);
     g_runtime->debugSDL();
     g_runtime->initOptions();

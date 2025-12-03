@@ -25,11 +25,14 @@
 #include <unordered_map>
 #include "shared/interfaces/ISound.h"
 #include "tileset_tex.h"
+#include "summary.h"
 
 class ISound;
 class CFrameSet;
 class CMenu;
 class CGameUI;
+class EngineHW;
+class MenuManager;
 typedef std::vector<std::string> StringVector;
 
 struct Rez
@@ -66,6 +69,7 @@ public:
     bool checkMusicFiles();
     void loadColorMaps(const int userID);
     bool createSDLWindow();
+    void initEngine();
     Rez getScreenSize();
     Rez getWindowSize();
     rect_t getSafeAreaWindow();
@@ -87,14 +91,6 @@ private:
         int windowedWidth;
         int windowedHeigth;
     } App;
-
-    struct Summary
-    {
-        int ppFruits;
-        int ppBonuses;
-        int ppSecrets;
-        int timeTaken;
-    };
 
     struct posF_t
     {
@@ -132,11 +128,7 @@ private:
 
     std::unique_ptr<IMusic> m_music;
     std::shared_ptr<ISound> m_sound;
-    std::unique_ptr<CMenu> m_mainMenu;
-    std::unique_ptr<CMenu> m_gameMenu;
-    std::unique_ptr<CMenu> m_optionMenu;
-    std::unique_ptr<CMenu> m_userMenu;
-    std::unique_ptr<CMenu> m_skillMenu;
+
     std::unique_ptr<CFrameSet> m_titlePix;
     bool m_musicEnabled = false;
     App m_app;
@@ -162,9 +154,6 @@ private:
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
     Summary m_summary;
-    int m_lastMenuBaseY = 0;
-    int m_lastMenuBaseX = 0;
-    CMenu *m_lastMenu = nullptr;
     uint8_t m_mouseButtons[3];
     CGameUI *m_virtualKeyboard;
     std::string m_input;
@@ -182,11 +171,6 @@ private:
     enum
     {
         FONT_SIZE = 8,
-        MENUID_MAINMENU = 0x10,
-        MENUID_GAMEMENU = 0x11,
-        MENUID_OPTIONMENU,
-        MENUID_USERS,
-        MENUID_SKILLS,
         MENU_ITEM_NEW_GAME = 0x100,
         MENU_ITEM_LOAD_GAME,
         MENU_ITEM_SAVE_GAME,
@@ -227,7 +211,6 @@ private:
     void resizeScroller();
     void drawScroller(CFrame &bitmap);
     void drawTitlePix(CFrame &bitmap, const int offsetY);
-    void drawOptions(CFrame &bitmap);
     size_t scrollerBufSize();
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
@@ -244,15 +227,9 @@ private:
     void createResolutionList();
     void resizeGameMenu();
     void openMusic(const std::string &filename);
-    void drawUserMenu(CFrame &bitmap);
-    void drawSkillMenu(CFrame &bitmap);
     std::string getMusicPath(const std::string &filename);
     void enterGame();
-    void drawLevelSummary(CFrame &bitmap);
-    int menuItemAt(int x, int y);
-    void followPointer(int x, int y);
     void initSkillMenu();
-    bool isMenuActive();
     void clearVJoyStates();
     void clearMouseButtons();
     void handleMouse(int x, int y);
@@ -267,51 +244,8 @@ private:
     void handleVKEY(int x, int y);
     bool loadAppIcon();
     void addGamePadOptions(CMenu &menu);
-    void drawTest(CFrame &bitmap);
 
-    void drawScreen();
-    void drawGameStatus(const visualCues_t &visualcues);
-    void drawSugarMeter(const int bx);
-    void drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL_Color &color, const bool filled);
-    void drawMenu(CMenu &menu, const int baseX, const int baseY);
-
-    void drawPreScreen();
-    void drawLevelIntro();
-    SDL_Texture *createTexture(SDL_Renderer *renderer, CFrame *frame);
-    void drawViewPortStatic();
-    void drawViewPortDynamic();
-    void drawBossses(const int mx, const int my, const int sx, const int sy);
-    void drawScroll();
-    void drawEventText();
-    void drawTimeout();
-    void preloadHearts();
-    void drawHealthBar(const bool isPlayerHurt);
-    void fazeScreen();
-    void flashScreen();
-    void drawKeys();
-    const Tile *tile2Frame(const uint8_t tileID);
-    const Tile *calcSpecialFrame(const sprite_t &sprite);
-
-    inline void drawTile(const Tile *tile, const int x, const int y)
-    {
-        constexpr const float SCALE = 2;
-        SDL_FRect dst = {
-            (float)x * SCALE,
-            (float)y * SCALE,
-            tile->sw, //  tile->rect.w * SCALE,
-            tile->sh, // tile->rect.h * SCALE
-        };
-        SDL_RenderTexture(m_app.renderer, tile->texture, &tile->rect, &dst);
-    }
-
-    SDL_Texture *m_textureTitlePix;
-    TileSet m_tileset_tiles;
-    TileSet m_tileset_animz;
-    TileSet m_tileset_users;
-    TileSet m_tileset_scroll;
-    TileSet m_tileset_hearts;
-    TileSet m_tileset_sheet0;
-    TileSet m_tileset_sheet1;
+    std::unique_ptr<EngineHW> m_engine;
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

@@ -23,7 +23,7 @@ public:
             return false;
         }
         // f.read(reinterpret_cast<char *>(raw), sizeof(raw));
-        f.read(reinterpret_cast<char *>(raw), size);
+        f.read(reinterpret_cast<char *>(m_rawData), size);
         return f.good();
     }
 
@@ -47,7 +47,7 @@ public:
             int gy = (ch / COLS) * FONT_SIZE;
             for (int row = 0; row < FONT_SIZE; ++row)
             {
-                uint8_t bits = raw[ch][row];
+                uint8_t bits = m_rawData[ch][row];
                 for (int col = 0; col < FONT_SIZE; ++col)
                 {
                     bool on = bits & (1 << col);
@@ -147,6 +147,11 @@ public:
         }
     }
 
+    const uint8_t *rawData()
+    {
+        return m_rawData[0];
+    }
+
 private:
     enum
     {
@@ -155,6 +160,6 @@ private:
         FONT_SIZE = 8,
         CHARS = 128
     };
-    uint8_t raw[CHARS][FONT_SIZE]{};
+    uint8_t m_rawData[CHARS][FONT_SIZE]{};
     SDL_Texture *m_texture = nullptr;
 };

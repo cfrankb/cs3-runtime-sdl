@@ -41,6 +41,7 @@ class CMapArch;
 class CAnimator;
 class IMusic;
 class CRecorder;
+class MenuManager;
 
 class CGameMixin
 {
@@ -64,6 +65,23 @@ protected slots:
     virtual void load() = 0;
     void setQuiet(bool state);
 
+    enum
+    {
+        MAX_NAME_LENGTH = 16
+    };
+
+    struct hiscore_t
+    {
+        int32_t score;
+        int32_t level;
+        char name[MAX_NAME_LENGTH];
+    };
+
+    hiscore_t &getHiScoreAtIndex(int i) { return m_hiscores[i]; }
+    int scoreRank() { return m_scoreRank; }
+    bool recordScore() { return m_recordScore; }
+    std::vector<std::string> &helptext() { return m_helptext; }
+
 protected:
     enum : uint32_t
     {
@@ -86,7 +104,6 @@ protected:
         MAX_SCORES = 18,
         KEY_REPETE_DELAY = 5,
         KEY_NO_REPETE = 1,
-        MAX_NAME_LENGTH = 16,
         SAVENAME_PTR_OFFSET = 8,
         CARET_SPEED = 8,
         INTERLINES = 2,
@@ -217,13 +234,6 @@ protected:
         uint8_t sugarCubes[SUGAR_CUBES];
     };
 
-    struct hiscore_t
-    {
-        int32_t score;
-        int32_t level;
-        char name[MAX_NAME_LENGTH];
-    };
-
     struct message_t
     {
         int scaleX;
@@ -264,7 +274,8 @@ protected:
     int m_musicMuted = false; // Note: this has to be an int
     Prompt m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
-    bool m_gameMenuActive = false;
+    // bool m_gameMenuActive = false;
+    std::unique_ptr<MenuManager> m_menus;
     int m_gameMenuCooldown = 0;
     int m_cx;
     int m_cy;
@@ -336,7 +347,8 @@ protected:
     void drawUI(CFrame &bitmap, CGameUI &ui);
     int whichButton(CGameUI &ui, int x, int y);
 
-    constexpr inline uint32_t fazFilter(const int bitShift) const
+    constexpr inline uint32_t
+    fazFilter(const int bitShift) const
     {
         return (0xff >> bitShift) << 16 |
                (0xff >> bitShift) << 8 |
