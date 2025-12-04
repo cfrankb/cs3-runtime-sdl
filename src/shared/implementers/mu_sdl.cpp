@@ -124,8 +124,9 @@ bool CMusicSDL::play(int loop)
 
 void CMusicSDL::stop()
 {
-    if (m_type == TYPE_PRELOAD)
+    if (m_type == TYPE_PRELOAD && Mix_PlayingMusic())
     {
+        LOGI("stop music");
         Mix_HaltMusic();
     }
 #ifdef __EMSCRIPTEN__
@@ -142,9 +143,15 @@ void CMusicSDL::stop()
 void CMusicSDL::close()
 {
     stop();
-    SDL_Delay(100);
+
     if (m_type == TYPE_PRELOAD)
     {
+        while (Mix_PlayingMusic() && !Mix_PausedMusic())
+        {
+            // music is actively playing
+            LOGI("waiting for music to stop");
+            SDL_Delay(100);
+        }
         if (m_data.mixData)
             Mix_FreeMusic(m_data.mixData);
         m_data.mixData = nullptr;

@@ -107,6 +107,14 @@ CRuntime::~CRuntime()
  */
 void CRuntime::paint()
 {
+    auto nowMs = []()
+    {
+        using namespace std::chrono;
+        return duration_cast<milliseconds>(
+                   steady_clock::now().time_since_epoch())
+            .count();
+    };
+
     if (!m_bitmap)
     {
         m_bitmap = new CFrame(getWidth(), getHeight());
@@ -134,6 +142,8 @@ void CRuntime::paint()
     m_engine->updateEngineState(engineState);
     m_engine->setTicks(m_ticks);
 
+    // uint64_t a, b;
+
     switch (m_game->mode())
     {
     case CGame::MODE_LEVEL_INTRO:
@@ -141,12 +151,20 @@ void CRuntime::paint()
     case CGame::MODE_GAMEOVER:
     case CGame::MODE_TIMEOUT:
     case CGame::MODE_CHUTE:
+        m_mutex.lock();
         m_engine->drawLevelIntro();
         renderBitmap = false;
+        m_mutex.unlock();
         break;
     case CGame::MODE_PLAY:
+        m_mutex.lock();
+        //  b = nowMs();
         m_engine->drawScreen();
+        // drawScreen(bitmap);
+        // a = nowMs();
+        // LOGI("%llu", a - b);
         renderBitmap = false;
+        m_mutex.unlock();
         break;
     case CGame::MODE_HISCORES:
         m_engine->drawScores();
@@ -873,11 +891,14 @@ void CRuntime::preloadAssets()
         &m_sheet1,
         &m_uisheet,
         &m_titlePix,
+        nullptr,
     };
     CFileMem mem;
     for (size_t i = 0; i < m_assetFiles.size(); ++i)
     {
         const std::string filename = AssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
+        if (!frameSets[i])
+            continue;
         *frameSets[i] = std::make_unique<CFrameSet>();
         data_t data = AssetMan::read(filename);
         if (!data.empty())
@@ -1456,21 +1477,30 @@ void CRuntime::setupTitleScreen()
  */
 void CRuntime::takeScreenshot()
 {
-    CFrame bitmap(getWidth(), getHeight());
-    if (m_bitmap)
-        bitmap.copy(m_bitmap);
-    else
-        bitmap.fill(BLACK);
-    auto &rgba = bitmap.getRGB();
-    for (int i = 0; i < bitmap.width() * bitmap.height(); ++i)
+    int w;
+    int h;
+    if (!SDL_GetRenderOutputSize(m_app.renderer, &w, &h))
     {
-        auto &color = rgba[i];
-        if ((color >> 24) < 128)
-        {
-            rgba[i] = BLACK;
-        }
+        LOGE("SDL_GetRenderOutputSize SDL_Error: %s", SDL_GetError());
+        return;
     }
-    bitmap.enlarge();
+
+    CFrame bitmap(w, h);
+    SDL_Surface *surface = SDL_RenderReadPixels(m_app.renderer, nullptr);
+    const char *name = SDL_GetPixelFormatName(surface->format);
+    LOGI("Surface format: %s\n", name);
+
+    SDL_Surface *conv = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_ABGR8888);
+    SDL_DestroySurface(surface);
+    if (!conv)
+    {
+        LOGE("SDL_ConvertSurface SDL_Error: %s", SDL_GetError());
+        return;
+    }
+
+    memcpy(bitmap.getRGB().data(), conv->pixels, w * h * sizeof(uint32_t));
+    SDL_DestroySurface(conv);
+
     std::vector<uint8_t> png;
     bitmap.toPng(png);
     CFileWrap file;
@@ -2712,7 +2742,7 @@ bool CRuntime::isValidSavegame(const std::string &filepath)
 void CRuntime::initEngine()
 {
     // initialize engine
-    m_engine = std::make_unique<EngineHW>(m_app.renderer, m_assetFiles, m_animator.get(), m_menus.get(), this, getWidth(), getHeight());
+    m_engine = std::make_unique<EngineHW>(m_app.renderer, m_app.window, m_assetFiles, m_animator, m_menus.get(), this, getWidth(), getHeight());
 }
 
 void CRuntime::initLevelSummary()

@@ -65,7 +65,7 @@
 CGameMixin::CGameMixin()
 {
     m_game = CGame::getGame();
-    m_animator = std::make_unique<CAnimator>();
+    m_animator = m_game->getAnimator();
     m_prompt = PROMPT_NONE;
     clearJoyStates();
     clearScores();
@@ -2494,8 +2494,10 @@ void CGameMixin::drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues)
  */
 void CGameMixin::beginLevelIntro(CGame::GameMode mode)
 {
+    m_mutex.lock();
     startCountdown(COUNTDOWN_INTRO);
     m_game->loadLevel(mode);
+    m_mutex.unlock();
     centerCamera();
     clearVisualStates();
 }

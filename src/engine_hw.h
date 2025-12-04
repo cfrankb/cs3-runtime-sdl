@@ -1,3 +1,20 @@
+/*
+    cs3-runtime-sdl
+    Copyright (C) 2025 Francois Blanchette
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #pragma once
 
 #include "engine.h"
@@ -16,7 +33,7 @@ class EngineHW : public Engine
 {
 
 public:
-    EngineHW(SDL_Renderer *renderer, const std::vector<std::string> &assetFiles, CAnimator *, MenuManager *, CGameMixin *, const int width, const int height);
+    EngineHW(SDL_Renderer *renderer, SDL_Window *, const std::vector<std::string> &assetFiles, CAnimator *, MenuManager *, CGameMixin *, const int width, const int height);
     ~EngineHW() {};
 
     inline int getWidth()
@@ -28,6 +45,8 @@ public:
     {
         return m_height;
     }
+
+    bool initGPUDevice();
 
     // override
     void drawScreen() override;
@@ -51,7 +70,7 @@ protected:
     void fazeScreen();
     void flashScreen();
     void drawKeys();
-    const Tile *tile2Frame(const uint8_t tileID);
+    const Tile *getMainLayerTile(const uint8_t tileID);
     const Tile *calcSpecialFrame(const sprite_t &sprite);
 
     // overloaded
@@ -77,6 +96,7 @@ protected:
     }
 
     SDL_Renderer *m_renderer;
+    SDL_Window *m_window;
     TileSet m_tileset_tiles;
     TileSet m_tileset_animz;
     TileSet m_tileset_users;
@@ -84,5 +104,6 @@ protected:
     TileSet m_tileset_hearts;
     TileSet m_tileset_sheet0;
     TileSet m_tileset_sheet1;
+    TileSet m_tileset_layers0;
     BitmapFont8x8 m_font;
 };

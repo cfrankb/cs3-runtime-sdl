@@ -19,7 +19,7 @@
 #include "sheetdata.h"
 
 // out/bosses.json
-std::vector<tileinfo_t> sheet0_data = {
+std::vector<tileinfo_t> g_sheet0_data = {
     {176,128,80,64},
     {96,64,80,64},
     {256,128,80,64},
@@ -88,7 +88,7 @@ std::vector<tileinfo_t> sheet0_data = {
 };
 
 // out/beholder1.json
-std::vector<tileinfo_t> sheet1_data = {
+std::vector<tileinfo_t> g_sheet1_data = {
     {0,512,64,64},
     {512,384,64,64},
     {448,384,64,64},
@@ -189,5 +189,12 @@ std::vector<tileinfo_t> sheet1_data = {
     {384,128,64,64},
     {320,128,64,64},
     {256,128,64,64},
+};
+
+// out/scroll.json
+std::vector<tileinfo_t> g_scroll_data = {
+    {0,0,16,48},
+    {16,0,16,48},
+    {32,0,16,48},
 };
 

@@ -1,3 +1,20 @@
+/*
+    cs3-runtime-sdl
+    Copyright (C) 2025 Francois Blanchette
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 #include "engine_hw.h"
 #include <unordered_map>
 #include "menu.h"
@@ -59,8 +76,9 @@ namespace EngineHW_Private
 
 using namespace EngineHW_Private;
 
-EngineHW::EngineHW(SDL_Renderer *renderer, const std::vector<std::string> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height) : m_renderer(renderer)
+EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector<std::string> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height) : m_renderer(renderer)
 {
+    m_window = window;
     m_width = width;
     m_height = height;
     m_game = CGame::getGame();
@@ -70,6 +88,12 @@ EngineHW::EngineHW(SDL_Renderer *renderer, const std::vector<std::string> &asset
     setAssetFiles(assetFiles);
     preloadAssets();
 };
+
+bool EngineHW::initGPUDevice()
+{
+    //    SDL_GPUDevice *device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, nullptr);
+    return true;
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -90,12 +114,14 @@ void EngineHW::preloadAssets()
         ASSET_SHEET1,
         ASSET_UISHEET,
         ASSET_TITLEPIX,
+        ASSET_LAYERS0,
     };
 
     m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES], TILE_SIZE, TILE_SIZE);
     m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ], TILE_SIZE, TILE_SIZE);
     m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS], TILE_SIZE, TILE_SIZE);
     m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET], 16, 48);
+    m_tileset_layers0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_LAYERS0], TILE_SIZE, TILE_SIZE);
 
     const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
     m_tileset_users.cacheMask(m_renderer, COLOR_FADE, [colorFilter](uint32_t &color)
@@ -129,8 +155,8 @@ void EngineHW::preloadAssets()
                                   //
                               });
 
-    m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0], sheet0_data);
-    m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1], sheet1_data);
+    m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0], g_sheet0_data);
+    m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1], g_sheet1_data);
 
     preloadHearts();
 }
@@ -469,7 +495,7 @@ void EngineHW::drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL
     SDL_SetRenderDrawColor(renderer, oldR, oldG, oldB, oldA);
 }
 
-const Tile *EngineHW::tile2Frame(const uint8_t tileID)
+const Tile *EngineHW::getMainLayerTile(const uint8_t tileID)
 {
     ColorMask colorMask = COLOR_NOCHANGE;
     const CGame &game = *m_game;
@@ -580,7 +606,7 @@ void EngineHW::drawViewPortStatic()
         for (int x = 0; x < cols; ++x)
         {
             uint8_t tileID = map->at(x + mx, y + my);
-            const Tile *tile = tile2Frame(tileID);
+            const Tile *tile = getMainLayerTile(tileID);
             if (tile)
                 drawTile(tile, x * TILE_SIZE, y * TILE_SIZE);
         }
@@ -808,23 +834,37 @@ void EngineHW::drawViewPortDynamic()
     const int ox = m_state.m_cx & 1;
     const int my = m_state.m_cy / 2;
     const int oy = m_state.m_cy & 1;
-    const int halfOffset = TILE_SIZE / 2;
-
-    int py = oy ? -halfOffset : 0;
-    for (int y = 0; y < rows + oy; ++y)
+    constexpr const int halfOffset = TILE_SIZE / 2;
+    const int layerCount = (int)map->layerCount();
+    for (int i = layerCount - 1; i >= 0; --i)
     {
-        int px = ox ? -halfOffset : 0;
-        for (int x = 0; x < cols + ox; ++x)
+        const CLayer *layer = map->getLayer(i);
+        if (!layer)
+            continue;
+        int py = oy ? -halfOffset : 0;
+        for (int y = 0; y < rows + oy; ++y)
         {
-            const uint8_t tileID = map->at(x + mx, y + my);
-            const Tile *tile = tile2Frame(tileID);
-            if (tile)
+            int px = ox ? -halfOffset : 0;
+            for (int x = 0; x < cols + ox; ++x)
             {
-                drawTile(tile, px, py);
+                const Tile *tile;
+                const uint8_t tileID = layer->at(x + mx, y + my);
+                if (layer->baseID() == 0)
+                {
+                    tile = getMainLayerTile(tileID);
+                }
+                else
+                {
+                    tile = tileID ? m_tileset_layers0.getTile(m_animator->getLayerTile(tileID)) : nullptr;
+                }
+                if (tile)
+                {
+                    drawTile(tile, px, py);
+                }
+                px += TILE_SIZE;
             }
-            px += TILE_SIZE;
+            py += TILE_SIZE;
         }
-        py += TILE_SIZE;
     }
 
     /////////////////////////////////////////////////////////////////////////////
@@ -1008,7 +1048,7 @@ void EngineHW::updateColorMaps(const ColorMaps &colormaps)
                                       color = it->second; //
                               });
 
-    m_tileset_users.cacheMask(m_renderer, COLOR_GODMODE, [&colormaps](uint32_t &color)
+    m_tileset_users.cacheMask(m_renderer, COLOR_RAGE, [&colormaps](uint32_t &color)
                               {
                                   const auto &colorMap = colormaps.rage;
                                   if (auto it = colorMap.find(color); it != colorMap.end())

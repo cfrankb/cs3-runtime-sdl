@@ -27,5 +27,6 @@ struct tileinfo_t {
     float h;
 };
 
-extern std::vector<tileinfo_t> sheet0_data;
-extern std::vector<tileinfo_t> sheet1_data;
+extern std::vector<tileinfo_t> g_sheet0_data;
+extern std::vector<tileinfo_t> g_sheet1_data;
+extern std::vector<tileinfo_t> g_scroll_data;

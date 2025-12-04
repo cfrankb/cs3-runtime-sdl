@@ -26,6 +26,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <mutex>
 #include "colormap.h"
 #include "game.h"
 #include "gameui.h"
@@ -248,7 +249,7 @@ protected:
     uint8_t m_vjoyState[JOY_AIMS];
     uint8_t m_buttonState[Button_Count];
     uint32_t m_ticks = 0;
-    std::unique_ptr<CAnimator> m_animator;
+    CAnimator *m_animator;
     std::unique_ptr<CFrameSet> m_tiles;
     std::unique_ptr<CFrameSet> m_animz;
     std::unique_ptr<CFrameSet> m_users;
@@ -291,6 +292,7 @@ protected:
     CGameUI m_ui;
     CFileWrap m_recorderFile;
     bool m_quiet = false;
+    std::mutex m_mutex;
 
     void drawPreScreen(CFrame &bitmap);
     void drawScreen(CFrame &bitmap);

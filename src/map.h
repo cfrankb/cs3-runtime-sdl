@@ -84,7 +84,19 @@ public:
     const Pos findFirst(const uint8_t tileId) const;
     size_t count(const uint8_t tileId) const;
     void fill(uint8_t ch = 0);
-    uint8_t getAttr(const uint8_t x, const uint8_t y) const;
+    inline uint8_t getAttr(const uint8_t x, const uint8_t y) const
+    {
+        const uint16_t key = toKey(x, y);
+        const auto &it = m_attrs.find(key);
+        if (it != m_attrs.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            return 0;
+        }
+    }
     void setAttr(const uint8_t x, const uint8_t y, const uint8_t a);
     size_t size() const;
     const char *lastError();
@@ -131,13 +143,19 @@ public:
         return m_layers[0].get();
     }
 
-    inline size_t layerCount()
+    inline size_t layerCount() const
     {
         return m_layers.size();
     }
 
     CLayer *addLayer(const CLayer::LayerType lt, const std::string_view &name, uint16_t baseID);
-    CLayer *getLayer(const size_t index);
+    inline CLayer *getLayer(const size_t index) const
+    {
+        if (index < m_layers.size())
+            return m_layers[index].get();
+        else
+            return nullptr;
+    }
     std::unique_ptr<CLayer> popLayer();
     void pushLayer(std::unique_ptr<CLayer> &layer);
 
