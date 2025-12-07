@@ -34,7 +34,7 @@ class EngineHW : public Engine
 
 public:
     EngineHW(SDL_Renderer *renderer, SDL_Window *, const std::vector<std::string> &assetFiles, CAnimator *, MenuManager *, CGameMixin *, const int width, const int height);
-    ~EngineHW() {};
+    ~EngineHW();
 
     inline int getWidth()
     {
@@ -53,6 +53,7 @@ public:
     void updateColorMaps(const ColorMaps &colormaps) override;
     void drawFont(const int x, const int y, const char *text, const Color color = WHITE, const int scaleX = 1, const int scaleY = 1) override;
     void drawMenu(CMenu &menu, const int baseX, const int baseY) override;
+    void drawRect(const rect_t &rect, const Color &color, const bool fill) override;
 
 protected:
     void drawGameStatus(const visualCues_t &visualcues);
@@ -72,9 +73,12 @@ protected:
     void drawKeys();
     const Tile *getMainLayerTile(const uint8_t tileID);
     const Tile *calcSpecialFrame(const sprite_t &sprite);
+    SDL_Texture *createTexture(CFrame *frame);
+    CFrame *getFrame(const std::string &filename);
 
     // overloaded
     void preloadAssets();
+    int drawTitlePix(int offsetY) override;
 
     inline void drawTile(const Tile *tile, const int x, const int y)
     {
@@ -97,6 +101,7 @@ protected:
 
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;
+    SDL_Texture *m_textureTitlePix;
     TileSet m_tileset_tiles;
     TileSet m_tileset_animz;
     TileSet m_tileset_users;

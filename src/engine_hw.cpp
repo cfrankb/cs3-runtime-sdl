@@ -34,6 +34,10 @@
 #include "assetman.h"
 #include "colormap.h"
 #include "menumanager.h"
+#include "layerdata.h"
+#include "gameui.h"
+#include "shared/FileMem.h"
+#include "shared/FrameSet.h"
 
 namespace EngineHW_Private
 {
@@ -62,7 +66,7 @@ namespace EngineHW_Private
         constexpr SDL_Color DEEPPINK(0xff, 0x14, 0x93, 255);     // #ff1493
         constexpr SDL_Color DARKGRAY(0x44, 0x44, 0x44, 255);     // #444444
 
-        auto toSColor = [](const uint32_t c) -> SDL_Color
+        auto toSColor = [](const uint32_t c) -> const SDL_Color
         {
             SDL_Color out;
             out.r = c & 0xFF;
@@ -76,7 +80,8 @@ namespace EngineHW_Private
 
 using namespace EngineHW_Private;
 
-EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector<std::string> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height) : m_renderer(renderer)
+EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector<std::string> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height)
+    : Engine(), m_renderer(renderer)
 {
     m_window = window;
     m_width = width;
@@ -88,6 +93,12 @@ EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector
     setAssetFiles(assetFiles);
     preloadAssets();
 };
+
+EngineHW::~EngineHW()
+{
+    if (m_textureTitlePix)
+        SDL_DestroyTexture(m_textureTitlePix);
+}
 
 bool EngineHW::initGPUDevice()
 {
@@ -123,6 +134,7 @@ void EngineHW::preloadAssets()
     m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET], 16, 48);
     m_tileset_layers0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_LAYERS0], TILE_SIZE, TILE_SIZE);
 
+    LOGI("Creating texture variants");
     const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
     m_tileset_users.cacheMask(m_renderer, COLOR_FADE, [colorFilter](uint32_t &color)
                               {
@@ -157,6 +169,15 @@ void EngineHW::preloadAssets()
 
     m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0], g_sheet0_data);
     m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1], g_sheet1_data);
+
+    const std::string filepath = AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX];
+    CFrame *frame = getFrame(filepath);
+    if (frame)
+    {
+        m_textureTitlePix = createTexture(frame);
+        if (m_textureTitlePix)
+            SDL_SetTextureScaleMode(m_textureTitlePix, SDL_SCALEMODE_NEAREST);
+    }
 
     preloadHearts();
 }
@@ -836,6 +857,14 @@ void EngineHW::drawViewPortDynamic()
     const int oy = m_state.m_cy & 1;
     constexpr const int halfOffset = TILE_SIZE / 2;
     const int layerCount = (int)map->layerCount();
+    struct overlay_t
+    {
+        const Tile *tile;
+        const int x;
+        const int y;
+    };
+    std::vector<overlay_t> overlays;
+
     for (int i = layerCount - 1; i >= 0; --i)
     {
         const CLayer *layer = map->getLayer(i);
@@ -847,15 +876,19 @@ void EngineHW::drawViewPortDynamic()
             int px = ox ? -halfOffset : 0;
             for (int x = 0; x < cols + ox; ++x)
             {
-                const Tile *tile;
+                const Tile *tile = nullptr;
                 const uint8_t tileID = layer->at(x + mx, y + my);
                 if (layer->baseID() == 0)
                 {
                     tile = getMainLayerTile(tileID);
                 }
-                else
+                else if (tileID)
                 {
-                    tile = tileID ? m_tileset_layers0.getTile(m_animator->getLayerTile(tileID)) : nullptr;
+                    const uint8_t refID = m_animator->getLayerTile(tileID);
+                    tile = m_tileset_layers0.getTile(refID);
+                    const layerdata_t &data = getLayerTileDef(refID);
+                    if (data.tileType == LayerTileType::Foreground)
+                        overlays.emplace_back(overlay_t{tile, px, py});
                 }
                 if (tile)
                 {
@@ -886,6 +919,9 @@ void EngineHW::drawViewPortDynamic()
             py -= halfOffset;
         drawTile(tile, px, py);
     }
+
+    for (const auto &overlay : overlays)
+        drawTile(overlay.tile, overlay.x, overlay.y);
 
     // draw Bosses
     drawBossses(m_state.m_cx, m_state.m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
@@ -1054,4 +1090,69 @@ void EngineHW::updateColorMaps(const ColorMaps &colormaps)
                                   if (auto it = colorMap.find(color); it != colorMap.end())
                                       color = it->second; //
                               });
+}
+
+void EngineHW::drawRect(const rect_t &rect, const Color &color, const bool fill)
+{
+    const SDL_FRect drect{SCALEF * rect.x, SCALEF * rect.y, SCALEF * rect.width, SCALEF * rect.height};
+    drawRect(m_renderer, drect, SColor::toSColor(color), fill);
+}
+
+SDL_Texture *EngineHW::createTexture(CFrame *frame)
+{
+    SDL_PropertiesID texProps = SDL_CreateProperties();
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_WIDTH_NUMBER, frame->width());
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_HEIGHT_NUMBER, frame->height());
+    SDL_SetNumberProperty(texProps, SDL_PROP_TEXTURE_CREATE_FORMAT_NUMBER, SDL_PIXELFORMAT_ABGR8888);
+    SDL_Texture *texture = SDL_CreateTextureWithProperties(m_renderer, texProps);
+    SDL_DestroyProperties(texProps);
+
+    if (!texture)
+        return nullptr;
+
+    int pitch = frame->width() * sizeof(uint32_t); // 4 bytes per pixel
+    if (!SDL_UpdateTexture(texture, nullptr, frame->getRGB().data(), pitch))
+    {
+        std::cerr << "SDL_UpdateTexture failed: " << SDL_GetError() << "\n";
+    }
+    return texture;
+}
+
+CFrame *EngineHW::getFrame(const std::string &filepath)
+{
+    CFrame *frame = nullptr;
+    auto set = std::make_unique<CFrameSet>();
+    data_t data = AssetMan::read(filepath);
+    if (!data.empty())
+    {
+        LOGI("reading %s", filepath.c_str());
+        CFileMem mem;
+        mem.replace(data.data(), data.size());
+        if (set->extract(mem))
+        {
+            LOGI("extracted: %ld", set->getSize());
+        }
+        if (set->size())
+            frame = set->removeAt(0);
+    }
+    else
+    {
+        LOGE("can't read: %s", filepath.c_str());
+    }
+    return frame;
+}
+
+int EngineHW::drawTitlePix(int offsetY)
+{
+    const int x = 0;
+    const int y = offsetY;
+    constexpr const float SCALEF = 2;
+    SDL_FRect dst = {
+        (float)x * SCALEF,
+        (float)y * SCALEF,
+        m_textureTitlePix->w * SCALEF,
+        m_textureTitlePix->h * SCALEF,
+    };
+    SDL_RenderTexture(m_renderer, m_textureTitlePix, nullptr, &dst);
+    return (int)m_textureTitlePix->h;
 }

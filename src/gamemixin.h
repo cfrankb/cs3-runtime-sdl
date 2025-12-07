@@ -42,7 +42,6 @@ class CMapArch;
 class CAnimator;
 class IMusic;
 class CRecorder;
-class MenuManager;
 
 class CGameMixin
 {
@@ -276,7 +275,6 @@ protected:
     Prompt m_prompt = PROMPT_NONE;
     int m_optionCooldown = 0;
     // bool m_gameMenuActive = false;
-    std::unique_ptr<MenuManager> m_menus;
     int m_gameMenuCooldown = 0;
     int m_cx;
     int m_cy;
@@ -382,7 +380,7 @@ protected:
     virtual void toggleFullscreen() = 0;
     virtual void manageTitleScreen() = 0;
     virtual void toggleGameMenu() = 0;
-    virtual void manageGameMenu() = 0;
+    virtual bool manageGameMenu() = 0;
     virtual void manageOptionScreen() = 0;
     virtual void manageUserMenu() = 0;
     virtual void manageLevelSummary() = 0;

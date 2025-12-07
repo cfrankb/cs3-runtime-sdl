@@ -75,6 +75,7 @@ namespace GamePrivate
         MAX_SHIELDS = 2,
         MAX_FACTOR = 4,
         BARREL_TTL = 20,
+        AUTOKILL = -1024,
     };
 }
 
@@ -244,8 +245,7 @@ void CGame::consume()
 
     if (result.isDeadly)
     {
-        addHealth(-1024);
-        LOGI("death");
+        addHealth(AUTOKILL);
     }
 
     if (isFruit(pu))
@@ -658,8 +658,7 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
     const auto &result = scanPos(m_player.pos());
     if (result.isDeadly)
     {
-        addHealth(-1024);
-        LOGI("death");
+        addHealth(AUTOKILL);
     }
     else if (result.isWater && m_gameStats->get(S_BOAT) == 0)
     {

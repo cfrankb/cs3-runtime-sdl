@@ -23,6 +23,7 @@
 #include "SDL3/SDL_gamepad.h"
 #include <vector>
 #include <unordered_map>
+#include <memory>
 #include "shared/interfaces/ISound.h"
 #include "tileset_tex.h"
 #include "summary.h"
@@ -119,7 +120,7 @@ private:
     void toggleFullscreen() override;
     void manageTitleScreen() override;
     void toggleGameMenu() override;
-    void manageGameMenu() override;
+    bool manageGameMenu() override;
     void manageUserMenu() override;
     void manageSkillMenu() override;
     void manageLevelSummary() override;
@@ -153,11 +154,10 @@ private:
     bool m_trace = false;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
-    Summary m_summary;
     uint8_t m_mouseButtons[3];
-    CGameUI *m_virtualKeyboard;
     std::string m_input;
     bool m_hasFocus;
+    std::unique_ptr<MenuManager> m_menus;
 
     // Vector to hold pointers to opened game controllers
     std::vector<SDL_Gamepad *> m_gameControllers;
@@ -206,16 +206,13 @@ private:
         VK_BACKSPACE = 8,
     };
 
-    void drawTitleScreen(CFrame &bitmap);
     bool isTrue(const std::string &value) const;
     void resizeScroller();
-    void drawScroller(CFrame &bitmap);
-    void drawTitlePix(CFrame &bitmap, const int offsetY);
     size_t scrollerBufSize();
     bool fileExists(const std::string &filename) const;
     const std::string getSavePath() const;
     void drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int baseY);
-    void manageMenu(CMenu &menu);
+    bool manageMenu(CMenu &menu);
     bool fetchFile(const std::string &path, char **dest, const bool terminator);
     void parseHelp(char *text);
     void manageOptionScreen() override;
@@ -239,12 +236,10 @@ private:
     void onGamePadEvent(const SDL_Event &event);
     void onMouseEvent(const SDL_Event &event);
     void onSDLQuit();
-    void initVirtualKeyboard();
-    void drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std::string &buffer);
     void handleVKEY(int x, int y);
     bool loadAppIcon();
     void addGamePadOptions(CMenu &menu);
-
+    void updateScroller();
     std::unique_ptr<EngineHW> m_engine;
 
 #ifdef __EMSCRIPTEN__

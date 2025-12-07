@@ -25,9 +25,11 @@
 #include "animator.h"
 #include "colormap.h"
 #include "summary.h"
+#include "rect.h"
 
 class CMenu;
 class CGame;
+class CGameUI;
 class CAnimator;
 class MenuManager;
 class CGameMixin;
@@ -48,7 +50,7 @@ struct EngineState
 class Engine
 {
 public:
-    Engine() {};
+    Engine();
     ~Engine() {};
 
     void resize(int width, int height)
@@ -66,6 +68,9 @@ public:
     virtual void drawScreen() = 0;
     virtual void updateColorMaps(const ColorMaps &colormaps) = 0;
     virtual void drawMenu(CMenu &menu, const int baseX, const int baseY) = 0;
+    virtual void drawRect(const rect_t &rect, const Color &color, const bool fill) = 0;
+    virtual void drawFont(const int x, const int y, const char *text, const Color color = WHITE, const int scaleX = 1, const int scaleY = 1) = 0;
+    virtual int drawTitlePix(int offsetY) = 0;
 
     // dispatch
     void drawPreScreen();
@@ -77,17 +82,19 @@ public:
     void drawScores();
     void drawHelpScreen();
     void drawOptions();
+    void drawVirtualKeyboard(const std::string &title, std::string &buffer);
+    void drawUI(CGameUI &ui);
+    void drawTitleScreen(const char *scroll);
 
     // helper
     void initLevelSummary();
-
-    // overloaded
-    virtual void drawFont(const int x, const int y, const char *text, const Color color = WHITE, const int scaleX = 1, const int scaleY = 1) = 0;
 
     void setTicks(const uint64_t ticks)
     {
         m_ticks = ticks;
     }
+
+    CGameUI *virtualKeyboard() { return m_virtualKeyboard.get(); }
 
 protected:
     enum
@@ -256,6 +263,7 @@ protected:
     CGameMixin *m_gameMixin;
     std::vector<std::string> m_assetFiles;
     Summary m_summary;
+    std::unique_ptr<CGameUI> m_virtualKeyboard;
 
     inline int getWidth()
     {
@@ -271,6 +279,9 @@ protected:
     {
         m_assetFiles = assetFiles;
     }
+
+    // internal
+    void initVirtualKeyboard();
 
     // shared
     void gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t &context);

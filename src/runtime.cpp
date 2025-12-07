@@ -60,25 +60,25 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #endif
-const char HISCORE_FILE[] = "hiscores-cs3.dat";
-const char SAVEGAME_FILE[] = "savegame-cs3.dat";
+constexpr const char HISCORE_FILE[] = "hiscores-cs3.dat";
+constexpr const char SAVEGAME_FILE[] = "savegame-cs3.dat";
 
 constexpr const int SCALE = 2;
 constexpr const float SCALEF = 2.0f;
 constexpr const int SCALE_2X = 4;
+
+// #define PROFILE
 
 CRuntime::CRuntime() : CGameMixin()
 {
     m_music = nullptr;
     m_app = App();
     m_startLevel = 0;
-
     m_skill = 0;
     m_verbose = false;
-    m_summary = Summary{0, 0, 0, 0};
     m_hasFocus = false;
-    m_virtualKeyboard = new CGameUI();
-    initVirtualKeyboard();
+    m_menus = std::make_unique<MenuManager>();
+    m_input = "";
 
 #ifdef __EMSCRIPTEN__
     mountFS();
@@ -98,7 +98,6 @@ CRuntime::~CRuntime()
         SDL_DestroyWindow(m_app.window);
     }
     delete[] m_scroll;
-    delete m_virtualKeyboard;
 }
 
 /**
@@ -107,6 +106,8 @@ CRuntime::~CRuntime()
  */
 void CRuntime::paint()
 {
+
+#if defined(PROFILE)
     auto nowMs = []()
     {
         using namespace std::chrono;
@@ -114,7 +115,9 @@ void CRuntime::paint()
                    steady_clock::now().time_since_epoch())
             .count();
     };
-
+    uint64_t a, b;
+    b = nowMs();
+#endif
     if (!m_bitmap)
     {
         m_bitmap = new CFrame(getWidth(), getHeight());
@@ -122,7 +125,7 @@ void CRuntime::paint()
 
     SDL_SetRenderDrawColor(m_app.renderer, 0, 0, 0, 255);
     SDL_RenderClear(m_app.renderer);
-    bool renderBitmap = true;
+    bool renderBitmap = false;
 
     CFrame &bitmap = *m_bitmap;
     bitmap.fill(BLACK);
@@ -142,8 +145,6 @@ void CRuntime::paint()
     m_engine->updateEngineState(engineState);
     m_engine->setTicks(m_ticks);
 
-    // uint64_t a, b;
-
     switch (m_game->mode())
     {
     case CGame::MODE_LEVEL_INTRO:
@@ -153,58 +154,45 @@ void CRuntime::paint()
     case CGame::MODE_CHUTE:
         m_mutex.lock();
         m_engine->drawLevelIntro();
-        renderBitmap = false;
         m_mutex.unlock();
         break;
     case CGame::MODE_PLAY:
         m_mutex.lock();
-        //  b = nowMs();
         m_engine->drawScreen();
-        // drawScreen(bitmap);
-        // a = nowMs();
-        // LOGI("%llu", a - b);
-        renderBitmap = false;
         m_mutex.unlock();
         break;
     case CGame::MODE_HISCORES:
         m_engine->drawScores();
-        renderBitmap = false;
         break;
     case CGame::MODE_CLICKSTART:
         m_engine->drawPreScreen();
-        renderBitmap = false;
         break;
     case CGame::MODE_HELP:
         m_engine->drawHelpScreen();
-        renderBitmap = false;
         break;
     case CGame::MODE_TITLE:
-        drawTitleScreen(bitmap);
+        m_engine->drawTitleScreen(m_scroll);
+        updateScroller();
         break;
     case CGame::MODE_OPTIONS:
         m_engine->drawOptions();
-        renderBitmap = false;
         break;
     case CGame::MODE_IDLE:
         break;
     case CGame::MODE_USERSELECT:
         m_engine->drawUserMenu();
-        renderBitmap = false;
         break;
     case CGame::MODE_LEVEL_SUMMARY:
         m_engine->drawLevelSummary();
-        renderBitmap = false;
         break;
     case CGame::MODE_SKLLSELECT:
         m_engine->drawSkillMenu();
-        renderBitmap = false;
         break;
     case CGame::MODE_NEW_INPUTNAME:
-        drawVirtualKeyboard(bitmap, "ENTER YOUR NAME", m_input);
+        m_engine->drawVirtualKeyboard("ENTER YOUR NAME", m_input);
         break;
     case CGame::MODE_TEST:
         m_engine->drawTest();
-        renderBitmap = false;
     };
 
     if (renderBitmap)
@@ -222,6 +210,10 @@ void CRuntime::paint()
         SDL_RenderTexture(m_app.renderer, m_app.texture, nullptr, &rectDest);
     }
     SDL_RenderPresent(m_app.renderer);
+#if defined(PROFILE)
+    a = nowMs();
+    LOGI("%llu", a - b);
+#endif
 }
 
 /**
@@ -799,7 +791,7 @@ void CRuntime::handleFingerDown(float x, float y)
 
 void CRuntime::handleVKEY(int x, int y)
 {
-    int btn = whichButton(*m_virtualKeyboard, x, y);
+    int btn = whichButton(*m_engine->virtualKeyboard(), x, y);
     if (btn != INVALID)
     {
         if (btn == VK_BACKSPACE)
@@ -883,6 +875,7 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
 
 void CRuntime::preloadAssets()
 {
+    /*
     std::unique_ptr<CFrameSet> *frameSets[] = {
         &m_tiles,
         &m_animz,
@@ -923,9 +916,10 @@ void CRuntime::preloadAssets()
     if (data.empty())
         return;
     m_fontData = std::move(data);
+    */
 
     const std::string creditsFile = AssetMan::getPrefix() + m_config["credits"];
-    data = AssetMan::read(creditsFile, true);
+    data_t data = AssetMan::read(creditsFile, true);
     if (!data.empty())
     {
         std::string str = reinterpret_cast<char *>(data.data());
@@ -1331,64 +1325,8 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
     }
 }
 
-/**
- * @brief Draw titlescreen
- *
- * @param bitmap
- */
-void CRuntime::drawTitleScreen(CFrame &bitmap)
+void CRuntime::updateScroller()
 {
-    bitmap.fill(BLACK);
-    if (m_titlePix == nullptr || m_titlePix->getSize() == 0)
-        return;
-
-    auto &title = *(*m_titlePix)[0];
-    const int offsetY = 12;
-    drawTitlePix(bitmap, offsetY);
-
-    const int baseY = 2 * offsetY + title.height();
-    const rect_t rect{
-        8,
-        baseY,
-        getWidth() - 16,
-        getHeight() - baseY - 24};
-    CGameMixin::drawRect(bitmap, rect, DARKRED, false);
-
-    CMenu &menu = *m_menus->get(MENUID_MAINMENU);
-    const int menuBaseY = 100 - 8;
-    drawMenu(bitmap, menu, -1, menuBaseY);
-    drawScroller(bitmap);
-}
-
-/**
- * @brief Draw Titlescreen Pixmap
- *
- * @param bitmap
- * @param offsetY
- */
-void CRuntime::drawTitlePix(CFrame &bitmap, const int offsetY)
-{
-    auto &title = *(*m_titlePix)[0];
-    int baseX = (bitmap.width() - title.width()) / 2;
-    for (int y = 0; y < title.height(); ++y)
-    {
-        for (int x = 0; x < title.width(); ++x)
-        {
-            const int xx = baseX + x;
-            if (xx < bitmap.width() && xx >= 0)
-                bitmap.at(baseX + x, y + offsetY) = title.at(x, y);
-        }
-    }
-}
-
-/**
- * @brief Draw scrolling text on Intro Screen
- *
- * @param bitmap
- */
-void CRuntime::drawScroller(CFrame &bitmap)
-{
-    drawFont(bitmap, 0, getHeight() - FONT_SIZE * 2, m_scroll, YELLOW);
     if (m_ticks & 1 && !m_credits.empty())
     {
         for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
@@ -1721,9 +1659,11 @@ void CRuntime::manageTitleScreen()
  * @brief handles the game menu
  *
  */
-void CRuntime::manageGameMenu()
+bool CRuntime::manageGameMenu()
 {
-    manageMenu(*m_menus->get(MENUID_GAMEMENU));
+    if (!m_menus->isMenuActive(MENUID_GAMEMENU))
+        return false;
+    return manageMenu(*m_menus->get(MENUID_GAMEMENU));
 }
 
 /**
@@ -1749,8 +1689,9 @@ void CRuntime::manageUserMenu()
  *
  * @param menu
  */
-void CRuntime::manageMenu(CMenu &menu)
+bool CRuntime::manageMenu(CMenu &menu)
 {
+
     CGame &game = *m_game;
     CMenuItem &item = menu.current();
     int oldValue = item.role() ? item.value() : 0;
@@ -1798,7 +1739,7 @@ void CRuntime::manageMenu(CMenu &menu)
             if (menu.id() == MENUID_GAMEMENU)
             {
                 setupTitleScreen();
-                return;
+                return true;
             }
             game.setLevel(m_startLevel);
             m_menus->setActive(MENUID_GAMEMENU, false);
@@ -1909,6 +1850,7 @@ void CRuntime::manageMenu(CMenu &menu)
     }
 
     m_buttonState[BUTTON_A] = BUTTON_RELEASED;
+    return true;
 }
 
 void CRuntime::setStartLevel(int level)
@@ -2477,85 +2419,6 @@ rect_t CRuntime::windowRect2textureRect(const rect_t &wRect)
  * @brief Initialize the VirtualKeyboard UI (android)
  *
  */
-void CRuntime::initVirtualKeyboard()
-{
-    const int BTN_SIZE = 16;
-    const int BTN_PADDING = 4;
-    const int rowSize = 12;
-    CGameUI &ui = *m_virtualKeyboard;
-    ui.setMargin(FONT_SIZE);
-    const char chars[]{
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "0123456789"
-        ".,/@$%^&*!"};
-
-    int i = 0;
-    for (const char &c : chars)
-    {
-        if (c == '\0')
-            break;
-        char t[2];
-        t[0] = c;
-        t[1] = '\0';
-        const int row = i / rowSize;
-        const int col = i % rowSize;
-        button_t button{
-            c,
-            col * (BTN_SIZE + BTN_PADDING),
-            row * (BTN_SIZE + BTN_PADDING),
-            BTN_SIZE,
-            BTN_SIZE,
-            t,
-            WHITE,
-        };
-        ui.addButton(button);
-        ++i;
-    }
-    std::vector<const char *> keys = {
-        "SPACE", "BKSP", "ENTER"};
-    const char id[] = {VK_SPACE, VK_BACKSPACE, VK_ENTER};
-    int x = 0;
-    const int y = ui.height() + BTN_PADDING * 2;
-    i = 0;
-    for (const auto &key : keys)
-    {
-        int width = FONT_SIZE * 2 * strlen(key);
-        button_t button{
-            id[i],
-            x,
-            y,
-            width,
-            BTN_SIZE,
-            key,
-            WHITE};
-        x += width + BTN_PADDING;
-        ui.addButton(button);
-        ++i;
-    }
-    m_input = "";
-}
-
-/**
- * @brief Draw a virtual keyboard UI on Android
- *
- * @param bitmap
- * @param title
- * @param buffer
- */
-void CRuntime::drawVirtualKeyboard(CFrame &bitmap, const std::string &title, std::string &buffer)
-{
-    const int scaleX = 2;
-    const int scaleY = 2;
-    CGameUI &ui = *m_virtualKeyboard;
-    const char end = (m_ticks >> 4) & 1 ? (char)CHARS_CARET : ' ';
-    drawUI(bitmap, ui);
-    std::string t = title;
-    int x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
-    drawFont(bitmap, x, FONT_SIZE, t.c_str(), LIGHTGRAY, CLEAR, scaleX, scaleY);
-    t = buffer + end;
-    x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
-    drawFont(bitmap, x, 48, t.c_str(), YELLOW, CLEAR, scaleX, scaleY);
-}
 
 void CRuntime::onSDLQuit()
 {

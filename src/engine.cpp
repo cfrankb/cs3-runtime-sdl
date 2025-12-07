@@ -39,12 +39,17 @@ using namespace Engine_Private;
 
 ////////////////////////////////////////////////////////////////////
 
+Engine::Engine()
+{
+    m_virtualKeyboard = std::make_unique<CGameUI>();
+    initVirtualKeyboard();
+}
+
 void Engine::drawPreScreen()
 {
     const char t[] = "CLICK TO START";
     const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
     const int y = (getHeight() - FONT_SIZE) / 2;
-    //  m_font.drawText(m_renderer, t, SColor::WHITE, nullptr, x * SCALE, y * SCALE, SCALE, SCALE);
     drawFont(x, y, t, WHITE, 1, 1);
 }
 
@@ -80,14 +85,12 @@ void Engine::drawLevelIntro()
     const int x = (getWidth() - strlen(t) * 2 * FONT_SIZE) / 2;
     const int y = (getHeight() - FONT_SIZE * 2) / 2;
     drawFont(x, y, t, YELLOW, 2, 2);
-    // m_font.drawText(m_renderer, t, SColor::YELLOW, nullptr, x * SCALE, y * SCALE, SCALE_2X, SCALE_2X);
 
     if (mode == CGame::MODE_LEVEL_INTRO || mode == CGame::MODE_CHUTE)
     {
         const char *t = m_game->getMap().title();
         const int x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
         drawFont(x, y + 3 * FONT_SIZE, t, WHITE);
-        // m_font.drawText(m_renderer, t, SColor::WHITE, nullptr, x * SCALE, (y + 3 * FONT_SIZE) * SCALE, SCALE, SCALE);
     }
 
     if (mode != CGame::MODE_GAMEOVER && getWidth() >= MIN_WIDTH_FULL)
@@ -96,7 +99,6 @@ void Engine::drawLevelIntro()
         const int x = (getWidth() - strlen(hint) * FONT_SIZE) / 2;
         const int y = getHeight() - FONT_SIZE * 4;
         drawFont(x, y, hint, CYAN);
-        // m_font.drawText(m_renderer, hint, SColor::CYAN, nullptr, x * SCALE, y * SCALE, SCALE, SCALE);
     }
 
     // TODO: revisit
@@ -256,7 +258,7 @@ void Engine::drawScores()
                  hiScore.score,
                  hiScore.level,
                  hiScore.name,
-                 showCaret ? CHARS_CARET : '\0');
+                 showCaret ? CHARS_CARET - CHARS_CUSTOM + CHARS_CUSTOM_BASE : '\0');
         drawFont(1, y * FONT_SIZE, t, color, scaleX / 2, scaleY / 2);
         y += scaleX / 2;
     }
@@ -524,4 +526,113 @@ Engine::message_t Engine::getEventText(const int baseY)
         LOGW("unhandled event type: 0x%.2x", m_state.m_currentEvent);
         return message_t{};
     }
+}
+
+void Engine::drawVirtualKeyboard(const std::string &title, std::string &buffer)
+{
+    const int scaleX = 2;
+    const int scaleY = 2;
+    CGameUI &ui = *m_virtualKeyboard;
+    const char end = (m_ticks >> 4) & 1 ? (char)CHARS_CARET : ' ';
+    drawUI(ui);
+    std::string t = title;
+    int x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
+    drawFont(x, FONT_SIZE, t.c_str(), LIGHTGRAY, scaleX, scaleY);
+    t = buffer + end;
+    x = (getWidth() - t.length() * FONT_SIZE * scaleX) / 2;
+    drawFont(x, 48, t.c_str(), YELLOW, scaleX, scaleY);
+}
+
+void Engine::drawUI(CGameUI &ui)
+{
+    const int baseX = getWidth() - ui.width() - ui.margin();
+    const int baseY = getWidth() - ui.height() - ui.margin();
+    for (const auto &btn : ui.buttons())
+    {
+        int x = baseX + btn.x;
+        int y = baseY + btn.y;
+        drawRect(rect_t{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, static_cast<Color>(btn.color), true);
+        drawFont(x, y, btn.text.c_str(), BLACK, 2, 2);
+        drawRect(rect_t{.x = baseX + btn.x, .y = baseY + btn.y, .width = btn.width, .height = btn.height}, RED, false);
+    }
+}
+
+void Engine::initVirtualKeyboard()
+{
+    const int BTN_SIZE = 16;
+    const int BTN_PADDING = 4;
+    const int rowSize = 12;
+    CGameUI &ui = *m_virtualKeyboard;
+    ui.setMargin(FONT_SIZE);
+    const char chars[]{
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789"
+        ".,/@$%^&*!"};
+
+    int i = 0;
+    for (const char &c : chars)
+    {
+        if (c == '\0')
+            break;
+        char t[2];
+        t[0] = c;
+        t[1] = '\0';
+        const int row = i / rowSize;
+        const int col = i % rowSize;
+        button_t button{
+            c,
+            col * (BTN_SIZE + BTN_PADDING),
+            row * (BTN_SIZE + BTN_PADDING),
+            BTN_SIZE,
+            BTN_SIZE,
+            t,
+            WHITE,
+        };
+        ui.addButton(button);
+        ++i;
+    }
+    std::vector<const char *> keys = {
+        "SPACE", "BKSP", "ENTER"};
+    const char id[] = {VK_SPACE, VK_BACKSPACE, VK_ENTER};
+    int x = 0;
+    const int y = ui.height() + BTN_PADDING * 2;
+    i = 0;
+    for (const auto &key : keys)
+    {
+        int width = FONT_SIZE * 2 * strlen(key);
+        button_t button{
+            id[i],
+            x,
+            y,
+            width,
+            BTN_SIZE,
+            key,
+            WHITE};
+        x += width + BTN_PADDING;
+        ui.addButton(button);
+        ++i;
+    }
+}
+
+/**
+ * @brief Draw titlescreen
+ *
+ * @param bitmap
+ */
+void Engine::drawTitleScreen(const char *scroll)
+{
+    const int offsetY = 12;
+    int titleHeigth = drawTitlePix(offsetY);
+    const int baseY = 2 * offsetY + titleHeigth;
+    const rect_t rect{
+        8,
+        baseY,
+        getWidth() - 16,
+        getHeight() - baseY - 24};
+    drawRect(rect, DARKRED, false);
+
+    CMenu &menu = *m_menus->get(MENUID_MAINMENU);
+    const int menuBaseY = 100 - 8;
+    drawMenu(menu, -1, menuBaseY);
+    drawFont(0, getHeight() - FONT_SIZE * 2, scroll, YELLOW);
 }
