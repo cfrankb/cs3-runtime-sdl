@@ -53,6 +53,7 @@
 #include "boss.h"
 #include "engine_hw.h"
 #include "menumanager.h"
+#include "scopeguard.h"
 
 #define _f(x) static_cast<float>(x)
 
@@ -106,7 +107,16 @@ CRuntime::~CRuntime()
  */
 void CRuntime::paint()
 {
-
+    CGame &game = *m_game;
+    /*
+     if (game.level() == 4)
+     {
+         LOGI("paint IN");
+     }
+     ScopeGuard scope = game.level() == 4 ? ScopeGuard([]()
+                                                       { LOGI("paint OUT"); })
+                                          : ScopeGuard(nullptr);
+    */
 #if defined(PROFILE)
     auto nowMs = []()
     {
@@ -1133,6 +1143,8 @@ void CRuntime::load()
     centerCamera();
     int userID = game.getUserID();
     loadColorMaps(userID);
+    m_currentEvent = EVENT_NONE;
+    game.clearEvents();
 }
 
 void CRuntime::initSounds()

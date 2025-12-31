@@ -39,6 +39,10 @@
 #include "shared/FileMem.h"
 #include "shared/FrameSet.h"
 
+#define TRACE(...)            \
+    if (m_game->level() == 4) \
+        LOGI(__VA_ARGS__);
+
 namespace EngineHW_Private
 {
     constexpr const int FONT_SIZE = 8;
@@ -252,6 +256,8 @@ void EngineHW::drawFont(const int x, const int y, const char *text, Color color,
 
 void EngineHW::drawScreen()
 {
+
+    // TRACE("enter drawScreen");
     const CGame &game = *m_game;
 
     // draw viewport
@@ -330,6 +336,8 @@ void EngineHW::drawScreen()
         resizeGameMenu();
         drawMenu(*m_menus->get(MENUID_GAMEMENU), -1, (getHeight() - m_menus->get(MENUID_GAMEMENU)->height()) / 2);
     }
+
+    // TRACE("leave drawScreen");
 }
 
 void EngineHW::drawGameStatus(const visualCues_t &visualcues)
@@ -622,14 +630,20 @@ void EngineHW::drawViewPortStatic()
     const int mx = std::min(lmx, map->width() > cols ? map->width() - cols : 0);
     const int my = std::min(lmy, map->height() > rows ? map->height() - rows : 0);
 
-    for (int y = 0; y < rows; ++y)
+    const int layerCount = (int)map->layerCount();
+    std::vector<overlay_t> overlays;
+    for (int i = layerCount - 1; i >= 0; --i)
     {
-        for (int x = 0; x < cols; ++x)
+        const CLayer *layer = map->getLayer(i);
+        if (!layer)
+            continue;
+        for (int y = 0; y < rows; ++y)
         {
-            uint8_t tileID = map->at(x + mx, y + my);
-            const Tile *tile = getMainLayerTile(tileID);
-            if (tile)
-                drawTile(tile, x * TILE_SIZE, y * TILE_SIZE);
+            for (int x = 0; x < cols; ++x)
+            {
+                const uint8_t tileID = layer->at(x + mx, y + my);
+                drawViewPortInner(overlays, layer, tileID, x + mx, y + my);
+            }
         }
     }
 
@@ -658,8 +672,6 @@ const Tile *EngineHW::calcSpecialFrame(const sprite_t &sprite)
 {
     if (RANGE(sprite.attr, ATTR_IDLE_MIN, ATTR_IDLE_MAX))
     {
-        // CFrameSet &tiles = *m_tiles;
-        // return tiles[sprite.tileID];
         return m_tileset_tiles.getTile(sprite.tileID);
     }
     int saim = 0;
@@ -856,15 +868,9 @@ void EngineHW::drawViewPortDynamic()
     const int my = m_state.m_cy / 2;
     const int oy = m_state.m_cy & 1;
     constexpr const int halfOffset = TILE_SIZE / 2;
-    const int layerCount = (int)map->layerCount();
-    struct overlay_t
-    {
-        const Tile *tile;
-        const int x;
-        const int y;
-    };
-    std::vector<overlay_t> overlays;
 
+    const int layerCount = (int)map->layerCount();
+    std::vector<overlay_t> overlays;
     for (int i = layerCount - 1; i >= 0; --i)
     {
         const CLayer *layer = map->getLayer(i);
@@ -876,24 +882,8 @@ void EngineHW::drawViewPortDynamic()
             int px = ox ? -halfOffset : 0;
             for (int x = 0; x < cols + ox; ++x)
             {
-                const Tile *tile = nullptr;
                 const uint8_t tileID = layer->at(x + mx, y + my);
-                if (layer->baseID() == 0)
-                {
-                    tile = getMainLayerTile(tileID);
-                }
-                else if (tileID)
-                {
-                    const uint8_t refID = m_animator->getLayerTile(tileID);
-                    tile = m_tileset_layers0.getTile(refID);
-                    const layerdata_t &data = getLayerTileDef(refID);
-                    if (data.tileType == LayerTileType::Foreground)
-                        overlays.emplace_back(overlay_t{tile, px, py});
-                }
-                if (tile)
-                {
-                    drawTile(tile, px, py);
-                }
+                drawViewPortInner(overlays, layer, tileID, px, py);
                 px += TILE_SIZE;
             }
             py += TILE_SIZE;
@@ -955,7 +945,7 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
     // bosses are drawn on a 8x8 grid overlayed on top of the regular 16x16 grid
     for (const auto &boss : m_game->bosses())
     {
-        // don't process completed bosses
+        // don't draw completed bosses
         if (boss.isDone())
             continue;
 
@@ -1025,14 +1015,14 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
             SDL_FRect rect{x * SCALEF, y * SCALEF, hRect.width * SCALEF, hRect.height * SCALEF};
             SDL_FRect rectH{x * SCALEF, y * SCALEF, static_cast<int>(boss.hp() / hpRatio) * SCALEF, hRect.height * SCALEF};
             drawRect(m_renderer, rect, SColor::BLACK, true);
-            drawRect(m_renderer, rectH, SColor::ORANGE, true);
+            drawRect(m_renderer, rectH, SColor::toSColor(boss.data()->color_hp), true);
             drawRect(m_renderer, rect, SColor::WHITE, false);
         }
 
         // draw Boss Name
         const int x = hRect.x - sRect.x;
         const int y = hRect.y - sRect.y - FONT_SIZE;
-        m_font.drawText(m_renderer, boss.name(), SColor::ORANGE, nullptr, x * SCALE, y * SCALE, 1, 1);
+        m_font.drawText(m_renderer, boss.name(), SColor::toSColor(boss.data()->color_name), nullptr, x * SCALE, y * SCALE, 1, 1);
     }
 }
 
@@ -1146,7 +1136,6 @@ int EngineHW::drawTitlePix(int offsetY)
 {
     const int x = 0;
     const int y = offsetY;
-    constexpr const float SCALEF = 2;
     SDL_FRect dst = {
         (float)x * SCALEF,
         (float)y * SCALEF,

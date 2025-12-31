@@ -24,7 +24,6 @@ COPYRIGHT_NOTICE = (
 )
 
 DEST_PATH = "/home/cfrankb/toolkit/gcc/cs3-runtime-sdl/src/"
-DEST_PATH = "out/"
 
 HEADER = """
 #pragma once
@@ -59,7 +58,6 @@ with open("data/layer0.json") as sfile:
     data = json.load(sfile)
 
 
-# rows = []
 tiledata = []
 
 for tile in data["tiles"]:
@@ -67,18 +65,7 @@ for tile in data["tiles"]:
     if tile["tag"]:
         print(tile)
 
-    # row = [
-    #     # str(tile["index"]),
-    #     "0" if tile["next"] < 0 else str(tile["next"]),
-    #     str(tile["speed"]),
-    #     str(tile["type"]),
-    #     str(tile["w"]),
-    #     tile["tag"],
-    # ]
-    # rows.append("\t".join(row).strip())
-
     row = [
-        # str(tile["index"]),
         "0" if tile["next"] < 0 else str(tile["next"]),
         str(tile["speed"]),
         str(tile["type"]),
@@ -89,8 +76,6 @@ for tile in data["tiles"]:
     tiledef = "{" + (", ".join(row)) + "},\n"
     tiledata.append(tiledef)
 
-# with open("out/layerdata.tsv", "w") as t:
-#    t.write("\n".join(rows))
 
 with open(DEST_PATH + "layerdata.h", "w") as t:
     t.write(COPYRIGHT_NOTICE + HEADER + "\n")

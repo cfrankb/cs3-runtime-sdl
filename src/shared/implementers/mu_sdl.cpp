@@ -32,6 +32,11 @@ static bool endswith(const char *str, const char *end)
 }
 #endif
 
+void musicFinishedCallback()
+{
+    LOGI("music finished");
+}
+
 CMusicSDL::CMusicSDL()
 {
     m_type = TYPE_NONE;
@@ -59,6 +64,8 @@ CMusicSDL::CMusicSDL()
         return;
     }
     m_valid = true;
+
+    Mix_HookMusicFinished(musicFinishedCallback);
 }
 
 CMusicSDL::~CMusicSDL()
@@ -104,8 +111,9 @@ EMSCRIPTEN_KEEPALIVE
 #endif
 bool CMusicSDL::play(int loop)
 {
+    LOGI("play music");
     m_playing = true;
-    if (m_type == TYPE_PRELOAD)
+    if (m_type == TYPE_PRELOAD && m_data.mixData != nullptr)
     {
         Mix_PlayMusic(m_data.mixData, loop);
         return true;
@@ -126,6 +134,8 @@ void CMusicSDL::stop()
 {
     if (m_type == TYPE_PRELOAD && Mix_PlayingMusic())
     {
+        LOGI("100 ms delay");
+        SDL_Delay(100);
         LOGI("stop music");
         Mix_HaltMusic();
     }
@@ -146,14 +156,18 @@ void CMusicSDL::close()
 
     if (m_type == TYPE_PRELOAD)
     {
-        while (Mix_PlayingMusic() && !Mix_PausedMusic())
+        while (Mix_PlayingMusic())
         {
             // music is actively playing
             LOGI("waiting for music to stop");
             SDL_Delay(100);
         }
+
         if (m_data.mixData)
+        {
+            LOGI("Free Music: %p", m_data.mixData);
             Mix_FreeMusic(m_data.mixData);
+        }
         m_data.mixData = nullptr;
     }
     m_type = TYPE_NONE;

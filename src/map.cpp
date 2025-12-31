@@ -621,7 +621,7 @@ bool CMap::resize(uint16_t in_len, uint16_t in_hei, uint8_t t, bool fast)
     m_hei = in_hei;
 
     for (const auto &layer : m_layers)
-        if (!layer->resize(in_hei, in_hei, t, fast))
+        if (!layer->resize(in_len, in_hei, t, fast))
             return false;
 
     attrMap_t newAttrs;

@@ -227,7 +227,6 @@ void Engine::drawScores()
         scaleY = 2;
     }
 
-    // bitmap.fill(BLACK);
     char t[50];
     int y = 1;
     strncpy(t, "HALL OF HEROES", sizeof(t));
@@ -258,7 +257,7 @@ void Engine::drawScores()
                  hiScore.score,
                  hiScore.level,
                  hiScore.name,
-                 showCaret ? CHARS_CARET - CHARS_CUSTOM + CHARS_CUSTOM_BASE : '\0');
+                 showCaret ? CHARS_CARET - CHARS_CUSTOM + CHARS_CUSTOM_BASE + ' ' : '\0');
         drawFont(1, y * FONT_SIZE, t, color, scaleX / 2, scaleY / 2);
         y += scaleX / 2;
     }

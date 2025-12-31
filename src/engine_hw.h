@@ -22,6 +22,8 @@
 #include "tileset_tex.h"
 #include "font8x8.h"
 #include "colormap.h"
+#include "layerdata.h"
+#include "layer.h"
 
 class CMenu;
 class CFrame;
@@ -90,6 +92,37 @@ protected:
             tile->sh, // tile->rect.h * SCALE
         };
         SDL_RenderTexture(m_renderer, tile->texture, &tile->rect, &dst);
+    }
+
+    struct overlay_t
+    {
+        const Tile *tile;
+        const int x;
+        const int y;
+    };
+
+    inline void drawViewPortInner(std::vector<overlay_t> &overlays, const CLayer *layer, const uint8_t &tileID, const int px, const int py)
+    {
+        if (tileID == 0)
+            return;
+
+        const Tile *tile = nullptr;
+        if (layer->baseID() == 0)
+        {
+            tile = getMainLayerTile(tileID);
+        }
+        else if (tileID)
+        {
+            const uint8_t refID = m_animator->getLayerTile(tileID);
+            tile = m_tileset_layers0.getTile(refID);
+            const layerdata_t &data = getLayerTileDef(refID);
+            if (data.tileType == LayerTileType::Foreground)
+                overlays.emplace_back(overlay_t{tile, px, py});
+        }
+        if (tile)
+        {
+            drawTile(tile, px, py);
+        }
     }
 
     constexpr inline uint32_t fazFilter(const int bitShift) const
