@@ -107,8 +107,8 @@ CRuntime::~CRuntime()
  */
 void CRuntime::paint()
 {
-    CGame &game = *m_game;
     /*
+    CGame &game = *m_game;
      if (game.level() == 4)
      {
          LOGI("paint IN");
@@ -308,6 +308,12 @@ bool CRuntime::createSDLWindow()
 #endif
     m_resolution = findResolutionIndex();
 
+    SDL_SetRenderLogicalPresentation(
+        m_app.renderer,
+        width,  // e.g. 640
+        height, // e.g. 480
+        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
     return true;
 }
 
@@ -438,10 +444,10 @@ void CRuntime::doInput()
             LOGI("SDL_EVENT_WINDOW_RESIZED");
             if (!m_app.isFullscreen)
             {
-                LOGI("resized");
+                LOGI("resized %d x %d", getWidth(), getHeight());
                 SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
             }
-            // updateScreenInfo();
+            m_engine->resize(getWidth(), getHeight());
             onOrientationChange();
             break;
 
@@ -451,12 +457,10 @@ void CRuntime::doInput()
 
         case SDL_EVENT_WINDOW_RESTORED:
             LOGI("SDL_EVENT_WINDOW_RESTORED");
-            // updateScreenInfo();
             break;
 
         case SDL_EVENT_DISPLAY_ORIENTATION:
             LOGI("SDL_EVENT_DISPLAY_ORIENTATION");
-            // updateScreenInfo();
             onOrientationChange();
             break;
 
@@ -885,49 +889,6 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
 
 void CRuntime::preloadAssets()
 {
-    /*
-    std::unique_ptr<CFrameSet> *frameSets[] = {
-        &m_tiles,
-        &m_animz,
-        &m_users,
-        &m_sheet0,
-        &m_sheet1,
-        &m_uisheet,
-        &m_titlePix,
-        nullptr,
-    };
-    CFileMem mem;
-    for (size_t i = 0; i < m_assetFiles.size(); ++i)
-    {
-        const std::string filename = AssetMan::getPrefix() + "pixels/" + m_assetFiles[i];
-        if (!frameSets[i])
-            continue;
-        *frameSets[i] = std::make_unique<CFrameSet>();
-        data_t data = AssetMan::read(filename);
-        if (!data.empty())
-        {
-            if (!m_quiet)
-                LOGI("reading %s", filename.c_str());
-            mem.replace(data.data(), data.size());
-            if ((*frameSets[i])->extract(mem))
-            {
-                if (!m_quiet)
-                    LOGI("extracted: %ld", ((*frameSets[i])->getSize()));
-            }
-        }
-        else
-        {
-            LOGE("can't read: %s", filename.c_str());
-        }
-    }
-
-    const std::string fontName = AssetMan::getPrefix() + m_config["font"];
-    data_t data = AssetMan::read(fontName);
-    if (data.empty())
-        return;
-    m_fontData = std::move(data);
-    */
-
     const std::string creditsFile = AssetMan::getPrefix() + m_config["credits"];
     data_t data = AssetMan::read(creditsFile, true);
     if (!data.empty())
@@ -1582,6 +1543,24 @@ void CRuntime::toggleFullscreen()
     }
     else
     {
+        if (!m_app.isFullscreen)
+        {
+            EmscriptenFullscreenStrategy strategy{};
+            strategy.scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_ASPECT;
+            strategy.canvasResolutionScaleMode =
+                EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_STDDEF;
+            strategy.filteringMode =
+                EMSCRIPTEN_FULLSCREEN_FILTERING_NEAREST;
+            strategy.canvasResizedCallback = nullptr;
+            strategy.canvasResizedCallbackUserData = nullptr;
+
+            emscripten_enter_soft_fullscreen("#canvas", &strategy);
+        }
+        else
+        {
+            emscripten_exit_soft_fullscreen();
+        }
+        /*
         if (m_app.isFullscreen)
         {
             EmscriptenFullscreenStrategy strategy = {
@@ -1596,13 +1575,14 @@ void CRuntime::toggleFullscreen()
         {
             emscripten_exit_soft_fullscreen();
         }
+        */
     }
 #else
     if (m_app.isFullscreen)
     {
         // Currently in fullscreen, switch to windowed
         LOGI("Switching to windowed mode.");
-        if (!SDL_SetWindowFullscreen(m_app.window, false)) // false means windowed mode
+        if (!SDL_SetWindowFullscreen(m_app.window, 0)) // false means windowed mode
         {
             LOGE("Switching to windowed mode failed: %s", SDL_GetError());
         }
@@ -1613,7 +1593,7 @@ void CRuntime::toggleFullscreen()
             LOGE("SDL_SetWindowSize failed: %s", SDL_GetError());
         }
 
-        if (!SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedX))
+        if (!SDL_SetWindowPosition(m_app.window, m_app.windowedX, m_app.windowedY))
         {
             LOGE("SDL_SetWindowPosition failed: %s", SDL_GetError());
         }
@@ -1624,14 +1604,38 @@ void CRuntime::toggleFullscreen()
         LOGI("Switching to fullscreen desktop mode.");
 
         // Save current windowed position and size before going fullscreen
-        SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedX);
+        SDL_GetWindowPosition(m_app.window, &m_app.windowedX, &m_app.windowedY);
         SDL_GetWindowSize(m_app.window, &m_app.windowedWidth, &m_app.windowedHeigth);
 
-        if (!SDL_SetWindowFullscreen(m_app.window, true))
+        if (!SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN))
         {
             LOGE("Switching to fullscreen mode failed: %s", SDL_GetError());
         }
     }
+
+    // ---- IMPORTANT: wait until renderer size becomes valid ----
+    // REQUIRED: update renderer state AFTER the switch
+    int w = 0, h = 0;
+    for (int i = 0; i < 5 && (w == 0 || h == 0); ++i)
+    {
+        SDL_GetRenderOutputSize(m_app.renderer, &w, &h);
+        SDL_Delay(1);
+    }
+
+    SDL_Rect vp;
+    vp.x = 0;
+    vp.y = 0;
+    vp.w = w;
+    vp.h = h;
+
+    SDL_SetRenderViewport(m_app.renderer, &vp);
+
+    SDL_SetRenderLogicalPresentation(
+        m_app.renderer,
+        w,
+        h,
+        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
 #endif
     if (m_verbose)
     {
@@ -2017,8 +2021,8 @@ CMenu &CRuntime::initOptionMenu()
         snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
         resolutions.emplace_back(tmp);
     }
-    menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
-        .setRole(MENU_ITEM_RESOLUTION);
+    // menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
+    //    .setRole(MENU_ITEM_RESOLUTION);
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - gpu
       #- develop
     tags:
       - "v*"
