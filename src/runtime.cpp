@@ -1554,13 +1554,36 @@ void CRuntime::toggleFullscreen()
             strategy.canvasResizedCallback = nullptr;
             strategy.canvasResizedCallbackUserData = nullptr;
 
+            // HARD fullscreen — REQUIRED for itch.io
+            emscripten_request_fullscreen_strategy(
+                "#canvas",
+                EM_TRUE, // lock pointer
+                &strategy);
+        }
+        else
+        {
+            emscripten_exit_fullscreen();
+        }
+
+        /*
+        if (!m_app.isFullscreen)
+        {
+            EmscriptenFullscreenStrategy strategy{};
+            strategy.scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_ASPECT;
+            strategy.canvasResolutionScaleMode =
+                EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_STDDEF;
+            strategy.filteringMode =
+                EMSCRIPTEN_FULLSCREEN_FILTERING_NEAREST;
+            strategy.canvasResizedCallback = nullptr;
+            strategy.canvasResizedCallbackUserData = nullptr;
+
             emscripten_enter_soft_fullscreen("#canvas", &strategy);
         }
         else
         {
             emscripten_exit_soft_fullscreen();
         }
-        /*
+
         if (m_app.isFullscreen)
         {
             EmscriptenFullscreenStrategy strategy = {
