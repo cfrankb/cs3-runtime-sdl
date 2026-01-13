@@ -254,6 +254,13 @@ bool CRuntime::createSDLWindow()
     windowFlags |= SDL_WINDOW_BORDERLESS;
 #endif
     atexit(cleanup);
+
+#if defined(EMSCRIPTEN)
+    SDL_SetHint(
+        SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT,
+        "#canvas");
+#endif
+
     const int width = PIXEL_SCALE * getWidth();
     const int height = PIXEL_SCALE * getHeight();
     m_app.window = SDL_CreateWindow(title.c_str(), width, height, windowFlags);
