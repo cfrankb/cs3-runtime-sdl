@@ -40,6 +40,9 @@ def get_deps_blocks():
         "../../src/states.cpp",
         "../../src/statedata.cpp",
         "../../src/tilesdata.cpp",
+        "../../src/layer.cpp",
+        "../../src/layerdata.cpp",
+        "../../src/animator.cpp",
     ]
 
     for f in files:
