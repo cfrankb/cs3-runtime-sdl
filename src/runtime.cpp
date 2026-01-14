@@ -362,6 +362,23 @@ void CRuntime::run()
     mainLoop();
 }
 
+void CRuntime::handleWindowResize()
+{
+    int w = 0, h = 0;
+    SDL_GetRenderOutputSize(m_app.renderer, &w, &h);
+
+    SDL_Rect vp{0, 0, w, h};
+    SDL_SetRenderViewport(m_app.renderer, &vp);
+
+    SDL_SetRenderLogicalPresentation(
+        m_app.renderer,
+        640, // logical width
+        480, // logical height
+        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
+    LOGI("Resize handled: render output %dx%d", w, h);
+}
+
 /**
  * @brief Read input devices for user inputs
  *
@@ -369,6 +386,7 @@ void CRuntime::run()
 void CRuntime::doInput()
 {
     SDL_Event event;
+    bool skip = false;
     while (SDL_PollEvent(&event))
     {
         // SDL_Window *window = SDL_GetWindowFromID(event.window.windowID);
@@ -447,8 +465,29 @@ void CRuntime::doInput()
             LOGI("SDL_EVENT_WINDOW_HIDDEN");
             break;
 
+        case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
+            LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED");
+            skip = true;
+            /*
+            SDL_Rect safe;
+            if (SDL_GetWindowSafeArea(window, &safe))
+            {
+                SDL_Log("Safe area changed: x=%d y=%d w=%d h=%d",
+                        safe.x, safe.y, safe.w, safe.h);
+            }
+            */
+            [[fallthrough]];
+
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+            if (!skip)
+                LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED");
+            skip = true;
+            [[fallthrough]];
+
         case SDL_EVENT_WINDOW_RESIZED:
-            LOGI("SDL_EVENT_WINDOW_RESIZED");
+            if (!skip)
+                LOGI("SDL_EVENT_WINDOW_RESIZED");
+
             if (!m_app.isFullscreen)
             {
                 LOGI("resized %d x %d", getWidth(), getHeight());
@@ -456,6 +495,7 @@ void CRuntime::doInput()
             }
             m_engine->resize(getWidth(), getHeight());
             onOrientationChange();
+            handleWindowResize();
             break;
 
         case SDL_EVENT_WINDOW_MINIMIZED:
@@ -469,10 +509,6 @@ void CRuntime::doInput()
         case SDL_EVENT_DISPLAY_ORIENTATION:
             LOGI("SDL_EVENT_DISPLAY_ORIENTATION");
             onOrientationChange();
-            break;
-
-        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED");
             break;
 
         case SDL_EVENT_WINDOW_MOUSE_ENTER:
@@ -493,18 +529,6 @@ void CRuntime::doInput()
 
         case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
             LOGI("SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED");
-            break;
-
-        case SDL_EVENT_WINDOW_SAFE_AREA_CHANGED:
-            LOGI("SDL_EVENT_WINDOW_SAFE_AREA_CHANGED");
-            /*
-            SDL_Rect safe;
-            if (SDL_GetWindowSafeArea(window, &safe))
-            {
-                SDL_Log("Safe area changed: x=%d y=%d w=%d h=%d",
-                        safe.x, safe.y, safe.w, safe.h);
-            }
-            */
             break;
 
         case SDL_EVENT_CLIPBOARD_UPDATE:
@@ -1534,18 +1558,42 @@ void CRuntime::initOptions()
     m_trace = isTrue(m_config["trace"]);
 }
 
+#ifdef __EMSCRIPTEN__
+EM_JS(void, fix_canvas_css, (), {
+    if (!Module || !Module.canvas)
+        return;
+    const c = Module.canvas;
+    c.style.width = '100vw';
+    c.style.height = '100vh';
+    c.style.maxWidth = 'none';
+    c.style.maxHeight = 'none';
+    c.style.display = 'block';
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+});
+#endif
+
 /**
  * @brief  Function to toggle fullscreen mode on/off
  *
  */
 void CRuntime::toggleFullscreen()
 {
+    LOGI("toggleFullscreen");
 #ifdef __EMSCRIPTEN__
+
+    fix_canvas_css();
+
     if (m_config["webfullscreen"] == "true")
     {
-        if (!SDL_SetWindowFullscreen(m_app.window, m_app.isFullscreen))
+        if (!SDL_SetRenderLogicalPresentation(
+                m_app.renderer,
+                640, // logical width
+                480, // logical height
+                SDL_LOGICAL_PRESENTATION_INTEGER_SCALE))
         {
-            LOGE("Fullscreen toggle error: %s", SDL_GetError());
+            LOGE("toggleFullscreen >> SDL_SetRenderLogicalPresentation error: %s", SDL_GetError());
         }
     }
     else
@@ -1572,41 +1620,21 @@ void CRuntime::toggleFullscreen()
             emscripten_exit_fullscreen();
         }
 
-        /*
-        if (!m_app.isFullscreen)
+        int w = 0, h = 0;
+        for (int i = 0; i < 5 && (w == 0 || h == 0); ++i)
         {
-            EmscriptenFullscreenStrategy strategy{};
-            strategy.scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_ASPECT;
-            strategy.canvasResolutionScaleMode =
-                EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_STDDEF;
-            strategy.filteringMode =
-                EMSCRIPTEN_FULLSCREEN_FILTERING_NEAREST;
-            strategy.canvasResizedCallback = nullptr;
-            strategy.canvasResizedCallbackUserData = nullptr;
-
-            emscripten_enter_soft_fullscreen("#canvas", &strategy);
+            SDL_GetRenderOutputSize(m_app.renderer, &w, &h);
+            SDL_Delay(1);
         }
-        else
-        {
-            emscripten_exit_soft_fullscreen();
-        }
-
-        if (m_app.isFullscreen)
-        {
-            EmscriptenFullscreenStrategy strategy = {
-                .scaleMode = EMSCRIPTEN_FULLSCREEN_SCALE_DEFAULT,
-                .canvasResolutionScaleMode = EMSCRIPTEN_FULLSCREEN_CANVAS_SCALE_NONE,
-                .filteringMode = EMSCRIPTEN_FULLSCREEN_FILTERING_DEFAULT,
-                .canvasResizedCallback = nullptr,
-                .canvasResizedCallbackUserData = nullptr};
-            emscripten_enter_soft_fullscreen("#canvas", &strategy);
-        }
-        else
-        {
-            emscripten_exit_soft_fullscreen();
-        }
-        */
+        SDL_Rect vp{0, 0, w, h};
+        SDL_SetRenderViewport(m_app.renderer, &vp);
     }
+    SDL_SetRenderLogicalPresentation(
+        m_app.renderer,
+        640, // 640
+        480, // 480
+        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+
 #else
     if (m_app.isFullscreen)
     {
@@ -1912,7 +1940,7 @@ bool CRuntime::fileExists(const std::string &name) const
 const std::string CRuntime::getSavePath() const
 {
 #ifdef __EMSCRIPTEN__
-    return SAVEGAME_FILE;
+    return m_workspace + SAVEGAME_FILE;
 #else
     return m_workspace + SAVEGAME_FILE;
 #endif
@@ -2627,6 +2655,7 @@ bool CRuntime::isValidSavegame(const std::string &filepath)
 
     if (!fileExists(filepath))
     {
+        LOGW("savegame `%s` doesn't exists", filepath.c_str());
         return false;
     }
 
@@ -2639,6 +2668,7 @@ bool CRuntime::isValidSavegame(const std::string &filepath)
         sfile.close();
         if (!CGame::validateSignature(sig, version))
         {
+            LOGW("savegame invalid signature");
             return false;
         }
         return true;
