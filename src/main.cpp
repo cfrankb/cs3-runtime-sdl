@@ -180,6 +180,7 @@ const std::string getPrefix()
 #include <shlobj.h>
 #include <iostream>
 #include <vector>
+#include <filesystem> // Requires C++17
 
 std::string GetAppDataPath()
 {
