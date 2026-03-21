@@ -181,6 +181,7 @@ const std::string getPrefix()
 #include <iostream>
 #include <vector>
 #include <filesystem> // Requires C++17
+namespace fs = std::filesystem;
 
 std::string GetAppDataPath()
 {
