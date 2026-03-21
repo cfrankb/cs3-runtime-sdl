@@ -199,6 +199,29 @@ std::string GetAppDataPath()
     return "";
 }
 
+bool makePath(const std::string &path)
+{
+    // std::string path = "C:\\Users\\YourUser\\AppData\\Roaming\\MyAppData";
+    try
+    {
+        // create_directories creates the entire path (parents too) if they don't exist
+        if (fs::create_directories(path))
+        {
+            std::cout << "Directory created successfully\n";
+        }
+        else
+        {
+            std::cout << "Directory already exists or could not be created\n";
+        }
+    }
+    catch (const fs::filesystem_error &e)
+    {
+        std::cerr << "Error: " << e.what() << "\n";
+        return false;
+    }
+    return true;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     std::vector<std::string> list;
@@ -245,6 +268,11 @@ int main(int argc, char *args[])
     params.workspace = path;
 #elif defined(__MINGW32__)
     params.workspace = GetAppDataPath() + WINDOWS_GAME_ROAMPATH;
+    if (!makePath(workspace))
+    {
+        LOGE("failed to create appDataRoamPath: %s", params.workspace.c_str());
+    }
+    params.workspace += "\\";
 #elif defined(__EMSCRIPTEN__)
     params.workspace = "/offline/";
 #endif
