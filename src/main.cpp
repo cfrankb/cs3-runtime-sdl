@@ -270,7 +270,7 @@ int main(int argc, char *args[])
     params.workspace = path;
 #elif defined(__MINGW32__)
     params.workspace = GetAppDataPath() + WINDOWS_GAME_ROAMPATH;
-    if (!makePath(workspace))
+    if (!makePath(params.workspace))
     {
         LOGE("failed to create appDataRoamPath: %s", params.workspace.c_str());
     }
