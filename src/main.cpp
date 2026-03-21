@@ -46,6 +46,7 @@ uint32_t g_sleepDelay = SLEEP;
 constexpr const char *DEFAULT_PREFIX = "data/";
 constexpr const char *DEFAULT_MAPARCH = "levels.mapz";
 constexpr const char *CONF_FILE = "game.cfg";
+constexpr const char *WINDOWS_GAME_ROAMPATH = "\\cs3-runtime";
 
 // Platform detection
 #if defined(__APPLE__)
@@ -176,6 +177,28 @@ const std::string getPrefix()
 #if defined(__MINGW32__)
 #pragma message "Compiling with MinGW"
 #include <windows.h>
+#include <shlobj.h>
+#include <iostream>
+#include <vector>
+
+std::string GetAppDataPath()
+{
+    PWSTR path = NULL;
+    // Get the roaming AppData folder (C:\Users\Name\AppData\Roaming)
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path);
+
+    if (SUCCEEDED(hr))
+    {
+        // Convert PWSTR (wchar_t*) to std::string
+        std::wstring ws(path);
+        std::string s(ws.begin(), ws.end());
+        CoTaskMemFree(path); // Free the memory allocated by SHGetKnownFolderPath
+        return s;
+    }
+    CoTaskMemFree(path);
+    return "";
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     std::vector<std::string> list;
@@ -220,6 +243,8 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     params.workspace = path;
+#elif defined(__MINGW32__)
+    params.workspace = GetAppDataPath() + WINDOWS_GAME_ROAMPATH;
 #elif defined(__EMSCRIPTEN__)
     params.workspace = "/offline/";
 #endif
