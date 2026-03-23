@@ -1134,7 +1134,7 @@ CFrame *EngineHW::getFrame(const std::string &filepath)
 
 int EngineHW::drawTitlePix(int offsetY)
 {
-    const int x = 0;
+    const int x = (getWidth() - m_textureTitlePix->w) / 2;
     const int y = offsetY;
     SDL_FRect dst = {
         (float)x * SCALEF,

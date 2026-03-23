@@ -370,10 +370,12 @@ void CRuntime::handleWindowResize()
     SDL_Rect vp{0, 0, w, h};
     SDL_SetRenderViewport(m_app.renderer, &vp);
 
+    const int sx = getWidth() * SCALE;  // 640,
+    const int sy = getHeight() * SCALE; // 480,
     SDL_SetRenderLogicalPresentation(
         m_app.renderer,
-        640, // logical width
-        480, // logical height
+        sx, // logical width
+        sy, // logical height
         SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
 
     LOGI("Resize handled: render output %dx%d", w, h);
@@ -2079,8 +2081,8 @@ CMenu &CRuntime::initOptionMenu()
         snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
         resolutions.emplace_back(tmp);
     }
-    // menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
-    //    .setRole(MENU_ITEM_RESOLUTION);
+    menu.addItem(CMenuItem("SCREEN: %s", resolutions, &m_resolution))
+        .setRole(MENU_ITEM_RESOLUTION);
     menu.addItem(CMenuItem("DISPLAY: %s", {"WINDOWED", "FULLSCREEN"}, &m_fullscreen))
         .setRole(MENU_ITEM_FULLSCREEN);
 #endif
