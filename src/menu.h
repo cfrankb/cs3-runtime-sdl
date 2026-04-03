@@ -47,6 +47,7 @@ public:
     bool isCaretDisabled() const;
     bool containsRole(int role) const;
     CMenu &removeRole(int role);
+    CMenuItem *getItemByRole(int role);
 
 private:
     enum

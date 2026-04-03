@@ -1789,6 +1789,11 @@ bool CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_joyState[AIM_LEFT])
     {
+        if (item.isDisabled())
+        {
+            // don't allow disabled item to be changed
+            return false;
+        }
         if (item.left() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
@@ -1796,6 +1801,11 @@ bool CRuntime::manageMenu(CMenu &menu)
     }
     else if (m_joyState[AIM_RIGHT])
     {
+        if (item.isDisabled())
+        {
+            // don't allow disabled item to be changed
+            return false;
+        }
         if (item.right() && m_sound != nullptr)
             m_sound->play(SOUND_0009);
         m_optionCooldown = DEFAULT_OPTION_COOLDOWN;
@@ -1923,6 +1933,11 @@ bool CRuntime::manageMenu(CMenu &menu)
              oldValue != item.value())
     {
         toggleFullscreen();
+        CMenuItem *itemRez = menu.getItemByRole(MENU_ITEM_RESOLUTION);
+        if (itemRez)
+        {
+            itemRez->disable(m_app.isFullscreen);
+        }
     }
 
     m_buttonState[BUTTON_A] = BUTTON_RELEASED;
@@ -2089,6 +2104,12 @@ CMenu &CRuntime::initOptionMenu()
     if (!m_gameControllers.empty())
     {
         addGamePadOptions(menu);
+    }
+
+    CMenuItem *itemRez = menu.getItemByRole(MENU_ITEM_RESOLUTION);
+    if (itemRez)
+    {
+        itemRez->disable(m_app.isFullscreen);
     }
     return menu;
 }

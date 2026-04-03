@@ -199,10 +199,10 @@ void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
         const std::string &text = item.str();
         const int bx = baseX == -1 ? (getWidth() - text.size() * FONT_SIZE * scaleX) / 2 : baseX;
         const bool selected = static_cast<int>(i) == menu.index();
-        Color color = selected ? YELLOW : BLUE;
+        Color color = selected ? PALE_BROWN : DARK_BROWN2;
         if (item.isDisabled())
         {
-            color = LIGHTGRAY;
+            color = DARKGRAY;
         }
         int x = bx;
         const int y = baseY + i * spacingY;
@@ -212,7 +212,7 @@ void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
             uint8_t tmp[2];
             tmp[0] = CHARS_TRIGHT - CHARS_CUSTOM + CHARS_CUSTOM_BASE + ' ';
             tmp[1] = '\0';
-            m_font.drawText(m_renderer, (char *)tmp, SColor::RED, nullptr, 32 * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
+            m_font.drawText(m_renderer, (char *)tmp, SColor::toSColor(RED_BROWN), nullptr, 32 * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
             // drawFont(bitmap, 32, y, (char *)tmp, RED, CLEAR, scaleX, scaleY);
         }
         if (item.type() == CMenuItem::ITEM_BAR)

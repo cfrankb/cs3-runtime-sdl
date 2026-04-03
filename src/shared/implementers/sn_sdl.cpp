@@ -211,7 +211,6 @@ const char *CSndSDL::signature() const
  */
 void CSndSDL::setVolume(int v)
 {
-    return;
     m_volume = v;
     for (auto &[key, val] : m_sounds)
     {

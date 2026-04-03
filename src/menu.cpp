@@ -175,3 +175,13 @@ CMenu &CMenu::removeRole(int role)
     }
     return *this;
 }
+
+CMenuItem *CMenu::getItemByRole(int role)
+{
+    for (auto &item : m_items)
+    {
+        if (item.role() == role)
+            return &item;
+    }
+    return nullptr;
+}
