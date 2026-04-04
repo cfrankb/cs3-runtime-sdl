@@ -22,10 +22,10 @@ jobs:
           submodules: recursive
           fetch-depth: 0 # fetch full history including tags
 
-      - name: Checkout Steam SDK
+      - name: Checkout Data Repo
         uses: actions/checkout@v6
         with:
-          repository: github.com/cfrankb/cs3-data-private
+          repository: cfrankb/cs3-data-private
           path: data
           token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
 
