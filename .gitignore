@@ -13,6 +13,7 @@ techdocs/originals
 local/*
 setup/*
 bb/*
+data/*
 #VERSION
 #/CMakeLists.txt
 levels2.mapz
