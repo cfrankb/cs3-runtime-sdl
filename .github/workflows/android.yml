@@ -29,6 +29,13 @@ jobs:
           submodules: recursive
           fetch-depth: 0 # fetch full history including tags
 
+      - name: Checkout Data Repo
+        uses: actions/checkout@v6
+        with:
+          repository: cfrankb/cs3-data-private
+          path: data
+          token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
+
       - name: Update build information
         run: |
           bin/setbuild.sh

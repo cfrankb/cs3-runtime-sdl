@@ -9,7 +9,7 @@ if(CMAKE_C_COMPILER MATCHES "x86_64-w64-mingw32.*")
 endif()
 
 
-if(EMSCRIPTEN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     message(STATUS "Targeting Emscripten/WebAssembly ${CMAKE_SOURCE_DIR}")
     set(CMAKE_EXECUTABLE_SUFFIX ".html")  # Optional: .html shell
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -sUSE_SDL=0 -O3 -sUSE_ZLIB=1 ")
@@ -43,7 +43,8 @@ endif()
 add_subdirectory(src)
 
 # Add External
-if(EMSCRIPTEN)
+#if(EMSCRIPTEN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(SDLMIXER_MOD_XMP ON CACHE BOOL "Enable libxmp module support")
     set(SDLMIXER_VENDORED ON CACHE BOOL "Use vendored libxmp")
 elseif(IS_MINGW)
@@ -58,6 +59,11 @@ elseif(IS_MINGW)
     #cmake --build build/mingw --target help
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+   # Emscripten-specific setup
+else()
+    # Non-Emscripten setup
+endif()
 add_subdirectory(external/SDL3 SDL3)
 add_subdirectory(external/SDL3_mixer SDL3_mixer)
 
@@ -71,7 +77,8 @@ add_executable(${PROJECT_NAME} src/main.cpp)
 #add_subdirectory(tests)
 
 
-if(EMSCRIPTEN)
+#if(EMSCRIPTEN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(BPATH "${CMAKE_CURRENT_BINARY_DIR}")
     set(DATA_SRC "${CMAKE_SOURCE_DIR}/data")
     set(DATA_DST "${BPATH}/ems_data")
@@ -106,6 +113,7 @@ if(EMSCRIPTEN)
         -sASYNCIFY
         -sEXPORTED_RUNTIME_METHODS=ccall,cwrap
         -sEXPORTED_FUNCTIONS=_main,_malloc,_free
+        #-sUSE_WEBGPU=1
     )
     target_link_libraries(${PROJECT_NAME}
         PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer src_lib
