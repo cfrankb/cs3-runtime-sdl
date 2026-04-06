@@ -42,6 +42,10 @@ jobs:
       - name: Build
         #run: cmake --build build --config Release
         run: |
+          pwd
+          ls -l
+          ls -s external
+          python3 bin/refresh.py
           chmod +x bin/build.sh
           bin/build.sh steam_linux
 
@@ -53,4 +57,5 @@ jobs:
             build/steam-linux/cs3-runtime
             external/steamworks/sdk/redistributable_bin/linux64/libsteam_api.so
             packages/steam/steam_appid.txt
+            data
           retention-days: 7
