@@ -24,6 +24,7 @@ def is_excluded(f: str):
         "menu.*",
         "parseargs.*",
         "runtime.*",
+        "steam_helper.*",
     ]
     f = ntpath.basename(f)
     for e in excluded:

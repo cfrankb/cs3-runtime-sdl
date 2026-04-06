@@ -16,6 +16,13 @@ elif [[ "$1" == "sdl3" ]] ; then
     echo "BUILD PATH: ${BPATH}"
     cmake -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
     cmake --build ${BPATH}
+elif [[ "$1" == "steam_linux" ]] ; then
+    BPATH=build/steam-linux
+    echo "BUILD PATH: ${BPATH}"
+    cmake -B ${BPATH} -DCMAKE_BUILD_TYPE=Release #\
+      #-DCMAKE_C_COMPILER=gcc-14 \
+      #-DCMAKE_CXX_COMPILER=g++-14
+    cmake --build ${BPATH}
 elif [[ "$1" == "emsdl3" ]] ; then
     BPATH=build/ems
     TARGET=${BPATH}/${APP_NAME}.html

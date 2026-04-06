@@ -13,7 +13,7 @@ def generate_file(folder, sub_folders):
     if not os.path.isdir(folder):
         print(f"not a directory: {folder}")
         return
-    excluded = ["main.cpp"]
+    excluded = ["main.cpp", "steam_helper.cpp"]
 
     file_path = folder + "/CMakeLists.txt"
     lines = []
@@ -81,9 +81,9 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
     )
 
     lines.append("")
-    lines.append("if(IS_MINGW)")
+    lines.append("if(IS_MINGW OR BUILDING_FOR_STEAM)")
     lines.append(
-        f"target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlib)"
+        f"target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
     )
     lines.append("endif()")
     lines.append("")

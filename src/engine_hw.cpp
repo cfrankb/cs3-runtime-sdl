@@ -79,8 +79,8 @@ namespace EngineHW_Private
             out.a = 255;
             return out;
         };
-    };
-};
+    }
+}
 
 using namespace EngineHW_Private;
 
@@ -96,7 +96,7 @@ EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector
     m_gameMixin = mixin;
     setAssetFiles(assetFiles);
     preloadAssets();
-};
+}
 
 EngineHW::~EngineHW()
 {

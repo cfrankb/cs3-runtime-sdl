@@ -34,6 +34,9 @@
 #include "statedata.h"
 #include "states.h"
 #include "strhelper.h"
+#ifdef STEAM_BUILD
+#include "steam_helper.h"
+#endif
 
 const uint32_t FPS = CRuntime::tickRate();
 const uint32_t SLEEP = 1000 / FPS;
@@ -252,6 +255,16 @@ int main(int argc, char *args[])
 #endif
 
     LOGI("Starting Game %s: Build [%s]", VERSION, BUILD_HASH);
+
+#if STEAM_BUILD
+    LOGI("running special steam build.");
+    if (!InitSteam())
+    {
+        LOGE("failed to init steam");
+        return EXIT_FAILURE;
+    }
+#endif
+
     srand(static_cast<unsigned int>(time(nullptr)));
     CMapArch maparch;
     params_t params;
@@ -357,5 +370,8 @@ int main(int argc, char *args[])
     }
 #endif
     CGame::destroy();
+#ifdef STEAM_BUILD
+    ShutdownSteam();
+#endif
     return EXIT_SUCCESS;
 }

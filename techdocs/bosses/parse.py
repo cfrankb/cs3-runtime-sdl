@@ -292,7 +292,7 @@ def write_cpp(file_path):
         tfile.write("namespace BossData\n")
         tfile.write(f"{{\n{TAB}")
         tfile.write(f"\n{TAB}".join(g_vars) + "\n")
-        tfile.write("};\n\n")
+        tfile.write("}\n\n")
         tfile.write("using namespace BossData;\n\n")
 
         tfile.write("constexpr const sprite_hitbox_t g_hitboxes[] = {\n")

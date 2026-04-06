@@ -8,6 +8,26 @@ if(CMAKE_C_COMPILER MATCHES "x86_64-w64-mingw32.*")
     set(IS_MINGW TRUE)
 endif()
 
+# Define __FILE_NAME__ for GCC versions older than 12
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+    # This adds a definition for every source file
+    set_property(SOURCE ${YOUR_SOURCE_FILES} APPEND PROPERTY COMPILE_DEFINITIONS
+        "__FILE_NAME__=\"$<TARGET_FILE_NAME:$<TARGET_NAME>>\"" # Simplified version
+    )
+    # Better version: use a macro to strip the path
+    add_compile_options("-D__FILE_NAME__=__builtin_strrchr(\"/\" __FILE__, '/') ? __builtin_strrchr(\"/\" __FILE__, '/') + 1 : __FILE__")
+endif()
+
+# Detect if we are building in the Steam Linux Runtime
+if(EXISTS "/etc/os-release")
+    file(READ "/etc/os-release" OS_RELEASE_CONTENT)
+    if(OS_RELEASE_CONTENT MATCHES "ID=[\"']?steamrt[\"']?")
+        set(BUILDING_FOR_STEAM TRUE)
+        message(STATUS "Build Environment: Steam Linux Runtime Detected")
+        add_compile_definitions(STEAM_BUILD=1)
+    endif()
+endif()
+
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     message(STATUS "Targeting Emscripten/WebAssembly ${CMAKE_SOURCE_DIR}")
@@ -37,17 +57,17 @@ elseif(MSVC)
 else()
     message(STATUS "Targeting native GCC/Linux")
     message(STATUS "Using GCC or Clang")
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    #add_compile_options(-Wall -Wextra -Wpedantic)
+    add_compile_options(-Wall -Wextra)
 endif()
 
 add_subdirectory(src)
 
 # Add External
-#if(EMSCRIPTEN)
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(SDLMIXER_MOD_XMP ON CACHE BOOL "Enable libxmp module support")
     set(SDLMIXER_VENDORED ON CACHE BOOL "Use vendored libxmp")
-elseif(IS_MINGW)
+elseif(IS_MINGW OR BUILDING_FOR_STEAM)
     set(SDL3_mixer_DISABLE_FIND_PACKAGE_SDL3 ON)
     set(SDLMIXER_MOD_XMP ON CACHE BOOL "Enable libxmp module support")
     set(SDLMIXER_VENDORED ON CACHE BOOL "Use vendored libxmp")
@@ -55,15 +75,31 @@ elseif(IS_MINGW)
     set(SDLMIXER_BUILD_SHARED_LIBS OFF CACHE BOOL "Build SDL3_mixer statically")
     set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
     set(ZLIB_BUILD_TESTING OFF CACHE BOOL "Disable zlib test targets like infcover")
-    add_subdirectory(external/zlib zlib)
     #cmake --build build/mingw --target help
+
+    # Global toggle (affects most CMake projects)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+    # SDL3 specific toggles
+    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDL_STATIC ON CACHE BOOL "" FORCE)
+
+    # SDL3_mixer specific toggles
+    set(SDL3MIXER_SHARED OFF CACHE BOOL "" FORCE)
+    set(SDL3MIXER_STATIC ON CACHE BOOL "" FORCE)
+
+    # ZLIB specific (if using the standard zlib source)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+    # Note: Zlib usually builds both; you may need to specifically
+    # link to the 'zlibstatic' target if it creates two.
+    set(ZLIB_BUILD_SHARED OFF CACHE BOOL "Disable zlib shared" FORCE)
+    set(ZLIB_BUILD_STATIC ON CACHE BOOL "Enable zlib static" FORCE)
+
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    add_subdirectory(external/zlib zlib)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-   # Emscripten-specific setup
-else()
-    # Non-Emscripten setup
-endif()
 add_subdirectory(external/SDL3 SDL3)
 add_subdirectory(external/SDL3_mixer SDL3_mixer)
 
@@ -71,11 +107,33 @@ add_subdirectory(external/SDL3_mixer SDL3_mixer)
 #add_executable(${PROJECT_NAME} ${SRC_EXPORTED_FILES})
 add_executable(${PROJECT_NAME} src/main.cpp)
 
+if(BUILDING_FOR_STEAM)
+    # Add the Steam-specific source file to the target
+    target_sources(${PROJECT_NAME} PRIVATE src/steam_helper.cpp)
 
+    # Also define the macro we discussed earlier so the C++ code knows
+    target_compile_definitions(${PROJECT_NAME} PRIVATE STEAM_BUILD)
+
+    # Define path to your unzipped Steamworks SDK
+    set(STEAMWORKS_SDK_PATH "${CMAKE_SOURCE_DIR}/external/steamworks/sdk")
+
+    # Add include directory
+    target_include_directories(${PROJECT_NAME} PRIVATE "${STEAMWORKS_SDK_PATH}/public")
+
+    # Don't forget to link the actual Steam library here too
+    # target_link_libraries(${PROJECT_NAME} PRIVATE ${STEAM_LIBRARY_PATH})
+    # Link the Linux 64-bit library
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        "${STEAMWORKS_SDK_PATH}/redistributable_bin/linux64/libsteam_api.so"
+    )
+
+    #set(CMAKE_INSTALL_RPATH "$ORIGIN")
+    #set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+
+endif()
 
 #enable_testing()
 #add_subdirectory(tests)
-
 
 #if(EMSCRIPTEN)
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
@@ -135,7 +193,10 @@ elseif(IS_MINGW)
     # link application resources
     add_dependencies(${PROJECT_NAME} app_icon_res)
     target_sources(${PROJECT_NAME} PRIVATE ${APP_ICON_OBJ})
-
+elseif(BUILDING_FOR_STEAM)
+    message(STATUS "Link Target Steam Linux")
+    target_link_libraries(${PROJECT_NAME}
+        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer zlibstatic src_lib)
 else()
     message(STATUS "Link Target Linux")
     #find_library(XMP_LIBRARY xmp)

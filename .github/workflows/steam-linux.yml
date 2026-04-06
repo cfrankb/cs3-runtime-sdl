@@ -1,0 +1,56 @@
+name: Build Steam Linux Version
+
+on:
+  push:
+    branches: [master, gpu]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    # Run all steps inside the Sniper SDK container
+    container:
+      image: registry.gitlab.steamos.cloud/steamrt/sniper/sdk:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive # Important if you bake in SDL/zlib
+
+      - name: Checkout Data Repo
+        uses: actions/checkout@v6
+        with:
+          repository: cfrankb/cs3-data-private
+          path: data
+          token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
+
+      - name: Checkout Steamworks SDK
+        uses: actions/checkout@v6
+        with:
+          repository: cfrankb/steamwork-sdk-private
+          path: external/steamworks
+          token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
+
+      #- name: Configure CMake
+      #  run: |
+      #    cmake -B build \
+      #      -DCMAKE_BUILD_TYPE=Release \
+      #      -DBUILDING_FOR_STEAM=ON
+
+      - name: Build
+        #run: cmake --build build --config Release
+        run: |
+          chmod +x bin/build.sh
+          bin/build.sh steam_linux
+
+      - name: Upload Artifact
+        uses: actions/actions/upload-artifact@v4
+        with:
+          name: steam-linux-build
+          path: |
+            build/steam-linux/cs3-runtime
+            external/steamworks/sdk/redistributable_bin/linux64/libsteam_api.so
+            packages/steam/steam_appid.txt
+          retention-days: 7
