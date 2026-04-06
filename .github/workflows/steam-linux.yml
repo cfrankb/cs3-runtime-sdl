@@ -29,8 +29,8 @@ jobs:
       - name: Checkout Steamworks SDK
         uses: actions/checkout@v6
         with:
-          repository: cfrankb/steamwork-sdk-private
-          path: external/steamworks
+          repository: cfrankb/steamworks-sdk-private
+          path: external/steamworks/sdk
           token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
 
       #- name: Configure CMake
@@ -44,7 +44,8 @@ jobs:
         run: |
           pwd
           ls -l
-          ls -s external
+          ls -l external
+          ls -l external/steamworks/sdk/public/steam
           python3 bin/refresh.py
           chmod +x bin/build.sh
           bin/build.sh steam_linux
