@@ -32,6 +32,16 @@ elif [[ "$1" == "mingw" ]] ; then
     BPATH=build/mingw
     cmake -DCMAKE_TOOLCHAIN_FILE=packages/cmake/mingw.toolchain.cmake -DIS_MINGW=ON -B ${BPATH} -DCMAKE_BUILD_TYPE=Release
     cmake --build ${BPATH} -- VERBOSE=1
+elif [[ "$1" == "steam_mingw" ]] ; then
+    # Export the full paths
+    export CC=/usr/bin/x86_64-w64-mingw32-gcc-posix
+    export CXX=/usr/bin/x86_64-w64-mingw32-g++-posix
+    BPATH=build/steam-mingw
+    # Run CMake
+    cmake -DCMAKE_TOOLCHAIN_FILE=packages/cmake/mingw.toolchain.cmake -DIS_MINGW=ON -B ${BPATH} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_SYSTEM_NAME=Windows
+    cmake --build ${BPATH} -- VERBOSE=1
 elif [[ "$1" == "run_ems" ]] ; then
     emrun --hostname 0.0.0.0 build/ems/cs3-runtime.html
 elif [[ "$1" == "clean" ]] ; then

@@ -36,6 +36,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
 elseif(IS_MINGW)
+
+    #set(CMAKE_C_COMPILER x86_64-w64-mingw32-gcc-posix)
+    #set(CMAKE_CXX_COMPILER x86_64-w64-mingw32-g++-posix)
+
     message(STATUS "Targeting MinGW/Windows")
     set(SDL3_DIR "${CMAKE_SOURCE_DIR}/external/SDL3")
     set(SDL3_DISABLE_INSTALL ON)
@@ -121,12 +125,27 @@ if(BUILDING_FOR_STEAM)
     # Add include directory
     target_include_directories(${PROJECT_NAME} PRIVATE "${STEAMWORKS_SDK_PATH}/public")
 
-    # Don't forget to link the actual Steam library here too
-    # target_link_libraries(${PROJECT_NAME} PRIVATE ${STEAM_LIBRARY_PATH})
-    # Link the Linux 64-bit library
-    target_link_libraries(${PROJECT_NAME} PRIVATE
-        "${STEAMWORKS_SDK_PATH}/redistributable_bin/linux64/libsteam_api.so"
-    )
+    if(IS_MINGW)
+        # Define path to Windows 64-bit SDK binaries
+        set(STEAM_WIN_BIN "${CMAKE_SOURCE_DIR}/external/steamworks/sdk/redistributable_bin/win64")
+
+        # Link the Windows library
+        target_link_libraries(${PROJECT_NAME} PRIVATE "${STEAM_WIN_BIN}/steam_api64.lib")
+
+        # Optional: Copy the DLL to the build folder so the game can run
+        #add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        #    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        #    "${STEAM_WIN_BIN}/steam_api64.dll"
+        #    $<TARGET_FILE_DIR:${PROJECT_NAME}>
+        #)
+    else()
+        # Don't forget to link the actual Steam library here too
+        # target_link_libraries(${PROJECT_NAME} PRIVATE ${STEAM_LIBRARY_PATH})
+        # Link the Linux 64-bit library
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+            "${STEAMWORKS_SDK_PATH}/redistributable_bin/linux64/libsteam_api.so"
+        )
+    endif()
 
     #set(CMAKE_INSTALL_RPATH "$ORIGIN")
     #set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)

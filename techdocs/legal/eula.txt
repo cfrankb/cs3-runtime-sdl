@@ -1,0 +1,48 @@
+END USER LICENSE AGREEMENT (EULA)
+
+Last Updated: April 6, 2026
+
+Please read this End User License Agreement (“Agreement”) carefully before clicking the "I Agree" button, downloading, or using [INSERT GAME NAME] (“the Game”). By downloading or using the Game, you are agreeing to be bound by the terms and conditions of this Agreement.
+1. THE LICENSE
+
+[INSERT STUDIO/DEVELOPER NAME] (“Developer”) grants you a personal, non-exclusive, non-transferable, limited license to install and use the Game for your personal, non-commercial entertainment purposes strictly in accordance with the terms of this Agreement and the Steam Subscriber Agreement.
+2. RESTRICTIONS
+
+You agree not to, and you will not permit others to:
+
+    Reverse Engineer: Decompile, disassemble, or attempt to derive the source code of the Game.
+
+    Commercial Use: Use the Game for any commercial purpose (e.g., "pay-to-play" gaming centers) without a separate license.
+
+    Distribution: Copy, rent, lease, lend, sell, or sublicense the Game to any third party.
+
+    Hacking/Cheating: Create, use, or distribute "cheats," "hacks," "mods," or "trainers" that interfere with the Game's intended balance or online functionality.
+
+3. OWNERSHIP
+
+The Game, including all code, characters, story, assets, and music, is the property of the Developer and is protected by copyright and intellectual property laws. This Agreement is a license, not a sale; you do not own the Game itself, but rather a right to access it.
+4. USER-GENERATED CONTENT (UGC)
+
+If the Game allows you to create or upload content (such as through the Steam Workshop):
+
+    You retain ownership of your original ideas.
+
+    You grant the Developer a perpetual, irrevocable, worldwide, royalty-free license to use, copy, modify, and display that content in connection with the Game.
+
+5. PRIVACY AND DATA
+
+The Game may collect certain technical information (IP addresses, hardware specs, gameplay statistics) to improve performance and security. All data handling is governed by our Privacy Policy found at [INSERT URL].
+6. STEAM PLATFORM
+
+You acknowledge that the Game is distributed through Steam, operated by Valve Corporation. Your use of the Game is also subject to the Steam Subscriber Agreement (SSA). In the event of a conflict between this EULA and the SSA, the SSA shall take precedence.
+7. TERMINATION
+
+This Agreement is effective until terminated by you or the Developer. Your rights under this license will terminate automatically without notice if you fail to comply with any terms of this Agreement. Upon termination, you must cease all use of the Game and delete all copies.
+8. LIMITATION OF LIABILITY
+
+To the maximum extent permitted by law, the Game is provided "AS IS" without warranty of any kind. The Developer shall not be liable for any special, incidental, or consequential damages resulting from possession, use, or malfunction of the Game.
+9. CONTACT INFORMATION
+
+If you have any questions about this Agreement, please contact us at:
+Email: [INSERT CONTACT EMAIL]
+Website: [INSERT WEBSITE]

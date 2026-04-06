@@ -188,20 +188,47 @@ namespace fs = std::filesystem;
 
 std::string GetAppDataPath()
 {
-    PWSTR path = NULL;
-    // Get the roaming AppData folder (C:\Users\Name\AppData\Roaming)
-    HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path);
+    std::string result = "";
 
-    if (SUCCEEDED(hr))
+    // Check if we are using a modern compiler/SDK that supports the new API
+    // MinGW usually needs _WIN32_WINNT >= 0x0600 for SHGetKnownFolderPath
+
+#if defined(_WIN32_WINNT) && _WIN32_WINNT >= 0x0600
+    PWSTR path = NULL;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path)))
     {
-        // Convert PWSTR (wchar_t*) to std::string
+        // Convert Wide string to UTF-8/string (simplified)
         std::wstring ws(path);
-        std::string s(ws.begin(), ws.end());
-        CoTaskMemFree(path); // Free the memory allocated by SHGetKnownFolderPath
-        return s;
+        result = std::string(ws.begin(), ws.end());
+        CoTaskMemFree(path);
     }
-    CoTaskMemFree(path);
-    return "";
+#else
+    // Fallback for MinGW or older Windows targets
+    char path[MAX_PATH];
+    if (SUCCEEDED(SHGetFolderPathA(NULL, CSIDL_APPDATA, NULL, 0, path)))
+    {
+        result = std::string(path);
+    }
+#endif
+
+    return result;
+
+    /*/
+        PWSTR path = NULL;
+        // Get the roaming AppData folder (C:\Users\Name\AppData\Roaming)
+        HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path);
+
+        if (SUCCEEDED(hr))
+        {
+            // Convert PWSTR (wchar_t*) to std::string
+            std::wstring ws(path);
+            std::string s(ws.begin(), ws.end());
+            CoTaskMemFree(path); // Free the memory allocated by SHGetKnownFolderPath
+            return s;
+        }
+        CoTaskMemFree(path);
+        return "";
+        */
 }
 
 bool makePath(const std::string &path)
