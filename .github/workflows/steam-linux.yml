@@ -46,7 +46,7 @@ jobs:
           bin/build.sh steam_linux
 
       - name: Upload Artifact
-        uses: actions/actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4 # Use @v4 for standard stability
         with:
           name: steam-linux-build
           path: |

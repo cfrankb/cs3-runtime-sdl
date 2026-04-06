@@ -77,7 +77,8 @@ elseif(IS_MINGW OR BUILDING_FOR_STEAM)
     set(ZLIB_BUILD_TESTING OFF CACHE BOOL "Disable zlib test targets like infcover")
     #cmake --build build/mingw --target help
 
-    # Global toggle (affects most CMake projects)
+
+     # Global toggle (affects most CMake projects)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
     # SDL3 specific toggles
@@ -187,7 +188,7 @@ elseif(IS_MINGW)
         -s
     )
     target_link_libraries(${PROJECT_NAME}
-        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer  zlib src_lib
+        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer zlibstatic src_lib
     )
 
     # link application resources

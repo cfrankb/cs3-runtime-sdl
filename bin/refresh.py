@@ -81,9 +81,13 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
     )
 
     lines.append("")
-    lines.append("if(IS_MINGW OR BUILDING_FOR_STEAM)")
+    lines.append("if(IS_MINGW)")
     lines.append(
-        f"target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
+        f"    target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
+    )
+    lines.append("elseif(BUILDING_FOR_STEAM)")
+    lines.append(
+        f"    target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
     )
     lines.append("endif()")
     lines.append("")
