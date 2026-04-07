@@ -83,7 +83,7 @@ jobs:
           makensis packages/data/win32/cs3-setup.nsi
           mkdir -p release
           cp build/*Setup.exe release
-          cp LICENSE release
+          #cp LICENSE release
 
       - name: Release
         uses: softprops/action-gh-release@v1

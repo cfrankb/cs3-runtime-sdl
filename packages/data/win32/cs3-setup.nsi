@@ -8,7 +8,7 @@
 !define MAIN_APP_EXE "cs3-runtime.exe"
 !define ICON "system-installer.ico"
 !define BANNER "bitmap1.bmp"
-#!define LICENSE_TXT "[CHANGEME License Text Document]"
+!define LICENSE_TXT "../../../setup/LICENSE"
 
 !define INSTALL_DIR "$PROGRAMFILES64\${APP_NAME}"
 !define INSTALL_TYPE "SetShellVarContext all"
@@ -16,6 +16,12 @@
 !define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${MAIN_APP_EXE}"
 !define UNINSTALL_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 !define REG_START_MENU "Start Menu Folder"
+
+; --- UI Settings ---
+; This defines the license file to be loaded into the page
+; --- Include Modern UI ---
+!include "MUI2.nsh"
+!define MUI_LICENSEPAGE_CHECKBOX ; Optional: User must check a box to continue
 
 var SM_Folder
 
