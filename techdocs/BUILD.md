@@ -50,7 +50,7 @@ Build the game
 
 ```
 $ bin/build.sh mingw
-$ packages/bin/makesetup.sh
+$ packages/bin/makesetup.sh mingw
 ```
 
 Run game

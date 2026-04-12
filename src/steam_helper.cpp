@@ -1,6 +1,7 @@
 #include "steam/steam_api.h"
 #include <iostream>
 #include "steam_helper.h"
+#include "logger.h"
 
 constexpr int AppID = 480; // test ID
 

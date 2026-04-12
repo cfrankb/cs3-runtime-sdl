@@ -131,7 +131,9 @@ protected:
         MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,
         PIXEL_SCALE = 2,
+#ifndef VK_SPACE
         VK_SPACE = ' ',
+#endif
         VK_ENTER = '\n',
         VK_BACKSPACE = 8,
     };

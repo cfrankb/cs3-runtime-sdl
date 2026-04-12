@@ -18,7 +18,19 @@
 
 #include <cstring>
 #include <cstdio>
+
+#if defined(_WIN32) && !defined(__MINGW32__)
+// For MSVC/Clang-MSVC
+#include <io.h>
+#include <process.h>
+// If you were using sleep(), use Windows.h or SDL_Delay()
+#include <windows.h>
+#else
+// For Linux/MinGW
 #include <unistd.h>
+#endif
+
+/// #include <unistd.h>
 #include "mu_sdl.h"
 
 #include "../FileWrap.h"

@@ -19,7 +19,17 @@
 #define SDL_MAIN_HANDLED
 #endif
 #include <SDL3/SDL_main.h>
+// #include <unistd.h>
+#if defined(_WIN32) && !defined(__MINGW32__)
+// For MSVC/Clang-MSVC
+#include <io.h>
+#include <process.h>
+// If you were using sleep(), use Windows.h or SDL_Delay()
+#include <windows.h>
+#else
+// For Linux/MinGW
 #include <unistd.h>
+#endif
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -212,23 +222,6 @@ std::string GetAppDataPath()
 #endif
 
     return result;
-
-    /*/
-        PWSTR path = NULL;
-        // Get the roaming AppData folder (C:\Users\Name\AppData\Roaming)
-        HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path);
-
-        if (SUCCEEDED(hr))
-        {
-            // Convert PWSTR (wchar_t*) to std::string
-            std::wstring ws(path);
-            std::string s(ws.begin(), ws.end());
-            CoTaskMemFree(path); // Free the memory allocated by SHGetKnownFolderPath
-            return s;
-        }
-        CoTaskMemFree(path);
-        return "";
-        */
 }
 
 bool makePath(const std::string &path)

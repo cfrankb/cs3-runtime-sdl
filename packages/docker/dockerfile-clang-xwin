@@ -1,0 +1,84 @@
+FROM ubuntu:latest
+
+# 1. Install build essentials and LLVM
+RUN apt-get update && apt-get install -y \
+    #clang \
+    lsb-release \
+    wget \
+    lld \
+    cmake \
+    git \
+    python3 \
+    curl \
+    unzip \
+    software-properties-common \
+    gnupg \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get remove -y clang-19 lld-19 || true
+
+# 2. Install 'xwin' to pull Windows SDK
+# This tool handles the "MSVC-on-Linux" headers/libs
+RUN curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz | tar xz \
+    && ls -l \
+    && cd xwin-0.8.0-x86_64-unknown-linux-musl \
+    && ls -l \
+    && mv xwin /usr/local/bin/
+
+# 3. Pre-fetch Windows SDK (Accepting MS licenses)
+# We put this in /opt/xwin so CMake can find it
+RUN xwin --accept-license splat --output /opt/xwin
+
+#RUN ln -s /usr/bin/llvm-rc-18 /usr/bin/llvm-rc
+# find /usr/bin -name "llvm-rc*" | head
+
+# # 1. Install prerequisites
+# RUN apt-get update && apt-get install -y \
+#     lsb-release \
+#     wget \
+#     software-properties-common \
+#     gnupg
+
+
+
+# 2. Add the LLVM 19 repository
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    ./llvm.sh 19
+
+# 3. Set Clang 19 as the default compiler
+RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 200 \
+    --slave /usr/bin/clang++ clang++ /usr/bin/clang++-19 \
+    --slave /usr/bin/llvm-rc llvm-rc /usr/bin/llvm-rc-19
+
+# 4. Verify the version
+RUN clang --version && clang --print-resource-dir
+
+RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/clang%2Bllvm-19.1.7-x86_64-pc-windows-msvc.tar.xz" \
+    -O /tmp/llvm-win.tar.xz && \
+    tar -xf /tmp/llvm-win.tar.xz -C /tmp && \
+    find /tmp -name "clang_rt.builtins*.lib" 2>/dev/null
+
+
+RUN mkdir -p /usr/lib/llvm-19/lib/clang/19/lib/x86_64-pc-windows-msvc/ && \
+    cp /tmp/clang+llvm-19.1.7-x86_64-pc-windows-msvc/lib/clang/19/lib/windows/clang_rt.builtins-x86_64.lib \
+    /usr/lib/llvm-19/lib/clang/19/lib/x86_64-pc-windows-msvc/
+
+# Verify
+#RUN ls -la /usr/lib/llvm-19/lib/clang/19/lib/x86_64-pc-windows-msvc/
+
+# Cleanup
+RUN rm -rf /tmp/llvm-win.tar.xz /tmp/clang+llvm-19.1.7-x86_64-pc-windows-msvc
+
+
+#RUN apt-get install libclang-rt-19-dev
+# or
+#RUN apt-get install clang-19 lld-19 compiler-rt
+#RUN apt-get install clang-19 lld-19
+#RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh &&  ./llvm.sh 19
+
+
+# 4. Set environment variables for the toolchain
+ENV CC=clang
+ENV CXX=clang++
+

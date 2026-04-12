@@ -18,9 +18,19 @@
 #include <ctime>
 #include <chrono>
 #include <cstring>
-#include <unistd.h>
 #include <algorithm>
 #include <memory>
+#if defined(_WIN32) && !defined(__MINGW32__)
+// For MSVC/Clang-MSVC
+#include <io.h>
+#include <process.h>
+// If you were using sleep(), use Windows.h or SDL_Delay()
+#include <windows.h>
+#else
+// For Linux/MinGW
+#include <unistd.h>
+#endif
+
 #include "SDL3/SDL_gamepad.h"
 #include "SDL3/SDL_render.h"
 #include "runtime.h"
@@ -1951,7 +1961,9 @@ void CRuntime::setStartLevel(int level)
 
 bool CRuntime::fileExists(const std::string &name) const
 {
-    return (access(name.c_str(), F_OK) != -1);
+    // return (access(name.c_str(), F_OK) != -1);
+    SDL_PathInfo info;
+    return SDL_GetPathInfo(name.c_str(), &info);
 }
 
 const std::string CRuntime::getSavePath() const

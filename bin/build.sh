@@ -3,14 +3,33 @@ set -e
 
 show_help () {
     printf '\navailable targets:\n\n'
-    echo "sdl3      "
-    echo "emsdl3    "
-    echo "mingw     "
+    echo "sdl3          g++ linux"
+    echo "emsdl3        Emsscripten/Wasm"
+    echo "mingw         Windows/mingw"
+    echo "msvc          Windows/clang/msvc"
+    echo "steam_linux   g++ Linux (steam)"
 }
 
 APP_NAME=cs3-runtime
 if [[ "$1" == "-h" ]] ; then
     show_help
+elif [[ "$1" == "msvc" ]] ; then
+    #rm -rf build/msvc
+    #rm -rf build/msvc/SDL3_mixer/external/vorbis-build/
+    #rm -f build/msvc/CMakeCache.txt
+    #rm -rf build/msvc/CMakeFiles
+    BPATH=build/msvc
+    cmake  -B ${BPATH} \
+        -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DSDLMIXER_VENDORED=ON \
+        -DSDLMIXER_MOD=ON \
+        -DSDLMIXER_MOD_XMP=ON \
+        -S .
+    #--trace-expand
+    cmake --build ${BPATH} -- VERBOSE=1
+    #cmake --build build/msvc --target vorbis -- VERBOSE=1
+    #cmake --build build/msvc --target vorbisfile -- VERBOSE=1
 elif [[ "$1" == "sdl3" ]] ; then
     BPATH=build/std
     echo "BUILD PATH: ${BPATH}"

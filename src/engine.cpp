@@ -29,6 +29,7 @@
 #include "chars.h"
 #include <cstring>
 #include "gamemixin.h"
+#include "theme.h"
 
 namespace Engine_Private
 {
@@ -628,10 +629,10 @@ void Engine::drawTitleScreen(const char *scroll)
         baseY,
         getWidth() - 16,
         getHeight() - baseY - 24};
-    drawRect(rect, DARK_BROWN2, false);
+    drawRect(rect, MENU_COLOR_BORDER, false);
 
     CMenu &menu = *m_menus->get(MENUID_MAINMENU);
     const int menuBaseY = 100 - 8;
     drawMenu(menu, -1, menuBaseY);
-    drawFont(0, getHeight() - FONT_SIZE * 2, scroll, PALE_BROWN);
+    drawFont(0, getHeight() - FONT_SIZE * 2, scroll, MENU_COLOR_ITEM_SELECTED);
 }
