@@ -50,7 +50,7 @@ namespace EngineHW_Private
     constexpr const int SCALE = 2;
     constexpr const float SCALEF = 2;
     constexpr const int SCALE_2X = 4;
-
+    constexpr const float LOGO_SCALE = 0.65;
     namespace SColor
     {
         constexpr SDL_Color WHITE{255, 255, 255, 255};           // #ffffff
@@ -103,6 +103,9 @@ EngineHW::~EngineHW()
 {
     if (m_textureTitlePix)
         SDL_DestroyTexture(m_textureTitlePix);
+
+    if (m_textureSplash)
+        SDL_DestroyTexture(m_textureSplash);
 }
 
 bool EngineHW::initGPUDevice()
@@ -131,6 +134,7 @@ void EngineHW::preloadAssets()
         ASSET_UISHEET,
         ASSET_TITLEPIX,
         ASSET_LAYERS0,
+        ASSET_SPLASH,
     };
 
     m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES], TILE_SIZE, TILE_SIZE);
@@ -175,16 +179,24 @@ void EngineHW::preloadAssets()
     m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0], g_sheet0_data);
     m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1], g_sheet1_data);
 
-    const std::string filepath = AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX];
-    CFrame *frame = getFrame(filepath);
-    if (frame)
-    {
-        m_textureTitlePix = createTexture(frame);
-        if (m_textureTitlePix)
-            SDL_SetTextureScaleMode(m_textureTitlePix, SDL_SCALEMODE_NEAREST);
-    }
+    m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX]);
+    m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH]);
 
     preloadHearts();
+}
+
+SDL_Texture *EngineHW::loadTextureAsset(const std::string &filepath)
+{
+    SDL_Texture *texture = nullptr;
+    CFrame *frameTitlePix = getFrame(filepath);
+    if (frameTitlePix)
+    {
+        texture = createTexture(frameTitlePix);
+        if (texture)
+            SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
+        delete frameTitlePix;
+    }
+    return texture;
 }
 
 void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
@@ -257,7 +269,6 @@ void EngineHW::drawFont(const int x, const int y, const char *text, Color color,
 
 void EngineHW::drawScreen()
 {
-
     // TRACE("enter drawScreen");
     const CGame &game = *m_game;
 
@@ -1145,4 +1156,55 @@ int EngineHW::drawTitlePix(int offsetY)
     };
     SDL_RenderTexture(m_renderer, m_textureTitlePix, nullptr, &dst);
     return (int)m_textureTitlePix->h;
+}
+
+void EngineHW::drawSplash()
+{
+#define _F(_x_) static_cast<float>(_x_)
+    const auto texture = m_textureSplash;
+    const int h = getHeight() * SCALE;
+    const int w = getWidth() * SCALE;
+    const float logoH = LOGO_SCALE * _F(h); // scaled logo
+
+    const float scaleY = _F(logoH) / _F(texture->h);
+    const int x = (w - texture->w * scaleY) / 2;
+    const int y = (h - logoH) / 2;
+    SDL_FRect dst = {
+        (float)x,
+        (float)y,
+        (float)(texture->w) * scaleY,
+        (float)(texture->h) * scaleY,
+    };
+
+    const float brFactor = 255 / 12;
+    const int cur = SPLASH_DURATION - m_state.m_countdown;
+    const float step = cur % 12;
+    const int phase = cur / 12;
+    float alphaMod = 0;
+
+    switch (phase)
+    {
+    case 0:
+        alphaMod = 0;
+        break;
+    case 1: // fade iu
+        alphaMod = brFactor * step;
+        break;
+    case 2:
+    case 3:
+        alphaMod = 255;
+        break;
+    case 4: // fade out
+        alphaMod = 255 - brFactor * step;
+        break;
+    case 5:
+        alphaMod = 0;
+        break;
+    }
+
+    SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    SDL_SetTextureAlphaMod(texture, alphaMod);
+    SDL_SetRenderDrawColorFloat(m_renderer, 0, 0, 0, 255);
+    SDL_RenderClear(m_renderer);
+    SDL_RenderTexture(m_renderer, texture, nullptr, &dst);
 }

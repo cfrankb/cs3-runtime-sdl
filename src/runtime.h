@@ -127,6 +127,7 @@ private:
     void manageLevelSummary() override;
     void initLevelSummary() override;
     void changeMoodMusic(CGame::GameMode mode) override;
+    void manageSplash() override;
 
     std::unique_ptr<IMusic> m_music;
     std::shared_ptr<ISound> m_sound;
@@ -229,6 +230,7 @@ private:
     void openMusic(const std::string &filename);
     std::string getMusicPath(const std::string &filename);
     void enterGame();
+    void enterSplash();
     void initSkillMenu();
     void clearVJoyStates();
     void clearMouseButtons();

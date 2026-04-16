@@ -71,6 +71,7 @@ public:
     virtual void drawRect(const rect_t &rect, const Color &color, const bool fill) = 0;
     virtual void drawFont(const int x, const int y, const char *text, const Color color = WHITE, const int scaleX = 1, const int scaleY = 1) = 0;
     virtual int drawTitlePix(int offsetY) = 0;
+    virtual void drawSplash() = 0;
 
     // dispatch
     void drawPreScreen();
@@ -95,6 +96,11 @@ public:
     }
 
     CGameUI *virtualKeyboard() { return m_virtualKeyboard.get(); }
+
+    enum
+    {
+        SPLASH_DURATION = 60 + 12,
+    };
 
 protected:
     enum
@@ -131,7 +137,7 @@ protected:
         MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,
         PIXEL_SCALE = 2,
-#ifndef VK_SPACE
+#ifndef VK_SPACE // prevent symbol collision on msvc
         VK_SPACE = ' ',
 #endif
         VK_ENTER = '\n',

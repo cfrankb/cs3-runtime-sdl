@@ -213,6 +213,9 @@ void CRuntime::paint()
         break;
     case CGame::MODE_TEST:
         m_engine->drawTest();
+        break;
+    case CGame::MODE_SPLASH:
+        m_engine->drawSplash();
     };
 
     if (renderBitmap)
@@ -599,7 +602,10 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         }
         if (event.button.button != 0 && mode == CGame::MODE_CLICKSTART)
         {
-            enterGame();
+            if (isTrue(m_config["splash"]))
+                enterSplash();
+            else
+                enterGame();
         }
         else if (event.button.button == SDL_BUTTON_LEFT &&
                  (m_menus->menuItemAt(pos.x, pos.y) != INVALID))
@@ -986,6 +992,10 @@ void CRuntime::preRun()
     else if (isTrue(m_config["clickstart"]))
     {
         m_game->setMode(CGame::MODE_CLICKSTART);
+    }
+    else if (isTrue(m_config["splash"]))
+    {
+        enterSplash();
     }
     else
     {
@@ -2722,4 +2732,16 @@ void CRuntime::initEngine()
 void CRuntime::initLevelSummary()
 {
     m_engine->initLevelSummary();
+}
+
+void CRuntime::enterSplash()
+{
+    m_game->setMode(CGame::MODE_SPLASH);
+    m_countdown = Engine::SPLASH_DURATION;
+}
+
+void CRuntime::manageSplash()
+{
+    if (m_countdown == 0)
+        enterGame();
 }
