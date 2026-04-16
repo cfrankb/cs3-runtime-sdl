@@ -2,7 +2,9 @@
 
 #include "color.h"
 
-#if fakse
+// #define BROWN_THEME
+
+#ifdef BROWN_THEME
 #define MENU_COLOR_ITEM DARK_BROWN2
 #define MENU_COLOR_ITEM_SELECTED PALE_BROWN
 #define MENU_COLOR_CURSOR RED_BROWN

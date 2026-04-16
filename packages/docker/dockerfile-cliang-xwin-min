@@ -1,0 +1,52 @@
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    wget curl unzip ca-certificates \
+    lld clang cmake git python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install xwin (minimal Windows SDK + MSVC CRT)
+RUN curl -L https://github.com/Jake-Shadle/xwin/releases/download/0.8.0/xwin-0.8.0-x86_64-unknown-linux-musl.tar.gz \
+    | tar xz && mv xwin-*/xwin /usr/local/bin/
+
+RUN xwin --accept-license minimal --output /opt/xwin
+
+# Install Windows LLVM builtins (only the one file we need)
+RUN wget "https://github.com/llvm/llvm-project/releases/download/llvmorg-19.1.7/clang%2Bllvm-19.1.7-x86_64-pc-windows-msvc.tar.xz" \
+    -O /tmp/llvm-win.tar.xz \
+    && tar -xf /tmp/llvm-win.tar.xz -C /tmp \
+    && mkdir -p /opt/builtins \
+    && cp /tmp/clang+llvm*/lib/clang/19/lib/windows/clang_rt.builtins-x86_64.lib /opt/builtins/ \
+    && rm -rf /tmp/*
+
+# Strip Windows SDK bloat
+RUN rm -rf \
+    /opt/xwin/sdk/Debug \
+    /opt/xwin/sdk/arm* \
+    /opt/xwin/sdk/Redist/ucrt/debug \
+    /opt/xwin/sdk/Redist/D3D* \
+    /opt/xwin/sdk/Redist/onecore* \
+    /opt/xwin/sdk/Redist/*arm*
+
+
+# -------------------------
+# Final minimal image
+# -------------------------
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    clang lld python3 git cmake \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/share/doc/* /usr/share/man/* /usr/share/locale/*
+
+COPY --from=builder /opt/xwin /opt/xwin
+COPY --from=builder /opt/builtins /opt/builtins
+
+ENV CC=clang
+ENV CXX=clang++
+ENV WINDOWS_SDK=/opt/xwin
+ENV BUILTINS=/opt/builtins

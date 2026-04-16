@@ -28,6 +28,11 @@ if(EXISTS "/etc/os-release")
     endif()
 endif()
 
+if (BUILDING_FOR_STEAM)
+    add_compile_definitions(STEAM_BUILD=1)
+endif()
+
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_TARGET MATCHES "msvc")
     set(IS_CROSS_MSVC TRUE)
     add_definitions(-DCOMPILING_WITH_CLANG_MSVC)
@@ -249,7 +254,12 @@ if(BUILDING_FOR_STEAM)
     # Add include directory
     target_include_directories(${PROJECT_NAME} PRIVATE "${STEAMWORKS_SDK_PATH}/public")
 
-    if(IS_MINGW)
+    if(IS_CROSS_MSVC)
+        set(STEAM_WIN_BIN "${STEAMWORKS_SDK_PATH}/redistributable_bin/win64")
+        set(STEAM_LIB "${STEAM_WIN_BIN}/steam_api64.lib")
+        set(STEAM_DLL "${STEAM_WIN_BIN}/steam_api64.dll")
+        target_link_libraries(${PROJECT_NAME} PRIVATE ${STEAM_LIB})
+    elseif(IS_MINGW)
         # Define path to Windows 64-bit SDK binaries
         #set(STEAM_WIN_BIN "${CMAKE_SOURCE_DIR}/external/steamworks/sdk/redistributable_bin/win64")
         set(STEAM_WIN_BIN "${STEAMWORKS_SDK_PATH}/redistributable_bin/win64")

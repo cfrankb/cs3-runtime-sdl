@@ -1,0 +1,41 @@
+[GAME NAME] PRE-RELEASE ALPHA LICENSE AGREEMENT
+
+IMPORTANT: READ CAREFULLY. This is a legal agreement between you (the "Tester") and [YOUR NAME/STUDIO NAME] ("Developer"). By installing or using the Alpha version of [GAME NAME] (the "Software"), you agree to be bound by these terms.
+1. ALPHA STATUS & "AS IS" DISCLAIMER
+
+The Software is currently in Alpha development. It is incomplete, contains bugs, and may cause data loss or system instability.
+
+    No Warranty: The Software is provided "AS IS" without warranty of any kind.
+
+    Risk: You acknowledge that you use the Software at your own risk. Developer is not liable for any damage to hardware or software resulting from its use.
+
+2. LICENSE GRANT
+
+Developer grants you a personal, non-exclusive, non-transferable, revocable license to install and use the Software for the sole purpose of testing and evaluation.
+
+    This license does not grant you ownership of the Software.
+
+    Developer may terminate this license at any time, for any reason, without notice.
+
+3. RESTRICTIONS
+
+You strictly agree NOT to:
+
+    Decompile, reverse engineer, or disassemble the Software.
+
+    Distribute, rent, lease, or sell the Software or its assets.
+
+    [OPTIONAL] Confidentiality: Share screenshots, videos, or public reviews of the Software without prior written consent from Developer. (Remove this if you want players to share footage).
+
+4. FEEDBACK & DATA
+
+Any suggestions, bug reports, or feedback provided to the Developer shall become the sole property of the Developer. Developer may use this feedback for any purpose without compensation to you.
+
+    Telemetry: You acknowledge that the Software may collect anonymous technical data (crash logs, performance metrics) to assist in development.
+
+5. TEMPORARY NATURE OF PROGRESS
+
+In the Alpha stage, Developer does not guarantee that saved games, character progress, or unlocks will be preserved. Data "wipes" may occur at any time during the development cycle.
+6. EXPIRATION
+
+This license automatically expires upon the release of a newer version of the Software or the official commercial launch, unless otherwise stated by the Developer.

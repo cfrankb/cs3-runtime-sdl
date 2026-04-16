@@ -17,6 +17,7 @@ run_common() {
     cp -R data/* setup/data
     cp ${BPATH}/*.exe setup
     cp -R techdocs/legal/* setup/legal
+    rm -f setup/legal/*.odt
     cp techdocs/*.md setup/legal
     #cp LICENSE setup
     cp techdocs/legal/eula.txt setup/LICENSE

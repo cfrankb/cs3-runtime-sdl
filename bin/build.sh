@@ -8,11 +8,24 @@ show_help () {
     echo "mingw         Windows/mingw"
     echo "msvc          Windows/clang/msvc"
     echo "steam_linux   g++ Linux (steam)"
+    echo "steam_msvc    Windows/clang/msvc (steam)"
 }
 
 APP_NAME=cs3-runtime
 if [[ "$1" == "-h" ]] ; then
     show_help
+elif [[ "$1" == "steam_msvc" ]] ; then
+    BPATH=build/steam-msvc
+   # rm -rf ${BPATH}
+    cmake  -B ${BPATH} \
+        -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DSDLMIXER_VENDORED=ON \
+        -DSDLMIXER_MOD=ON \
+        -DSDLMIXER_MOD_XMP=ON \
+        -DBUILDING_FOR_STEAM=ON \
+        -S .
+    cmake --build ${BPATH} -- VERBOSE=1
 elif [[ "$1" == "msvc" ]] ; then
     #rm -rf build/msvc
     #rm -rf build/msvc/SDL3_mixer/external/vorbis-build/
