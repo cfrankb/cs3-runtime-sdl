@@ -1,6 +1,6 @@
 /*
     cs3-runtime-sdl
-    Copyright (C) 2025 Francois Blanchette
+    Copyright (C) 2026 Francois Blanchette
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -81,5 +81,6 @@ enum TileType:uint8_t
     TYPE_LIGHTNING_BOLT       = 0x10,
     TYPE_FIRE                 = 0x11,
     TYPE_BARREL               = 0x12,
+    TYPE_EGG                  = 0x13,
 };
 

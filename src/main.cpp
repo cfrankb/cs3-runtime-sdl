@@ -187,8 +187,14 @@ const std::string getPrefix()
 #endif
 }
 
+#if defined(__MINGW32__) || defined(_MSC_VER)
 #if defined(__MINGW32__)
 #pragma message "Compiling with MinGW"
+#elif defined(_MSC_VER)
+#pragma message "Compiling with MSVC"
+#else
+#pragma message "Compiling unknown"
+#endif
 #include <windows.h>
 #include <shlobj.h>
 #include <iostream>
@@ -250,9 +256,9 @@ bool makePath(const std::string &path)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     std::vector<std::string> list;
-    if (lpCmdLine[0])
-        splitString2(lpCmdLine, list);
-    LOGI("CMD: %s", lpCmdLine);
+    for (int i = 1; i < __argc; i++)
+        list.emplace_back(__argv[i]);
+
     for (size_t i = 0; i < list.size(); ++i)
     {
         LOGI("%d>>> %s", i, list[i].c_str());
@@ -261,7 +267,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 int main(int argc, char *args[])
 {
     std::vector<std::string> list;
-    list.reserve(argc - 1);
+    if (argc)
+        list.reserve(argc - 1);
     for (int i = 1; i < argc; ++i)
     {
         list.emplace_back(args[i]);
@@ -301,7 +308,7 @@ int main(int argc, char *args[])
         return EXIT_FAILURE;
     }
     params.workspace = path;
-#elif defined(__MINGW32__)
+#elif defined(__MINGW32__) || defined(_MSC_VER)
     params.workspace = GetAppDataPath() + WINDOWS_GAME_ROAMPATH;
     if (!makePath(params.workspace))
     {

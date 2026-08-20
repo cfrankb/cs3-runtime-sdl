@@ -78,7 +78,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_TARGET MATCHES "
 
     set(CMAKE_LINK_DEF_FILE_FLAG "/DEF:")
     add_definitions(-DNOMINMAX)
-
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
@@ -236,8 +235,9 @@ if(IS_CROSS_MSVC)
         "-Wl,/alternatename:_ltoa=__ltoa"
         "-Wl,/alternatename:_ultoa=__ultoa"
         "-Wl,/NODEFAULTLIB:m.lib"
+        #"-Wl,/ENTRY:mainCRTStartup"
+        "-Wl,/SUBSYSTEM:WINDOWS"
     )
-
 endif()
 
 

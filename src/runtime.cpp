@@ -1469,9 +1469,9 @@ void CRuntime::takeScreenshot()
     bitmap.toPng(png);
     CFileWrap file;
     char filename[64];
-    auto now = std::chrono::system_clock::now();
-    std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
-    std::tm *localTime = std::localtime(&currentTime);
+    const auto now = std::chrono::system_clock::now();
+    const std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
+    const std::tm *localTime = std::localtime(&currentTime);
     snprintf(filename, sizeof(filename), "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
              localTime->tm_year + 1900,
              localTime->tm_mon + 1,
@@ -1479,7 +1479,7 @@ void CRuntime::takeScreenshot()
              localTime->tm_hour,
              localTime->tm_min,
              localTime->tm_sec);
-    std::string path = m_workspace + filename;
+    const std::string path = m_workspace + filename;
     if (file.open(path.c_str(), "wb"))
     {
         file.write(png.data(), png.size());
@@ -2115,6 +2115,8 @@ CMenu &CRuntime::initOptionMenu()
     std::vector<std::string> resolutions;
     for (const auto &rez : m_resolutions)
     {
+        if (rez.w < 640)
+            continue;
         snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
         resolutions.emplace_back(tmp);
     }

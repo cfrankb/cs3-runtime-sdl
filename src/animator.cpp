@@ -28,7 +28,7 @@
 #include "logger.h"
 
 constexpr uint8_t NO_SPECIAL_ID = 0;
-constexpr const size_t SEQ_COUNT = 30;
+constexpr const size_t SEQ_COUNT = 33;
 
 constexpr const std::array<CAnimator::animzSeq_t, SEQ_COUNT> g_animzSeq = {{
     {TILES_DIAMOND, ANIMZ_DIAMOND, ANIMZ_DIAMOND_LEN, NO_SPECIAL_ID},
@@ -61,6 +61,9 @@ constexpr const std::array<CAnimator::animzSeq_t, SEQ_COUNT> g_animzSeq = {{
     {SFX_EXPLOSION7, ANIMZ_EXPLOSION7, ANIMZ_EXPLOSION7_LEN, ANIMZ_EXPLOSION7}, // thunderbolt destruction (yellow)
     {SFX_EXPLOSION0, ANIMZ_EXPLOSION0, ANIMZ_EXPLOSION0_LEN, ANIMZ_EXPLOSION0}, // placeholder for mob death
     {SFX_FLAME, ANIMZ_FLAME, ANIMZ_FLAME_LEN, ANIMZ_FLAME},                     // barrel flame
+    {TILES_SKELETON, ANIMZ_SKELETON, ANIMZ_SKELETON_LEN, ANIMZ_SKELETON},
+    {TILES_BABYDRAGON, ANIMZ_BABYDRAGON, ANIMZ_BABYDRAGON_LEN, ANIMZ_BABYDRAGON}, // baby dragon animator
+    {TILES_EGG_CRACKED, ANIMZ_EGG_HATCH, ANIMZ_EGG_HATCH_LEN, NO_SPECIAL_ID},     // egg hatching
 }};
 
 CAnimator::CAnimator() : m_seqIndex(g_animzSeq.size(), 0)

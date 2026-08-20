@@ -1,0 +1,365 @@
+
+# cmake -B ${BPATH} \
+#   -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+#   -DCMAKE_BUILD_TYPE=Release \
+#   -DBUILD_SHARED_LIBS=OFF \
+#   -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+#   -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+#   -DSDL_AVX=OFF -DSDL_ASSEMBLY=OFF \
+#   -DSDL3MIXER_VENDORED=ON \
+#   -DSDL3MIXER_BUILD_SHARED_LIBS=OFF \
+#   -DSDL3MIXER_WAVPACK=OFF \
+#   -DSDL3MIXER_SAMPLES=OFF \
+#   -DZLIB_BUILD_SHARED=OFF \
+#   -DZLIB_BUILD_EXAMPLES=OFF .
+# cmake -B ${BPATH} \
+#   -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+#   -DCMAKE_BUILD_TYPE=Release \
+#   -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+#   -DSDL_AVX=OFF -DSDL_ASSEMBLY=OFF \
+#   -DSDL_MIXER_WAVPACK=OFF \
+#   -DBUILD_SHARED_LIBS=OFF \
+#   -DSDL_SHARED=OFF \
+#   -DSDL_STATIC=ON \
+#   -DSDL_MIXER_BUILD_SHARED_LIBS=OFF 
+
+
+# cmake -B ${BPATH} \
+#   -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+#   -DCMAKE_BUILD_TYPE=Release \
+#   -DBUILD_SHARED_LIBS=OFF \
+#   -DSDL_SHARED=OFF \
+#   -DSDL_STATIC=ON \
+#   -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+#   -DSDL_AVX=OFF -DSDL_AVX2=OFF -DSDL_ASSEMBLY=OFF \
+#   -DSDL_MIXER_WAVPACK=OFF \
+#   -DSDL_MIXER_VENDORED=ON \
+#   -DSDL_MIXER_BUILD_SHARED_LIBS=OFF \
+#   -DSDL3MIXER_WAVPACK=OFF \
+#   -DSDL3MIXER_SAMPLES=OFF \
+#   -DZLIB_BUILD_SHARED=OFF \
+#   -DZLIB_BUILD_EXAMPLES=OFF .
+
+    # cmake -B ${BPATH}  \
+    #   -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+    #   -DSDL_AVX=OFF -DSDL_AVX2=OFF \
+    #   -DSDL_ASSEMBLY=OFF \
+    #   -DSDL_LIBC=ON \
+    #   -DSDL_MIXER_WAVPACK=OFF \
+    #   -DBUILD_SHARED_LIBS=OFF \
+    #   -DSDL_SHARED=OFF \
+    #   -DSDL_STATIC=ON \
+    #   -DSDL_MIXER_WAVPACK=OFF \
+    #   -DSDL_MIXER_VENDORED=ON \
+    #   -DSDL_MIXER_BUILD_SHARED_LIBS=OFF \
+    #   -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake . -DCMAKE_BUILD_TYPE=Release
+
+
+    #rm -rf ${BPATH} # Mandatory: Clear "sticky" cache for a pure build
+
+# cmake -B ${BPATH} \
+#   -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+#   -DCMAKE_BUILD_TYPE=Release \
+#   -DBUILD_SHARED_LIBS=OFF \
+#   -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+#   -DSDL3MIXER_VENDORED=ON \
+#   -DSDL3MIXER_BUILD_SHARED_LIBS=OFF \
+#   -DSDL3MIXER_WAVPACK=OFF \
+#   -DSDL3MIXER_SAMPLES=OFF \
+#   -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+#   -DSDL_AVX=OFF -DSDL_ASSEMBLY=OFF \
+#   -DSDL_LIBC=ON \
+#   .
+
+
+    #-DSDLMIXER_VORBIS=VORBISFILE \
+
+    # cmake -B ${BPATH} \
+    #     -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+    #     -DCMAKE_BUILD_TYPE=Release \
+    #     -DBUILD_SHARED_LIBS=OFF \
+    #     -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+    #     -DSDLMIXER_WAVPACK=OFF \
+    #     -DSDL3MIXER_WAVPACK=OFF \
+    #     -DSDL_MIXER_WAVPACK=OFF \
+    #     -DSDLMIXER_VENDORED=ON \
+    #     -DSDLMIXER_BUILD_SHARED_LIBS=OFF \
+    #     -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+    #     -DSDL_AVX=OFF -DSDL_ASSEMBLY=OFF
+
+        # cmake -B ${BPATH} \
+    #     -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+    #     -DCMAKE_BUILD_TYPE=Release \
+    #     -DBUILD_SHARED_LIBS=OFF \
+    #     -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+    #     -DSDL_MIXER_VENDORED=ON -DSDL3MIXER_VENDORED=ON \
+    #     -DSDL_MIXER_BUILD_SHARED_LIBS=OFF -DSDL3MIXER_BUILD_SHARED_LIBS=OFF \
+    #     -DSDL_MIXER_WAVPACK=OFF -DSDL3MIXER_WAVPACK=OFF \
+    #     -DSDL_SSE=OFF -DSDL_SSE2=OFF -DSDL_SSE3=OFF \
+    #     -DSDL_AVX=OFF -DSDL_ASSEMBLY=OFF \
+    #     -DWAVPACK_ENABLE_ASM=OFF \
+    #     -DSDL_ASSEMBLY=OFF
+    # cmake --build ${BPATH} -- VERBOSE=1
+
+
+    The following are some of the valid targets for this Makefile:
+... all (the default if no target is provided)
+... clean
+... depend
+... edit_cache
+... install
+... install/local
+... install/strip
+... list_install_components
+... package
+... package_source
+... rebuild_cache
+... SDL3-static
+... SDL3_mixer-static
+... SDL3_test
+... SDL_uclibc
+... cs3-runtime
+... gme_shared
+... implementers_lib
+... ogg
+... shared_lib
+... src_lib
+... vorbis
+... vorbisenc
+... vorbisfile
+... xmp_static
+... zlibstatic
+... src/main.obj
+... src/main.i
+... src/main.s
+
+
+# 3. Define the Clang-cl wrappers if you want MSVC-style flags (/W4, /Zi)
+# Or keep using clang++ if you prefer GCC-style flags (-Wall, -g)
+#set(CMAKE_C_COMPILER clang)
+#set(CMAKE_CXX_COMPILER clang++)
+
+
+##set(CMAKE_RC_COMPILER "/usr/lib/llvm-18/bin/llvm-rc")
+##set(CMAKE_C_COMPILER "/usr/bin/clang-18")
+##set(CMAKE_CXX_COMPILER "/usr/bin/clang++-18")
+
+# Override CMake's internal defaults that force -nostdlib
+#set(CMAKE_C_LINK_EXECUTABLE "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#set(CMAKE_CXX_LINK_EXECUTABLE "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
+# Do the same for shared libraries just in case
+#set(CMAKE_C_CREATE_SHARED_LIBRARY "<CMAKE_C_COMPILER> <FLAGS> <CMAKE_C_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+#set(CMAKE_CXX_CREATE_SHARED_LIBRARY "<CMAKE_CXX_COMPILER> <FLAGS> <CMAKE_CXX_LINK_FLAGS> <LINK_FLAGS> <OBJECTS> -o <TARGET> <LINK_LIBRARIES>")
+
+# This ensures ANY target (like WavPack) can find math functions in ucrt.lib
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,/alternatename:m.lib=ucrt.lib" CACHE STRING "" FORCE)
+# set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,/alternatename:m.lib=ucrt.lib" CACHE STRING "" FORCE)
+
+# set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+# set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+# set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+
+# set(SDL3_mixer_DISABLE_FIND_PACKAGE_SDL3 ON)
+# set(SDLMIXER_MOD_XMP ON CACHE BOOL "Enable libxmp module support")
+# set(SDLMIXER_VENDORED ON CACHE BOOL "Use vendored libxmp")
+# set(SDLMIXER_MOD_XMP_SHARED OFF CACHE BOOL "Build libxmp statically")
+# set(SDLMIXER_BUILD_SHARED_LIBS OFF CACHE BOOL "Build SDL3_mixer statically")
+# set(CMAKE_FIND_PACKAGE_PREFER_CONFIG OFF)
+# set(ZLIB_BUILD_TESTING OFF CACHE BOOL "Disable zlib test targets like infcover")
+
+# # Global toggle (affects most CMake projects)
+# set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+# # SDL3 specific toggles
+# set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+# set(SDL_STATIC ON CACHE BOOL "" FORCE)
+
+# # SDL3_mixer specific toggles
+# set(SDL3MIXER_SHARED OFF CACHE BOOL "" FORCE)
+# set(SDL3MIXER_STATIC ON CACHE BOOL "" FORCE)
+
+# # ZLIB specific (if using the standard zlib source)
+# set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+# # Note: Zlib usually builds both; you may need to specifically
+# # link to the 'zlibstatic' target if it creates two.
+# set(ZLIB_BUILD_SHARED OFF CACHE BOOL "Disable zlib shared" FORCE)
+# set(ZLIB_BUILD_STATIC ON CACHE BOOL "Enable zlib static" FORCE)
+
+
+# #target_link_options(${PROJECT_NAME} PRIVATE "-Wl,/alternatename:m.lib=ucrt.lib")
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,/alternatename:m.lib=ucrt.lib" CACHE STRING "" FORCE)
+# set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,/alternatename:m.lib=ucrt.lib" CACHE STRING "" FORCE)
+# set(M_LIBRARY "" CACHE FILEPATH "Math library is integrated in UCRT" FORCE)
+# set(MATH_LIBRARY "" CACHE FILEPATH "Math library is integrated in UCRT" FORCE)
+
+# In windows-msvc.cmake
+# Override find_library for m to always return empty
+# function(find_library var)
+#     return ()
+#     # if("${ARGV}" MATCHES ";?m;?" OR "${ARGN}" MATCHES "^m$")
+#     #     set(${var} "" PARENT_SCOPE)
+#     #     return()
+#     # endif()
+#     # _find_library(${ARGV})
+# endfunction()
+
+# Intercept find_library calls for 'm' — it's part of UCRT on Windows
+# set(_FIND_LIBRARY_GUARD OFF)
+
+# function(find_library outvar)
+#     if(_FIND_LIBRARY_GUARD)
+#         return()
+#     endif()
+#     list(FIND ARGN "m" _m_index)
+#     if(_m_index GREATER -1)
+#         set(${outvar} "" PARENT_SCOPE)
+#         return()
+#     endif()
+#     set(_FIND_LIBRARY_GUARD ON)
+#     _find_library(${outvar} ${ARGN})
+#     set(${outvar} "${${outvar}}" PARENT_SCOPE)
+#     set(_FIND_LIBRARY_GUARD OFF)
+# endfunction()
+
+
+# set(CLANG_RT_BUILTINS 
+#     "/usr/lib/llvm-19/lib/clang/19/lib/x86_64-pc-windows-msvc/clang_rt.builtins-x86_64.lib")
+
+# if(NOT EXISTS "${CLANG_RT_BUILTINS}")
+#     message(FATAL_ERROR "clang_rt.builtins not found at ${CLANG_RT_BUILTINS}")
+# endif()
+
+# set(CMAKE_SHARED_LINKER_FLAGS
+#     "${CMAKE_SHARED_LINKER_FLAGS} ${CLANG_RT_BUILTINS}"
+#     CACHE STRING "" FORCE)
+# set(CMAKE_EXE_LINKER_FLAGS
+#     "${CMAKE_EXE_LINKER_FLAGS} ${CLANG_RT_BUILTINS}"
+#     CACHE STRING "" FORCE)
+
+set(CMAKE_CXX_COMPILER_TARGET x86_64-pc-windows-msvc)
+set(CMAKE_C_COMPILER_TARGET x86_64-pc-windows-msvc)
+
+# In windows-msvc.cmake
+# Tell CMake's find_library that 'm' has already been found as empty
+set(M_LIBRARY    "" CACHE FILEPATH "" FORCE)
+set(MATH_LIBRARY "" CACHE FILEPATH "" FORCE)
+
+# This is the key: pre-populate the find_library result cache
+# so find_library(result m) returns "" without searching
+set(m_LIBRARY    "" CACHE FILEPATH "" FORCE)
+set(m            "" CACHE FILEPATH "" FORCE)
+
+----------------------------------------------------------
+
+
+# # 3. Prevent find_library from even looking for 'm'
+    # set(M_LIBRARY "" CACHE FILEPATH "Integrated in UCRT" FORCE)
+    # set(MATH_LIBRARY "" CACHE FILEPATH "Integrated in UCRT" FORCE)
+
+    # # Disable WavPack BEFORE SDL3_mixer is added
+    # set(SDLMIXER_WAVPACK  OFF CACHE BOOL "" FORCE)
+    # set(SDL3MIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+    # set(SDL_MIXER_WAVPACK OFF CACHE BOOL "" FORCE)
+
+    # # SDL3_mixer: only OGG/Vorbis + XMP mod, disable everything else
+    # set(SDLMIXER_WAVPACK    OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_OPUS       OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_FLAC       OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MP3        OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MP3_MPG123    OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MP3_MINIMP3   OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MIDI          OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MIDI_FLUIDSYNTH OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MIDI_NATIVE   OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MIDI_TIMIDITY OFF CACHE BOOL "" FORCE)
+
+    # #set(SDLMIXER_OGG           ON  CACHE BOOL "" FORCE)
+    # set(SDLMIXER_VORBIS        VORBISFILE  CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MOD           ON  CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MOD_XMP       ON  CACHE BOOL "" FORCE)
+    # set(SDLMIXER_MOD_XMP_SHARED OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_VENDORED      ON  CACHE BOOL "" FORCE)
+    # set(SDLMIXER_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+    # Correct .def file flag for lld-link
+    #set(CMAKE_LINK_DEF_FILE_FLAG "/DEF:")
+    # Vorbis-specific override (this is the one that actually matters)
+    # --- Fix Vorbis linking on MSVC/Clang-cl ---
+    # set(M_LIBRARY "" CACHE STRING "" FORCE)
+    # set(MATH_LIBRARY "" CACHE STRING "" FORCE)
+    # set(VORBIS_M_LIBRARY "" CACHE STRING "" FORCE)
+
+    # # --- Force static Vorbis ---
+    # set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    # set(VORBIS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    # set(VORBIS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
+
+
+        # Force static Vorbis
+  ####  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    #set(VORBIS_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    #set(VORBIS_BUILD_STATIC ON  CACHE BOOL "" FORCE)
+
+# Force-kill the Ogg/Vorbis targets globally
+    # set(SDLMIXER_VORBIS OFF CACHE BOOL "" FORCE)
+    # set(SDLMIXER_OGG OFF CACHE BOOL "" FORCE)
+    
+    # # Also set the older naming convention just in case
+    # set(SDL_MIXER_VORBIS OFF CACHE BOOL "" FORCE)
+    # set(SDL_MIXER_OGG OFF CACHE BOOL "" FORCE)
+
+    # set(SDL3MIXER_VORBIS OFF CACHE BOOL "" FORCE)
+    # set(SDL3MIXER_VORBIS_LIBVORBIS OFF CACHE BOOL "" FORCE)
+    # set(SDL3MIXER_VORBIS_STB OFF CACHE BOOL "" FORCE)
+    # set(SDL3MIXER_TREMOR OFF CACHE BOOL "" FORCE)
+
+    # # Allow CRT libs for DLLs so SSE intrinsics resolve
+    # # Restore CRT libs for ALL shared libraries (DLLs)
+    # set(CMAKE_SHARED_LINKER_FLAGS_INIT
+    #     "-Xlinker /DEFAULTLIB:ucrt -Xlinker /DEFAULTLIB:vcruntime -Xlinker /DEFAULTLIB:msvcrt"
+    # )
+
+    # set(CMAKE_SHARED_LINKER_FLAGS
+    #     "${CMAKE_SHARED_LINKER_FLAGS_INIT}"
+    #     CACHE STRING "" FORCE
+    # )
+
+    # set_source_files_properties(
+    #     external/SDL3_mixer/external/vorbis/lib/vorbisfile.c
+    #     PROPERTIES COMPILE_OPTIONS "-mno-sse2;-mno-sse"
+    # )
+
+    # set_source_files_properties(
+    #     external/SDL3_mixer/external/vorbis/lib/vorbisfile.c
+    #     PROPERTIES COMPILE_OPTIONS "-mno-sse2;-mno-sse"
+    # )
+
+
+cmake  -DCMAKE_TOOLCHAIN_FILE=packages/cmake/windows-msvc.cmake \
+        -B ${BPATH} \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DSDL_SHARED=OFF -DSDL_STATIC=ON \
+        \
+        -DSDLMIXER_VENDORED=ON \
+        -DSDLMIXER_BUILD_SHARED_LIBS=OFF \
+        \
+        -DSDLMIXER_WAVPACK=OFF \
+        -DSDLMIXER_OPUS=OFF \
+        -DSDLMIXER_FLAC=OFF \
+        -DSDLMIXER_MP3=OFF \
+        -DSDLMIXER_MP3_MPG123=OFF \
+        -DSDLMIXER_MIDI=OFF \
+        -DSDLMIXER_MIDI_FLUIDSYNTH=OFF \
+        -DSDLMIXER_MIDI_NATIVE=OFF \
+        -DSDLMIXER_MIDI_TIMIDITY=OFF \
+        \
+        -DSDLMIXER_VORBIS=OFF \
+        -DSDLMIXER_OGG=OFF \
+        -DSDLMIXER_MOD=ON \
+        -DSDLMIXER_MOD_XMP=ON \
+        -DSDLMIXER_MOD_XMP_SHARED=OFF \
+        -DSDL_LIBC=OFF \
+        -S .
