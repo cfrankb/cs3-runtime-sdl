@@ -13,7 +13,7 @@ def generate_file(folder, sub_folders):
     if not os.path.isdir(folder):
         print(f"not a directory: {folder}")
         return
-    excluded = ["main.cpp", "steam_helper.cpp"]
+    excluded = ["main.cpp", "steam_helper.cpp", 'chars.cpp']
 
     file_path = folder + "/CMakeLists.txt"
     lines = []
