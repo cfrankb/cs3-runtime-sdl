@@ -17,4 +17,5 @@ data/*
 data
 #VERSION
 #/CMakeLists.txt
+tests/CMakeLists.txt
 levels2.mapz

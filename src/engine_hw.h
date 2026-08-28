@@ -71,7 +71,7 @@ protected:
     void drawTimeout();
     void preloadHearts();
     void drawHealthBar(const bool isPlayerHurt);
-    void fazeScreen();
+    virtual void fazeScreen(int str = 0xe);
     void flashScreen();
     void drawKeys();
     const Tile *getMainLayerTile(const uint8_t tileID);
@@ -137,6 +137,7 @@ protected:
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;
     SDL_Texture *m_textureTitlePix = nullptr;
+    SDL_Texture *m_textureTitleScreen = nullptr;
     SDL_Texture *m_textureSplash = nullptr;
     TileSet m_tileset_tiles;
     TileSet m_tileset_animz;

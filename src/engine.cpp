@@ -624,15 +624,17 @@ void Engine::drawTitleScreen(const char *scroll)
     const int offsetY = 12;
     int titleHeigth = drawTitlePix(offsetY);
     const int baseY = 2 * offsetY + titleHeigth;
-    const rect_t rect{
-        8,
-        baseY,
-        getWidth() - 16,
-        getHeight() - baseY - 24};
-    drawRect(rect, MENU_COLOR_BORDER, false);
-
-    CMenu &menu = *m_menus->get(MENUID_MAINMENU);
-    const int menuBaseY = 100 - 8;
-    drawMenu(menu, -1, menuBaseY);
+    if (m_menus->isMenuActive(MENUID_MAINMENU))
+    {
+        fazeScreen(128);
+        CMenu &menu = *m_menus->get(MENUID_MAINMENU);
+        int menuBaseY = 100 - 8;
+        if (getWidth() * 2 > 800)
+        {
+            menuBaseY += 32;
+        }
+        drawMenu(menu, -1, menuBaseY);
+    }
+    drawFont(0 + 2, getHeight() - FONT_SIZE * 2 + 2, scroll, BLACK);
     drawFont(0, getHeight() - FONT_SIZE * 2, scroll, MENU_COLOR_ITEM_SELECTED);
 }

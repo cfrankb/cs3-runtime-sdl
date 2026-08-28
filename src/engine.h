@@ -72,6 +72,7 @@ public:
     virtual void drawFont(const int x, const int y, const char *text, const Color color = WHITE, const int scaleX = 1, const int scaleY = 1) = 0;
     virtual int drawTitlePix(int offsetY) = 0;
     virtual void drawSplash() = 0;
+    virtual void fazeScreen(int str = 0xe0) = 0;
 
     // dispatch
     void drawPreScreen();

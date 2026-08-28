@@ -135,7 +135,15 @@ void EngineHW::preloadAssets()
         ASSET_TITLEPIX,
         ASSET_LAYERS0,
         ASSET_SPLASH,
+        ASSET_TITLESCREEN,
+        MAX_ASSET
     };
+
+    if (m_assetFiles.size() < MAX_ASSET)
+    {
+        LOGE("not enought asset defined");
+        return;
+    }
 
     m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES], TILE_SIZE, TILE_SIZE);
     m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ], TILE_SIZE, TILE_SIZE);
@@ -181,6 +189,7 @@ void EngineHW::preloadAssets()
 
     m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX]);
     m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH]);
+    m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN]);
 
     preloadHearts();
 }
@@ -202,6 +211,7 @@ SDL_Texture *EngineHW::loadTextureAsset(const std::string &filepath)
 void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
 {
     m_menus->setLastMenu(&menu, baseX, baseY);
+    const int menuID = menu.id();
     const int scaleX = menu.scaleX();
     const int scaleY = menu.scaleY();
     const int paddingY = menu.paddingY();
@@ -216,6 +226,14 @@ void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
         if (item.isDisabled())
         {
             color = DARKGRAY;
+            if (menuID == MENUID_MAINMENU)
+            {
+                color = LIGHTGRAY;
+            }
+        }
+        else if (!selected && menuID == MENUID_MAINMENU)
+        {
+            color = GREEN;
         }
         int x = bx;
         const int y = baseY + i * spacingY;
@@ -258,6 +276,8 @@ void EngineHW::drawMenu(CMenu &menu, const int baseX, const int baseY)
             x += 32;
         }
         // drawFont(bitmap, x, y, text.c_str(), color, CLEAR, scaleX, scaleY);
+        m_font.drawText(m_renderer, text.c_str(), SColor::toSColor(0), nullptr, x * SCALE + 4, y * SCALE + 4, scaleX * SCALE, scaleY * SCALE);
+        m_font.drawText(m_renderer, text.c_str(), SColor::toSColor(0), nullptr, x * SCALE - 4, y * SCALE - 4, scaleX * SCALE, scaleY * SCALE);
         m_font.drawText(m_renderer, text.c_str(), SColor::toSColor(color), nullptr, x * SCALE, y * SCALE, scaleX * SCALE, scaleY * SCALE);
     }
 }
@@ -341,10 +361,9 @@ void EngineHW::drawScreen()
     // draw timeout
     drawTimeout();
 
-    // if (m_state.m_gameMenuActive)
     if (m_menus->isMenuActive(MENUID_GAMEMENU))
     {
-        fazeScreen();
+        fazeScreen(0xb0);
         resizeGameMenu();
         drawMenu(*m_menus->get(MENUID_GAMEMENU), -1, (getHeight() - m_menus->get(MENUID_GAMEMENU)->height()) / 2);
     }
@@ -653,6 +672,10 @@ void EngineHW::drawViewPortStatic()
         {
             for (int x = 0; x < cols; ++x)
             {
+                if (x + mx >= layer->width())
+                    break;
+                if (y + my >= layer->height())
+                    break;
                 const uint8_t tileID = layer->at(x + mx, y + my);
                 drawViewPortInner(overlays, layer, tileID, x + mx, y + my);
             }
@@ -894,6 +917,10 @@ void EngineHW::drawViewPortDynamic()
             int px = ox ? -halfOffset : 0;
             for (int x = 0; x < cols + ox; ++x)
             {
+                if (x + mx >= layer->width())
+                    break;
+                if (y + my >= layer->height())
+                    break;
                 const uint8_t tileID = layer->at(x + mx, y + my);
                 drawViewPortInner(overlays, layer, tileID, px, py);
                 px += TILE_SIZE;
@@ -1038,14 +1065,14 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
     }
 }
 
-void EngineHW::fazeScreen()
+void EngineHW::fazeScreen(int str)
 {
     // save default
     SDL_BlendMode oldMode = 0;
     SDL_GetRenderDrawBlendMode(m_renderer, &oldMode);
 
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
-    SDL_Color color{0, 0, 0, 0xe0};
+    SDL_Color color{0, 0, 0, str}; // default: 0xef
     SDL_FRect rect{0, 0, getWidth() * SCALEF, getHeight() * SCALEF};
     drawRect(m_renderer, rect, color, true);
 
@@ -1146,16 +1173,27 @@ CFrame *EngineHW::getFrame(const std::string &filepath)
 
 int EngineHW::drawTitlePix(int offsetY)
 {
-    const int x = (getWidth() - m_textureTitlePix->w) / 2;
-    const int y = offsetY;
-    SDL_FRect dst = {
-        (float)x * SCALEF,
-        (float)y * SCALEF,
-        m_textureTitlePix->w * SCALEF,
-        m_textureTitlePix->h * SCALEF,
+    int width = SCALEF * getWidth();
+    int height = SCALEF * getHeight();
+
+    SDL_FRect src_low = {
+        (float)284,
+        (float)26,
+        824,
+        619,
     };
-    SDL_RenderTexture(m_renderer, m_textureTitlePix, nullptr, &dst);
-    return (int)m_textureTitlePix->h;
+
+    SDL_FRect *src = width <= 1024 ? &src_low : nullptr;
+
+    SDL_FRect dst = {
+        (float)0,
+        (float)0,
+        width,
+        height,
+    };
+
+    SDL_RenderTexture(m_renderer, m_textureTitleScreen, src, &dst);
+    return 0;
 }
 
 void EngineHW::drawSplash()

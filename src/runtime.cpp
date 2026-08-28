@@ -1387,11 +1387,15 @@ void CRuntime::setupTitleScreen()
     m_skill = m_game->skill();
     CMenu &menu = *m_menus->get(MENUID_MAINMENU);
     menu.clear();
-    if (getWidth() > 450)
+
+    int width = getWidth() * SCALE2X;
+    int heigth = getHeight() * SCALE2X;
+
+    if (width > 1024)
     {
         menu.setScaleX(4);
     }
-    else if (getWidth() > 350)
+    else if (width > 800)
     {
         menu.setScaleX(3);
     }
@@ -1402,11 +1406,11 @@ void CRuntime::setupTitleScreen()
 
     if (getHeight() >= 450)
     {
-        menu.setScaleY(6);
+        menu.setScaleY(5);
     }
     else if (getHeight() >= 350)
     {
-        menu.setScaleY(5);
+        menu.setScaleY(4);
     }
     else if (getHeight() >= 300)
     {
@@ -1748,6 +1752,25 @@ void CRuntime::resizeScroller()
  */
 void CRuntime::manageTitleScreen()
 {
+    if (m_gameMenuCooldown)
+    {
+        --m_gameMenuCooldown;
+    }
+    else if (m_keyStates[Key_Escape] ||
+             m_buttonState[BUTTON_START])
+    {
+        m_gameMenuCooldown = GAME_MENU_COOLDOWN;
+        m_prompt = PROMPT_NONE;
+        m_paused = false;
+        m_keyRepeters[Key_Escape] = 0;
+        bool active = m_menus->isMenuActive(MENUID_MAINMENU);
+        m_menus->setActive(MENUID_MAINMENU, !active);
+        return;
+    }
+
+    if (!m_menus->isMenuActive(MENUID_MAINMENU))
+        return;
+
     manageMenu(*m_menus->get(MENUID_MAINMENU));
 }
 
@@ -1849,8 +1872,9 @@ bool CRuntime::manageMenu(CMenu &menu)
             }
             game.setLevel(m_startLevel);
             m_menus->setActive(MENUID_GAMEMENU, false);
-            //            m_gameMenuActive = false;
+            m_menus->setActive(MENUID_MAINMENU, false);
             game.resetStats();
+            game.restartGame();
             initUserMenu();
             game.setMode(CGame::MODE_USERSELECT);
             clearKeyStates();
