@@ -207,37 +207,38 @@ void Engine::drawScores()
 {
     int scaleX = 2;
     int scaleY = 2;
-    if (getWidth() > 450)
+
+    int fullWidth = SCALE2X * getWidth();
+    int fullHeight = SCALE2X * getHeight();
+    if (fullWidth > 900)
     {
         scaleX = 4;
     }
-    else if (getWidth() > 350)
+    else if (fullWidth > 640)
     {
         scaleX = 3;
     }
-    if (getHeight() >= 450)
-    {
-        scaleY = 3;
-    }
-    if (getHeight() >= 350)
-    {
-        scaleY = 3;
-    }
-    else if (getHeight() >= 300)
-    {
-        scaleY = 2;
-    }
 
+    scaleY = 2;
     char t[50];
     int y = 1;
-    strncpy(t, "HALL OF HEROES", sizeof(t));
-    int x = (getWidth() - strlen(t) * scaleX * FONT_SIZE) / 2;
-    drawFont(x, y * FONT_SIZE, t, WHITE, scaleX, scaleY);
-    y += scaleX;
-    strncpy(t, std::string(strlen(t), '=').c_str(), sizeof(t) - 1);
-    x = (getWidth() - strlen(t) * scaleX * FONT_SIZE) / 2;
-    drawFont(x, y * FONT_SIZE, t, WHITE, scaleX, scaleY);
-    y += scaleX;
+
+    const bool is4_3 = (getWidth() * 3 == getHeight() * 4);
+    const int headerScaleX = is4_3 ? scaleX : scaleX / 2;
+    const int headerScaleY = is4_3 ? scaleY : scaleY / 2;
+
+    snprintf(t, sizeof(t), "HALL OF HEROES");
+    int x = (getWidth() - strlen(t) * headerScaleX * FONT_SIZE) / 2;
+    drawFont(x, y * FONT_SIZE, t, WHITE, headerScaleX, headerScaleY);
+    y += headerScaleY;
+    snprintf(t, sizeof(t), "%s", std::string(strlen(t), '=').c_str());
+    x = (getWidth() - strlen(t) * headerScaleX * FONT_SIZE) / 2;
+    drawFont(x, y * FONT_SIZE, t, WHITE, headerScaleX, headerScaleY);
+    y += headerScaleY + 1;
+
+    // At non-4:3, use smaller scale for scores too
+    const int scoreScaleX = is4_3 ? scaleX / 2 : std::max(1, scaleX / 4);
+    const int scoreScaleY = is4_3 ? scaleY / 2 : std::max(1, scaleY / 4);
 
     CGameMixin *mixin = m_gameMixin;
     for (int i = 0; i < static_cast<int>(MAX_SCORES); ++i)
@@ -259,21 +260,21 @@ void Engine::drawScores()
                  hiScore.level,
                  hiScore.name,
                  showCaret ? CHARS_CARET - CHARS_CUSTOM + CHARS_CUSTOM_BASE + ' ' : '\0');
-        drawFont(1, y * FONT_SIZE, t, color, scaleX / 2, scaleY / 2);
-        y += scaleX / 2;
+        drawFont(1, y * FONT_SIZE, t, color, scoreScaleX, scoreScaleY);
+        y += scoreScaleY;
     }
 
-    y += scaleX / 2;
+    y += scoreScaleY;
     if (mixin->scoreRank() == INVALID)
     {
-        strncpy(t, " SORRY, YOU DIDN'T QUALIFY.", sizeof(t));
-        drawFont(0, y * FONT_SIZE, t, YELLOW, scaleX / 2, scaleY / 2);
+        snprintf(t, sizeof(t), " SORRY, YOU DIDN'T QUALIFY.");
+        drawFont(0, y * FONT_SIZE, t, YELLOW, scoreScaleX, scoreScaleY);
     }
     else if (mixin->recordScore())
     {
-        strncpy(t, "PLEASE TYPE YOUR NAME AND PRESS ENTER.", sizeof(t));
+        snprintf(t, sizeof(t), "PLEASE TYPE YOUR NAME AND PRESS ENTER.");
         x = (getWidth() - strlen(t) * FONT_SIZE) / 2;
-        drawFont(x, y++ * FONT_SIZE, t, YELLOW, scaleX / 2, scaleY / 2);
+        drawFont(x, y++ * FONT_SIZE, t, YELLOW, scoreScaleX, scoreScaleY);
     }
 }
 
