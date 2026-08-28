@@ -332,7 +332,7 @@ bool CRuntime::createSDLWindow()
         m_app.renderer,
         width,  // e.g. 640
         height, // e.g. 480
-        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+        getLogicalPresentationMode(width, height));
 
     return true;
 }
@@ -389,9 +389,32 @@ void CRuntime::handleWindowResize()
         m_app.renderer,
         sx, // logical width
         sy, // logical height
-        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+        getLogicalPresentationMode(sx, sy));
 
     LOGI("Resize handled: render output %dx%d", w, h);
+}
+
+/**
+ * @brief Determine whether to use STRETCH or LETTERBOX based on aspect ratio match
+ *
+ * @param logicalW Logical content width
+ * @param logicalH Logical content height
+ * @return SDL_RendererLogicalPresentation
+ */
+SDL_RendererLogicalPresentation CRuntime::getLogicalPresentationMode(const int logicalW, const int logicalH)
+{
+    // Get current display mode to compare aspect ratios
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(m_app.window);
+    const SDL_DisplayMode *displayMode = SDL_GetDesktopDisplayMode(display);
+    if (displayMode)
+    {
+        // Cross-multiply to compare aspects: logicalW/logicalH vs displayW/displayH
+        // → logicalW * displayH vs displayW * logicalH
+        const bool aspectMatches = (logicalW * displayMode->w) == (displayMode->h * logicalH);
+        return aspectMatches ? SDL_LOGICAL_PRESENTATION_STRETCH : SDL_LOGICAL_PRESENTATION_LETTERBOX;
+    }
+    // Fallback to STRETCH if we can't get display info
+    return SDL_LOGICAL_PRESENTATION_STRETCH;
 }
 
 /**
@@ -1466,7 +1489,13 @@ void CRuntime::takeScreenshot()
         return;
     }
 
-    memcpy(bitmap.getRGB().data(), conv->pixels, w * h * sizeof(uint32_t));
+    // Copy row by row to handle pitch differences between surface and bitmap
+    const uint8_t *src = static_cast<const uint8_t *>(conv->pixels);
+    uint32_t *dst = bitmap.getRGB().data();
+    for (int y = 0; y < h; ++y)
+    {
+        memcpy(dst + y * w, src + y * conv->pitch, w * sizeof(uint32_t));
+    }
     SDL_DestroySurface(conv);
 
     std::vector<uint8_t> png;
@@ -1617,7 +1646,7 @@ void CRuntime::toggleFullscreen()
                 m_app.renderer,
                 640, // logical width
                 480, // logical height
-                SDL_LOGICAL_PRESENTATION_INTEGER_SCALE))
+                getLogicalPresentationMode(640, 480)))
         {
             LOGE("toggleFullscreen >> SDL_SetRenderLogicalPresentation error: %s", SDL_GetError());
         }
@@ -1655,11 +1684,13 @@ void CRuntime::toggleFullscreen()
         SDL_Rect vp{0, 0, w, h};
         SDL_SetRenderViewport(m_app.renderer, &vp);
     }
+    // Use the currently selected resolution as the logical content size
+    Rez &currentRez = m_resolutions[m_resolution];
     SDL_SetRenderLogicalPresentation(
         m_app.renderer,
-        640, // 640
-        480, // 480
-        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+        currentRez.w,
+        currentRez.h,
+        getLogicalPresentationMode(currentRez.w, currentRez.h));
 
 #else
     if (m_app.isFullscreen)
@@ -1714,11 +1745,13 @@ void CRuntime::toggleFullscreen()
 
     SDL_SetRenderViewport(m_app.renderer, &vp);
 
+    // Use the currently selected resolution as the logical content size
+    Rez &currentRez = m_resolutions[m_resolution];
     SDL_SetRenderLogicalPresentation(
         m_app.renderer,
-        w,
-        h,
-        SDL_LOGICAL_PRESENTATION_INTEGER_SCALE);
+        currentRez.w,
+        currentRez.h,
+        getLogicalPresentationMode(currentRez.w, currentRez.h));
 
 #endif
     if (m_verbose)
@@ -1977,11 +2010,6 @@ bool CRuntime::manageMenu(CMenu &menu)
              oldValue != item.value())
     {
         toggleFullscreen();
-        CMenuItem *itemRez = menu.getItemByRole(MENU_ITEM_RESOLUTION);
-        if (itemRez)
-        {
-            itemRez->disable(m_app.isFullscreen);
-        }
     }
 
     m_buttonState[BUTTON_A] = BUTTON_RELEASED;
@@ -2154,11 +2182,6 @@ CMenu &CRuntime::initOptionMenu()
         addGamePadOptions(menu);
     }
 
-    CMenuItem *itemRez = menu.getItemByRole(MENU_ITEM_RESOLUTION);
-    if (itemRez)
-    {
-        itemRez->disable(m_app.isFullscreen);
-    }
     return menu;
 }
 
@@ -2265,6 +2288,19 @@ void CRuntime::resize(int w, int h)
 {
     if (m_verbose && !m_quiet)
         LOGI("switch to: %dx%d", w, h);
+
+    // Save fullscreen state and exit if active — changing window size
+    // while fullscreen leaves an inconsistent state
+    bool wasFullscreen = m_app.isFullscreen;
+    if (wasFullscreen)
+    {
+        if (!SDL_SetWindowFullscreen(m_app.window, 0))
+        {
+            LOGE("Failed to exit fullscreen before resize: %s", SDL_GetError());
+            return;
+        }
+    }
+
     setWidth(w / 2);
     setHeight(h / 2);
     SDL_SetWindowSize(m_app.window, w, h);
@@ -2287,6 +2323,30 @@ void CRuntime::resize(int w, int h)
     m_engine->resize(w, h);
     m_app.windowedWidth = w;
     m_app.windowedHeigth = h;
+
+    // Restore fullscreen state if it was active
+    if (wasFullscreen)
+    {
+        if (!SDL_SetWindowFullscreen(m_app.window, SDL_WINDOW_FULLSCREEN))
+        {
+            LOGE("Failed to re-enter fullscreen after resize: %s", SDL_GetError());
+        }
+        // Re-apply logical presentation
+        SDL_SetRenderLogicalPresentation(
+            m_app.renderer,
+            w,
+            h,
+            getLogicalPresentationMode(w, h));
+    }
+    else
+    {
+        // Not fullscreen — still update logical presentation
+        SDL_SetRenderLogicalPresentation(
+            m_app.renderer,
+            w,
+            h,
+            getLogicalPresentationMode(w, h));
+    }
 }
 
 /**

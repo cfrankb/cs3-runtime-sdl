@@ -80,6 +80,7 @@ public:
     bool loadFromFile(const std::string filepath, std::string &name);
     bool isValidSavegame(const std::string &filepath);
     void handleWindowResize();
+    SDL_RendererLogicalPresentation getLogicalPresentationMode(const int logicalW, const int logicalH);
 
 private:
     typedef struct
