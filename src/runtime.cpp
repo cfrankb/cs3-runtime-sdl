@@ -1626,6 +1626,18 @@ EM_JS(void, fix_canvas_css, (), {
     document.body.style.margin = '0';
     document.body.style.padding = '0';
     document.body.style.overflow = 'hidden';
+    // Sync the canvas's internal pixel buffer to the displayed size.
+    // Without this the canvas defaults to 300x150, causing a black screen.
+    // On HiDPI laptops devicePixelRatio > 1, so the buffer must be scaled
+    // by it; using CSS pixels alone leaves a buffer too small to hold the
+    // 640x480 content, which renders as a blank/black screen.
+    const dpr = typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : 1;
+    const cssW = Math.round(getComputedStyle(c).width * dpr);
+    const cssH = Math.round(getComputedStyle(c).height * dpr);
+    if (cssW > 0 && cssH > 0) {
+        c.width = cssW;
+        c.height = cssH;
+    }
 });
 #endif
 
