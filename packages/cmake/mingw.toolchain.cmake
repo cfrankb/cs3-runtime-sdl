@@ -18,5 +18,5 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 #set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 
 # Use absolute paths
-set(CMAKE_C_COMPILER /usr/bin/x86_64-w64-mingw32-gcc-posix)
-set(CMAKE_CXX_COMPILER /usr/bin/x86_64-w64-mingw32-g++-posix)
+set(CMAKE_C_COMPILER /usr/bin/x86_64-w64-mingw32-gcc)
+set(CMAKE_CXX_COMPILER /usr/bin/x86_64-w64-mingw32-g++)

@@ -284,8 +284,10 @@ int main(int argc, char *args[])
     LOGI("Starting Game %s: Build [%s]", VERSION, BUILD_HASH);
 
 #if STEAM_BUILD
+    bool skipSteam = true;
+
     LOGI("running special steam build.");
-    if (!InitSteam())
+    if (!skipSteam && !InitSteam())
     {
         LOGE("failed to init steam");
         return EXIT_FAILURE;

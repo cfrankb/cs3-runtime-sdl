@@ -270,7 +270,7 @@ protected:
     MenuManager *m_menus = nullptr;
     CAnimator *m_animator = nullptr;
     CGameMixin *m_gameMixin;
-    std::vector<std::string> m_assetFiles;
+    std::vector<std::vector<std::string>> m_assetFiles;
     Summary m_summary;
     std::unique_ptr<CGameUI> m_virtualKeyboard;
 
@@ -284,7 +284,7 @@ protected:
         return m_height;
     }
 
-    void setAssetFiles(const std::vector<std::string> &assetFiles)
+    void setAssetFiles(const std::vector<std::vector<std::string>> &assetFiles)
     {
         m_assetFiles = assetFiles;
     }

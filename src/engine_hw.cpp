@@ -59,17 +59,17 @@ namespace EngineHW_Private
         constexpr SDL_Color GREEN{0, 255, 0, 255};               // #00ff00
         constexpr SDL_Color PURPLE{255, 0, 255, 255};            // #ff00ff
         constexpr SDL_Color LIGHTGRAY{0xa9, 0xa9, 0xa9, 0xff};   // #a9a9a9
-        constexpr SDL_Color DEEPSKYBLUE(0x00, 0xBF, 0xFF, 0xff); // #00bfff
-        constexpr SDL_Color BLACK(0x00, 0x00, 0x00, 0xff);       // #000000
-        constexpr SDL_Color DARKGREEN(0, 128, 0, 255);           // #008000
-        constexpr SDL_Color RED(255, 0, 0, 255);                 // #ff0000
-        constexpr SDL_Color ORANGE(0xf5, 0x9b, 0x14, 255);       // #f59b14
-        constexpr SDL_Color DARKORANGE(0xff, 0x8c, 0x00, 255);   // #ff8c00
-        constexpr SDL_Color CORAL(0xff, 0x7f, 0x50, 255);        // #ff7f50
-        constexpr SDL_Color PINK(0xff, 0xc0, 0xcb, 255);         // #ffc0cb
-        constexpr SDL_Color HOTPINK(0xff, 0x69, 0xb4, 255);      // #ff69b4
-        constexpr SDL_Color DEEPPINK(0xff, 0x14, 0x93, 255);     // #ff1493
-        constexpr SDL_Color DARKGRAY(0x44, 0x44, 0x44, 255);     // #444444
+        constexpr SDL_Color DEEPSKYBLUE{0x00, 0xbf, 0xff, 0xff}; // #00bfff
+        constexpr SDL_Color BLACK{0x00, 0x00, 0x00, 0xff};       // #000000
+        constexpr SDL_Color DARKGREEN{0, 128, 0, 255};           // #008000
+        constexpr SDL_Color RED{255, 0, 0, 255};                 // #ff0000
+        constexpr SDL_Color ORANGE{0xf5, 0x9b, 0x14, 255};       // #f59b14
+        constexpr SDL_Color DARKORANGE{0xff, 0x8c, 0x00, 255};   // #ff8c00
+        constexpr SDL_Color CORAL{0xff, 0x7f, 0x50, 255};        // #ff7f50
+        constexpr SDL_Color PINK{0xff, 0xc0, 0xcb, 255};         // #ffc0cb
+        constexpr SDL_Color HOTPINK{0xff, 0x69, 0xb4, 255};      // #ff69b4
+        constexpr SDL_Color DEEPPINK{0xff, 0x14, 0x93, 255};     // #ff1493
+        constexpr SDL_Color DARKGRAY{0x44, 0x44, 0x44, 255};     // #444444
 
         auto toSColor = [](const uint32_t c) -> const SDL_Color
         {
@@ -85,7 +85,7 @@ namespace EngineHW_Private
 
 using namespace EngineHW_Private;
 
-EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector<std::string> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height)
+EngineHW::EngineHW(SDL_Renderer *renderer, SDL_Window *window, const std::vector<std::vector<std::string>> &assetFiles, CAnimator *animator, MenuManager *menus, CGameMixin *mixin, const int width, const int height)
     : Engine(), m_renderer(renderer)
 {
     m_window = window;
@@ -124,32 +124,17 @@ void EngineHW::preloadAssets()
     }
     m_font.buildAtlas(m_renderer);
 
-    enum
-    {
-        ASSET_TILES,
-        ASSET_ANIMZ,
-        ASSET_USERS,
-        ASSET_SHEET0,
-        ASSET_SHEET1,
-        ASSET_UISHEET,
-        ASSET_TITLEPIX,
-        ASSET_LAYERS0,
-        ASSET_SPLASH,
-        ASSET_TITLESCREEN,
-        MAX_ASSET
-    };
-
     if (m_assetFiles.size() < MAX_ASSET)
     {
-        LOGE("not enought asset defined");
+        LOGE("not enought assets defined: %d (should be %d)", m_assetFiles.size(), MAX_ASSET);
         return;
     }
 
-    m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES], TILE_SIZE, TILE_SIZE);
-    m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ], TILE_SIZE, TILE_SIZE);
-    m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS], TILE_SIZE, TILE_SIZE);
-    m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET], 16, 48);
-    m_tileset_layers0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_LAYERS0], TILE_SIZE, TILE_SIZE);
+    m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
+    m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
+    m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
+    m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET][IDX_FILENAME], 16, 48);
+    m_tileset_layers0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_LAYERS0][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
 
     LOGI("Creating texture variants");
     const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
@@ -184,12 +169,12 @@ void EngineHW::preloadAssets()
                                   //
                               });
 
-    m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0], g_sheet0_data);
-    m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1], g_sheet1_data);
+    m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0][IDX_FILENAME], g_sheet0_data);
+    m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data);
 
-    m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX]);
-    m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH]);
-    m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN]);
+    m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX][IDX_FILENAME]);
+    m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH][IDX_FILENAME]);
+    m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN][IDX_FILENAME]);
 
     preloadHearts();
 }
@@ -1072,7 +1057,7 @@ void EngineHW::fazeScreen(int str)
     SDL_GetRenderDrawBlendMode(m_renderer, &oldMode);
 
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
-    SDL_Color color{0, 0, 0, str}; // default: 0xef
+    SDL_Color color{0, 0, 0, static_cast<Uint8>(str)}; // default: 0xef
     SDL_FRect rect{0, 0, getWidth() * SCALEF, getHeight() * SCALEF};
     drawRect(m_renderer, rect, color, true);
 
@@ -1173,17 +1158,27 @@ CFrame *EngineHW::getFrame(const std::string &filepath)
 
 int EngineHW::drawTitlePix(int offsetY)
 {
-    int width = SCALEF * getWidth();
-    int height = SCALEF * getHeight();
+    const size_t QUAD_COUNT = 4;
+    const float width = SCALEF * getWidth();
+    const float height = SCALEF * getHeight();
+
+    std::vector<float> quad;
+    for (size_t i = 0; i < QUAD_COUNT; ++i)
+    {
+        if (i + 1 > m_assetFiles[ASSET_TITLESCREEN].size())
+            break;
+        quad.push_back(std::atof(m_assetFiles[ASSET_TITLESCREEN][i + 1].c_str()));
+    }
 
     SDL_FRect src_low = {
-        (float)284,
-        (float)26,
-        824,
-        619,
+        quad[0], //(float)284,
+        quad[1], //(float)26,
+        quad[2], //(float)824,
+        quad[3], //(float)619,
     };
-
-    SDL_FRect *src = width <= 1024 ? &src_low : nullptr;
+    SDL_FRect *src = nullptr;
+    if (quad.size() == QUAD_COUNT)
+        src = width <= 1024 ? &src_low : nullptr;
 
     SDL_FRect dst = {
         (float)0,

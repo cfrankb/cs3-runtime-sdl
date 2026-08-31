@@ -66,8 +66,8 @@ elif [[ "$1" == "mingw" ]] ; then
     cmake --build ${BPATH} -- VERBOSE=1
 elif [[ "$1" == "steam_mingw" ]] ; then
     # Export the full paths
-    export CC=/usr/bin/x86_64-w64-mingw32-gcc-posix
-    export CXX=/usr/bin/x86_64-w64-mingw32-g++-posix
+    export CC=/usr/bin/x86_64-w64-mingw32-gcc
+    export CXX=/usr/bin/x86_64-w64-mingw32-g++
     BPATH=build/steam-mingw
     # Run CMake
     cmake -DCMAKE_TOOLCHAIN_FILE=packages/cmake/mingw.toolchain.cmake -DIS_MINGW=ON -B ${BPATH} \

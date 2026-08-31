@@ -10,12 +10,11 @@ constexpr int AppID = 1172620; // test ID
 bool InitSteam()
 {
     // 1. Check if the user is running the game through Steam
-    /* if (SteamAPI_RestartAppIfNecessary(AppID))
-     {
-         LOGE("game already running");
-         return false; // Exit app and let Steam restart it
-     }
-         */
+    if (SteamAPI_RestartAppIfNecessary(AppID))
+    {
+        LOGE("game already running");
+        return false; // Exit app and let Steam restart it
+    }
 
     // 2. Initialize the API
     if (!SteamAPI_Init())

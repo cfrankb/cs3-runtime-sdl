@@ -44,6 +44,34 @@ Run game
 $ build/std/cs3-runtime
 ```
 
+### msvc / cross compiler (windows build)
+
+Install docker and the installer build system
+```
+$ yay nsis
+``` 
+
+
+Build steps
+```
+# build docker image (only once)
+$ bin/winx/steam-winx.sh build
+
+$ run docker
+$ bin/winx/steam-winx.sh run
+
+$ build the application (inside docker container)
+$ bin/build.sh steam_msvc 
+```
+
+
+Create the installer
+```
+$ packages/bin/makesetup.sh msvc 
+$ packages/bin/makesetup.sh setup
+```
+
+
 ### Mingw (linux)
 
 Build the game

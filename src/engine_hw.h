@@ -35,7 +35,7 @@ class EngineHW : public Engine
 {
 
 public:
-    EngineHW(SDL_Renderer *renderer, SDL_Window *, const std::vector<std::string> &assetFiles, CAnimator *, MenuManager *, CGameMixin *, const int width, const int height);
+    EngineHW(SDL_Renderer *renderer, SDL_Window *, const std::vector<std::vector<std::string>> &assetFiles, CAnimator *, MenuManager *, CGameMixin *, const int width, const int height);
     ~EngineHW();
 
     inline int getWidth()
@@ -71,7 +71,7 @@ protected:
     void drawTimeout();
     void preloadHearts();
     void drawHealthBar(const bool isPlayerHurt);
-    virtual void fazeScreen(int str = 0xe);
+    virtual void fazeScreen(int str = 0xe) override;
     void flashScreen();
     void drawKeys();
     const Tile *getMainLayerTile(const uint8_t tileID);
@@ -133,6 +133,22 @@ protected:
                (0xff >> bitShift) << 8 |
                0xff >> bitShift;
     }
+
+    enum
+    {
+        ASSET_TILES,
+        ASSET_ANIMZ,
+        ASSET_USERS,
+        ASSET_SHEET0,
+        ASSET_SHEET1,
+        ASSET_UISHEET,
+        ASSET_TITLEPIX,
+        ASSET_LAYERS0,
+        ASSET_SPLASH,
+        ASSET_TITLESCREEN,
+        MAX_ASSET,
+        IDX_FILENAME = 0
+    };
 
     SDL_Renderer *m_renderer;
     SDL_Window *m_window;

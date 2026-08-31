@@ -46,10 +46,12 @@ elif [[ "$1" == "mingw" ]] ; then
     ##cp ${BPATH}/zlib/*.dll ${DEST}
     #cp ${BPATH}/build_libxmp/*.dll ${DEST}
 elif [[ "$1" == "msvc" ]] ; then
-    BPATH=build/msvc
+    BPATH=build/steam-msvc
     run_common
     cp ${BPATH}/SDL3_mixer/external/ogg-build/*.dll ${DEST}
     cp ${BPATH}/SDL3_mixer/external/vorbis-build/lib/*.dll ${DEST}
+    cp external/steamworks/sdk/redistributable_bin/win64/steam_api64.dll ${DEST}
+    cp packages/steam/steam_appid.txt ${DEST}
     ls -l ${DEST}
 elif [[ "$1" == "setup" ]] ; then
     make_setup

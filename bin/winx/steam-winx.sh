@@ -5,7 +5,9 @@ show_help () {
     printf '\navailable targets:\n\n'
     echo "start  "
     echo "build  "
+    echo "rebuild  "
     echo "run    "
+    echo "run-root "
 }
 
 IMAGE_PATH=packages/docker/dockerfile-clang-xwin

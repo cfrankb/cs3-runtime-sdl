@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
 # 1. Install build essentials and LLVM
 RUN apt-get update && apt-get install -y \
@@ -41,10 +41,11 @@ RUN xwin --accept-license splat --output /opt/xwin
 
 
 
-# 2. Add the LLVM 19 repository
+# 2. Add the LLVM 19 repository and install cleanly
 RUN wget https://apt.llvm.org/llvm.sh && \
     chmod +x llvm.sh && \
-    ./llvm.sh 19
+    DEBIAN_FRONTEND=noninteractive ./llvm.sh 19 all && \
+    rm llvm.sh
 
 # 3. Set Clang 19 as the default compiler
 RUN update-alternatives --install /usr/bin/clang clang /usr/bin/clang-19 200 \

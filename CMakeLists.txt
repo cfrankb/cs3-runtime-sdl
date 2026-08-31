@@ -139,6 +139,11 @@ elseif(IS_CROSS_MSVC)
     # Disable WavPack to stop it from trying to build a shared library [cite: 7, 8]
     set(SDL_MIXER_WAVPACK OFF CACHE BOOL "Disable WavPack" FORCE)
 
+    # The cross (xwin) MSVC SDK does not ship gameinput.lib, so SDL's GameInput
+    # backend cannot statically link the `GameInputCreate` symbol. Disable the
+    # GameInput backend and fall back to SDL's XInput/HID controller support.
+    set(SDL_GAMEINPUT OFF CACHE BOOL "Disable GameInput backend" FORCE)
+
     # 1) Make sure everything in this toolchain is static
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
     set(SDL3MIXER_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)

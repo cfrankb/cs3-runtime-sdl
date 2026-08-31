@@ -139,7 +139,7 @@ private:
     std::unordered_map<std::string, std::string> m_config;
     std::vector<std::string> m_musicFiles;
     std::vector<std::string> m_soundFiles;
-    std::vector<std::string> m_assetFiles;
+    std::vector<std::vector<std::string>> m_assetFiles;
     std::vector<std::string> m_userNames;
     std::string m_workspace = "";
     std::string m_credits;

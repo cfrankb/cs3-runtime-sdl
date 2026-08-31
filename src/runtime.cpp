@@ -1256,7 +1256,8 @@ bool CRuntime::parseConfig(uint8_t *buf)
             }
             else if (section == "assets")
             {
-                m_assetFiles.emplace_back(p);
+                std::vector<std::string> list = split(p, ',');
+                m_assetFiles.emplace_back(list);
             }
             else if (section == "users")
             {
@@ -1427,15 +1428,15 @@ void CRuntime::setupTitleScreen()
         menu.setScaleX(2);
     }
 
-    if (getHeight() >= 450)
+    if (heigth >= 900)
     {
         menu.setScaleY(5);
     }
-    else if (getHeight() >= 350)
+    else if (heigth >= 700)
     {
         menu.setScaleY(4);
     }
-    else if (getHeight() >= 300)
+    else if (heigth >= 600)
     {
         menu.setScaleY(3);
     }
@@ -1631,10 +1632,11 @@ EM_JS(void, fix_canvas_css, (), {
     // On HiDPI laptops devicePixelRatio > 1, so the buffer must be scaled
     // by it; using CSS pixels alone leaves a buffer too small to hold the
     // 640x480 content, which renders as a blank/black screen.
-    const dpr = typeof window.devicePixelRatio === 'number' ? window.devicePixelRatio : 1;
+    const dpr = typeof window.devicePixelRatio == = 'number' ? window.devicePixelRatio : 1;
     const cssW = Math.round(getComputedStyle(c).width * dpr);
     const cssH = Math.round(getComputedStyle(c).height * dpr);
-    if (cssW > 0 && cssH > 0) {
+    if (cssW > 0 && cssH > 0)
+    {
         c.width = cssW;
         c.height = cssH;
     }
