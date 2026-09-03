@@ -1804,12 +1804,14 @@ void CRuntime::manageTitleScreen()
         --m_gameMenuCooldown;
     }
     else if (m_keyStates[Key_Escape] ||
+             m_keyStates[Key_Space] ||
              m_buttonState[BUTTON_START])
     {
         m_gameMenuCooldown = GAME_MENU_COOLDOWN;
         m_prompt = PROMPT_NONE;
         m_paused = false;
         m_keyRepeters[Key_Escape] = 0;
+        m_keyRepeters[Key_Space] = 0;
         bool active = m_menus->isMenuActive(MENUID_MAINMENU);
         m_menus->setActive(MENUID_MAINMENU, !active);
         return;
@@ -1917,11 +1919,11 @@ bool CRuntime::manageMenu(CMenu &menu)
                 setupTitleScreen();
                 return true;
             }
-            game.setLevel(m_startLevel);
             m_menus->setActive(MENUID_GAMEMENU, false);
             m_menus->setActive(MENUID_MAINMENU, false);
             game.resetStats();
             game.restartGame();
+            game.setLevel(m_startLevel);
             initUserMenu();
             game.setMode(CGame::MODE_USERSELECT);
             clearKeyStates();

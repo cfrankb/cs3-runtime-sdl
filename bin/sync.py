@@ -25,6 +25,11 @@ def is_excluded(f: str):
         "parseargs.*",
         "runtime.*",
         "steam_helper.*",
+        "engine_hw.*",
+        "engine.*",
+        "menumanager.*",
+        "tileset_tex.*",
+        "font8x8.h"
     ]
     f = ntpath.basename(f)
     for e in excluded:
@@ -79,7 +84,9 @@ def process_list(sync_list, action, verbose):
 
     for u in sync_list:
         f, dpath, backup = u
-        m1 = str(get_modif(f))[0:-7]
+        if not os.path.exists(f):
+            print(f"missing file: {f}")
+            continue
         if os.path.isfile(dpath):
             m2 = str(get_modif(dpath))[0:-7]
             if not filecmp.cmp(f, dpath):

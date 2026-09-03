@@ -39,6 +39,7 @@
 #include "shared/FileMem.h"
 #include "shared/FrameSet.h"
 #include "theme.h"
+#include "animzdata.h"
 
 #define TRACE(...)            \
     if (m_game->level() == 4) \
@@ -705,8 +706,16 @@ const Tile *EngineHW::calcSpecialFrame(const sprite_t &sprite)
             saim &= 1;
         }
     }
-    const animzInfo_t &info = m_animator->getSpecialInfo(sprite.tileID);
-    return m_tileset_animz.getTile(saim * info.frames + info.base + info.offset);
+
+    if (sprite.tileID == TILES_EGG_WHOLE)
+    {
+        return m_tileset_animz.getTile(ANIMZ_EGG_HATCH + sprite.frame);
+    }
+    else
+    {
+        const animzInfo_t &info = m_animator->getSpecialInfo(sprite.tileID);
+        return m_tileset_animz.getTile(saim * info.frames + info.base + info.offset);
+    }
 }
 
 void EngineHW::drawScroll()

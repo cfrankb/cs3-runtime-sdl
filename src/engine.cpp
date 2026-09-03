@@ -349,11 +349,14 @@ void Engine::gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t
             const Pos pos = monster.pos();
             const uint8_t attr = map->getAttr(pos.x, pos.y);
             sprites.emplace_back(
-                sprite_t{.x = monster.x(),
-                         .y = monster.y(),
-                         .tileID = tileID,
-                         .aim = monster.getAim(),
-                         .attr = attr});
+                sprite_t{
+                    .x = monster.x(),
+                    .y = monster.y(),
+                    .tileID = tileID,
+                    .aim = monster.getAim(),
+                    .attr = attr,
+                    .frame = monster.frame(),
+                });
         }
     }
 
@@ -368,6 +371,7 @@ void Engine::gatherSprites(std::vector<sprite_t> &sprites, const cameraContext_t
                 .tileID = sfx.sfxID,
                 .aim = AIM_NONE,
                 .attr = 0,
+                .frame = 0,
             });
         }
     }
