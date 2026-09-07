@@ -2085,7 +2085,7 @@ void CRuntime::toggleGameMenu()
 #if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
 #endif
-    menu.addItem(CMenuItem("RETURN TO GAME", MENU_ITEM_RETURN_TO_GAME));
+    menu.addItem(CMenuItem("RESUME GAME", MENU_ITEM_RETURN_TO_GAME));
 }
 
 /**

@@ -209,7 +209,6 @@ void Engine::drawScores()
     int scaleY = 2;
 
     int fullWidth = SCALE2X * getWidth();
-    int fullHeight = SCALE2X * getHeight();
     if (fullWidth > 900)
     {
         scaleX = 4;
@@ -317,13 +316,27 @@ void Engine::drawOptions()
 void Engine::resizeGameMenu()
 {
     CMenu &menu = *m_menus->get(MENUID_GAMEMENU);
-    if (getWidth() > MIN_WIDTH_FULL)
+
+    int width = getWidth() * SCALE2X;
+    if (width > 1024)
+    {
+        menu.setScaleX(4);
+        menu.setScaleY(3);
+    }
+    else if (width > 800)
+    {
+        menu.setScaleX(3);
+        menu.setScaleY(3);
+    }
+    else if (width >= static_cast<int>(MIN_WIDTH_FULL) * static_cast<int>(SCALE2X))
     {
         menu.setScaleX(2);
+        menu.setScaleY(2);
     }
     else
     {
         menu.setScaleX(1);
+        menu.setScaleY(2);
     }
 }
 
@@ -627,8 +640,8 @@ void Engine::initVirtualKeyboard()
 void Engine::drawTitleScreen(const char *scroll)
 {
     const int offsetY = 12;
-    int titleHeigth = drawTitlePix(offsetY);
-    const int baseY = 2 * offsetY + titleHeigth;
+    int _ = drawTitlePix(offsetY);
+    // const int baseY = 2 * offsetY + titleHeigth;
     if (m_menus->isMenuActive(MENUID_MAINMENU))
     {
         fazeScreen(128);

@@ -1,0 +1,31 @@
+game mechanic overview
+=========================================================================
+any consumable              01-1F and 40-4F 
+(pickup trigger)            when assigned an attribute will make matching
+                            tiles with the same attribute disapear
+
+diamonds                    must be collected to complete the level
+chute                       drops to the next level (same X,Y coordonates)
+ice cubes                   can be pushed onto monster
+exploding barrels           can damage up nearby enemies and player
+water / swamp               health damage to player
+boat                        immunity to water (1 time consumable)
+boulder                     can be moved
+dragon egg                  spawn dragon 
+keys and doors              allow/block player (deny access)
+monsters                    regular mobs are variations of basic AI
+vine                        damage player, can swallow other monsters
+                            and spread through water
+blue mushroom               extra life (1 time consumable)
+green mushroom              TBD
+red mushroom                invincibility/god mode (1 time consumable)
+yellow mushroom             sugar rush  (1 time consumable)
+fruits                      give player sugar rush
+scrolls                     messages (lore)
+treasures                   gold/points
+stop                        deny monster access 
+
+level enter/exit            define where the player start and exit. 
+                            if exit is defined player must exit at X,Y
+                            either use start position or player tile to mark spawn point
+

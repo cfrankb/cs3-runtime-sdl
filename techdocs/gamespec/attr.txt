@@ -4,6 +4,7 @@ Attributes
 01-1f       passages
 40-4f       secret
 
+b0-b7       boss spawn point
 d0-d3       crusher vertical
 d4-d7       crusher horizontal
 e0-e9       idle until contact
