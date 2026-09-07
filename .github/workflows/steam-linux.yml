@@ -2,7 +2,9 @@ name: Build Steam Linux Version
 
 on:
   push:
-    branches: [master]
+    branches:
+      - master
+      - gpu
   pull_request:
     branches: [master]
 

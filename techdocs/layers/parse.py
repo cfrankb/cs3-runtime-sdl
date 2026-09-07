@@ -46,7 +46,7 @@ enum LayerTileType {
     Water,
 };
 
-extern const layerdata_t g_layerdata[256];
+extern const layerdata_t g_layerdata[];
 
 constexpr inline const layerdata_t & getLayerTileDef(int i) {
     return g_layerdata[i];

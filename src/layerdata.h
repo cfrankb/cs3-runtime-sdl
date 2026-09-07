@@ -19,7 +19,8 @@
 
 #include <cstdint>
 
-struct layerdata_t {
+struct layerdata_t
+{
     uint8_t nextTile;
     uint8_t animeSpeed;
     uint8_t tileType;
@@ -27,7 +28,8 @@ struct layerdata_t {
     const char *tag;
 };
 
-enum LayerTileType {
+enum LayerTileType
+{
     Background,
     Foreground,
     Solid,
@@ -35,8 +37,9 @@ enum LayerTileType {
     Water,
 };
 
-extern const layerdata_t g_layerdata[256];
+extern const layerdata_t g_layerdata[];
 
-constexpr inline const layerdata_t & getLayerTileDef(int i) {
+constexpr inline const layerdata_t &getLayerTileDef(int i)
+{
     return g_layerdata[i];
 }

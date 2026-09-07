@@ -637,6 +637,13 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
             m_buttonState[BUTTON_A] = BUTTON_PRESSED;
             manageMenu(*m_menus->last());
         }
+        else if (event.button.button == SDL_BUTTON_LEFT &&
+                 mode == CGame::MODE_TITLE &&
+                 !m_menus->isMenuActive(MENUID_MAINMENU))
+        {
+            //     m_menus->setActive(MENUID_MAINMENU, true);
+            LOGI("open mainmenu");
+        }
         else if (mode == CGame::MODE_PLAY)
         {
             handleMouse(pos.x, pos.y);
