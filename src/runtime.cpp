@@ -1995,6 +1995,14 @@ bool CRuntime::manageMenu(CMenu &menu)
         {
             m_isRunning = false;
         }
+        else if (item.role() == MENU_ITEM_RESET_MAP)
+        {
+            game.addHealth(-4096);
+            m_optionCooldown = MAX_OPTION_COOLDOWN;
+            m_menus->setActive(MENUID_GAMEMENU, false);
+            m_game->setMode(CGame::MODE_PLAY);
+            // m_game->killPlayer();
+        }
     }
 
     if (item.role() == MENU_ITEM_MUSIC &&
@@ -2082,6 +2090,7 @@ void CRuntime::toggleGameMenu()
     menu.addItem(CMenuItem("LOAD GAME", MENU_ITEM_LOAD_GAME))
         .disable(!isValidSavegame(getSavePath()));
     menu.addItem(CMenuItem("SAVE GAME", MENU_ITEM_SAVE_GAME));
+    menu.addItem(CMenuItem("RESET MAP", MENU_ITEM_RESET_MAP));
 #if !defined(__ANDROID__)
     menu.addItem(CMenuItem("OPTIONS", MENU_ITEM_OPTIONS));
 #endif
