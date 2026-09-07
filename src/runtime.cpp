@@ -263,12 +263,12 @@ bool CRuntime::createSDLWindow()
     SDL_WindowFlags windowFlags = SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                   SDL_WINDOW_INPUT_FOCUS |
                                   SDL_WINDOW_MOUSE_CAPTURE;
-#if defined(__ANDROID__) || defined(EMSCRIPTEN)
+#if defined(__ANDROID__) || defined(__EMSCRIPTEN__)
     windowFlags |= SDL_WINDOW_BORDERLESS;
 #endif
     atexit(cleanup);
 
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
     SDL_SetHint(
         SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT,
         "#canvas");
@@ -1639,7 +1639,7 @@ EM_JS(void, fix_canvas_css, (), {
     // On HiDPI laptops devicePixelRatio > 1, so the buffer must be scaled
     // by it; using CSS pixels alone leaves a buffer too small to hold the
     // 640x480 content, which renders as a blank/black screen.
-    const dpr = typeof window.devicePixelRatio == = 'number' ? window.devicePixelRatio : 1;
+    const dpr = typeof window.devicePixelRatio == 'number' ? window.devicePixelRatio : 1;
     const cssW = Math.round(getComputedStyle(c).width * dpr);
     const cssH = Math.round(getComputedStyle(c).height * dpr);
     if (cssW > 0 && cssH > 0)

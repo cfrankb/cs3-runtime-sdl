@@ -263,7 +263,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     {
         LOGI("%d>>> %s", i, list[i].c_str());
     }
-#elif !defined(EMSCRIPTEN)
+#elif !defined(__EMSCRIPTEN__)
 int main(int argc, char *args[])
 {
     std::vector<std::string> list;
