@@ -13,8 +13,8 @@ techdocs/originals
 local/*
 setup/*
 bb/*
-data/*
-data
+#data/*
+#data
 #VERSION
 #/CMakeLists.txt
 tests/CMakeLists.txt

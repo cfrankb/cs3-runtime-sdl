@@ -19,17 +19,21 @@
 
 #include <cstdint>
 
-struct layerdata_t
-{
+struct layerdata_t {
     uint8_t nextTile;
     uint8_t animeSpeed;
     uint8_t tileType;
     uint8_t weight;
+    uint8_t granular;
     const char *tag;
 };
 
-enum LayerTileType
-{
+const uint8_t GranualarUL=1; // TOP LEFT
+const uint8_t GranualarUR=2; // TOP RIGHT
+const uint8_t GranualarDL=4; // BOTTOM LEFT
+const uint8_t GranualarDR=8; // BOTTOM RIGHT
+
+enum LayerTileType {
     Background,
     Foreground,
     Solid,
@@ -39,7 +43,6 @@ enum LayerTileType
 
 extern const layerdata_t g_layerdata[];
 
-constexpr inline const layerdata_t &getLayerTileDef(int i)
-{
+constexpr inline const layerdata_t & getLayerTileDef(int i) {
     return g_layerdata[i];
 }

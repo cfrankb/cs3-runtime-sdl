@@ -35,8 +35,14 @@ struct layerdata_t {
     uint8_t animeSpeed;
     uint8_t tileType;
     uint8_t weight;
+    uint8_t granular;
     const char *tag;
 };
+
+const uint8_t GranualarUL=1; // TOP LEFT
+const uint8_t GranualarUR=2; // TOP RIGHT
+const uint8_t GranualarDL=4; // BOTTOM LEFT
+const uint8_t GranualarDR=8; // BOTTOM RIGHT
 
 enum LayerTileType {
     Background,
@@ -54,7 +60,7 @@ constexpr inline const layerdata_t & getLayerTileDef(int i) {
 """.strip()
 
 
-with open("data/layer0.json") as sfile:
+with open("data/layer01.json") as sfile:
     data = json.load(sfile)
 
 
@@ -70,6 +76,7 @@ for tile in data["tiles"]:
         str(tile["speed"]),
         str(tile["type"]),
         str(tile["w"]),  # weight
+        str(tile["granular"]),  # tile granular (quadrant)
         "nullptr" if not tile["tag"] else f'"{tile["tag"]}"',
     ]
 
