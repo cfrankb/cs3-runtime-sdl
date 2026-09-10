@@ -49,10 +49,6 @@
 #endif
 
 const uint32_t FPS = CRuntime::tickRate();
-const uint32_t SLEEP = 1000 / FPS;
-uint32_t g_lastTick = 0;
-bool g_skip = false;
-uint32_t g_sleepDelay = SLEEP;
 
 #define EXIT_SUCCESS 0
 #define EXIT_FAILURE 1
@@ -77,6 +73,21 @@ constexpr const char *WINDOWS_GAME_ROAMPATH = "\\cs3-runtime";
 
 CRuntime *g_runtime = nullptr;
 
+bool g_paintToggle = false; // Alternates to handle 12Hz updates
+void loop_handler(void *)
+{
+    // This function assumes it is called EXACTLY 24 times a second.
+    g_runtime->doInput();
+    g_runtime->run();
+
+    // Handle the 12Hz viewport sub-cycle
+    g_paintToggle = !g_paintToggle;
+    if (g_paintToggle)
+    {
+        g_runtime->paint();
+    }
+}
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -90,6 +101,30 @@ EM_BOOL on_fullscreen_change(int eventType, const EmscriptenFullscreenChangeEven
         g_runtime->notifyExitFullScreen();
     }
     return EM_TRUE;
+}
+
+uint32_t g_webLastTickTime = 0;
+const uint32_t TICK_RATE_24HZ = 41; // 1000ms / 24 = ~41.6ms
+
+void emscripten_throttled_entry(void *arg)
+{
+    uint32_t currentTickTime = SDL_GetTicks();
+    if (g_webLastTickTime == 0)
+        g_webLastTickTime = currentTickTime;
+
+    uint32_t elapsed = currentTickTime - g_webLastTickTime;
+
+    // GUARD: If 41ms hasn't passed since the last execution, exit early.
+    // This stops requestAnimationFrame from over-accelerating the iterations.
+    if (elapsed < TICK_RATE_24HZ)
+    {
+        return;
+    }
+
+    // Call your pure 24 iterations/sec engine logic exactly once
+    loop_handler(arg);
+
+    g_webLastTickTime = currentTickTime;
 }
 #endif
 
@@ -111,58 +146,6 @@ void stripMaps(CMapArch &arch)
     {
         LOGI("removed %d map%s", mapRemoved, mapRemoved > 1 ? "s" : "");
         LOGI("%lu maps remaining.", arch.size());
-    }
-}
-
-// Your same tracking variables
-const double DT_24HZ = 1.0 / 24.0;
-const double DT_12HZ = 1.0 / 12.0;
-uint64_t g_lastTickTime = 0; // SDL3 uses uint64_t for millisecond ticks
-double g_logicAccumulator = 0.0;
-double g_paintAccumulator = 0.0;
-bool g_skipPaint = false;
-
-// The EXACT same loop handler logic
-void loop_handler(void *)
-{
-    uint64_t currentTickTime = SDL_GetTicks();
-    if (g_lastTickTime == 0)
-        g_lastTickTime = currentTickTime;
-
-    double deltaTime = (currentTickTime - g_lastTickTime) / 1000.0;
-    g_lastTickTime = currentTickTime;
-
-    if (deltaTime > 0.25)
-        deltaTime = 0.25;
-
-    g_logicAccumulator += deltaTime;
-    g_paintAccumulator += deltaTime;
-
-    // 24Hz Logic updates
-    while (g_logicAccumulator >= DT_24HZ)
-    {
-        g_runtime->doInput();
-        g_runtime->run();
-        g_logicAccumulator -= DT_24HZ;
-    }
-
-    // 12Hz Viewport paint
-    if (g_paintAccumulator >= DT_12HZ)
-    {
-        uint64_t paintStart = SDL_GetTicks();
-
-        if (!g_skipPaint)
-        {
-            g_runtime->paint();
-        }
-
-        uint64_t paintDuration = SDL_GetTicks() - paintStart;
-        g_paintAccumulator -= DT_12HZ;
-
-        if (paintDuration > 83)
-            g_skipPaint = true;
-        else
-            g_skipPaint = false;
     }
 }
 
@@ -412,13 +395,25 @@ int main(int argc, char *args[])
     g_runtime->checkMusicFiles();
 #endif
 #ifdef __EMSCRIPTEN__
-    // emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_FALSE, on_fullscreen_change);
     emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_TRUE, on_fullscreen_change);
-    emscripten_set_main_loop_arg(loop_handler, &runtime, -1, 1);
+    emscripten_set_main_loop_arg(emscripten_throttled_entry, &runtime, FPS, 1);
 #else
+    // FOR DESKTOP (Manjaro/Linux/Windows):
+    // Manually maintain the 24Hz cadence (~41.6ms) while yielding CPU time cleanly.
+    const uint32_t TICK_RATE_24HZ = 41;
+    uint32_t lastTickTime = SDL_GetTicks();
+
     while (g_runtime->isRunning())
     {
-        loop_handler(nullptr);
+        uint32_t currentTickTime = SDL_GetTicks();
+        uint32_t elapsed = currentTickTime - lastTickTime;
+        if (elapsed >= TICK_RATE_24HZ)
+        {
+            loop_handler(&runtime);
+            lastTickTime = currentTickTime;
+        }
+        // Essential for Desktop: Prevents 100% CPU spikes by yielding the thread
+        SDL_Delay(1);
     }
 #endif
     CGame::destroy();

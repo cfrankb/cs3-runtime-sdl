@@ -60,6 +60,14 @@
       background-color: #000;
     }
 
+    canvas.emscripten,
+    canvas#canvas {
+      /* ... your existing 4:3 centering rules ... */
+
+      /* Wipes out the browser's default focus ring highlight */
+      outline: none !important;
+    }
+
     #buttonbox {
       text-align: center;
     }
