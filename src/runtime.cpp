@@ -641,8 +641,9 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
                  mode == CGame::MODE_TITLE &&
                  !m_menus->isMenuActive(MENUID_MAINMENU))
         {
-            //     m_menus->setActive(MENUID_MAINMENU, true);
-            LOGI("open mainmenu");
+            m_buttonState[BUTTON_A] = 0;
+            m_menus->setActive(MENUID_MAINMENU, true);
+            m_optionCooldown = MAX_OPTION_COOLDOWN;
         }
         else if (mode == CGame::MODE_PLAY)
         {
@@ -736,7 +737,16 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
         if (m_gameControllers.size() != 0 &&
             !m_menus->get(MENUID_OPTIONMENU)->containsRole(MENU_ITEM_X_AXIS_SENTIVITY))
         {
-            addGamePadOptions(*m_menus->get(MENUID_OPTIONMENU));
+            CMenu &menu = *m_menus->get(MENUID_OPTIONMENU);
+            addGamePadOptions(menu);
+            if (menu.containsRole(MENU_ITEM_RETURN_MAIN))
+            {
+                menu.moveItem(MENU_ITEM_RETURN_MAIN, menu.size() - 1);
+            }
+            else if (menu.containsRole(MENU_ITEM_RETURN_MAIN))
+            {
+                menu.moveItem(MENU_ITEM_RETURN_TO_GAME, menu.size() - 1);
+            }
         }
     }
     else if (event.type == SDL_EVENT_GAMEPAD_REMOVED)
@@ -1414,7 +1424,7 @@ void CRuntime::setupTitleScreen()
     clearJoyStates();
     clearKeyStates();
     clearButtonStates();
-    m_optionCooldown = MAX_OPTION_COOLDOWN;
+    m_optionCooldown = 5;
     m_skill = m_game->skill();
     CMenu &menu = *m_menus->get(MENUID_MAINMENU);
     menu.clear();
@@ -1817,10 +1827,14 @@ void CRuntime::manageTitleScreen()
         m_gameMenuCooldown = GAME_MENU_COOLDOWN;
         m_prompt = PROMPT_NONE;
         m_paused = false;
-        m_keyRepeters[Key_Escape] = 0;
-        m_keyRepeters[Key_Space] = 0;
+        m_keyStates[Key_Escape] = 0;
+        m_keyStates[Key_Space] = 0;
+        m_keyRepeters[Key_Escape] = 1;
+        m_keyRepeters[Key_Space] = 1;
+        m_buttonState[BUTTON_START] = 0;
         bool active = m_menus->isMenuActive(MENUID_MAINMENU);
         m_menus->setActive(MENUID_MAINMENU, !active);
+        m_menus->setLastMenu(nullptr, 0, 0);
         return;
     }
 

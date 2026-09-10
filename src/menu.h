@@ -48,6 +48,7 @@ public:
     bool containsRole(int role) const;
     CMenu &removeRole(int role);
     CMenuItem *getItemByRole(int role);
+    void moveItem(int role, int pos);
 
 private:
     enum

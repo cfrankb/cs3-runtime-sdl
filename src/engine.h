@@ -133,7 +133,7 @@ protected:
         MENUBAR_CREDITS,
         MENUBAR_HISCORES,
         DEFAULT_OPTION_COOLDOWN = 3,
-        MAX_OPTION_COOLDOWN = 6,
+        MAX_OPTION_COOLDOWN = 4,
         MUSIC_VOLUME_STEPS = 1 + (ISound::MAX_VOLUME / 10),
         MUSIC_VOLUME_MAX = ISound::MAX_VOLUME,
         SCALE2X = 2,

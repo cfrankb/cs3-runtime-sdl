@@ -77,7 +77,6 @@ CAnimator::CAnimator() : m_seqIndex(g_animzSeq.size(), 0)
         // if animated (save current index)
         if (data.nextTile)
             m_tileLayer[i] = i;
-        ++i;
     }
 
     for (const auto &seq : g_animzSeq)

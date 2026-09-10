@@ -114,32 +114,55 @@ void stripMaps(CMapArch &arch)
     }
 }
 
+// Your same tracking variables
+const double DT_24HZ = 1.0 / 24.0;
+const double DT_12HZ = 1.0 / 12.0;
+uint64_t g_lastTickTime = 0; // SDL3 uses uint64_t for millisecond ticks
+double g_logicAccumulator = 0.0;
+double g_paintAccumulator = 0.0;
+bool g_skipPaint = false;
+
+// The EXACT same loop handler logic
 void loop_handler(void *)
 {
-    uint32_t currTick = SDL_GetTicks();
-    uint32_t meantime = currTick - g_lastTick;
-    if (meantime >= g_sleepDelay)
+    uint64_t currentTickTime = SDL_GetTicks();
+    if (g_lastTickTime == 0)
+        g_lastTickTime = currentTickTime;
+
+    double deltaTime = (currentTickTime - g_lastTickTime) / 1000.0;
+    g_lastTickTime = currentTickTime;
+
+    if (deltaTime > 0.25)
+        deltaTime = 0.25;
+
+    g_logicAccumulator += deltaTime;
+    g_paintAccumulator += deltaTime;
+
+    // 24Hz Logic updates
+    while (g_logicAccumulator >= DT_24HZ)
     {
         g_runtime->doInput();
         g_runtime->run();
-        uint32_t btime = SDL_GetTicks();
-        if (!g_skip)
+        g_logicAccumulator -= DT_24HZ;
+    }
+
+    // 12Hz Viewport paint
+    if (g_paintAccumulator >= DT_12HZ)
+    {
+        uint64_t paintStart = SDL_GetTicks();
+
+        if (!g_skipPaint)
         {
             g_runtime->paint();
         }
-        uint32_t atime = SDL_GetTicks();
-        uint32_t ptime = atime - btime;
-        if (ptime < SLEEP)
-        {
-            g_sleepDelay = SLEEP - ptime;
-            g_skip = false;
-        }
+
+        uint64_t paintDuration = SDL_GetTicks() - paintStart;
+        g_paintAccumulator -= DT_12HZ;
+
+        if (paintDuration > 83)
+            g_skipPaint = true;
         else
-        {
-            g_sleepDelay = SLEEP;
-            g_skip = true;
-        }
-        g_lastTick = currTick;
+            g_skipPaint = false;
     }
 }
 

@@ -185,3 +185,43 @@ CMenuItem *CMenu::getItemByRole(int role)
     }
     return nullptr;
 }
+
+void CMenu::moveItem(int role, int pos)
+{
+    auto it = std::find_if(m_items.begin(), m_items.end(), [role](const auto &item)
+                           { return item.role() == role; });
+    if (it == m_items.end())
+    {
+        LOGW("Cannot move item: role %d not found", role);
+        return;
+    }
+
+    const int from = static_cast<int>(it - m_items.begin());
+    if (pos < 0 || pos > static_cast<int>(m_items.size()) - 1)
+    {
+        LOGW("Invalid move position: %d (menu size %zu)", pos, m_items.size());
+        pos = std::clamp(pos, 0, static_cast<int>(m_items.size()) - 1);
+    }
+    if (from == pos)
+    {
+        return;
+    }
+
+    CMenuItem item = std::move(*it);
+    m_items.erase(it);
+
+    if (m_currentItem == from)
+    {
+        m_currentItem = pos;
+    }
+    else if (from < pos && from < m_currentItem && m_currentItem <= pos)
+    {
+        --m_currentItem; // Item to the right of the cursor shifted left
+    }
+    else if (pos < from && pos <= m_currentItem && m_currentItem < from)
+    {
+        ++m_currentItem; // Item to the left of the cursor shifted right
+    }
+
+    m_items.insert(m_items.begin() + pos, std::move(item));
+}
