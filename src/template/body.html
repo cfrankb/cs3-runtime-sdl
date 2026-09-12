@@ -182,10 +182,9 @@
       onRuntimeInitialized: function () {
         const canvas = document.getElementById('canvas');
         const fsBtn = document.getElementById('fs-btn');
-
         // Hide button if running on itch.io (they provide their own)
         if (window.self !== window.top) {
-          //     fsBtn.style.display = 'none';
+          fsBtn.style.display = 'none';
         }
 
         // Fullscreen button click handler

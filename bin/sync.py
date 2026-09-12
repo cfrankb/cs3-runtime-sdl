@@ -4,9 +4,23 @@ import ntpath
 import glob
 import os
 import datetime
-import filecmp
+import zlib
 import shutil
 from pathlib import Path
+
+
+BLOCK = 1024 * 1024
+
+
+def crc_of_file(file_path: str):
+    crc = 0
+    with open(file_path, "rb") as f:
+        while True:
+            block = f.read(BLOCK)
+            if not block:
+                break
+            crc = zlib.crc32(block, crc)
+    return crc & 0xFFFFFFFF
 
 
 DEST_BASE = "/home/cfrankb/toolkit/qt/cs3-map-edit/src"
@@ -66,6 +80,7 @@ def sync_pixels(sync_list):
         "data/pixels/tiles.obl",
         "data/pixels/uisheet.png",
         "data/pixels/cs3layers.png",
+        "data/layer01.json",
     ]
     for f in paths:
         sync_list.append([f, DEST_PIXELS + ntpath.basename(f), False])
@@ -89,7 +104,7 @@ def process_list(sync_list, action, verbose):
             continue
         if os.path.isfile(dpath):
             m2 = str(get_modif(dpath))[0:-7]
-            if not filecmp.cmp(f, dpath):
+            if crc_of_file(f) != crc_of_file(dpath):
                 s1 = Path(f).stat().st_size
                 s2 = Path(dpath).stat().st_size
                 diff = s1 - s2
@@ -123,4 +138,5 @@ sync_list = []
 sync_code(sync_list=sync_list)
 sync_pixels(sync_list=sync_list)
 sync_map(sync_list=sync_list)
+
 process_list(sync_list=sync_list, action="copy", verbose=False)

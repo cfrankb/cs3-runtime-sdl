@@ -153,6 +153,18 @@ private:
     int m_sndVolume = 10;
     int m_xAxisSensitivity = 10;
     int m_yAxisSensitivity = 10;
+    float m_stickX = 0.0f;
+    float m_stickY = 0.0f;
+    enum AnalogDir
+    {
+        ANA_NONE,
+        ANA_UP,
+        ANA_DOWN,
+        ANA_LEFT,
+        ANA_RIGHT
+    };
+    AnalogDir m_lastAnalogDir = ANA_NONE;
+
     bool m_verbose = false;
     bool m_trace = false;
     bool m_isRunning = true;
@@ -248,6 +260,7 @@ private:
     void addGamePadOptions(CMenu &menu);
     void updateScroller();
     std::unique_ptr<EngineHW> m_engine;
+    void inputArbitration(int mode);
 
 #ifdef __EMSCRIPTEN__
     void mountFS();

@@ -68,6 +68,19 @@ constexpr const std::array<CAnimator::animzSeq_t, SEQ_COUNT> g_animzSeq = {{
 
 CAnimator::CAnimator() : m_seqIndex(g_animzSeq.size(), 0)
 {
+
+    for (const auto &seq : g_animzSeq)
+    {
+        m_seqLookUp[seq.srcTile] = animzInfo_t{
+            .frames = seq.count,
+            .base = seq.specialID,
+            .offset = 0,
+        };
+    }
+}
+
+void CAnimator::reloadTileData()
+{
     memset(m_tileMainLayer, NO_ANIMZ, sizeof(m_tileMainLayer));
     memset(m_tileLayer, '\0', sizeof(m_tileLayer));
 
@@ -77,15 +90,6 @@ CAnimator::CAnimator() : m_seqIndex(g_animzSeq.size(), 0)
         // if animated (save current index)
         if (data.nextTile)
             m_tileLayer[i] = i;
-    }
-
-    for (const auto &seq : g_animzSeq)
-    {
-        m_seqLookUp[seq.srcTile] = animzInfo_t{
-            .frames = seq.count,
-            .base = seq.specialID,
-            .offset = 0,
-        };
     }
 }
 

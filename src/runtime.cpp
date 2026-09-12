@@ -20,6 +20,7 @@
 #include <cstring>
 #include <algorithm>
 #include <memory>
+#include <math.h>
 #if defined(_WIN32) && !defined(__MINGW32__)
 // For MSVC/Clang-MSVC
 #include <io.h>
@@ -582,9 +583,261 @@ void CRuntime::doInput()
                 LOGI("UNHANDLED EVENT: %d", event.type);
         }
     }
+
+    inputArbitration(3);
+
 #ifdef __EMSCRIPTEN__
     readGamePadJs();
 #endif
+}
+
+void CRuntime::inputArbitration(int mode)
+{
+    if (mode == 1)
+    {
+        // --- EVALUATE THE ANALOG VECTOR ---
+        AnalogDir currentAnalogDir = ANA_NONE;
+        float magnitude = sqrtf((m_stickX * m_stickX) + (m_stickY * m_stickY));
+
+        if (magnitude >= 0.70f)
+        {
+            float angle_deg = atan2f(m_stickY, m_stickX) * (180.0f / (float)M_PI);
+
+            if (angle_deg >= -45.0f && angle_deg < 45.0f)
+                currentAnalogDir = ANA_RIGHT;
+            else if (angle_deg >= 45.0f && angle_deg < 135.0f)
+                currentAnalogDir = ANA_DOWN;
+            else if (angle_deg >= -135.0f && angle_deg < -45.0f)
+                currentAnalogDir = ANA_UP;
+            else
+                currentAnalogDir = ANA_LEFT;
+        }
+
+        // --- SAFELY MUTATE JOYSTATE ONLY ON CHANGED ANALOG STATE ---
+        if (currentAnalogDir != m_lastAnalogDir)
+        {
+            // 1. Release ONLY the direction that this analog stick previously pressed
+            switch (m_lastAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_RELEASED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_RELEASED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_RELEASED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_RELEASED;
+                break;
+            default:
+                break;
+            }
+
+            // 2. Press the new direction selected by the angle calculation
+            switch (currentAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_PRESSED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_PRESSED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_PRESSED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_PRESSED;
+                break;
+            default:
+                break;
+            }
+
+            // Remember this state for the next frame's comparison
+            m_lastAnalogDir = currentAnalogDir;
+        }
+    }
+    else if (mode == 2)
+    {
+
+        // --- EVALUATE THE ANALOG VECTOR USING AN 8-WAY WEDGE ---
+        enum ExtendedDir
+        {
+            EXT_NONE,
+            EXT_UP,
+            EXT_DOWN,
+            EXT_LEFT,
+            EXT_RIGHT,
+            EXT_DIAGONAL
+        };
+        ExtendedDir activeZone = EXT_NONE;
+
+        float magnitude = sqrtf((m_stickX * m_stickX) + (m_stickY * m_stickY));
+
+        if (magnitude >= 0.70f)
+        {
+            float angle_deg = atan2f(m_stickY, m_stickX) * (180.0f / (float)M_PI);
+
+            // Clean 45-degree slices (8 slices total)
+            if (angle_deg >= -22.5f && angle_deg < 22.5f)
+            {
+                activeZone = EXT_RIGHT;
+            }
+            else if (angle_deg >= 67.5f && angle_deg < 112.5f)
+            {
+                activeZone = EXT_DOWN;
+            }
+            else if (angle_deg >= -112.5f && angle_deg < -67.5f)
+            {
+                activeZone = EXT_UP;
+            }
+            else if (angle_deg >= 157.5f || angle_deg < -157.5f)
+            {
+                activeZone = EXT_LEFT;
+            }
+            else
+            {
+                // The stick is actively pushed into one of the four 45° corners (e.g., Up-Left, Down-Right)
+                activeZone = EXT_DIAGONAL;
+            }
+        }
+
+        // --- CONVERT THE ARCADE ZONE TO SAFE MUTATION ---
+        // m_lastAnalogDir remains defined as your standard: ANA_NONE, ANA_UP, ANA_DOWN, ANA_LEFT, ANA_RIGHT
+        AnalogDir targetAnalogDir = m_lastAnalogDir; // Default to holding the current state
+
+        if (activeZone == EXT_NONE)
+        {
+            targetAnalogDir = ANA_NONE; // Center stick clears state
+        }
+        else if (activeZone != EXT_DIAGONAL)
+        {
+            // If the player pushes a clear orthogonal lane, explicitly switch to it
+            if (activeZone == EXT_UP)
+                targetAnalogDir = ANA_UP;
+            else if (activeZone == EXT_DOWN)
+                targetAnalogDir = ANA_DOWN;
+            else if (activeZone == EXT_LEFT)
+                targetAnalogDir = ANA_LEFT;
+            else if (activeZone == EXT_RIGHT)
+                targetAnalogDir = ANA_RIGHT;
+        }
+        // Note: If activeZone == EXT_DIAGONAL, targetAnalogDir retains m_lastAnalogDir.
+        // This forms the "Sticky Buffer" that naturally handles physical stick variations.
+
+        // --- EXECUTE MUTATION ONLY ON PURE CHANGES ---
+        if (targetAnalogDir != m_lastAnalogDir)
+        {
+            // 1. Release previous analog assignment
+            switch (m_lastAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_RELEASED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_RELEASED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_RELEASED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_RELEASED;
+                break;
+            default:
+                break;
+            }
+
+            // 2. Claim new analog assignment
+            switch (targetAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_PRESSED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_PRESSED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_PRESSED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_PRESSED;
+                break;
+            default:
+                break;
+            }
+
+            m_lastAnalogDir = targetAnalogDir;
+        }
+    }
+    else if (mode == 3)
+    {
+        // --- EVALUATE VIA AXIS DOMINANCE DELTA ---
+        AnalogDir currentAnalogDir = ANA_NONE;
+
+        float absX = fabsf(m_stickX);
+        float absY = fabsf(m_stickY);
+
+        // Only process if the stick has cleared your mechanical deadzone threshold
+        if (absX >= 0.70f || absY >= 0.70f)
+        {
+            // Whichever axis has the absolute higher value is the dominant direction
+            if (absX > absY)
+            {
+                // Horizontal Dominance
+                currentAnalogDir = (m_stickX > 0.0f) ? ANA_RIGHT : ANA_LEFT;
+            }
+            else
+            {
+                // Vertical Dominance
+                currentAnalogDir = (m_stickY > 0.0f) ? ANA_DOWN : ANA_UP;
+            }
+        }
+
+        // --- EXECUTE MUTATION ONLY ON PURE CHANGES ---
+        if (currentAnalogDir != m_lastAnalogDir)
+        {
+            // 1. Release previous analog assignment safely
+            switch (m_lastAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_RELEASED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_RELEASED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_RELEASED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_RELEASED;
+                break;
+            default:
+                break;
+            }
+
+            // 2. Claim new analog assignment safely
+            switch (currentAnalogDir)
+            {
+            case ANA_UP:
+                m_joyState[AIM_UP] = KEY_PRESSED;
+                break;
+            case ANA_DOWN:
+                m_joyState[AIM_DOWN] = KEY_PRESSED;
+                break;
+            case ANA_LEFT:
+                m_joyState[AIM_LEFT] = KEY_PRESSED;
+                break;
+            case ANA_RIGHT:
+                m_joyState[AIM_RIGHT] = KEY_PRESSED;
+                break;
+            default:
+                break;
+            }
+
+            m_lastAnalogDir = currentAnalogDir;
+        }
+    }
 }
 
 void CRuntime::onMouseEvent(const SDL_Event &event)
@@ -743,10 +996,11 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             {
                 menu.moveItem(MENU_ITEM_RETURN_MAIN, menu.size() - 1);
             }
-            else if (menu.containsRole(MENU_ITEM_RETURN_MAIN))
+            else if (menu.containsRole(MENU_ITEM_RETURN_TO_GAME))
             {
                 menu.moveItem(MENU_ITEM_RETURN_TO_GAME, menu.size() - 1);
             }
+            m_optionCooldown = MAX_OPTION_COOLDOWN;
         }
     }
     else if (event.type == SDL_EVENT_GAMEPAD_REMOVED)
@@ -822,49 +1076,24 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_GAMEPAD_AXIS_MOTION)
     {
-        // case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-        SDL_Gamepad *controller = SDL_GetGamepadFromID(event.gaxis.which);
-        if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX ||
-            event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTX)
+        float xSens = (xAxisSensitivity <= 0) ? 8000.0f : (float)xAxisSensitivity;
+        float ySens = (yAxisSensitivity <= 0) ? 8000.0f : (float)yAxisSensitivity;
+
+        if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTX || event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTX)
         {
-            if (event.gaxis.value < -xAxisSensitivity)
-            {
-                m_joyState[AIM_LEFT] = KEY_PRESSED;
-            }
-            else if (event.gaxis.value > xAxisSensitivity)
-            {
-                m_joyState[AIM_RIGHT] = KEY_PRESSED;
-            }
-            else
-            {
-                m_joyState[AIM_LEFT] = KEY_RELEASED;
-                m_joyState[AIM_RIGHT] = KEY_RELEASED;
-            }
+            m_stickX = (float)event.gaxis.value / xSens;
+            if (m_stickX > 1.0f)
+                m_stickX = 1.0f;
+            if (m_stickX < -1.0f)
+                m_stickX = -1.0f;
         }
-        else if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY ||
-                 event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTY)
+        else if (event.gaxis.axis == SDL_GAMEPAD_AXIS_LEFTY || event.gaxis.axis == SDL_GAMEPAD_AXIS_RIGHTY)
         {
-            if (event.gaxis.value < -yAxisSensitivity)
-            {
-                m_joyState[AIM_UP] = KEY_PRESSED;
-            }
-            else if (event.gaxis.value > yAxisSensitivity)
-            {
-                m_joyState[AIM_DOWN] = KEY_PRESSED;
-            }
-            else
-            {
-                m_joyState[AIM_UP] = KEY_RELEASED;
-                m_joyState[AIM_DOWN] = KEY_RELEASED;
-            }
-        }
-        // Axis value ranges from -32768 to 32767
-        // Apply a deadzone to ignore small movements
-        else if (event.gaxis.value < -8000 || event.gaxis.value > 8000)
-        { // Example deadzone
-            LOGI("Controller: %s - Axis MOTION: %s -- Value: %d", SDL_GetGamepadName(controller),
-                 SDL_GetGamepadStringForAxis((SDL_GamepadAxis)event.gaxis.axis),
-                 event.gaxis.value);
+            m_stickY = (float)event.gaxis.value / ySens;
+            if (m_stickY > 1.0f)
+                m_stickY = 1.0f;
+            if (m_stickY < -1.0f)
+                m_stickY = -1.0f;
         }
     }
     else if (event.type == SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN)
@@ -1824,18 +2053,21 @@ void CRuntime::manageTitleScreen()
              m_keyStates[Key_Space] ||
              m_buttonState[BUTTON_START])
     {
-        m_gameMenuCooldown = GAME_MENU_COOLDOWN;
-        m_prompt = PROMPT_NONE;
-        m_paused = false;
-        m_keyStates[Key_Escape] = 0;
-        m_keyStates[Key_Space] = 0;
-        m_keyRepeters[Key_Escape] = 1;
-        m_keyRepeters[Key_Space] = 1;
-        m_buttonState[BUTTON_START] = 0;
         bool active = m_menus->isMenuActive(MENUID_MAINMENU);
-        m_menus->setActive(MENUID_MAINMENU, !active);
-        m_menus->setLastMenu(nullptr, 0, 0);
-        return;
+        if (!active || !m_keyStates[Key_Space])
+        {
+            m_gameMenuCooldown = GAME_MENU_COOLDOWN;
+            m_prompt = PROMPT_NONE;
+            m_paused = false;
+            m_keyStates[Key_Escape] = 0;
+            m_keyStates[Key_Space] = 0;
+            m_keyRepeters[Key_Escape] = 1;
+            m_keyRepeters[Key_Space] = 1;
+            m_buttonState[BUTTON_START] = 0;
+            m_menus->setActive(MENUID_MAINMENU, !active);
+            m_menus->setLastMenu(nullptr, 0, 0);
+            return;
+        }
     }
 
     if (!m_menus->isMenuActive(MENUID_MAINMENU))

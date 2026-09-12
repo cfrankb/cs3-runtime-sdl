@@ -119,6 +119,12 @@ bool EngineHW::initGPUDevice()
 
 void EngineHW::preloadAssets()
 {
+    if (!loadTileLayer("data/layer01.json", g_layerdata))
+    {
+        LOGE("failed to load tile data");
+    }
+    m_animator->reloadTileData();
+
     if (!m_font.loadRawFont("data/bitfont.bin"))
     {
         LOGE("cannot load font");

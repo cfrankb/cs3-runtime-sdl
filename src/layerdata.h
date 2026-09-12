@@ -18,8 +18,10 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
-struct layerdata_t {
+struct layerdata_t
+{
     uint8_t nextTile;
     uint8_t animeSpeed;
     uint8_t tileType;
@@ -28,12 +30,13 @@ struct layerdata_t {
     const char *tag;
 };
 
-const uint8_t GranualarUL=1; // TOP LEFT
-const uint8_t GranualarUR=2; // TOP RIGHT
-const uint8_t GranualarDL=4; // BOTTOM LEFT
-const uint8_t GranualarDR=8; // BOTTOM RIGHT
+const uint8_t GranualarUL = 1; // TOP LEFT
+const uint8_t GranualarUR = 2; // TOP RIGHT
+const uint8_t GranualarDL = 4; // BOTTOM LEFT
+const uint8_t GranualarDR = 8; // BOTTOM RIGHT
 
-enum LayerTileType {
+enum LayerTileType
+{
     Background,
     Foreground,
     Solid,
@@ -41,8 +44,15 @@ enum LayerTileType {
     Water,
 };
 
-extern const layerdata_t g_layerdata[];
+enum
+{
+    TOTAL_TILE_COUNT = 256
+};
+extern layerdata_t g_layerdata[TOTAL_TILE_COUNT];
 
-constexpr inline const layerdata_t & getLayerTileDef(int i) {
+bool loadTileLayer(const std::string &filename, layerdata_t *layers);
+
+inline const layerdata_t &getLayerTileDef(int i)
+{
     return g_layerdata[i];
 }

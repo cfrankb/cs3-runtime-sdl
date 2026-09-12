@@ -584,8 +584,8 @@
             "index": 64,
             "next": -1,
             "speed": 1,
-            "tag": "",
-            "type": 2,
+            "tag": "CornerLeft",
+            "type": 0,
             "w": 1
         },
         {
@@ -656,8 +656,8 @@
             "index": 72,
             "next": -1,
             "speed": 1,
-            "tag": "",
-            "type": 2,
+            "tag": "CornerRight",
+            "type": 0,
             "w": 1
         },
         {
@@ -693,7 +693,7 @@
             "next": -1,
             "speed": 1,
             "tag": "",
-            "type": 1,
+            "type": 2,
             "w": 1
         },
         {
@@ -702,7 +702,7 @@
             "next": -1,
             "speed": 1,
             "tag": "",
-            "type": 1,
+            "type": 2,
             "w": 1
         },
         {

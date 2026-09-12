@@ -439,6 +439,7 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/external
     ${CMAKE_SOURCE_DIR}/external/SDL3/include
     ${CMAKE_SOURCE_DIR}/external/SDL3_mixer/include
     ${CMAKE_SOURCE_DIR}/external/zlib

@@ -1856,7 +1856,9 @@ bool CGame::isGranularSolidFromPos(const Pos &pos, const uint8_t aim) const
 {
     auto testGranular = [](const uint8_t &gr, const uint8_t &g1, const uint8_t &g2)
     {
-        return (gr & g1) && (gr & g2);
+        bool result = (gr & g1) && (gr & g2);
+        // LOGI("gr:%.2x g1: %.2x g2: %.2x => %d", gr, g1, g2, result);
+        return result;
     };
 
     const CMap &map = getMap();
