@@ -174,6 +174,21 @@
     var spinnerElement = document.getElementById("spinner");
     var setStatusLast = NaN;
 
+    // Global error capture: synchronous failures (bad data fetch, WebGL
+    // context creation, unsupported JS) happen before/around module init
+    // and won't reach the .catch below, so report them here.
+    window.onerror = function (message, source, lineno, colno, error) {
+      console.error("[global error]", message, "at", source + ":" + lineno + ":" + colno, error && error.stack ? error.stack : "");
+      if (statusElement) setStatus("Error: " + (message || String(error && error.message)));
+      return false;
+    };
+
+    try {
+      if (!window.Module) window.Module = {};
+    } catch (e) {
+      console.error("[setup guard failed]", e);
+    }
+
     MyApp({
       canvas: document.getElementById('canvas'),
       locateFile: (filename) => {
@@ -286,7 +301,18 @@
           if (text) console.error("[post-exception status] " + text);
         };
       };
+    }).catch(err => {
+      console.error("Module initialization failed:", err);
+      Module.setStatus("Error: " + (err && err.message ? err.message : String(err)));
     });
+
+    // Fallback: if the module never initializes within N seconds, the page is
+    // likely stuck (e.g. wasm/.data fetch blocked or WebGL unavailable).
+    var initTimer = setTimeout(() => {
+      if (window.Module) return;
+      console.error("[init timeout] Module did not initialize; page may be stuck.");
+      if (statusElement) setStatus("Error: module did not initialize (timeout)");
+    }, 20000);
 
     // Audio setup
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
