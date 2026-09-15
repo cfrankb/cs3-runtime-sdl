@@ -384,13 +384,27 @@ void CRuntime::handleWindowResize()
     SDL_Rect vp{0, 0, w, h};
     SDL_SetRenderViewport(m_app.renderer, &vp);
 
-    const int sx = getWidth() * SCALE;  // 640,
-    const int sy = getHeight() * SCALE; // 480,
-    SDL_SetRenderLogicalPresentation(
-        m_app.renderer,
-        sx, // logical width
-        sy, // logical height
-        getLogicalPresentationMode(sx, sy));
+    // Calculate your exact original dynamic layout sizes
+    const int sx = getWidth() * SCALE;  // e.g., 640
+    const int sy = getHeight() * SCALE; // e.g., 480
+
+    // TRACK PREVIOUSLY ASSIGNED DIMENSIONS
+    static int last_sx = 0;
+    static int last_sy = 0;
+
+    // Only apply the logical presentation if the frame size actually changed.
+    // On High DPI screens, this breaks the recursive event feedback loop.
+    if (sx != last_sx || sy != last_sy)
+    {
+        last_sx = sx;
+        last_sy = sy;
+
+        SDL_SetRenderLogicalPresentation(
+            m_app.renderer,
+            sx, // logical width
+            sy, // logical height
+            getLogicalPresentationMode(sx, sy));
+    }
 
     LOGI("Resize handled: render output %dx%d", w, h);
 }
@@ -529,10 +543,18 @@ void CRuntime::doInput()
 
             if (!m_app.isFullscreen)
             {
-                LOGI("resized %d x %d", getWidth(), getHeight());
-                SDL_SetWindowSize(m_app.window, event.window.data1, event.window.data2);
+                // 1. Read the dimensions directly from the event data
+                int newWidth = event.window.data1;
+                int newHeight = event.window.data2;
+                LOGI("resized %d x %d", newWidth, newHeight);
+                // 2. Pass these exact numbers to your engine instead of getWidth()/getHeight()
+                //   m_engine->resize(newWidth, newHeight);
             }
-            m_engine->resize(getWidth(), getHeight());
+            else
+            {
+                m_engine->resize(getWidth(), getHeight());
+            }
+
             onOrientationChange();
             handleWindowResize();
             break;
