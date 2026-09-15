@@ -348,9 +348,34 @@
           source.buffer = buffer;
           source.connect(gainNode);
           source.loop = true;
+          // HARD ANCHOR AGAINST GARBAGE COLLECTION:
+          // Attaching the source node straight to the gainNode
+          // keeps the memory active and protected from the browser's GC.
+          gainNode.activeSource = source;
           source.start(0);
         });
     }
+
+    // Add this directly below your existing Audio setup variables
+    document.addEventListener("visibilitychange", () => {
+      if (!audioCtx) return;
+
+      if (document.visibilityState === "hidden") {
+        // 1. User switched away from the tab.
+        // Intentionally suspend the context to stop the hardware buffer from flatlining.
+        audioCtx.suspend().then(() => {
+          console.log("Audio gracefully suspended via backgrounding.");
+        });
+      } else if (document.visibilityState === "visible") {
+        // 2. User returned to the game.
+        // Wake the audio track right back up.
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume().then(() => {
+            console.log("Audio context restored.");
+          });
+        }
+      }
+    });
 
     // Gamepad support
     window.addEventListener("gamepadconnected", (e) => {
