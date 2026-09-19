@@ -1531,6 +1531,10 @@ bool CRuntime::parseConfig(uint8_t *buf)
             {
                 m_userNames.emplace_back(p);
             }
+            else if (section == "layers")
+            {
+                m_layers.emplace_back(p);
+            }
             else if (section == "config")
             {
                 StringVector list;

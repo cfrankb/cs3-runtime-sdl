@@ -76,7 +76,7 @@ public:
         return m_tiles[x + y * m_len];
     }
 
-    inline uint8_t at(const int x, const int y) const
+    inline uint16_t at(const int x, const int y) const
     {
         if (!isValid(x, y))
         {
@@ -186,20 +186,32 @@ protected:
             VERSION0,
             VERSION1,
             VERSION2,
+            VERSION3
         };
 
         if (version == VERSION0)
         {
             m_layerType = LAYER_MAIN;
-            if (!readfile(m_tiles.data(), len * hei))
+            uint8_t *tmpMap = new uint8_t[len * hei];
+            // if (!readfile(m_tiles.data(), len * hei))
+            if (!readfile(tmpMap, len * hei))
             {
                 m_lastError = "failed to read layer data";
                 LOGE("%s", m_lastError.c_str());
                 return false;
             }
+
+            // copy temp map to data
+            for (size_t i = 0; i < len * hei; ++i)
+            {
+                m_tiles.data()[i] = tmpMap[i];
+            }
+            delete[] tmpMap;
             m_name = "main";
         }
-        else if (version == VERSION1 || version == VERSION2)
+        else if (version == VERSION1 ||
+                 version == VERSION2 ||
+                 version == VERSION3)
         {
             if (!readfile(&m_layerType, sizeof(m_layerType)))
             {
@@ -223,12 +235,34 @@ protected:
                 return false;
             }
 
-            uLong destLen = len * hei;
-            int err = uncompress((uint8_t *)m_tiles.data(), &destLen, cData.data(), compressedSize);
-            if (err != Z_OK || destLen != len * hei)
+            uint8_t *tmpMap = nullptr;
+            uint8_t *dest = (uint8_t *)m_tiles.data();
+            uint8_t tileSize = sizeof(uint8_t); // sizeof(uint16_t);
+            if (version == VERSION1 ||
+                version == VERSION2)
+            {
+                // legacy map
+                tmpMap = new uint8_t[len * hei];
+                dest = tmpMap;
+                tileSize = sizeof(uint8_t);
+            }
+            uLong expectedSize = len * hei * tileSize;
+            uLong destLen = len * hei * tileSize;
+            int err = uncompress(dest, &destLen, cData.data(), compressedSize);
+            if (err != Z_OK || destLen != expectedSize)
             {
                 m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
                 return false;
+            }
+
+            if (tmpMap)
+            {
+                // copy temp map to data
+                for (size_t i = 0; i < len * hei; ++i)
+                {
+                    m_tiles.data()[i] = tmpMap[i];
+                }
+                delete[] tmpMap;
             }
 
             // read layer name
@@ -236,11 +270,13 @@ protected:
             m_name = "";
             if (!readfile(&nameSize, sizeof(uint16_t)))
             {
+                m_lastError = "failed to read layer name size";
                 return false;
             }
             std::vector<char> nameBuffer(nameSize);
             if (nameSize && !readfile(nameBuffer.data(), nameSize))
             {
+                m_lastError = "failed to read layer name";
                 return false;
             }
             m_name.assign(nameBuffer.data(), nameBuffer.size());
@@ -250,6 +286,7 @@ protected:
                 // load baseID;
                 if (!readfile(&m_baseID, sizeof(m_baseID)))
                 {
+                    m_lastError = "failed to read layer baseID";
                     return false;
                 }
             }

@@ -40,6 +40,7 @@
 #include "shared/FrameSet.h"
 #include "theme.h"
 #include "animzdata.h"
+#include <format>
 
 #define TRACE(...)            \
     if (m_game->level() == 4) \
@@ -119,9 +120,20 @@ bool EngineHW::initGPUDevice()
 
 void EngineHW::preloadAssets()
 {
-    if (!loadTileLayer("data/layer01.json", g_layerdata))
+    for (int i = 0; i < LAYER_COUNT; ++i)
     {
-        LOGE("failed to load tile data");
+        std::string filepath = std::format("{}pixels/layer{}.json", AssetMan::getPrefix(), i);
+        // "data/pixels/layer0.json"
+        if (!loadTileLayer(filepath, g_layerdata, i * LAYER_TILE_COUNT))
+        {
+            LOGE("failed to load tile json: %s", filepath.c_str());
+        }
+
+        filepath = std::format("{}pixels/layer{}.png", AssetMan::getPrefix(), i);
+        if (!m_tileset_layers[i].load(m_renderer, filepath.c_str(), TILE_SIZE, TILE_SIZE))
+        {
+            LOGE("failed to load tile texture: %s", filepath.c_str());
+        }
     }
     m_animator->reloadTileData();
 
@@ -141,7 +153,6 @@ void EngineHW::preloadAssets()
     m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
     m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
     m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET][IDX_FILENAME], 16, 48);
-    m_tileset_layers0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_LAYERS0][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
 
     LOGI("Creating texture variants");
     const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
@@ -547,7 +558,7 @@ void EngineHW::drawRect(SDL_Renderer *renderer, const SDL_FRect &rect, const SDL
     SDL_SetRenderDrawColor(renderer, oldR, oldG, oldB, oldA);
 }
 
-const Tile *EngineHW::getMainLayerTile(const uint8_t tileID)
+const Tile *EngineHW::getMainLayerTile(const uint16_t tileID)
 {
     ColorMask colorMask = COLOR_NOCHANGE;
     const CGame &game = *m_game;
@@ -668,7 +679,7 @@ void EngineHW::drawViewPortStatic()
                     break;
                 if (y + my >= layer->height())
                     break;
-                const uint8_t tileID = layer->at(x + mx, y + my);
+                const uint16_t tileID = layer->at(x + mx, y + my);
                 drawViewPortInner(overlays, layer, tileID, x + mx, y + my);
             }
         }
@@ -921,7 +932,7 @@ void EngineHW::drawViewPortDynamic()
                     break;
                 if (y + my >= layer->height())
                     break;
-                const uint8_t tileID = layer->at(x + mx, y + my);
+                const uint16_t tileID = layer->at(x + mx, y + my);
                 drawViewPortInner(overlays, layer, tileID, px, py);
                 px += TILE_SIZE;
             }

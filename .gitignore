@@ -19,3 +19,4 @@ bb/*
 #/CMakeLists.txt
 tests/CMakeLists.txt
 levels2.mapz
+.aider*

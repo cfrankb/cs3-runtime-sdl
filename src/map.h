@@ -174,6 +174,7 @@ public:
         VERSION0 = 0,
         VERSION1 = 1,
         VERSION2 = 2,
+        VERSION3 = 3,
     };
 
 private:

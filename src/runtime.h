@@ -141,6 +141,7 @@ private:
     std::vector<std::string> m_soundFiles;
     std::vector<std::vector<std::string>> m_assetFiles;
     std::vector<std::string> m_userNames;
+    std::vector<std::string> m_layers;
     std::string m_workspace = "";
     std::string m_credits;
     char *m_scroll = nullptr;

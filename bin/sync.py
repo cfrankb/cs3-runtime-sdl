@@ -79,8 +79,8 @@ def sync_pixels(sync_list):
         "data/pixels/sheet1.obl",
         "data/pixels/tiles.obl",
         "data/pixels/uisheet.png",
-        "data/pixels/cs3layers.png",
-        "data/layer01.json",
+        "data/pixels/layer*.png",
+        "data/pixels/layer*.json",
     ]
     for f in paths:
         sync_list.append([f, DEST_PIXELS + ntpath.basename(f), False])

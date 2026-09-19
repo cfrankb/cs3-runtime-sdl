@@ -74,7 +74,7 @@ protected:
     virtual void fazeScreen(int str = 0xe) override;
     void flashScreen();
     void drawKeys();
-    const Tile *getMainLayerTile(const uint8_t tileID);
+    const Tile *getMainLayerTile(const uint16_t tileID);
     const Tile *calcSpecialFrame(const sprite_t &sprite);
     SDL_Texture *createTexture(CFrame *frame);
     CFrame *getFrame(const std::string &filename);
@@ -103,7 +103,7 @@ protected:
         const int y;
     };
 
-    inline void drawViewPortInner(std::vector<overlay_t> &overlays, const CLayer *layer, const uint8_t &tileID, const int px, const int py)
+    inline void drawViewPortInner(std::vector<overlay_t> &overlays, const CLayer *layer, const uint16_t tileID, const int px, const int py)
     {
         if (tileID == 0)
             return;
@@ -115,11 +115,15 @@ protected:
         }
         else if (tileID)
         {
-            const uint8_t refID = m_animator->getLayerTile(tileID);
-            tile = m_tileset_layers0.getTile(refID);
-            const layerdata_t &data = getLayerTileDef(refID);
-            if (data.tileType == LayerTileType::Foreground)
-                overlays.emplace_back(overlay_t{tile, px, py});
+            const uint16_t refID = m_animator->getLayerTile(tileID);
+            if (refID && refID < TOTAL_TILE_COUNT)
+            {
+                const uint8_t layerID = refID >> 8;
+                tile = m_tileset_layers[layerID].getTile(refID & 0xff);
+                const layerdata_t &data = getLayerTileDef(refID);
+                if (data.tileType == LayerTileType::Foreground)
+                    overlays.emplace_back(overlay_t{tile, px, py});
+            }
         }
         if (tile)
         {
@@ -147,7 +151,8 @@ protected:
         ASSET_SPLASH,
         ASSET_TITLESCREEN,
         MAX_ASSET,
-        IDX_FILENAME = 0
+        IDX_FILENAME = 0,
+        MAX_LAYERS = 4
     };
 
     SDL_Renderer *m_renderer;
@@ -162,6 +167,7 @@ protected:
     TileSet m_tileset_hearts;
     TileSet m_tileset_sheet0;
     TileSet m_tileset_sheet1;
-    TileSet m_tileset_layers0;
+    // TileSet m_tileset_layers0;
+    TileSet m_tileset_layers[MAX_LAYERS];
     BitmapFont8x8 m_font;
 };
