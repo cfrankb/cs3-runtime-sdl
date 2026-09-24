@@ -73,17 +73,21 @@ def sync_code(sync_list):
 
 
 def sync_pixels(sync_list):
-    paths = [
+    patterns = [
         "data/pixels/animz.obl",
         "data/pixels/sheet0.obl",
         "data/pixels/sheet1.obl",
         "data/pixels/tiles.obl",
         "data/pixels/uisheet.png",
-        "data/pixels/layer*.png",
-        "data/pixels/layer*.json",
+        "data/pixels/layer[0-9].png",
+        "data/pixels/layer[0-9].json", 
     ]
-    for f in paths:
-        sync_list.append([f, DEST_PIXELS + ntpath.basename(f), False])
+    for pattern in patterns:
+        matches = sorted(glob.glob(pattern))
+        if not matches:
+            continue  # or warn(f"no match: {pattern}") to catch typos
+        for f in matches:
+            sync_list.append([f, DEST_PIXELS + ntpath.basename(f), False])
 
 
 def sync_map(sync_list):

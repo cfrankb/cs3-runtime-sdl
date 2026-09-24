@@ -83,7 +83,7 @@ void CAnimator::reloadTileData()
 {
     memset(m_tileMainLayer, NO_ANIMZ, sizeof(m_tileMainLayer));
     memset(m_tileLayer, '\0', sizeof(m_tileLayer));
-    for (int i = 0; i < MAX_LAYER_TILES; ++i)
+    for (size_t i = 0; i < (size_t)MAX_LAYER_TILES; ++i)
     {
         const auto &data = g_layerdata[i];
         // if animated (save current index)

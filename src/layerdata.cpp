@@ -37,11 +37,12 @@ bool loadTileLayer(const std::string &filename, layerdata_t *layers, int baseIdx
         return false;
     }
     file.read(t, size);
+    file.close();
     t[size] = '\0';
     json = t;
     delete[] t;
 
-    for (int i = 0; i < LAYER_TILE_COUNT; i++)
+    for (int i = 0; i < LAYER_TILE_COUNT; ++i)
     {
         layers[baseIdx + i].granular = 0;
         layers[baseIdx + i].nextTile = 0;
@@ -76,9 +77,13 @@ bool loadTileLayer(const std::string &filename, layerdata_t *layers, int baseIdx
             continue;
 
         layerdata_t &L = layers[index + baseIdx];
-        L.nextTile = baseIdx + (uint16_t)tile.value("next", 0);
+        L.nextTile =  (uint16_t)tile.value("next", 0);
         if (L.nextTile == DUMMY_NEXT_TILE)
+        {
             L.nextTile = 0;
+        } else {
+            L.nextTile += baseIdx;
+        }
         L.animeSpeed = (uint8_t)tile.value("speed", 1);
         L.tileType = static_cast<LayerTileType>(tile.value("type", 0));
         L.weight = (uint8_t)tile.value("w", 1);

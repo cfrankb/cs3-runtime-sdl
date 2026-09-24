@@ -46,7 +46,7 @@ public:
     }
     inline uint16_t getLayerTile(const uint16_t tileID) const
     {
-        const uint8_t &c = m_tileLayer[tileID];
+        const uint16_t &c = m_tileLayer[tileID];
         return c ? c : tileID;
     }
 
