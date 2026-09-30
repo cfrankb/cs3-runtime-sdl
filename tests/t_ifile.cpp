@@ -24,6 +24,8 @@
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/FileMem.h"
 #include "../src/shared/IFile.h"
+#include "../src/shared/ISerial.h"
+#include "../src/game_auto.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
 #include "../src/shared/FrameSet.h"
@@ -254,6 +256,76 @@ bool test_ifile_read_write()
     std::filesystem::remove(OUT_FILE1);
     std::filesystem::remove(OUT_FILE2);
 
+    return true;
+}
+
+/**
+ * @brief Test the generic std::vector<T> serializer (readVector/writeVector)
+ *        round-tripping a vector of spawn_t through an IFile stream.
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_vector()
+{
+    const std::vector<spawn_t> in = {
+        {1, 10, 20, 100},
+        {2, -5, 3, 0},
+        {65535, 32767, -32768, 65534},
+    };
+    // 4-byte count + 3 * 8-byte elements
+    const long expectedSize = sizeof(uint32_t) + static_cast<long>(in.size()) * sizeof(spawn_t);
+
+    CFileMem mem;
+    if (!mem.open("tests/out/vector.dat", "rw+"))
+    {
+        LOGE("can't open for writing vector.dat");
+        return false;
+    }
+    if (!writeVector(OBJECT_NAME(in), in, mem))
+    {
+        LOGE("writeVector(spawn_t) failed");
+        mem.close();
+        return false;
+    }
+    if (mem.getSize() != expectedSize)
+    {
+        LOGE("vector size %ld; expecting %ld", mem.getSize(), expectedSize);
+        mem.close();
+        return false;
+    }
+    if (!mem.seek(0))
+    {
+        LOGE("seek(0) failed");
+        mem.close();
+        return false;
+    }
+
+    std::vector<spawn_t> out;
+    if (!readVector(OBJECT_NAME(out), out, mem))
+    {
+        LOGE("readVector(spawn_t) failed");
+        mem.close();
+        return false;
+    }
+    mem.close();
+
+    if (out.size() != in.size())
+    {
+        LOGE("vector count %u; expecting %u", out.size(), in.size());
+        return false;
+    }
+    for (size_t i = 0; i < in.size(); ++i)
+    {
+        if (out[i].tileID != in[i].tileID || out[i].x != in[i].x ||
+            out[i].y != in[i].y || out[i].delay != in[i].delay)
+        {
+            LOGE("vector[%u] mismatch", i);
+            return false;
+        }
+    }
+
+    std::filesystem::remove("tests/out/vector.dat");
     return true;
 }
 

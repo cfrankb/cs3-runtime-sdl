@@ -71,6 +71,7 @@ int main(int argc, char *args[])
         FCT(test_ifile),
         FCT(test_ifile_create),
         FCT(test_ifile_read_write),
+        FCT(test_ifile_vector),
         FCT(test_png_magic),
         FCT(test_frameset),
     };
