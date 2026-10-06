@@ -30,7 +30,7 @@ TAB = " " * 4
 
 
 def is_excluded(f: str):
-    excluded = [
+    excluded_basename = [
         "main.cpp",
         "menuitem.*",
         "assetman*",
@@ -45,11 +45,18 @@ def is_excluded(f: str):
         "tileset_tex.*",
         "font8x8.h"
     ]
-    f = ntpath.basename(f)
-    for e in excluded:
-        if e.endswith("*") and f.startswith(e[0:-1]):
+    excluded_path = [
+        'src/shared/logger.h'
+    ]
+
+    bn = ntpath.basename(f)
+    for e in excluded_basename:
+        if e.endswith("*") and bn.startswith(e[0:-1]):
             return True
-        elif f == e:
+        elif bn == e:
+            return True
+    for e in excluded_path:
+        if f == e:
             return True
     return False
 

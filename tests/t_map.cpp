@@ -63,7 +63,7 @@ bool test_map()
     if (map.width() != mapSize.w || map.height() != mapSize.h)
     {
         LOGE("map sized (%dx%d) was expected (%dx%d)",
-             map.width(), map.hei(), mapSize.w, mapSize.h);
+             map.width(), map.height(), mapSize.w, mapSize.h);
         return false;
     }
 
@@ -76,7 +76,7 @@ bool test_map()
     if (map.width() != mapSize2.w || map.height() != mapSize2.h)
     {
         LOGE("map sized (%dx%d) was expected (%dx%d)",
-             map.width(), map.hei(), mapSize2.w, mapSize2.h);
+             map.width(), map.height(), mapSize2.w, mapSize2.h);
         return false;
     }
 
@@ -335,7 +335,7 @@ bool test_map_up()
     //            [7, 8, 9]
     fillMap(map);
     map.setAttr(1, 1, 0xFF); // Attribute at (1,1)
-    map.shift(CMap::Direction::UP);
+    map.shift(Direction::UP);
     // Expected: [4, 5, 6]
     //           [7, 8, 9]
     //           [1, 2, 3]
@@ -354,7 +354,7 @@ bool test_map_left()
     //            [7, 8, 9]
     fillMap(map);
     map.setAttr(0, 0, 0xff);
-    map.shift(CMap::Direction::LEFT);
+    map.shift(Direction::LEFT);
 
     // Expected : [2, 3, 1]
     //            [5, 6, 4]
@@ -383,7 +383,7 @@ bool test_map_right()
     //            [7, 8, 9]
     fillMap(map);
     map.setAttr(2, 2, 0xff);
-    map.shift(CMap::Direction::RIGHT);
+    map.shift(Direction::RIGHT);
 
     // Expected : [3, 1, 2]
     //            [6, 4, 5]
@@ -412,7 +412,7 @@ bool test_map_down()
     //            [7, 8, 9]
     fillMap(map);
     map.setAttr(2, 2, 0xff);
-    map.shift(CMap::Direction::DOWN);
+    map.shift(Direction::DOWN);
 
     // Expected : [7, 8, 9]
     //            [1, 2, 3]

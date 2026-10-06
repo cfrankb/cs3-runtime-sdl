@@ -269,9 +269,9 @@ bool test_ifile_read_write()
 bool test_ifile_vector()
 {
     const std::vector<spawn_t> in = {
-        {1, 10, 20, 100},
-        {2, -5, 3, 0},
-        {65535, 32767, -32768, 65534},
+        {1, 10, 20, 100, 0xc0, 1},
+        {2, -5, 3, 0, 0xc0, 1},
+        {65535, 32767, -32768, 65534, 0xc0, 1},
     };
     // 4-byte count + 3 * 8-byte elements
     const long expectedSize = sizeof(uint32_t) + static_cast<long>(in.size()) * sizeof(spawn_t);

@@ -635,7 +635,7 @@ const Tile *EngineHW::getMainLayerTile(const uint16_t tileID)
     else
     {
         const uint16_t j = m_animator->at(tileID);
-        if (j == NO_ANIMZ)
+        if (j == CAnimator::NO_ANIMZ)
         {
             // tile = tiles[tileID];
             tile = m_tileset_tiles.getTile(tileID);

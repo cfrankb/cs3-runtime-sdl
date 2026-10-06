@@ -82,13 +82,15 @@ set(SRC_EXPORTED_FILES ${SRC_EXPORTED_FILES} PARENT_SCOPE)
     )
 
     lines.append("")
-    lines.append("if(IS_MINGW)")
+    # zlib is a real compile+link dependency of the shared code (compression
+    # in helper.cpp, Frame*.cpp, PngMagic.cpp, layer.h). Link it PUBLIC so the
+    # dependency propagates to consumers (src_lib, tests) AND so CMake orders
+    # libz.a after this archive in the link line, resolving the symbols.
+    # Emscripten supplies its own zlib via -sUSE_ZLIB and has no zlibstatic
+    # target, so skip it there.
+    lines.append('if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")')
     lines.append(
-        f"    target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
-    )
-    lines.append("elseif(BUILDING_FOR_STEAM)")
-    lines.append(
-        f"    target_link_libraries({master_lib} PRIVATE SDL3_mixer::SDL3_mixer zlibstatic)"
+        f"    target_link_libraries({master_lib} PUBLIC SDL3_mixer::SDL3_mixer zlibstatic)"
     )
     lines.append("endif()")
     lines.append("")
@@ -123,9 +125,16 @@ def generate_tests(folder):
     lines.append("")
     lines.append("add_executable(cs3-tests ${TEST_SOURCES})")
     lines.append("")
+    # zlib is only vendored as the `zlibstatic` target on non-Emscripten
+    # builds (native, MinGW, Clang/MSVC). Emscripten supplies zlib via the
+    # global -sUSE_ZLIB=1 flag, where no zlibstatic target exists, so skip it
+    # there to match the main app's link target (see root CMakeLists.txt).
     lines.append(
-        "target_link_libraries(cs3-tests PRIVATE src_lib SDL3::SDL3 SDL3_mixer::SDL3_mixer z)"
+        "target_link_libraries(cs3-tests PRIVATE src_lib SDL3::SDL3 SDL3_mixer::SDL3_mixer)"
     )
+    lines.append('if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")')
+    lines.append("    target_link_libraries(cs3-tests PRIVATE zlibstatic)")
+    lines.append("endif()")
 
     lines.append(
         """
@@ -136,7 +145,7 @@ target_include_directories(cs3-tests PRIVATE
 )"""
     )
     lines.append("")
-    lines.append("add_test(NAME cs3-runtime-tests COMMAND cs3-tests)")
+    lines.append("add_test(NAME cs3-runtime-tests COMMAND cs3-tests WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})")
 
     lines.append("")
     lines.append('message(STATUS "Building cs3-tests with ${TEST_SOURCES}")')

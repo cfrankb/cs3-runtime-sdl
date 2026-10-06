@@ -30,6 +30,12 @@ jobs:
           path: data
           token: ${{ secrets.CS3_REPO_TOKEN }} # Only if internal access is enabled
 
+      - name: Compact json
+        run: |
+          python3 bin/minijson.py data/pixels/layer0.json -o data/pixels/layer0.json
+          python3 bin/minijson.py data/pixels/layer1.json -o data/pixels/layer1.json
+          python3 bin/minijson.py data/pixels/layer2.json -o data/pixels/layer2.json
+
       - name: Refresh CMakeLists.txt
         run: |
           python3 bin/refresh.py

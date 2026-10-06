@@ -92,6 +92,9 @@ elif [[ "$1" == "bosses" ]] ; then
 elif [[ "$1" == "tests" ]] ; then
     cmake -S . -B build
     cmake --build build --target cs3-tests
+elif [[ "$1" == "tests_run" ]] ; then    
+    cd build
+    ctest --output-on-failure
 elif [ -z "$1" ]; then
     echo "nothing to do"
     show_help

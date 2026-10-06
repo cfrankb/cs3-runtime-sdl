@@ -643,7 +643,7 @@ CFrame *CGameMixin::tile2Frame(const uint16_t tileID, ColorMask &colorMask, std:
     else
     {
         const uint16_t j = m_animator->at(tileID);
-        if (j == NO_ANIMZ)
+        if (j == CAnimator::NO_ANIMZ)
         {
             const CFrameSet &tiles = *m_tiles;
             tile = tiles[tileID];
@@ -1360,12 +1360,16 @@ void CGameMixin::manageGamePlay()
         }
     }
 
-    if (m_ticks % 3 == 0)
+    const bool timeFrozen = (bool)m_game->stats().get(S_TIME_FREEZE_TIMER);
+    if (m_ticks % 3 == 0 && !timeFrozen)
         m_animator->animate();
 
-    game.manageMonsters(m_ticks);
-    game.manageBosses(m_ticks);
-    game.manageSpawns(m_ticks);
+    if (!timeFrozen)
+    {
+        game.manageMonsters(m_ticks);
+        game.manageBosses(m_ticks);
+        game.manageSpawns(m_ticks);
+    }
     const uint16_t exitKey = m_game->getMap().states().getU(POS_EXIT);
     if (game.isClosure())
     {

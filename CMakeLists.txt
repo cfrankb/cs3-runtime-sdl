@@ -171,6 +171,14 @@ else()
     message(STATUS "Using GCC or Clang")
     #add_compile_options(-Wall -Wextra -Wpedantic)
     add_compile_options(-Wall -Wextra)
+
+    # Vendor zlib statically for a self-contained native build
+    # (system libz is not reliably present, so we build external/zlib).
+    set(ZLIB_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(ZLIB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
+    set(ZLIB_BUILD_STATIC ON CACHE BOOL "" FORCE)
+    add_subdirectory(external/zlib zlib)
 endif()
 
 add_subdirectory(src)
@@ -319,8 +327,8 @@ if(BUILDING_FOR_STEAM)
 
 endif()
 
-#enable_testing()
-#add_subdirectory(tests)
+enable_testing()
+add_subdirectory(tests)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set(BPATH "${CMAKE_CURRENT_BINARY_DIR}")
@@ -431,9 +439,8 @@ else()
     #find_library(XMP_LIBRARY xmp)
     #find_library(OGG_LIBRARY ogg)
     #find_library(VORBIS_LIBRARY vorbisfile)
-    find_library(ZLIB_LIBRARY z)
     target_link_libraries(${PROJECT_NAME}
-        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer ${ZLIB_LIBRARY} src_lib
+        PRIVATE SDL3::SDL3 SDL3_mixer::SDL3_mixer zlibstatic src_lib
 )
 endif()
 

@@ -963,6 +963,9 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_MOUSE_WHEEL)
     {
+        if (m_game->mode() == CGame::MODE_PLAY)
+            return;
+
         // LOGI("SDL_EVENT_MOUSE_WHEEL x=%f y=%f",
         //      event.wheel.x, event.wheel.y);
         if (static_cast<int>(event.wheel.y) == 1)
@@ -1470,7 +1473,9 @@ void CRuntime::initSounds()
 
 void CRuntime::openMusicForLevel(int i)
 {
-    const std::string filename = m_musicFiles[i % m_musicFiles.size()];
+    const CMap &map = m_game->getMap();
+    const std::string metaMusic = map.statesConst().getS(StateValue::MUSIC);
+    const std::string filename = metaMusic.empty() ? m_musicFiles[i % m_musicFiles.size()] : metaMusic;
     openMusic(filename);
 }
 
@@ -1478,6 +1483,8 @@ void CRuntime::openMusic(const std::string &filename)
 {
     if (!m_quiet)
         LOGI("open music: %s", filename.c_str());
+    if (filename.empty())
+        return;
     const std::string music = getMusicPath(filename);
     if (m_music && m_musicEnabled && m_music->open(music.c_str()))
     {
