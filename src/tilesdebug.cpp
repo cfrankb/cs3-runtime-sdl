@@ -127,8 +127,8 @@ static const std::unordered_map<uint16_t, std::string> g_tileNames = {
     _S(TILES_BABYDRAGON),
     _S(TILES_DEICO),
     _S(TILES_FORCEF94),
-    _S(TILES_SKULL_SW0),
-    _S(TILES_SKULL_SW1),
+    _S(TILES_LEVER_SW0),
+    _S(TILES_LEVER_SW1),
     _S(TILES_INSECT1),
     _S(TILES_LUTIN),
     _S(TILES_MANKA),
@@ -189,6 +189,9 @@ static const std::unordered_map<uint16_t, std::string> g_tileNames = {
     _S(TILES_EGG_CRACKED),
     _S(TILES_FIREBALL_SM),
     _S(TILES_BELL),
+    _S(TILES_BARRELW),
+    _S(TILES_BARRELW_DOWN),
+    _S(TILES_BARRELW_WATER),
 };
 
 static const std::unordered_map<uint16_t, std::string> g_aiNames = {
@@ -251,6 +254,7 @@ static const std::unordered_map<uint16_t, std::string> g_typesNames = {
     _S(TYPE_MONSTERV3),
     _S(TYPE_BELL),
     _S(TYPE_SWITCH),
+    _S(TYPE_PUSHOVER),
 };
 
 std::string get_tileNames(const uint16_t i)

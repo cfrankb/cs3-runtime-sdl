@@ -223,10 +223,10 @@ constexpr const TileDef tileDefs[] = {
     {.flags=0x00, .type=TYPE_MONSTER, .score=0, .health=-4, .speed=4, .ai=7, .hidden=false, .basename="deico.obl", .bullet=0, .rate=0, .path=0, .range=0},
     // 63 TILES_FORCEF94
     {.flags=0x00, .type=TYPE_WALLS, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="forcef94.obl", .bullet=0, .rate=0, .path=0, .range=0},
-    // 64 TILES_SKULL_SW0
-    {.flags=0x00, .type=TYPE_SWITCH, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="skull.png", .bullet=0, .rate=0, .path=0, .range=0},
-    // 65 TILES_SKULL_SW1
-    {.flags=0x8000, .type=TYPE_WALLS, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="skull.png", .bullet=0, .rate=0, .path=0, .range=0},
+    // 64 TILES_LEVER_SW0
+    {.flags=0x00, .type=TYPE_SWITCH, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="lever.png", .bullet=0, .rate=0, .path=0, .range=0},
+    // 65 TILES_LEVER_SW1
+    {.flags=0x8000, .type=TYPE_WALLS, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="lever.png", .bullet=0, .rate=0, .path=0, .range=0},
     // 66 TILES_INSECT1
     {.flags=0x00, .type=TYPE_MONSTER, .score=0, .health=-6, .speed=5, .ai=1, .hidden=false, .basename="insect1_dn.obl", .bullet=0, .rate=0, .path=0, .range=0},
     // 67 TILES_LUTIN
@@ -346,7 +346,13 @@ constexpr const TileDef tileDefs[] = {
     // a0 TILES_FIREBALL_SM
     {.flags=0x00, .type=TYPE_FIREBALL, .score=0, .health=-10, .speed=4, .ai=0, .hidden=false, .basename="fireball_sm.png", .bullet=0, .rate=0, .path=0, .range=0},
     // a1 TILES_BELL
-    {.flags=0x00, .type=TYPE_BELL, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="bell.png", .bullet=0, .rate=0, .path=0, .range=0}
+    {.flags=0x00, .type=TYPE_BELL, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="bell.png", .bullet=0, .rate=0, .path=0, .range=0},
+    // a2 TILES_BARRELW
+    {.flags=0x00, .type=TYPE_PUSHOVER, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="barrelw.png", .bullet=0, .rate=0, .path=0, .range=0},
+    // a3 TILES_BARRELW_DOWN
+    {.flags=0x00, .type=TYPE_WALLS, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="barrelw.png", .bullet=0, .rate=0, .path=0, .range=0},
+    // a4 TILES_BARRELW_WATER
+    {.flags=0x00, .type=TYPE_SWAMP, .score=0, .health=0, .speed=0, .ai=0, .hidden=false, .basename="barrelw.png", .bullet=0, .rate=0, .path=0, .range=0}
 };
 
 const uint8_t chMap[] = {
