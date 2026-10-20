@@ -26,6 +26,7 @@ def crc_of_file(file_path: str):
 DEST_BASE = "/home/cfrankb/toolkit/qt/cs3-map-edit/src"
 DEST_CODE = DEST_BASE + "/runtime/"
 DEST_PIXELS = DEST_BASE + "/data/"
+DEST_BOSSES = DEST_BASE + "/data/bosses/"
 TAB = " " * 4
 
 
@@ -79,8 +80,20 @@ def sync_code(sync_list):
                 sync_list.append([f, DEST_CODE + "/".join(f.split("/")[1:]), False])
 
 
-def sync_pixels(sync_list):
-    patterns = [
+def sync_data(sync_list):
+    def copy_list(patterns, dest, prefix):
+        for pattern in patterns:
+            matches = sorted(glob.glob(pattern))
+            if not matches:
+                continue  # or warn(f"no match: {pattern}") to catch typos
+            for f in matches:
+                if prefix:
+                    item = [f, dest + f[len(prefix):], False]
+                else:
+                    item = [f, dest + ntpath.basename(f), False]
+                sync_list.append(item)
+
+    patterns_pixels = [
         "data/pixels/animz.obl",
         "data/pixels/sheet0.obl",
         "data/pixels/sheet1.obl",
@@ -89,13 +102,13 @@ def sync_pixels(sync_list):
         "data/pixels/layer[0-9].png",
         "data/pixels/layer[0-9].json", 
     ]
-    for pattern in patterns:
-        matches = sorted(glob.glob(pattern))
-        if not matches:
-            continue  # or warn(f"no match: {pattern}") to catch typos
-        for f in matches:
-            sync_list.append([f, DEST_PIXELS + ntpath.basename(f), False])
+    copy_list(patterns=patterns_pixels, dest=DEST_PIXELS, prefix=None)
 
+    patterns_bosses = [
+        "data/bosses/bosses.ini",
+        "data/bosses/data/*.json",
+    ]
+    copy_list(patterns=patterns_bosses, dest=DEST_BOSSES, prefix='data/bosses/')
 
 def sync_map(sync_list):
     sync_list.append(["tests/in/levels2.mapz", "data/levels.mapz", True])
@@ -147,7 +160,7 @@ def process_list(sync_list, action, verbose):
 sync_list = []
 
 sync_code(sync_list=sync_list)
-sync_pixels(sync_list=sync_list)
+sync_data(sync_list=sync_list)
 sync_map(sync_list=sync_list)
 
 process_list(sync_list=sync_list, action="copy", verbose=False)

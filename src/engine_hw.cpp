@@ -194,6 +194,11 @@ void EngineHW::preloadAssets()
     m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH][IDX_FILENAME]);
     m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN][IDX_FILENAME]);
 
+    LOGI("loading boss data");
+    if (loadBossData(AssetMan::getPrefix() + "bosses", AssetMan::getPrefix() + "bosses/data"))
+    {
+        LOGE("failed to load boss data");
+    }
     preloadHearts();
 }
 
