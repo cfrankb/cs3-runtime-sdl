@@ -43,6 +43,7 @@ def get_deps_blocks():
         "../../src/layer.cpp",
         "../../src/layerdata.cpp",
         "../../src/animator.cpp",
+        "../../src/game_auto.cpp",
     ]
 
     for f in files:
