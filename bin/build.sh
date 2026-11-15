@@ -81,8 +81,8 @@ elif [[ "$1" == "clean" ]] ; then
 elif [[ "$1" == "bosses" ]] ; then
     #DEST=/home/cfrankb/toolkit/gcc/cs3-runtime-sdl/data/pixels
     DEST=${PWD}/data/pixels
-    cd techdocs/bosses
-    python parse.py
+    cd docs/bosses
+    #python parse.py
     cd ../..
     cd tools/sheet
     make && build/sheet config/bosses.txt

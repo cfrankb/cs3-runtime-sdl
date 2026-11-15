@@ -9,7 +9,7 @@ notes.txt
 tests/out/*
 tests/in/backup
 setup/*
-techdocs/originals
+docs/originals
 local/*
 setup/*
 bb/*
@@ -21,3 +21,4 @@ tests/CMakeLists.txt
 levels2.mapz
 .aider*
 .tmp/*
+*.log

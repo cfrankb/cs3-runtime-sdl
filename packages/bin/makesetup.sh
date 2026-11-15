@@ -16,11 +16,11 @@ run_common() {
     mkdir -p setup/legal
     cp -R data/* setup/data
     cp ${BPATH}/*.exe setup
-    cp -R techdocs/legal/* setup/legal
+    cp -R docs/legal/* setup/legal
     rm -f setup/legal/*.odt
-    cp techdocs/*.md setup/legal
+    cp docs/*.md setup/legal
     #cp LICENSE setup
-    cp techdocs/legal/eula.txt setup/LICENSE
+    cp docs/legal/eula.txt setup/LICENSE
 }
 
 make_setup() {
