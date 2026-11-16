@@ -41,6 +41,10 @@ namespace
     // mirrors the anonymous enum in game.cpp; the fuse scenario fails if it drifts
     constexpr int BARREL_TTL = 20;
 
+    // mirrors GamePrivate::RESPAWN_DELAY in game_ai.cpp; 840 also passes the
+    // (ticks & RESPAWN_SLICE) spawn gate
+    constexpr int RESPAWN_DELAY = 20;
+
     CGame *g_game = nullptr;
 
     uint16_t tileOf(const uint8_t type, const uint8_t minSpeed = 0, const uint16_t aiMustBeClear = 0)
@@ -500,6 +504,113 @@ namespace
         {
             LOGE("barrel fuse: explosion cleanup (count %zu tiles 0x%.2x/0x%.2x)",
                  g_game->getMonsters().size(), CGame::getMap().at(6, 5), CGame::getMap().at(6, 6));
+            return false;
+        }
+        return true;
+    }
+
+    // ---------------- Phase 3: spawns ----------------
+
+    // Melt a respawn-flagged icecube with a bullet (the TYPE_ICECUBE death
+    // path inside handleBullet is what reaches queueRespawn)
+    bool queueRespawnViaMelt(const uint8_t attr)
+    {
+        resetWorld();
+        CActor &ice = spawn(tileOf(TYPE_ICECUBE), TYPE_ICECUBE, 6, 5, AIM_NONE);
+        ice.setAttr(attr);
+        spawn(tileOf(TYPE_FIREBALL), TYPE_FIREBALL, 4, 5, AIM_RIGHT);
+        g_game->manageMonsters(TICKS_ALL); // bullet advances to (5,5)
+        g_game->manageMonsters(TICKS_ALL); // dies at the icecube: melts + queues
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawn setup: melt did not clear both actors");
+            return false;
+        }
+        return true;
+    }
+
+    bool testSpawns()
+    {
+        // attr ATTR_RESPAWN_MIN+1 arms two respawns
+        if (!queueRespawnViaMelt(ATTR_RESPAWN_MIN + 1))
+            return false;
+
+        for (int i = 0; i < RESPAWN_DELAY; ++i) // burn the initial delay
+            g_game->manageSpawns(TICKS_ALL);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawns: respawned before the delay elapsed");
+            return false;
+        }
+
+        g_game->manageSpawns(TICKS_ALL); // delay reached 0: first respawn
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("spawns: no respawn after the delay (count %zu)", g_game->getMonsters().size());
+            return false;
+        }
+        const CActor &born = g_game->getMonsters().front();
+        const uint16_t iceTile = tileOf(TYPE_ICECUBE);
+        if (born.type() != TYPE_ICECUBE || born.pos() != Pos{6, 5} ||
+            CGame::getMap().at(6, 5) != iceTile)
+        {
+            LOGE("spawns: respawn misplaced (type 0x%.2x at (%d,%d) tile 0x%.2x)",
+                 born.type(), born.x(), born.y(), CGame::getMap().at(6, 5));
+            return false;
+        }
+
+        // pretend the monster wandered off so the cell frees up again
+        g_game->getMonsters().clear();
+        g_game->rebuildMonsterGrid();
+        for (int i = 0; i < RESPAWN_DELAY; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("spawns: second respawn came too early");
+            return false;
+        }
+        g_game->manageSpawns(TICKS_ALL);
+        if (g_game->getMonsters().size() != 2)
+        {
+            LOGE("spawns: missing second respawn");
+            return false;
+        }
+
+        // attr's active count is spent: never respawns again
+        g_game->getMonsters().clear();
+        g_game->rebuildMonsterGrid();
+        for (int i = 0; i < RESPAWN_DELAY * 2 + 1; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawns: respawned past the attr's active count");
+            return false;
+        }
+        return true;
+    }
+
+    bool testSpawnsBlocked()
+    {
+        if (!queueRespawnViaMelt(ATTR_RESPAWN_MIN))
+            return false;
+
+        // an actor standing on the spawn point defers the spawn indefinitely
+        spawn(tileOf(TYPE_ICECUBE), TYPE_ICECUBE, 6, 5, AIM_NONE);
+        for (int i = 0; i < RESPAWN_DELAY * 2; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("spawns: spawned onto a blocked cell (count %zu)", g_game->getMonsters().size());
+            return false;
+        }
+
+        // free cell: delay is already 0, so the next slice tick spawns
+        g_game->getMonsters().clear();
+        g_game->rebuildMonsterGrid();
+        g_game->manageSpawns(TICKS_ALL);
+        if (g_game->getMonsters().size() != 1 || g_game->findMonsterAt(6, 5) == CGame::INVALID)
+        {
+            LOGE("spawns: no respawn after the cell unblocked");
             return false;
         }
         return true;
