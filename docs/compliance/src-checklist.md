@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 0ee2727 |
+| Git HEAD | 8fe54c8 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 72 |
-| Verified items | 71 / 121 |
+| Verified items | 77 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -70,12 +70,12 @@ See [README](README.md) for the verification procedure.
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
 - [x] `src/maparch.cpp` `98605da56ae8827d` — covered by t_maparch_*
 - [x] `src/maparch.h` `9c6b979a896e52b2` — covered by t_maparch_*
-- [ ] `src/menu.cpp` `8595b0b453d98e44`
-- [ ] `src/menu.h` `f4cf9a46341c10c7`
-- [ ] `src/menuitem.cpp` `58a52b5b43909d52`
-- [ ] `src/menuitem.h` `55e29074aba864ae`
-- [ ] `src/menumanager.cpp` `db629a80792eaa07`
-- [ ] `src/menumanager.h` `2dc722c339a62c28`
+- [x] `src/menu.cpp` `8595b0b453d98e44` — covered by t_menu
+- [x] `src/menu.h` `f4cf9a46341c10c7` — covered by t_menu
+- [x] `src/menuitem.cpp` `58a52b5b43909d52` — covered by t_menu
+- [x] `src/menuitem.h` `55e29074aba864ae` — covered by t_menu
+- [x] `src/menumanager.cpp` `db629a80792eaa07` — covered by t_menu
+- [x] `src/menumanager.h` `2dc722c339a62c28` — covered by t_menu
 - [x] `src/names.cpp` `5a20574b700bf9b8` — covered by t_tables
 - [x] `src/names.h` `4abc4fbcaaecaa2a` — covered by t_tables
 - [x] `src/parseargs.cpp` `d4fa1a4d9aa0f9cf` — covered by t_parseargs

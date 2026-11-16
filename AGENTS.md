@@ -59,7 +59,7 @@ To ensure codebase consistency and minimize unnecessary version control diffs, a
 - Suggest a commit name; do not commit automatically.
 - Stage by concern. Keep unrelated doc edits out of feature commits.
 - Exclude or delete patch artifacts (`*.orig`, `*.rej`).
-- Check github-ci for deprecated typescript modules and deprecated runners.
+- Check github-ci workflows for deprecated typescript modules and deprecated runners.
 
 ## Edit this file
 - Always ask for explicit user permission before editing AGENTS.md.

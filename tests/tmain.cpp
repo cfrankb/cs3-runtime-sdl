@@ -47,6 +47,7 @@
 #include "t_game_ai.h"
 #include "t_logger.h"
 #include "t_gamemixin.h"
+#include "t_menu.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -107,6 +108,16 @@ int main(int argc, char *args[])
         FCT(test_logger),
         FCT(test_gamemixin),
         FCT(test_game_ai),
+        FCT(test_menu_nav),
+        FCT(test_menu_disabled),
+        FCT(test_item_range),
+        FCT(test_item_options),
+        FCT(test_item_str),
+        FCT(test_menu_roles),
+        FCT(test_menu_scale),
+        FCT(test_mgr_get),
+        FCT(test_mgr_active),
+        FCT(test_mgr_hit),
     };
 
     int failed = 0;

@@ -121,11 +121,106 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       value-initialized); `validateSignature` logged `&signature` (pointer
       bytes) instead of the signature string. `game.cpp` 32.0% → 42.4%.
 
-## Tier 4 — not worth unit-testing (defer / integrate manually)
+## Round 2 (2026-11-16) — re-tiering the leftovers
 
-- `engine.cpp`, `engine_hw.cpp`, `tileset_tex.cpp` — SDL render context.
-- `gameui.cpp`, `menu.cpp`, `menuitem.cpp`, `menumanager.cpp` — UI state
-  machines bound to the engine loop.
-- `main.cpp`, `steam_helper.cpp` — entry point / platform SDK.
-- `mu_sdl.cpp`, `sn_sdl.cpp` — SDL audio backends.
-- `tilesdebug.cpp` — debug dump helpers.
+Detailed phase-by-phase plan: [coverage-round2-test-plan.md](coverage-round2-test-plan.md).
+
+`grep -c SDL_` on the files Tier 4 wrote off as "not worth unit-testing":
+`menu.cpp`, `menuitem.cpp`, `menumanager.cpp`, `gameui.cpp`, `engine.cpp`,
+`gamemixin.cpp`, `animator.cpp`, `shared/helper.cpp`, `shared/Frame.cpp`,
+`shared/FrameSet.cpp`, `shared/PngMagic.cpp` → **0 SDL references each**.
+They are UI state machines and a software rasteriser, not GPU code. The old
+"bound to the engine loop" label was an assumption, not a dependency. Ordered
+by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
+
+## Tier 4 — pure logic, no new scaffolding (~1320 lines, 42% → ~53%)
+
+- [x] `menu.cpp` (105 @ 8.6%) + `menuitem.cpp` (93 @ 0%) — one `t_menu.cpp`.
+      `addItem`/`at`/`size`, `up`/`down` ends return false (no wrap), `setCurrent`
+      clamping, range items `left`/`right` clamps (raw value steps by 1;
+      `m_factor`/`m_start` only scale `str()`), options items, `disable`
+      (caret still visits disabled items), `role`/`userData`/`type`
+      accessors, `str()` rendering, `containsRole`/`removeRole`/
+      `getItemByRole`/`moveItem` (caret tracking). No fixture, no singleton.
+      menu.cpp 98.1%, menuitem.cpp 97.8%.
+- [x] `menumanager.cpp` (48 @ 16.7%) — extend `t_menu.cpp`: `get()` menus
+      pre-created, `setActive`/`isMenuActive`/`toggleMenuActive`,
+      `menuItemAt(x,y)` hit-test (y-band only, x ignored, disabled rows are
+      hits), `followPointer`. menumanager.cpp 95.8%.
+- [ ] `gameui.cpp` (37 @ 37.8%) — `addButton`/`clear`/`at`/`buttons`,
+      `show`/`hide`/`isVisible`, `width`/`height`/`margin` geometry.
+- [ ] `shared/helper.cpp` (112 @ 33.9%) — `copyFile`/`concat` round-trip +
+      missing-source error strings, `compressData` (both overloads) round-trip
+      through zlib `uncompress` (`zlibstatic` is already linked),
+      `readFile` hit/miss. `getUUID`: format + uniqueness only.
+- [ ] `shared/Frame.cpp` (514 @ 29.0%) — `t_frame` additions on small
+      synthetic frames: `flipH`/`flipV`/`rotate`/`shrink`/`enlarge`,
+      `shiftUP|DOWN|LEFT|RIGHT` with and without `wrap`, `floodFill`,
+      `floodFillAlpha`, `clip`, `fill`/`isEmpty`/`inverse`/`copy`/`fill`,
+      `draw(vector<Dot>)`+`save`, `drawAt` transparency, `shadow`/`fade`,
+      `toNet`, `setTransparency`/`hasTransparency`/`setTopPixelAsTranparency`,
+      `write`/`read` round-trip through `IFile` (already covered by t_ifile).
+      `toBmp`/`toPng`/`split`/`explode`: header + size + round-trip assertions,
+      no byte goldens.
+- [ ] `shared/FrameSet.cpp` (683 @ 44.1%) — same synthetic-frame trick:
+      add/insert/remove/`write`/`read` round-trip, transforms applied to a set,
+      `oblv2DataUnit` metadata paths. Reuse the Frame helpers, do not re-derive.
+- [ ] `shared/PngMagic.cpp` (310 @ 39.7%) — encode→decode identity on a 4x4
+      and an indexed/transparent frame, truncated-chunk and bad-CRC rejection
+      (also finally exercises `shared/CRC.h`), existing `tests/in/refs` PNGs.
+- [ ] `animator.cpp` (83 @ 24.1%) — `animate()` frame advance/loop,
+      `getSpecialInfo`, `reloadTileData` with the synthetic `g_layerdata`
+      entries `t_game.cpp` already builds.
+
+## Tier 5 — needs a stub subclass, still no SDL (~960 lines, ~53% → ~61%)
+
+- [ ] `engine.cpp` (344 @ 0%) — `Engine` is an abstract base with 0 SDL calls.
+      A ~20-line `TestEngine : Engine` with empty pure-virtual bodies (same
+      expose-protected trick `t_gamemixin.cpp` uses) unlocks the real logic:
+      `gatherSprites` viewport culling (`cameraContext_t` zoom/scale math —
+      the best bug surface in the file), `getEventText`, `initLevelSummary` +
+      `drawLevelSummary`, `drawScores`, `resizeGameMenu`,
+      `initVirtualKeyboard`/`drawVirtualKeyboard`, `getEventText` parity with
+      `CGameMixin::getEventText` (two near-duplicate implementations — a test
+      that asserts both agree is the cheap guard against one drifting).
+- [ ] `gamemixin.cpp` (1454 @ 15.7%) — the single biggest block in `src/`
+      (~1225 uncovered lines) and it calls no SDL: every `draw*` takes a
+      `CFrame &` and rasterises in software. Drive it from the existing
+      headless `TestRuntime : CRuntime` + map/bossdata fixtures and assert
+      on invariants (changed-pixel counts, non-empty bounding boxes, layer
+      order, `tile2Frame`/`drawTile` frame identity), not goldens:
+      `drawTile`, `tile2Frame`, `drawViewPortStatic`, `drawViewPortDynamic`,
+      `drawBossses`, `drawScores`, `drawLevelIntro`, `drawScreen`,
+      `drawMenu`. Then the non-draw rules: `handleFunctionKeys_Game`,
+      `handleInputString`, `changeZoom`, `setWidth`/`setHeight`,
+      `enableHiScore`, `setSkill`. `mainLoop`/`manageGamePlay` last — they
+      fan out into audio and menu state; assert state transitions over N
+      ticks only.
+
+## Tier 6 — SDL-bound: one dummy-driver test, no mocks (~570 lines, → ~66%)
+
+- [ ] `runtime.cpp` (1570 @ 2.3%) + `engine_hw.cpp` (701 @ 0%) + `paint()` /
+      `takeScreenshot()` — set `SDL_VIDEODRIVER=dummy` (and
+      `SDL_AUDIODRIVER=dummy`) in the test, `SDL_Init(SDL_INIT_VIDEO)`, create
+      the window through the existing `CRuntime` path, then call `paint`,
+      `drawMenu`, `takeScreenshot` and the `onMouseEvent`/`onGamePadEvent`
+      dispatchers with hand-built `SDL_Event`s. Skip the suite (return true,
+      log a warning) when `SDL_Init` fails so headless CI cannot go red.
+      Put it in a separate `cs3-tests-sdl` binary registered with its own
+      `add_test` if it destabilises the main suite; do not mock SDL, and do
+      not refactor for testability.
+- [ ] Out of scope, keep `[ ]` in the checklist with a note:
+      `main.cpp`, `steam_helper.cpp`, `mu_sdl.cpp`, `sn_sdl.cpp`,
+      `tileset_tex.cpp`, `tilesdebug.cpp`, header-only tables
+      (`animzdata.h`, `colormasks.h`, `font8x8.h`, `tilesdefs.h`, ...).
+
+## Tier 7 — process gaps found while re-tiering
+
+- [ ] No workflow runs `ctest` (`grep -l ctest .github/workflows/*` → empty).
+      `docs/spec/README.md` requires tests wired to CI. Add one small
+      `linux-tests.yml`: configure + build `src_lib` and `cs3-tests`, run
+      `ctest`. Coverage generation stays local/manual.
+- [ ] `itools/gen_coverage.py` reports per-file only, which is how the Tier 4
+      mislabelling survived. Have it also list the worst uncovered functions
+      per file (`gcov -f -n`, filter `_ZSt`/`std::`/`operator` noise) so the
+      next round of targets comes from the report.
