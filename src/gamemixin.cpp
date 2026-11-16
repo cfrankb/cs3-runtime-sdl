@@ -1892,7 +1892,7 @@ bool CGameMixin::read(IFile &sfile, std::string &name)
     // fseek(sfile, ptr, SEEK_SET);
     size_t size = 0;
     _R(&size, sizeof(uint16_t));
-    std::vector<char> tmp(size);
+    std::vector<char> tmp(size + 1, 0); // NUL-terminated: name = tmp.data()
     _R(tmp.data(), size);
     name = tmp.data();
     return true;

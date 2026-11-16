@@ -32,6 +32,13 @@
 #include "t_ifile.h"
 #include "t_frameset.h"
 #include "t_pngmagic.h"
+#include "t_actor.h"
+#include "t_animator.h"
+#include "t_randomz.h"
+#include "t_parseargs.h"
+#include "t_statedata.h"
+#include "t_dotarray.h"
+#include "t_bossdata.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -74,6 +81,14 @@ int main(int argc, char *args[])
         FCT(test_ifile_vector),
         FCT(test_png_magic),
         FCT(test_frameset),
+        FCT(test_actor),
+        FCT(test_path_algos),
+        FCT(test_animator),
+        FCT(test_random),
+        FCT(test_parseargs),
+        FCT(test_statedata),
+        FCT(test_dotarray),
+        FCT(test_bossdata),
     };
 
     int failed = 0;

@@ -24,36 +24,57 @@
 #include "../src/gamemixin.h"
 #include "../src/skills.h"
 #include "../src/runtime.h"
+#include "../src/game.h"
 #include "thelper.h"
 #include "t_runtime.h"
 
 bool test_runtime()
 {
-    constexpr const char *IN_FILE = "tests/in/savegame-cs3.dat";
+    constexpr const char *GEN_FILE = "tests/out/savegame-gen.dat";
     constexpr const char *OUT_FILE = "tests/out/savegame-cs3.dat";
+
+    // Generate the savegame with the current engine: a checked-in fixture
+    // written by an older ENGINE_VERSION is rejected on load by design
+    // (CGame::validateSignature), which would fail this test on every
+    // version bump. Default-constructed CRuntime holds a default CGame.
+    std::string name = "test";
     CRuntime runtime;
     runtime.setQuiet(true);
-    std::string name;
-    if (!runtime.loadFromFile(IN_FILE, name))
+
+    // a default (0x0, layerless) map can't round-trip: zero dimensions are
+    // written as 0 but read back as MAX_SIZE; give the game map real content
+    if (!CGame::getMap().resize(20, 25, 0, true))
     {
-        LOGE("read error: %s ", IN_FILE);
+        LOGE("failed to resize game map");
+        return false;
+    }
+
+    if (!runtime.saveToFile(GEN_FILE, name))
+    {
+        LOGE("failed to write %s", GEN_FILE);
+        return false;
+    }
+
+    if (!runtime.loadFromFile(GEN_FILE, name))
+    {
+        LOGE("read error: %s", GEN_FILE);
         return false;
     }
 
     if (!runtime.saveToFile(OUT_FILE, name))
     {
-        LOGE("failed write %s", OUT_FILE);
+        LOGE("failed to write %s", OUT_FILE);
         return false;
     }
 
-    if (getFileSize(OUT_FILE) != getFileSize(IN_FILE))
+    if (!compareFiles(GEN_FILE, OUT_FILE))
     {
-        LOGE("different disk size for %s and %s; %ld != %ld",
-             IN_FILE, OUT_FILE, getFileSize(IN_FILE), getFileSize(OUT_FILE));
+        LOGE("%s and %s differ", GEN_FILE, OUT_FILE);
         return false;
     }
 
     // clean up
+    std::filesystem::remove(GEN_FILE);
     std::filesystem::remove(OUT_FILE);
     return true;
 }

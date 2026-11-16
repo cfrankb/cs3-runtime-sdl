@@ -273,8 +273,10 @@ bool test_ifile_vector()
         {2, -5, 3, 0, 0xc0, 1},
         {65535, 32767, -32768, 65534, 0xc0, 1},
     };
-    // 4-byte count + 3 * 8-byte elements
-    const long expectedSize = sizeof(uint32_t) + static_cast<long>(in.size()) * sizeof(spawn_t);
+    // 4-byte count + 3 * 11-byte serialized elements
+    // (spawn_t serializes field-by-field: 5 * uint16 + uint8; sizeof(spawn_t) is 12 with padding)
+    const long expectedSize = sizeof(uint32_t) +
+                              static_cast<long>(in.size()) * (5 * sizeof(uint16_t) + sizeof(uint8_t));
 
     CFileMem mem;
     if (!mem.open("tests/out/vector.dat", "rw+"))
