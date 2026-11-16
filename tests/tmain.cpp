@@ -41,6 +41,9 @@
 #include "t_bossdata.h"
 #include "t_boss.h"
 #include "t_level.h"
+#include "t_ai_path.h"
+#include "t_assetman.h"
+#include "t_tables.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -93,6 +96,9 @@ int main(int argc, char *args[])
         FCT(test_bossdata),
         FCT(test_boss),
         FCT(test_level),
+        FCT(test_pathfinding),
+        FCT(test_assetman),
+        FCT(test_tables),
     };
 
     int failed = 0;

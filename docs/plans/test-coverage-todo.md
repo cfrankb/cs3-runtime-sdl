@@ -44,18 +44,33 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
 
 ## Tier 3 — need singleton or fixture scaffolding first
 
-- [ ] `ai_path.cpp` — A\*/BFS/LOS/AStarSmooth `findPath` behavior: small
-      walkable/blocked map via `CGame::getGame()` (helper in `thelper`);
-      assert reachable path vs `NoValidPath` around a wall.
+- [x] `ai_path.cpp` — `t_ai_path.cpp`: A*/BFS/AStarSmooth/LOS `findPath`
+      on a 10x10 map (open grid optimal length, gap-detour routing,
+      sealed-wall no-path, out-of-bounds goals) driven by a minimal
+      `ISprite` (tile==0xff blocks) mirroring `CGame::translate`. Fixed
+      three product bugs found by test: `g_deltas` axes were rotated 90°
+      vs the engine aim convention (sprite validity checked a perpendicular
+      cell); A*/BFS/AStarSmooth probed `canMove` after moving to `newPos`
+      (checked one cell past the step, never the entered cell) and LOS had
+      the same off-by-one; `AStarSmooth::smoothPath` probed LOS from the
+      sprite's static position and then rejected every smoothed jump >1
+      cell, so it always returned an empty path.
       (CPath serialization + `getPathAlgo` already covered by `t_actor`.)
-- [ ] `assetman.cpp` — asset file loading against `tests/in/ima`, `mcx`,
-      `obl*` fixtures.
-- [ ] `layerdata.cpp` / `tilesdata.cpp` / `colormap.cpp` / `sheetdata.cpp` /
-      `names.cpp` — table loaders (`loadTileLayer` etc.) against sample data
-      files; verify loaded entries and bounds.
+- [x] `assetman.cpp` — `t_assetman.cpp`: `defaultPrefix`/`addTrailSlash`/
+      `setPrefix` slash handling, `read()` of `tests/in/test.rec` byte count
+      + `terminator` NUL, missing-file empty result.
+- [x] `layerdata.cpp` / `tilesdata.cpp` / `colormap.cpp` / `sheetdata.cpp` /
+      `names.cpp` — `t_tables.cpp`: `resolvePath` (bare + `Path::` prefix),
+      `resolveTile`/`resolveSound`/`resolveColor` hit+miss sentinels,
+      `resolveFlags` OR/`0`/numeric-fallback; `parseColorMaps` sections,
+      clear-on-reparse, invalid-section/kv-before-section/bad-hex rejection;
+      `loadTileLayer` JSON defaults, `next:-1`→0, field parse, baseIdx
+      offset, missing-file failure; sheet tables non-empty; `getChTile`
+      128-entry wrap.
 - [ ] `logger.cpp` — log line lands in output file; levels filter correctly.
 - [ ] `game_ai.cpp` — AI tick logic against singleton + map fixture
       (982 lines, biggest untested block; do after ai_path helper exists).
+      Phased plan: [game_ai-test-plan.md](game_ai-test-plan.md).
 
 ## Tier 4 — not worth unit-testing (defer / integrate manually)
 

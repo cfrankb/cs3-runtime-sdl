@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | b9337e6 |
+| Git HEAD | df6585f |
 | Files tracked | 121 |
-| Covered by cs3-tests | 57 |
-| Verified items | 55 / 121 |
+| Covered by cs3-tests | 69 |
+| Verified items | 69 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -16,13 +16,13 @@ See [README](README.md) for the verification procedure.
 
 - [x] `src/actor.cpp` `1ecdbe5a28721251` — covered by t_actor
 - [x] `src/actor.h` `b169d17893baf80e` — covered by t_actor
-- [ ] `src/ai_path.cpp` `162c79f7fa05e79c` — PARTIAL CPath serialization + getPathAlgo only (t_actor); A*/BFS/LOS untested
-- [ ] `src/ai_path.h` `3100f68c01d31d7f` — PARTIAL CPath serialization + getPathAlgo only (t_actor); A*/BFS/LOS untested
+- [x] `src/ai_path.cpp` `e786e094375b18ec` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
 - [x] `src/animator.h` `55d40c7187188ab0` — covered by t_animator
 - [ ] `src/animzdata.h` `722a3035388bf09b`
-- [ ] `src/assetman.cpp` `fd156396d2a83648`
-- [ ] `src/assetman.h` `7d4bc0e19fe999a5`
+- [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
+- [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f997bfc050e9663d`
 - [x] `src/boss.cpp` `c86ea109a1e8d05c` — covered by t_boss
 - [x] `src/boss.h` `1692c812fa358f22` — covered by t_boss
@@ -31,8 +31,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/build.h` `76583a503a9cada0`
 - [ ] `src/chars.h` `0982da541f3fc76e`
 - [ ] `src/color.h` `b24ca2504f97fa00`
-- [ ] `src/colormap.cpp` `8e94f1ee9995f4d1`
-- [ ] `src/colormap.h` `38285a2a847b1cbb`
+- [x] `src/colormap.cpp` `8e94f1ee9995f4d1` — covered by t_tables
+- [x] `src/colormap.h` `38285a2a847b1cbb` — covered by t_tables
 - [ ] `src/colormasks.h` `5dbd536c2c942b3d`
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
@@ -59,8 +59,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/joyaim.h` `4e7e7f88cf5c0e02`
 - [x] `src/layer.cpp` `7e9d13c49baa8dfc` — covered by t_map*
 - [x] `src/layer.h` `5b326b8fb740de7a` — covered by t_map*
-- [ ] `src/layerdata.cpp` `ac81acaf0a834d9f`
-- [ ] `src/layerdata.h` `8c2ce0bbe17cc15e`
+- [x] `src/layerdata.cpp` `ac81acaf0a834d9f` — covered by t_tables
+- [x] `src/layerdata.h` `8c2ce0bbe17cc15e` — covered by t_tables
 - [x] `src/level.cpp` `b919dac75ba69dbb` — covered by t_level
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
 - [ ] `src/logger.cpp` `349c670dd25912b5`
@@ -76,8 +76,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/menuitem.h` `55e29074aba864ae`
 - [ ] `src/menumanager.cpp` `db629a80792eaa07`
 - [ ] `src/menumanager.h` `2dc722c339a62c28`
-- [ ] `src/names.cpp` `e94ca83d0e53b977`
-- [ ] `src/names.h` `4abc4fbcaaecaa2a`
+- [x] `src/names.cpp` `e94ca83d0e53b977` — covered by t_tables
+- [x] `src/names.h` `4abc4fbcaaecaa2a` — covered by t_tables
 - [x] `src/parseargs.cpp` `6cc1b1fabd8cc637` — covered by t_parseargs
 - [x] `src/parseargs.h` `3f41edcb703df911` — covered by t_parseargs
 - [x] `src/randomz.cpp` `ec222ecf543375d2` — covered by t_randomz
@@ -88,8 +88,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/runtime.cpp` `3468592a97c160d4` — covered by t_runtime
 - [x] `src/runtime.h` `08ab887f2a4a1bfd` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
-- [ ] `src/sheetdata.cpp` `7c9aab9bf61babd0`
-- [ ] `src/sheetdata.h` `51047aeaee728977`
+- [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables
+- [x] `src/sheetdata.h` `51047aeaee728977` — covered by t_tables
 - [x] `src/skills.h` `a8005be0043d59a7` — covered by t_gamestats, t_runtime
 - [ ] `src/sounds.h` `ac00a2436762f36c`
 - [ ] `src/sprtypes.h` `a5b71232dd3298e0`
@@ -103,8 +103,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/strhelper.h` `faa42b2398e7575a` — covered by t_strhelper
 - [ ] `src/summary.h` `1ffe8d997dfe07f3`
 - [ ] `src/theme.h` `cac18f341241b32f`
-- [ ] `src/tilesdata.cpp` `c34c94acd89f2389`
-- [ ] `src/tilesdata.h` `addedd5707c8cbb4`
+- [x] `src/tilesdata.cpp` `c34c94acd89f2389` — covered by t_tables
+- [x] `src/tilesdata.h` `addedd5707c8cbb4` — covered by t_tables
 - [ ] `src/tilesdebug.cpp` `dd62b239b320d236`
 - [ ] `src/tilesdebug.h` `3c82e45296d77958`
 - [ ] `src/tilesdefs.h` `56cf1fccc1e5663e`
@@ -121,7 +121,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FileWrap.cpp` `c96ca9d8c074412f` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
 - [x] `src/shared/Frame.cpp` `7b89f7a559c86a3d` — covered by t_frameset
-- [x] `src/shared/Frame.h` `c43fdc39af44a4f5` — covered by t_frameset
+- [x] `src/shared/Frame.h` `b9dee218bab8ee86` — covered by t_frameset
 - [x] `src/shared/FrameSet.cpp` `45804ad3c73d96b1` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `917ea6d58ec186fe` — covered by t_frameset
 - [x] `src/shared/IFile.h` `c97f77321536adee` — covered by t_ifile

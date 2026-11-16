@@ -39,11 +39,13 @@ namespace PathData
     constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
     constexpr size_t MAX_PATH_SIZE = 4096;
     constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
+    // must match CGame::translate()/JoyAim convention used by sprites and by
+    // the direction labelling below
     constexpr std::array<Pos, JoyAim::TOTAL_AIMS> g_deltas = {
-        Pos{-1, 0}, // Up
-        Pos{1, 0},  // Down
-        Pos{0, -1}, // Left
-        Pos{0, 1},  // Right
+        Pos{0, -1}, // Up
+        Pos{0, 1},  // Down
+        Pos{-1, 0}, // Left
+        Pos{1, 0},  // Right
     };
 }
 
@@ -168,17 +170,13 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
             if (closedList.find(newPos) != closedList.end())
                 continue;
 
-            // save original position
-            Pos originalPos{sprite.pos()};
-
-            // Check if move is valid
-            sprite.move(newPos);
-            if (!sprite.canMove(g_dirs[i]))
-            {
-                sprite.move(originalPos);
-                continue;
-            }
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_dirs[i]);
             sprite.move(originalPos);
+            if (!canStep)
+                continue;
 
             int newGCost = current->gCost + 1;
             int newHCost = manhattanDistance(newPos, goalPos);
@@ -263,15 +261,17 @@ std::vector<JoyAim> BFS::findPath(ISprite &sprite, const Pos &goalPos) const
             if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei || visited[newPos])
                 continue;
 
-            Pos originalPos = sprite.pos();
-            sprite.move(newPos);
-            if (sprite.canMove(g_dirs[i]))
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos = sprite.pos();
+            sprite.move(current);
+            const bool canStep = sprite.canMove(g_dirs[i]);
+            sprite.move(originalPos);
+            if (canStep)
             {
                 queue.push(newPos);
                 visited[newPos] = true;
                 parent[newPos] = current;
             }
-            sprite.move(originalPos);
         }
     }
     return {};
@@ -315,7 +315,8 @@ std::vector<JoyAim> LineOfSight::findPath(ISprite &sprite, const Pos &playerPos)
             Pos next = {static_cast<int16_t>(x + stepX), static_cast<int16_t>(y)};
             if (next.x >= 0 && next.x < mapLen && next.y >= 0 && next.y < mapHei)
             {
-                sprite.move(next);
+                // probe canMove from the current cell so the entered cell is checked
+                sprite.move(Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)});
                 JoyAim aim = (stepX > 0 ? AIM_RIGHT : AIM_LEFT);
                 if (sprite.canMove(aim))
                 {
@@ -333,7 +334,8 @@ std::vector<JoyAim> LineOfSight::findPath(ISprite &sprite, const Pos &playerPos)
             Pos next = {static_cast<int16_t>(x), static_cast<int16_t>(y + stepY)};
             if (next.x >= 0 && next.x < mapLen && next.y >= 0 && next.y < mapHei)
             {
-                const_cast<ISprite &>(sprite).move(next);
+                // probe canMove from the current cell so the entered cell is checked
+                sprite.move(Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)});
                 JoyAim aim = (stepY > 0 ? AIM_DOWN : AIM_UP);
                 if (sprite.canMove(aim))
                 {
@@ -367,11 +369,14 @@ std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprit
     const CMap &map = CGame::getMap();
     const int mapLen = map.width() * granularFactor; // Half-tile bounds
     const int mapHei = map.height() * granularFactor;
-    std::vector<Pos> smoothedPath = {path[0]};
+    const Pos originalPos = sprite.pos();
 
     LineOfSight los;
+    std::vector<JoyAim> directions;
     for (size_t i = 1; i < path.size();)
     {
+        // probe line-of-sight from the actual segment start
+        sprite.move(path[i - 1]);
         size_t j = i + 1;
         while (j < path.size())
         {
@@ -385,7 +390,7 @@ std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprit
                 break;
             }
             // Reuse LineOfSight to check if direct path is clear in half-tile space
-            if (!los.findPath(const_cast<ISprite &>(sprite), end).empty())
+            if (!los.findPath(sprite, end).empty())
             {
                 j++;
             }
@@ -394,30 +399,19 @@ std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprit
                 break;
             }
         }
-        smoothedPath.push_back(path[j - 1]);
-        i = j;
-    }
-
-    std::vector<JoyAim> directions;
-    for (size_t i = 1; i < smoothedPath.size(); ++i)
-    {
-        const int dx = smoothedPath[i].x - smoothedPath[i - 1].x;
-        const int dy = smoothedPath[i].y - smoothedPath[i - 1].y;
-        if (dx == 1 && dy == 0)
-            directions.push_back(JoyAim::AIM_RIGHT);
-        else if (dx == -1 && dy == 0)
-            directions.push_back(JoyAim::AIM_LEFT);
-        else if (dx == 0 && dy == 1)
-            directions.push_back(JoyAim::AIM_DOWN);
-        else if (dx == 0 && dy == -1)
-            directions.push_back(JoyAim::AIM_UP);
-        else
+        // emit the unit moves from path[i-1] to path[j-1] (LOS is all-or-nothing)
+        const auto segment = los.findPath(sprite, path[j - 1]);
+        if (segment.empty())
         {
-            LOGE("Invalid smoothed path transition from (%d,%d) to (%d,%d) on line %d",
-                 smoothedPath[i - 1].x, smoothedPath[i - 1].y, smoothedPath[i].x, smoothedPath[i].y, __LINE__);
+            LOGE("Invalid smoothed path transition from (%d,%d) to (%d,%d)",
+                 path[i - 1].x, path[i - 1].y, path[j - 1].x, path[j - 1].y);
+            sprite.move(originalPos);
             return {};
         }
+        directions.insert(directions.end(), segment.begin(), segment.end());
+        i = j;
     }
+    sprite.move(originalPos);
     return directions;
 }
 
@@ -471,14 +465,13 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
             if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei || closedList[newPos])
                 continue;
 
+            // probe canMove from the expanded node so the entered cell is checked
             const Pos originalPos = sprite.pos();
-            const_cast<ISprite &>(sprite).move(newPos);
-            if (!sprite.canMove(g_dirs[i]))
-            {
-                sprite.move(originalPos);
-                continue;
-            }
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_dirs[i]);
             sprite.move(originalPos);
+            if (!canStep)
+                continue;
 
             int newGCost = current->gCost + 1;
             if (!nodes[newPos] || newGCost < nodes[newPos]->gCost)
