@@ -9,6 +9,7 @@ show_help () {
     echo "msvc          Windows/clang/msvc"
     echo "steam_linux   g++ Linux (steam)"
     echo "steam_msvc    Windows/clang/msvc (steam)"
+    exit 1
 }
 
 APP_NAME=cs3-runtime

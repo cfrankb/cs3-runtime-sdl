@@ -416,7 +416,7 @@ bool CGame::loadLevel(const GameMode mode)
     if (m_hints.size() == 0)
         LOGW("hints not loaded -- not available???");
 
-    m_introHint = m_hints.size() ? rand() % m_hints.size() : 0;
+    m_introHint = m_hints.size() ? getRandom().range(0, static_cast<int>(m_hints.size())) : 0;
 
     // clear event list
     clearEvents();

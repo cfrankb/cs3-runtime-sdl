@@ -56,7 +56,7 @@ bool test_statedata()
     {
         const bool ok = (o.display == "TIMEOUT" && o.value == TIMEOUT) ||
                         (o.display == "PRIVATE" && o.value == PRIVATE) ||
-                        (o.display == "USERDEF1" && o.value == USERDEF1) ||
+                        (o.display == "USERDEF1" && o.value == STATE_USERDEF1) ||
                         (o.display == "AUTHOR" && o.value == AUTHOR) ||
                         (o.display == "MSG0" && o.value == MSG0) ||
                         (o.display == "MSGF" && o.value == MSGF) ||

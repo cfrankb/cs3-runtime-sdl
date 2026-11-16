@@ -62,7 +62,6 @@ public:
     inline const hitbox_t &hitbox() const { return m_bossData->hitbox; }
     uint8_t type() const override { return m_bossData->type; }
     std::vector<HitResult> testHitbox1(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
-    std::vector<HitResult> testHitbox2(const CMap &map, hitboxTestCallback_t testCallback, hitboxActionCallback_t actionCallback) const;
 
     bool isSolid(const Pos &pos) const;
     bool isGhostBlocked(const Pos &pos) const;
