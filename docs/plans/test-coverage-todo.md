@@ -174,9 +174,14 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       name, `toSubset` and `operator=` deep copies, `setCurrFrame`
       no-clamp pinned. 70.3%. `operator--` non-empty path is UB — left
       unexercised, finding recorded.
-- [ ] `shared/PngMagic.cpp` (310 @ 39.7%) — encode→decode identity on a 4x4
-      and an indexed/transparent frame, truncated-chunk and bad-CRC rejection
-      (also finally exercises `shared/CRC.h`), existing `tests/in/refs` PNGs.
+- [x] `shared/PngMagic.cpp` (310 @ 39.7%) — DONE via `tests/t_pngmagic.cpp`
+      extension: refs parse + `skipOblt` split-vs-whole, synthetic encode→
+      decode identity incl. transparent frame, bad-signature/bad-CRC/
+      truncated rejection (first `shared/CRC.h` exercise), `orgPos` offset,
+      hand-built 4-bit indexed PNG with tRNS + obLT v2 metadata, full 8-bit
+      row-filter matrix (NONE/SUB/UP/AVERAGE/PAETH), split-IDAT, bad filter
+      byte and corrupt-zlib rejection. 89.0%. obLT header is native-endian;
+      "unsupported oblt version" return is unreachable — findings recorded.
 - [ ] `animator.cpp` (83 @ 24.1%) — `animate()` frame advance/loop,
       `getSpecialInfo`, `reloadTileData` with the synthetic `g_layerdata`
       entries `t_game.cpp` already builds.

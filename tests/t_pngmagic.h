@@ -18,3 +18,9 @@
 #pragma once
 
 bool test_png_magic();
+bool test_png_refs();
+bool test_png_roundtrip();
+bool test_png_corrupt();
+bool test_png_orgpos();
+bool test_png_4bpp();
+bool test_png_filters();
