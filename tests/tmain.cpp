@@ -48,6 +48,9 @@
 #include "t_logger.h"
 #include "t_gamemixin.h"
 #include "t_menu.h"
+#include "t_gameui.h"
+#include "t_helper.h"
+#include "t_frame.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -118,6 +121,16 @@ int main(int argc, char *args[])
         FCT(test_mgr_get),
         FCT(test_mgr_active),
         FCT(test_mgr_hit),
+        FCT(test_gameui),
+        FCT(test_helper_files),
+        FCT(test_helper_compress),
+        FCT(test_helper_strings),
+        FCT(test_helper_uuid),
+        FCT(test_frame_transforms),
+        FCT(test_frame_fills),
+        FCT(test_frame_geometry),
+        FCT(test_frame_pixels),
+        FCT(test_frame_io),
     };
 
     int failed = 0;

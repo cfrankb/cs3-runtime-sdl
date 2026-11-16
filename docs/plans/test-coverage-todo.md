@@ -147,21 +147,25 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       pre-created, `setActive`/`isMenuActive`/`toggleMenuActive`,
       `menuItemAt(x,y)` hit-test (y-band only, x ignored, disabled rows are
       hits), `followPointer`. menumanager.cpp 95.8%.
-- [ ] `gameui.cpp` (37 @ 37.8%) — `addButton`/`clear`/`at`/`buttons`,
-      `show`/`hide`/`isVisible`, `width`/`height`/`margin` geometry.
-- [ ] `shared/helper.cpp` (112 @ 33.9%) — `copyFile`/`concat` round-trip +
-      missing-source error strings, `compressData` (both overloads) round-trip
-      through zlib `uncompress` (`zlibstatic` is already linked),
-      `readFile` hit/miss. `getUUID`: format + uniqueness only.
-- [ ] `shared/Frame.cpp` (514 @ 29.0%) — `t_frame` additions on small
-      synthetic frames: `flipH`/`flipV`/`rotate`/`shrink`/`enlarge`,
+- [x] `gameui.cpp` (37 @ 37.8%) — `addButton`/`clear`/`at`/`buttons`,
+      `show`/`hide`/`isVisible`, `width`/`height`/`margin` geometry (max
+      button extents; margin is an independent knob). gameui.cpp 100%.
+- [x] `shared/helper.cpp` (112 @ 33.9%) — `t_helper`: `copyFile`/`concat`
+      round-trip + missing-source error strings, `compressData` (all three
+      overloads) round-trip through zlib `uncompress` (`zlibstatic` is
+      already linked), `readFile` hit/miss, `toUpper`/`upperClean` table,
+      `getUUID` format + 100-sample uniqueness. 87.5%.
+- [x] `shared/Frame.cpp` (514 @ 29.0%) — `tests/t_frame.cpp` (5 suites):
+      `flipH`/`flipV`/`rotate`/`shrink`/`enlarge`,
       `shiftUP|DOWN|LEFT|RIGHT` with and without `wrap`, `floodFill`,
-      `floodFillAlpha`, `clip`, `fill`/`isEmpty`/`inverse`/`copy`/`fill`,
-      `draw(vector<Dot>)`+`save`, `drawAt` transparency, `shadow`/`fade`,
-      `toNet`, `setTransparency`/`hasTransparency`/`setTopPixelAsTranparency`,
-      `write`/`read` round-trip through `IFile` (already covered by t_ifile).
-      `toBmp`/`toPng`/`split`/`explode`: header + size + round-trip assertions,
-      no byte goldens.
+      `floodFillAlpha`, `clip` (incl. throw on over-wide extent),
+      `fill`/`isEmpty`/`inverse`/`copy`, `shadow`/`fade`,
+      `draw(vector<Dot>)`+`save` incl. colour-only/alpha-only modes,
+      `drawAt` transparency, `toNet`, `getChunkType`,
+      `setTransparency`/`hasTransparency`/`setTopPixelAsTranparency`,
+      `split`/`explode` (both overloads), `write`/`read` round-trip via
+      `CFileWrap`, `toBmp` header + `toPng` signature/IHDR/IEND.
+      Frame.cpp 85.8%, DotArray.cpp 94.9%.
 - [ ] `shared/FrameSet.cpp` (683 @ 44.1%) — same synthetic-frame trick:
       add/insert/remove/`write`/`read` round-trip, transforms applied to a set,
       `oblv2DataUnit` metadata paths. Reuse the Frame helpers, do not re-derive.

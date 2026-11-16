@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 8fe54c8 |
+| Git HEAD | 8f045c7 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 72 |
-| Verified items | 77 / 121 |
+| Verified items | 79 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -53,8 +53,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `174638c96b00ba1d` — covered by t_gamestats
-- [ ] `src/gameui.cpp` `00334bc49c514026`
-- [ ] `src/gameui.h` `6e986224ea513449`
+- [x] `src/gameui.cpp` `00334bc49c514026` — covered by t_gameui
+- [x] `src/gameui.h` `6e986224ea513449` — covered by t_gameui
 - [ ] `src/isprite.h` `4207150543c2d9f5`
 - [ ] `src/joyaim.h` `4e7e7f88cf5c0e02`
 - [x] `src/layer.cpp` `7e9d13c49baa8dfc` — covered by t_map*
@@ -120,15 +120,15 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FileMem.h` `2a83f8ea3f73b7bf` — covered by t_ifile
 - [x] `src/shared/FileWrap.cpp` `c96ca9d8c074412f` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
-- [x] `src/shared/Frame.cpp` `7b89f7a559c86a3d` — covered by t_frameset
-- [x] `src/shared/Frame.h` `b9dee218bab8ee86` — covered by t_frameset
+- [x] `src/shared/Frame.cpp` `7b89f7a559c86a3d` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `b9dee218bab8ee86` — covered by t_frame, t_frameset
 - [x] `src/shared/FrameSet.cpp` `45804ad3c73d96b1` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `917ea6d58ec186fe` — covered by t_frameset
 - [x] `src/shared/IFile.h` `c97f77321536adee` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `abeac28232cce604` — covered by t_ifile
 - [x] `src/shared/PngMagic.cpp` `f0120e355100cd6a` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
-- [x] `src/shared/helper.cpp` `517c1b75cb88687c` — covered by t_runtime, t_map*
+- [x] `src/shared/helper.cpp` `517c1b75cb88687c` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
 - [ ] `src/shared/logger.h` `90c8ae1c2b098faa`
 - [ ] `src/shared/ss_limits.h` `e62b799121380518`
