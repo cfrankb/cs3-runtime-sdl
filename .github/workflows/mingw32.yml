@@ -92,14 +92,14 @@ jobs:
           #cp LICENSE release
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             release/*
 
       - name: Upload Windows executable
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: cs3v2-mingw-win32
           path: release
