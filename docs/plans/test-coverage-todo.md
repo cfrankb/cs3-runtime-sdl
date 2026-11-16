@@ -166,9 +166,14 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       `split`/`explode` (both overloads), `write`/`read` round-trip via
       `CFileWrap`, `toBmp` header + `toPng` signature/IHDR/IEND.
       Frame.cpp 85.8%, DotArray.cpp 94.9%.
-- [ ] `shared/FrameSet.cpp` (683 @ 44.1%) — same synthetic-frame trick:
-      add/insert/remove/`write`/`read` round-trip, transforms applied to a set,
-      `oblv2DataUnit` metadata paths. Reuse the Frame helpers, do not re-derive.
+- [x] `shared/FrameSet.cpp` (683 @ 44.1%) — `tests/t_frameset.cpp`
+      extension: `extract` over every `tests/in` family (ima/imc1/obl3/
+      obl4/obl5/mcx) with error-free assertions, garbage/empty/foreign-
+      signature rejection on both `extract` and `read`, container ops
+      (add/`++`/`[]`/insertAt/move/removeAt/set/resize/clear), tags/UUID/
+      name, `toSubset` and `operator=` deep copies, `setCurrFrame`
+      no-clamp pinned. 70.3%. `operator--` non-empty path is UB — left
+      unexercised, finding recorded.
 - [ ] `shared/PngMagic.cpp` (310 @ 39.7%) — encode→decode identity on a 4x4
       and an indexed/transparent frame, truncated-chunk and bad-CRC rejection
       (also finally exercises `shared/CRC.h`), existing `tests/in/refs` PNGs.
