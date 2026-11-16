@@ -814,6 +814,47 @@ namespace
         }
         return true;
     }
+
+    // canMove must gate every world tile the hitbox newly covers, not just
+    // the anchor tile's row/column: a half-tile step must never slide the
+    // hitbox's far edge into a blocking tile (icecube collision bug)
+    bool testBossHalfTileEdge()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *data = pickBoss(
+            all, [](const bossData_t &d)
+            { return d.hitbox.width >= 2 && d.hitbox.width % 2 == 0; });
+        if (!data)
+        {
+            LOGI("boss half-step: no even-width bossdata, skipping");
+            return true;
+        }
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(4, 4, data); // anchor on an even half-tile coord
+        CBoss &boss = bosses.back();
+        CMap &map = CGame::getMap();
+        if (!boss.canMove(JoyAim::AIM_RIGHT))
+        {
+            LOGE("boss half-step: free move rejected on a blank map");
+            return false;
+        }
+        // wall off the tile the far edge would newly cover on one step right
+        const int edgeTile = (4 + data->hitbox.width) / 2;
+        if (edgeTile >= MAP_SIZE)
+            return true;
+        const uint16_t wall = tileOf(TYPE_WALLS);
+        for (int ty = 4 / 2; ty <= (4 + data->hitbox.height - 1) / 2; ++ty)
+            map.set(edgeTile, ty, wall);
+        if (boss.canMove(JoyAim::AIM_RIGHT))
+        {
+            LOGE("boss half-step: canMove let the hitbox edge into solid tile %d", edgeTile);
+            return false;
+        }
+        return true;
+    }
 }
 
 bool test_game_ai()
@@ -841,6 +882,7 @@ bool test_game_ai()
         {testBossPath, "boss path"},
         {testBossBullet, "boss bullet"},
         {testBossHitboxContact, "boss hitbox contact"},
+        {testBossHalfTileEdge, "boss half-tile edge"},
     };
 
     int failed = 0;

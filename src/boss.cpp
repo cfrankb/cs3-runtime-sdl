@@ -229,16 +229,11 @@ std::vector<HitResult> CBoss::testHitbox1(const CMap &map,
 bool CBoss::canMove(const JoyAim aim) const
 {
     const CMap &map = CGame::getMap();
-    const int mapLen = map.width();
-    const int mapHei = map.height();
-    const int x = m_x / BOSS_GRANULAR_FACTOR;
-    const int y = m_y / BOSS_GRANULAR_FACTOR;
-    const int w = m_bossData->hitbox.width / BOSS_GRANULAR_FACTOR;
-    const int h = m_bossData->hitbox.height / BOSS_GRANULAR_FACTOR;
-    const int maxX = mapLen * BOSS_GRANULAR_FACTOR;
-    const int maxY = mapHei * BOSS_GRANULAR_FACTOR;
+    const int w = m_bossData->hitbox.width;  // half-tiles
+    const int h = m_bossData->hitbox.height; // half-tiles
+    const int maxX = map.width() * BOSS_GRANULAR_FACTOR;
+    const int maxY = map.height() * BOSS_GRANULAR_FACTOR;
 
-    // Check if move stays within same 8x8 grid cell and map bounds
     int next_x = m_x;
     int next_y = m_y;
     switch (aim)
@@ -259,71 +254,35 @@ bool CBoss::canMove(const JoyAim aim) const
         LOGW("invalid aim: %.2x on %d", aim, __LINE__);
         return false;
     }
-    if (next_x / BOSS_GRANULAR_FACTOR == m_x / BOSS_GRANULAR_FACTOR &&
-        next_y / BOSS_GRANULAR_FACTOR == m_y / BOSS_GRANULAR_FACTOR &&
-        next_x >= 0 && next_x + m_bossData->hitbox.width <= maxX &&
-        next_y >= 0 && next_y + m_bossData->hitbox.height <= maxY)
-    {
-        return true; // Sub-tile move within same 8x8 cell and map bounds
-    }
-
-    // Check collisions for new 8x8 grid cell
-    switch (aim)
-    {
-    case JoyAim::AIM_UP:
-        if (next_y < 0)
-            return false;
-        for (int ax = x; ax < x + w; ++ax)
-        {
-            if (ax < 0 || ax >= mapLen)
-                continue;
-            const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y - 1)};
-            if ((this->*m_solidCheck)(pos))
-                return false;
-        }
-        break;
-
-    case JoyAim::AIM_DOWN:
-        if (next_y + m_bossData->hitbox.height > maxY)
-            return false;
-        for (int ax = x; ax < x + w; ++ax)
-        {
-            if (ax < 0 || ax >= mapLen)
-                continue;
-            const Pos pos{static_cast<int16_t>(ax), static_cast<int16_t>(y + h)};
-            if ((this->*m_solidCheck)(pos))
-                return false;
-        }
-        break;
-
-    case JoyAim::AIM_LEFT:
-        if (next_x < 0)
-            return false;
-        for (int ay = y; ay < y + h; ++ay)
-        {
-            if (ay < 0 || ay >= mapHei)
-                continue;
-            const Pos pos{static_cast<int16_t>(x - 1), static_cast<int16_t>(ay)};
-            if ((this->*m_solidCheck)(pos))
-                return false;
-        }
-        break;
-
-    case JoyAim::AIM_RIGHT:
-        if (next_x + m_bossData->hitbox.width > maxX)
-            return false;
-        for (int ay = y; ay < y + h; ++ay)
-        {
-            if (ay < 0 || ay >= mapHei)
-                continue;
-            const Pos pos{static_cast<int16_t>(x + w), static_cast<int16_t>(ay)};
-            if ((this->*m_solidCheck)(pos))
-                return false;
-        }
-        break;
-    default:
-        LOGE("invalid aim: %.2x on line %d", aim, __LINE__);
+    if (next_x < 0 || next_y < 0 ||
+        next_x + w > maxX || next_y + h > maxY)
         return false;
+
+    // The hitbox spans several world tiles; every tile it would *newly*
+    // cover must be non-solid. Checking only the anchor tile's row/column
+    // let a half-tile step slide the hitbox's far edge into a blocking
+    // tile (e.g. a static ice cube the boss then collided with).
+    const int nx1 = next_x / BOSS_GRANULAR_FACTOR;
+    const int nx2 = (next_x + w - 1) / BOSS_GRANULAR_FACTOR;
+    const int ny1 = next_y / BOSS_GRANULAR_FACTOR;
+    const int ny2 = (next_y + h - 1) / BOSS_GRANULAR_FACTOR;
+    const int ox1 = m_x / BOSS_GRANULAR_FACTOR;
+    const int ox2 = (m_x + w - 1) / BOSS_GRANULAR_FACTOR;
+    const int oy1 = m_y / BOSS_GRANULAR_FACTOR;
+    const int oy2 = (m_y + h - 1) / BOSS_GRANULAR_FACTOR;
+
+    for (int ty = ny1; ty <= ny2; ++ty)
+    {
+        for (int tx = nx1; tx <= nx2; ++tx)
+        {
+            if (tx >= ox1 && tx <= ox2 && ty >= oy1 && ty <= oy2)
+                continue; // already overlapped before the move
+            if (!map.isValid(tx, ty))
+                return false;
+            const Pos pos{static_cast<int16_t>(tx), static_cast<int16_t>(ty)};
+            if ((this->*m_solidCheck)(pos))
+                return false;
+        }
     }
     return true;
 }
