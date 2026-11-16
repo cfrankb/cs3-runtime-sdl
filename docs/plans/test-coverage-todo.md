@@ -2,8 +2,8 @@
 
 Tracks adding unit tests to raise `cs3-tests` coverage of `src/`.
 State of play lives in [`../compliance/src-checklist.md`](../compliance/src-checklist.md)
-(70/121 verified) and [`../compliance/src-coverage.md`](../compliance/src-coverage.md)
-(39.8% total). Ordered by effort ascending; work top-down.
+(71/121 verified) and [`../compliance/src-coverage.md`](../compliance/src-coverage.md)
+(42.2% total). Ordered by effort ascending; work top-down.
 
 Acceptance for every item: new `tests/t_*.cpp` following existing harness
 style, registered in `tmain.cpp` + `tests/CMakeLists.txt`,
@@ -42,6 +42,17 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       `getChTile`, missing-file error. Fixed product bug found by test:
       `CMap::resize` on a `clear()`ed map had no layers → assert; now
       recreates the main layer.
+- [x] `map.cpp` / `maparch.cpp` negative paths — `test_map_corrupt()` and
+      `test_maparch_corrupt()`: truncated/corrupt MAPZ and MAAZ byte streams
+      rejected with an error (header, signature, version, layer/attribute,
+      title-size cap, index table and index-entry offsets, missing files);
+      legacy V0 MAPZ read + its truncated rejection; optional-XDR absence
+      accepted; `indexFromFile`/`indexFromMemory` validator rejects. Fixed
+      product bug found by test: `CMap::readCommon` legacy-V0 error branch
+      called `getMainLayer()->lastError()` after `m_layers.clear()` and
+      before pushing the layer — out-of-bounds `m_layers[0]` (aborted);
+      now uses the local layer. `map.cpp` 70.4% → 79.5%,
+      `maparch.cpp` 59.9% → 80.2%.
 
 ## Tier 3 — need singleton or fixture scaffolding first
 
@@ -68,7 +79,25 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       `loadTileLayer` JSON defaults, `next:-1`→0, field parse, baseIdx
       offset, missing-file failure; sheet tables non-empty; `getChTile`
       128-entry wrap.
-- [ ] `logger.cpp` — log line lands in output file; levels filter correctly.
+- [x] `logger.cpp` — `t_logger.cpp`: LOGI/LOGW/LOGE lines land in the
+      `setOutputFile` target with `[file/LEVEL]` tags, output-file switch
+      closes and reopens, `setLevel(L_WARN)` filters INFO but keeps
+      WARN/ERROR, format-trailing-`\n` is not doubled; reset via
+      `setOutputFile("")` (fopen failure → stdout routing). LOGF (exits)
+      and the Android branches not exercised. `logger.cpp` 68.4% → 94.7%.
+      Note: `src/shared/logger.h` duplicates `src/logger.h` (same include
+      guard); left unverified.
+- [x] `gamemixin.cpp` rules scraps — `t_gamemixin.cpp` via a headless
+      `TestRuntime : CRuntime` subclass exposing the protected members
+      (same pattern `t_runtime` uses): `rankUserScore` (no-placement
+      below-worst, mid-table insert + shift + level/name stamp),
+      `getEventText` (8 fixed event banners, SUGAR_RUSH/EXIT_OPENED tick
+      flashing, YUMMY/SHIELD stat interpolation, MSG0 lines from map
+      states, unhandled-event empty), `manageTimer` (decrement, expiry →
+      `incTimeTaken` + TICK_RATE reload, TIMEOUT 100→99 / 15→14; the
+      TIMEOUT==1 kill/level-intro path enters game flow + music and is
+      not exercised), `moveCamera` (all four deadzone branches + stay).
+      `gamemixin.cpp` 7.8% → 15.7%; remainder is SDL draw/input.
 - [x] `game_ai.cpp` — AI tick logic against singleton + map fixture
       (982 lines, biggest untested block; do after ai_path helper exists).
       Phases 1–4 done in `t_game_ai.cpp`: dispatcher/movers, MonsterV3/

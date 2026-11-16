@@ -16,9 +16,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <cassert>
+#include <cstring>
 #include "thelper.h"
+#include "../src/shared/FileMem.h"
 #include "t_maparch.h"
 #include "../src/maparch.h"
 #include "../src/map.h"
@@ -329,4 +332,262 @@ void testIndexFromMemory()
     // assert(index[0] > sizeof(MAAZ_SIG) + sizeof(uint16_t) * 2 + sizeof(uint32_t));
     assert(index[1] > index[0]);
     LOGI("Offsets: %ld, %ld", index[0], index[1]);
+}
+// Negative paths for the MAAZ archive reader and index validators.
+// Mirrors MapPrivate layout in src/maparch.cpp: header = 'MAAZ' sig,
+// u16 version(0), u16 count, u32 index offset; then map data; index table of
+// u32 offsets at the header offset.
+bool test_maparch_corrupt()
+{
+    namespace fs = std::filesystem;
+    const std::string negFile = "tests/out/maparch_neg.mapz";
+    constexpr size_t headerSize = 12;
+
+    // build a valid single-map archive as the corruption base
+    {
+        fs::create_directories("tests/out");
+        CMapArch arch;
+        arch.add(std::make_unique<CMap>(4, 4, 0));
+        if (!arch.write(negFile))
+        {
+            LOGE("test_maparch_corrupt: could not write fixture %s", negFile.c_str());
+            return false;
+        }
+    }
+    std::vector<uint8_t> buf = readFile(negFile.c_str());
+    if (buf.size() < headerSize + 8 || memcmp(buf.data(), "MAAZ", 4) != 0)
+    {
+        LOGE("test_maparch_corrupt: unexpected fixture");
+        return false;
+    }
+    auto getU32 = [&buf](size_t pos) -> uint32_t
+    {
+        return buf[pos] | (buf[pos + 1] << 8) | (buf[pos + 2] << 16) | (buf[pos + 3] << 24);
+    };
+    const uint32_t tableOff = getU32(8);
+
+    auto expectRejected = [&buf](std::vector<uint8_t> v, const char *what) -> bool
+    {
+        CFileMem f;
+        f.replace(v.data(), v.size());
+        CMapArch arch;
+        if (arch.read(f))
+        {
+            LOGE("test_maparch_corrupt: corrupt archive accepted (%s)", what);
+            return false;
+        }
+        if (!*arch.lastError())
+        {
+            LOGE("test_maparch_corrupt: no error recorded (%s)", what);
+            return false;
+        }
+        return true;
+    };
+
+    auto patchU32 = [](std::vector<uint8_t> &v, size_t pos, uint32_t val)
+    {
+        v[pos] = val & 0xff;
+        v[pos + 1] = (val >> 8) & 0xff;
+        v[pos + 2] = (val >> 16) & 0xff;
+        v[pos + 3] = (val >> 24) & 0xff;
+    };
+
+    // baseline
+    {
+        CFileMem f;
+        f.replace(buf.data(), buf.size());
+        CMapArch arch;
+        if (!arch.read(f) || arch.size() != 1)
+        {
+            LOGE("test_maparch_corrupt: intact archive rejected");
+            return false;
+        }
+    }
+
+    // header truncation, bad signature, bad version
+    if (!expectRejected(std::vector<uint8_t>(buf.begin(), buf.begin() + headerSize - 1), "short header"))
+        return false;
+    {
+        std::vector<uint8_t> v = buf;
+        v[0] ^= 0xff;
+        if (!expectRejected(v, "bad signature"))
+            return false;
+    }
+    {
+        std::vector<uint8_t> v = buf;
+        v[4] = 99;
+        if (!expectRejected(v, "bad version"))
+            return false;
+    }
+
+    // index offset 0 and beyond EOF (the IFile seek lambda reports 0 as failure)
+    {
+        std::vector<uint8_t> v = buf;
+        patchU32(v, 8, 0);
+        if (!expectRejected(v, "index offset 0"))
+            return false;
+    }
+    {
+        std::vector<uint8_t> v = buf;
+        patchU32(v, 8, static_cast<uint32_t>(buf.size()) + 1000);
+        if (!expectRejected(v, "index offset past EOF"))
+            return false;
+    }
+
+    // bad index entries: 0 (seek failure) and past EOF (map read failure)
+    {
+        std::vector<uint8_t> v = buf;
+        patchU32(v, tableOff, 0);
+        if (!expectRejected(v, "map offset 0"))
+            return false;
+    }
+    {
+        std::vector<uint8_t> v = buf;
+        patchU32(v, tableOff, static_cast<uint32_t>(buf.size()) + 1000);
+        if (!expectRejected(v, "map offset past EOF"))
+            return false;
+    }
+
+    // indexFromFile negative paths
+    auto writeBuf = [](const std::string &name, const std::vector<uint8_t> &v)
+    {
+        std::ofstream f(name, std::ios::binary);
+        f.write(reinterpret_cast<const char *>(v.data()), v.size());
+    };
+    auto expectIndexFileRejected = [](const std::string &name, const char *what) -> bool
+    {
+        IndexVector index;
+        if (CMapArch::indexFromFile(name.c_str(), index))
+        {
+            LOGE("test_maparch_corrupt: indexFromFile accepted (%s)", what);
+            return false;
+        }
+        return true;
+    };
+    {
+        const std::string base = "tests/out/maparch_neg_";
+        // no such file
+        IndexVector index;
+        if (CMapArch::indexFromFile("tests/out/maparch_does_not_exist.mapz", index))
+        {
+            LOGE("test_maparch_corrupt: indexFromFile accepted missing file");
+            return false;
+        }
+        // header smaller than sizeof(Header)
+        writeBuf(base + "short.mapz", std::vector<uint8_t>(buf.begin(), buf.begin() + 5));
+        if (!expectIndexFileRejected(base + "short.mapz", "short header"))
+            return false;
+        std::vector<uint8_t> hdr(buf.begin(), buf.begin() + headerSize);
+        {
+            std::vector<uint8_t> v = hdr;
+            v[0] ^= 0xff;
+            writeBuf(base + "badsig.mapz", v);
+            if (!expectIndexFileRejected(base + "badsig.mapz", "bad signature"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = hdr;
+            v[4] = 99;
+            writeBuf(base + "badver.mapz", v);
+            if (!expectIndexFileRejected(base + "badver.mapz", "bad version"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = hdr;
+            v[6] = 0xe8; // count = 10000 > MAX_MAPS
+            v[7] = 0x27;
+            writeBuf(base + "badcount.mapz", v);
+            if (!expectIndexFileRejected(base + "badcount.mapz", "excessive count"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = hdr;
+            patchU32(v, 8, 0);
+            writeBuf(base + "zerooff.mapz", v);
+            if (!expectIndexFileRejected(base + "zerooff.mapz", "zero table offset"))
+                return false;
+        }
+        {
+            // count=1, table at offset 12, single entry past EOF
+            std::vector<uint8_t> v{'M', 'A', 'A', 'Z', 0, 0, 1, 0, 12, 0, 0, 0, 0xff, 0xff, 0xff, 0xff};
+            writeBuf(base + "badent.mapz", v);
+            if (!expectIndexFileRejected(base + "badent.mapz", "entry past EOF"))
+                return false;
+        }
+        // valid fixture must index cleanly
+        IndexVector vindex;
+        if (!CMapArch::indexFromFile(negFile.c_str(), vindex) || vindex.size() != 1)
+        {
+            LOGE("test_maparch_corrupt: indexFromFile rejected valid fixture");
+            return false;
+        }
+    }
+
+    // indexFromMemory negative paths
+    {
+        IndexVector index;
+        if (CMapArch::indexFromMemory(nullptr, index))
+        {
+            LOGE("test_maparch_corrupt: indexFromMemory accepted null pointer");
+            return false;
+        }
+        auto expectMemRejected = [](std::vector<uint8_t> &v, const char *what) -> bool
+        {
+            IndexVector index;
+            if (CMapArch::indexFromMemory(v.data(), index))
+            {
+                LOGE("test_maparch_corrupt: indexFromMemory accepted (%s)", what);
+                return false;
+            }
+            return true;
+        };
+        {
+            std::vector<uint8_t> v = buf;
+            v[0] ^= 0xff;
+            if (!expectMemRejected(v, "bad signature"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = buf;
+            v[4] = 99;
+            if (!expectMemRejected(v, "bad version"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = buf;
+            v[6] = 0xe8;
+            v[7] = 0x27;
+            if (!expectMemRejected(v, "excessive count"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = buf;
+            patchU32(v, 8, 8); // table offset inside the header
+            if (!expectMemRejected(v, "table offset in header"))
+                return false;
+        }
+        {
+            std::vector<uint8_t> v = buf;
+            patchU32(v, tableOff, 3); // map offset inside the header
+            if (!expectMemRejected(v, "map offset in header"))
+                return false;
+        }
+        IndexVector mindex;
+        if (!CMapArch::indexFromMemory(buf.data(), mindex) || mindex.size() != 1)
+        {
+            LOGE("test_maparch_corrupt: indexFromMemory rejected valid fixture");
+            return false;
+        }
+    }
+
+    // extract on a missing file
+    {
+        CMapArch arch;
+        if (arch.extract("tests/out/maparch_does_not_exist.mapz"))
+        {
+            LOGE("test_maparch_corrupt: extract accepted missing file");
+            return false;
+        }
+    }
+    return true;
 }

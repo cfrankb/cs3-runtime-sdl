@@ -45,6 +45,8 @@
 #include "t_assetman.h"
 #include "t_tables.h"
 #include "t_game_ai.h"
+#include "t_logger.h"
+#include "t_gamemixin.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -74,9 +76,11 @@ int main(int argc, char *args[])
         FCT(test_map_down),
         FCT(test_map_left),
         FCT(test_map_right),
+        FCT(test_map_corrupt),
         FCT(test_maparch_1),
         FCT(test_maparch_2),
         FCT(test_maparch_3),
+        FCT(test_maparch_corrupt),
         FCT(test_strhelper),
         FCT(test_gamestats),
         FCT(test_runtime),
@@ -100,6 +104,8 @@ int main(int argc, char *args[])
         FCT(test_pathfinding),
         FCT(test_assetman),
         FCT(test_tables),
+        FCT(test_logger),
+        FCT(test_gamemixin),
         FCT(test_game_ai),
     };
 

@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 5688853 |
+| Git HEAD | 0ee2727 |
 | Files tracked | 121 |
-| Covered by cs3-tests | 70 |
-| Verified items | 70 / 121 |
+| Covered by cs3-tests | 72 |
+| Verified items | 71 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -48,7 +48,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/game_ai.cpp` `ed85aab1ec755fe9` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — covered by t_runtime
+- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — partial: t_runtime, t_gamemixin (rules paths; draw/input SDL-bound)
 - [x] `src/gamemixin.h` `387b8b032d8430cf` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
@@ -63,10 +63,10 @@ See [README](README.md) for the verification procedure.
 - [x] `src/layerdata.h` `8c2ce0bbe17cc15e` — covered by t_tables
 - [x] `src/level.cpp` `b919dac75ba69dbb` — covered by t_level
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
-- [ ] `src/logger.cpp` `f6d8efa613669664`
-- [ ] `src/logger.h` `d4a28967b6e98c90`
+- [x] `src/logger.cpp` `f6d8efa613669664` — covered by t_logger
+- [ ] `src/logger.h` `d4a28967b6e98c90` — covered by t_logger
 - [ ] `src/main.cpp` `cefe4430ffd2cdbe`
-- [x] `src/map.cpp` `994d0a3010e99902` — covered by t_map*, t_runtime
+- [x] `src/map.cpp` `48f1a503646865d5` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
 - [x] `src/maparch.cpp` `98605da56ae8827d` — covered by t_maparch_*
 - [x] `src/maparch.h` `9c6b979a896e52b2` — covered by t_maparch_*

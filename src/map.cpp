@@ -233,7 +233,7 @@ bool CMap::readCommon(ReadFunc &&readfile, std::function<size_t()> tell, std::fu
         std::unique_ptr<CLayer> layer = std::make_unique<CLayer>(m_len, m_hei);
         if (!layer->readCommon(readfile, ver))
         {
-            m_lastError = std::string("failed read MainLayer: ") + getMainLayer()->lastError();
+            m_lastError = std::string("failed read MainLayer: ") + layer->lastError();
             LOGE("%s", m_lastError.c_str());
             return false;
         }

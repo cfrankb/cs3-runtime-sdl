@@ -21,10 +21,13 @@
 #include "../src/map.h"
 #include "../src/states.h"
 #include "../src/shared/FileWrap.h"
+#include "../src/shared/FileMem.h"
 #include "../src/shared/helper.h"
+#include "../src/level.h"
 #include "../src/logger.h"
 #include <filesystem>
 #include <cassert>
+#include <vector>
 
 static constexpr const char *IN_FILE = "tests/in/levels1.mapz";
 static constexpr const char *OUT_FILE1 = "tests/out/map1.mapz";
@@ -430,5 +433,177 @@ bool test_map_down()
     if (map.at(2, 2) != 6)
         return false;
 
+    return true;
+}
+
+// Negative paths: corrupted / truncated serialised maps must be rejected with
+// an error, and the legacy V0 + optional-XDR paths must still work.
+// Mirrors MapPrivate layout in src/map.cpp (sig 'MAPZ', u16 ver, u8 layerCount,
+// per layer: u8 w, u8 h, u8 type, u32 csize, csize bytes; u16 attrCount, 3 bytes
+// per attr; 'XTR' + u8 ver + u8 titleSize + title; then states).
+bool test_map_corrupt()
+{
+    const std::string fname = "tests/out/map_neg.mapz";
+    const char *TITLE1 = "Roses Are Red";
+    const size_t titleLen = strlen(TITLE1);
+
+    CMap src;
+    src.resize(6, 4, '\0', true);
+    src.setAttr(ATTRX, ATTRY, ATTRA);
+    src.setTitle(TITLE1);
+    src.states().setU(KEY1, VALUE2);
+    if (!src.write(fname.c_str()))
+    {
+        LOGE("test_map_corrupt: could not write fixture %s", fname.c_str());
+        return false;
+    }
+    std::vector<uint8_t> buf = readFile(fname.c_str());
+    if (buf.size() < 30)
+    {
+        LOGE("test_map_corrupt: fixture too small (%zu bytes)", buf.size());
+        return false;
+    }
+
+    // parse the layout so the test fails loudly if the format shifts
+    const uint32_t csize = buf[10] | (buf[11] << 8) | (buf[12] << 16) | (buf[13] << 24);
+    const size_t nameOff = 14 + csize;                 // after compressed data
+    const uint16_t nameSize = buf[nameOff] | (buf[nameOff + 1] << 8);
+    const size_t attrOff = nameOff + 2 + nameSize + 2; // + baseID u16
+    if (memcmp(buf.data(), "MAPZ", 4) != 0 || buf[4] != 3 || buf[6] != 1)
+    {
+        LOGE("test_map_corrupt: unexpected fixture header");
+        return false;
+    }
+    const size_t xtrOff = attrOff + 2 + 3; // one attribute
+    if (memcmp(buf.data() + xtrOff, "XTR", 3) != 0 || buf[xtrOff + 4] != titleLen)
+    {
+        LOGE("test_map_corrupt: unexpected XTR section position");
+        return false;
+    }
+
+    auto expectRejected = [&buf](const std::vector<uint8_t> &v, const char *what) -> bool
+    {
+        CFileMem f;
+        f.replace(v.data(), v.size());
+        CMap m;
+        if (m.read(f))
+        {
+            LOGE("test_map_corrupt: corrupt map accepted (%s)", what);
+            return false;
+        }
+        if (!*m.lastError())
+        {
+            LOGE("test_map_corrupt: no error recorded (%s)", what);
+            return false;
+        }
+        return true;
+    };
+
+    // baseline: the untouched buffer must read back cleanly
+    {
+        CFileMem f;
+        f.replace(buf.data(), buf.size());
+        CMap m;
+        if (!m.read(f) || m.width() != 6 || m.height() != 4 || m.title() != std::string(TITLE1))
+        {
+            LOGE("test_map_corrupt: intact buffer rejected");
+            return false;
+        }
+    }
+
+    // truncated header fields
+    for (size_t cut : {size_t(0), size_t(4), size_t(6)})
+    {
+        std::vector<uint8_t> v(buf.begin(), buf.begin() + cut);
+        if (!expectRejected(v, "truncated header"))
+            return false;
+    }
+
+    // truncations anywhere inside the layer / attribute sections
+    for (size_t cut = 7; cut < attrOff + 2 + 3; ++cut)
+    {
+        std::vector<uint8_t> v(buf.begin(), buf.begin() + cut);
+        if (!expectRejected(v, "truncated layer/attribute"))
+            return false;
+    }
+
+    // truncations inside the XTR title sections
+    for (size_t cut : {xtrOff + 4, xtrOff + 5})
+    {
+        std::vector<uint8_t> v(buf.begin(), buf.begin() + cut);
+        if (!expectRejected(v, "truncated title"))
+            return false;
+    }
+    // truncated states section: rejected (CStates::read does not set lastError)
+    for (size_t cut : {xtrOff + 5 + titleLen, xtrOff + 5 + titleLen + 1})
+    {
+        std::vector<uint8_t> v(buf.begin(), buf.begin() + cut);
+        CFileMem f;
+        f.replace(v.data(), v.size());
+        CMap m;
+        if (m.read(f))
+        {
+            LOGE("test_map_corrupt: corrupt map accepted (truncated states)");
+            return false;
+        }
+    }
+
+    // title size >= MAX_TITLE
+    {
+        std::vector<uint8_t> v = buf;
+        v[xtrOff + 4] = 0xff;
+        if (!expectRejected(v, "oversized title"))
+            return false;
+    }
+
+    // bad signature
+    {
+        std::vector<uint8_t> v = buf;
+        v[1] ^= 0xff;
+        if (!expectRejected(v, "bad signature"))
+            return false;
+    }
+
+    // bad version
+    {
+        std::vector<uint8_t> v = buf;
+        v[4] = 99;
+        if (!expectRejected(v, "bad version"))
+            return false;
+    }
+
+    // legacy V0: sig, ver=0, w, h, raw tiles, attrCount=0
+    std::vector<uint8_t> v0{'M', 'A', 'P', 'Z', 0, 0, 3, 2};
+    for (uint8_t t = 1; t <= 6; ++t)
+        v0.push_back(t);
+    v0.push_back(0);
+    v0.push_back(0);
+    {
+        CFileMem f;
+        f.replace(v0.data(), v0.size());
+        CMap m;
+        if (!m.read(f) || m.width() != 3 || m.height() != 2 || m.at(0, 0) != 1 || m.at(2, 1) != 6)
+        {
+            LOGE("test_map_corrupt: legacy V0 map rejected");
+            return false;
+        }
+    }
+    // legacy V0 with missing tile data
+    v0.resize(8);
+    if (!expectRejected(v0, "legacy V0 truncated"))
+        return false;
+
+    // XDR section fully absent is optional: reads back without title
+    {
+        std::vector<uint8_t> v(buf.begin(), buf.begin() + xtrOff);
+        CFileMem f;
+        f.replace(v.data(), v.size());
+        CMap m;
+        if (!m.read(f) || m.width() != 6)
+        {
+            LOGE("test_map_corrupt: map without optional XDR section rejected");
+            return false;
+        }
+    }
     return true;
 }
