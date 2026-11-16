@@ -2,7 +2,8 @@
 
 Tracks adding unit tests to raise `cs3-tests` coverage of `src/`.
 State of play lives in [`../compliance/src-checklist.md`](../compliance/src-checklist.md)
-(49/121 verified). Ordered by effort ascending; work top-down.
+(70/121 verified) and [`../compliance/src-coverage.md`](../compliance/src-coverage.md)
+(39.8% total). Ordered by effort ascending; work top-down.
 
 Acceptance for every item: new `tests/t_*.cpp` following existing harness
 style, registered in `tmain.cpp` + `tests/CMakeLists.txt`,
@@ -76,6 +77,20 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       (path/bullet/hitbox-contact/states). Seams: public `rebuildMonsterGrid()`
       (Phase 0), `getBosses()` + public `addHealth` (Phase 4).
       Plan archived: [game_ai-test-plan.md](archive/game_ai-test-plan.md).
+- [x] `game.cpp` rules — filled the empty `t_game.cpp` stub: `validateSignature`
+      (sig/version accept+reject), `addKey`/`hasKey` inventory (fill, dedupe,
+      overflow), `purgeSfx` timeout drain, `scanPos` (swamp/deadly/solid/water
+      + granular quadrant gates per aim) and `isGranularSolidFromPos` via a
+      scratch overlay layer + saved/restored `g_layerdata` entries, and all
+      `checkClosure` branches (death, level-complete, exit-key gate +
+      EVENT_EXIT_OPENED/reveal, chute). Seams: public `stats()`. Fixed
+      three product bugs found by test: `addKey` looped `sizeof(m_keys)`
+      (12) instead of `MAX_KEYS`, so a 7th key aliased/wrote past the
+      indicators array; `CAnimator` left `m_tileLayer`/`m_tileMainLayer`
+      uninitialized until `reloadTileData()`, so `getLayerTile` on a fresh
+      animator read garbage into `g_layerdata` out of bounds (now
+      value-initialized); `validateSignature` logged `&signature` (pointer
+      bytes) instead of the signature string. `game.cpp` 32.0% → 42.4%.
 
 ## Tier 4 — not worth unit-testing (defer / integrate manually)
 

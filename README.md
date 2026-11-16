@@ -6,15 +6,15 @@ CreepSpread III is a retro-inspired action game that blends fast-paced gameplay 
 
 Creepspread III is powered by SDL3, this project brings CreepSpread III to a wide range of platforms—play it as a native desktop app or directly in your browser.
 
-![alt text](techdocs/images/cs3logo2026v4.png)
+![alt text](docs/images/cs3logo2026v4.png)
 
-![alt text](techdocs/images/screenshot20250807-225257.png)
+![alt text](docs/images/screenshot20250807-225257.png)
 
-![alt text](techdocs/images/screenshot20250807-225306.png)
+![alt text](docs/images/screenshot20250807-225306.png)
 
-![alt text](techdocs/images/screenshot20250807-225315.png)
+![alt text](docs/images/screenshot20250807-225315.png)
 
-![alt text](techdocs/images/screenshot20250807-225339.png)
+![alt text](docs/images/screenshot20250807-225339.png)
 
 ## First look at the game
 
@@ -26,7 +26,7 @@ Check out the gameplay demo on [YouTube](https://www.youtube.com/watch?v=K8tYE7s
 
 You build the game from the source code using the step provided.
 
-See all the build options [here](techdocs/BUILD.md).
+See all the build options [here](docs/BUILD.md).
 
 ## Join the chaos
 
@@ -48,4 +48,4 @@ This project is licensed under the GPL3 License. See [LICENSE](./LICENSE).
 
 ## Compliance
 
-For third-party components and attribution, see [OPEN_SOURCE_COMPLIANCE.md](techdocs/OPEN_SOURCE_COMPLIANCE.md).
+For third-party components and attribution, see [OPEN_SOURCE_COMPLIANCE.md](docs/OPEN_SOURCE_COMPLIANCE.md).

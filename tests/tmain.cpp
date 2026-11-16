@@ -107,7 +107,11 @@ int main(int argc, char *args[])
     for (size_t i = 0; i < fct.size(); ++i)
     {
         LOGI("==> %s()", fct[i].s);
-        failed += !fct[i].f();
+        if (!fct[i].f())
+        {
+            LOGE("XXXXXX %s() FAILED", fct[i].s);
+            ++failed;
+        }
     }
 
     if (failed != 0)

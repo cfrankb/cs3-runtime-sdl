@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 6d088f4 |
+| Git HEAD | 5688853 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 70 |
 | Verified items | 70 / 121 |
@@ -19,13 +19,13 @@ See [README](README.md) for the verification procedure.
 - [x] `src/ai_path.cpp` `e786e094375b18ec` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
-- [x] `src/animator.h` `55d40c7187188ab0` — covered by t_animator
+- [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
 - [ ] `src/animzdata.h` `722a3035388bf09b`
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
 - [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f997bfc050e9663d`
-- [x] `src/boss.cpp` `c86ea109a1e8d05c` — covered by t_boss
-- [x] `src/boss.h` `1692c812fa358f22` — covered by t_boss
+- [x] `src/boss.cpp` `e2f86b5afdc2172c` — covered by t_boss
+- [x] `src/boss.h` `c31f3c81cfca0e04` — covered by t_boss
 - [x] `src/bossdata.cpp` `5525be1c08f18052` — covered by t_bossdata
 - [x] `src/bossdata.h` `0f7efeb1c388d773` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
@@ -36,19 +36,19 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/colormasks.h` `5dbd536c2c942b3d`
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
-- [ ] `src/engine.cpp` `81586e3f67dfab2d`
+- [ ] `src/engine.cpp` `9d9b5986f796223b`
 - [ ] `src/engine.h` `46992fe4dbfe3d3e`
-- [ ] `src/engine_hw.cpp` `590aad58d2d8d327`
+- [ ] `src/engine_hw.cpp` `db19684f3fe8e716`
 - [ ] `src/engine_hw.h` `1327f4c97b90aa35`
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `b2a174c1b250f44e` — covered by t_runtime, t_game
-- [x] `src/game.h` `f35bb894d4619444` — covered by t_runtime, t_game
-- [x] `src/game_ai.cpp` `e9aac7af151aa17d` — covered by t_game_ai
+- [x] `src/game.cpp` `d955625db0712557` — covered by t_runtime, t_game
+- [x] `src/game.h` `cad4d5e0cbb85795` — covered by t_runtime, t_game
+- [x] `src/game_ai.cpp` `ed85aab1ec755fe9` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `a1bc1f602aba9f2f` — covered by t_runtime
+- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — covered by t_runtime
 - [x] `src/gamemixin.h` `387b8b032d8430cf` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
@@ -63,29 +63,29 @@ See [README](README.md) for the verification procedure.
 - [x] `src/layerdata.h` `8c2ce0bbe17cc15e` — covered by t_tables
 - [x] `src/level.cpp` `b919dac75ba69dbb` — covered by t_level
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
-- [ ] `src/logger.cpp` `349c670dd25912b5`
-- [ ] `src/logger.h` `b0aec1bb5c1d6f25`
+- [ ] `src/logger.cpp` `f6d8efa613669664`
+- [ ] `src/logger.h` `d4a28967b6e98c90`
 - [ ] `src/main.cpp` `cefe4430ffd2cdbe`
 - [x] `src/map.cpp` `994d0a3010e99902` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
-- [x] `src/maparch.cpp` `b28f6c9acd1543e1` — covered by t_maparch_*
+- [x] `src/maparch.cpp` `98605da56ae8827d` — covered by t_maparch_*
 - [x] `src/maparch.h` `9c6b979a896e52b2` — covered by t_maparch_*
 - [ ] `src/menu.cpp` `8595b0b453d98e44`
 - [ ] `src/menu.h` `f4cf9a46341c10c7`
-- [ ] `src/menuitem.cpp` `0058cb730d453b7e`
+- [ ] `src/menuitem.cpp` `58a52b5b43909d52`
 - [ ] `src/menuitem.h` `55e29074aba864ae`
 - [ ] `src/menumanager.cpp` `db629a80792eaa07`
 - [ ] `src/menumanager.h` `2dc722c339a62c28`
-- [x] `src/names.cpp` `e94ca83d0e53b977` — covered by t_tables
+- [x] `src/names.cpp` `5a20574b700bf9b8` — covered by t_tables
 - [x] `src/names.h` `4abc4fbcaaecaa2a` — covered by t_tables
-- [x] `src/parseargs.cpp` `6cc1b1fabd8cc637` — covered by t_parseargs
+- [x] `src/parseargs.cpp` `d4fa1a4d9aa0f9cf` — covered by t_parseargs
 - [x] `src/parseargs.h` `3f41edcb703df911` — covered by t_parseargs
 - [x] `src/randomz.cpp` `ec222ecf543375d2` — covered by t_randomz
 - [x] `src/randomz.h` `4e6d1464dd9a4607` — covered by t_randomz
 - [x] `src/recorder.cpp` `2bfd1c5bb0a0afa4` — covered by t_recorder
 - [x] `src/recorder.h` `ea6d5a523969090a` — covered by t_recorder
 - [ ] `src/rect.h` `1c32d3c3241f2ede`
-- [x] `src/runtime.cpp` `3468592a97c160d4` — covered by t_runtime
+- [x] `src/runtime.cpp` `029cf0f47abf057f` — covered by t_runtime
 - [x] `src/runtime.h` `08ab887f2a4a1bfd` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables
@@ -93,9 +93,9 @@ See [README](README.md) for the verification procedure.
 - [x] `src/skills.h` `a8005be0043d59a7` — covered by t_gamestats, t_runtime
 - [ ] `src/sounds.h` `ac00a2436762f36c`
 - [ ] `src/sprtypes.h` `a5b71232dd3298e0`
-- [x] `src/statedata.cpp` `72f5a31f5208a946` — covered by t_statedata
-- [x] `src/statedata.h` `0b770c096f3fa43e` — covered by t_statedata
-- [x] `src/states.cpp` `1d80636fb9d266d6` — covered by t_states, t_stateparser
+- [x] `src/statedata.cpp` `406688e893ab4afa` — covered by t_statedata
+- [x] `src/statedata.h` `6bc791e225d46ed0` — covered by t_statedata
+- [x] `src/states.cpp` `e224af3f495c6aa0` — covered by t_states, t_stateparser
 - [x] `src/states.h` `62a6fd1786ae028c` — covered by t_states, t_stateparser
 - [ ] `src/steam_helper.cpp` `18782318f261ad20`
 - [ ] `src/steam_helper.h` `342510a577baecdd`
@@ -130,7 +130,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
 - [x] `src/shared/helper.cpp` `517c1b75cb88687c` — covered by t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
-- [ ] `src/shared/logger.h` `6850a598aaaa2311`
+- [ ] `src/shared/logger.h` `90c8ae1c2b098faa`
 - [ ] `src/shared/ss_limits.h` `e62b799121380518`
 
 ## src/shared/implementers/

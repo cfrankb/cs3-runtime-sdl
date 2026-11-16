@@ -201,6 +201,7 @@ public:
     scan_t scanPos(const Pos &pos, const uint8_t aim) const;
     bool isGranularSolidFromPos(const Pos &pos, const uint8_t aim) const;
     CAnimator *getAnimator() { return m_animator.get(); }
+    CGameStats &stats(); // public so tests can observe stats (see t_game)
     std::vector<automator_t> &automators() { return m_automators; }
 
     enum
@@ -250,7 +251,6 @@ private:
     void addLife();
     int calcScoreLife() const;
     const char *getHintText();
-    CGameStats &stats();
     const CGameStats &statsConst() const;
 
     // regular monsters (mob)

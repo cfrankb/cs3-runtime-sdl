@@ -834,7 +834,7 @@ bool CGame::hasKey(const uint8_t c)
  */
 void CGame::addKey(const uint8_t c)
 {
-    for (uint32_t i = 0; i < sizeof(m_keys); ++i)
+    for (uint32_t i = 0; i < MAX_KEYS; ++i)
     {
         if (m_keys.tiles[i] == c)
         {
@@ -1172,7 +1172,7 @@ bool CGame::validateSignature(const char *signature, const uint32_t version)
     if (memcmp(signature, GAME_SIGNATURE, sizeof(GAME_SIGNATURE)) != 0)
     {
         char tmp[sizeof(GAME_SIGNATURE) + 1];
-        memcpy(tmp, &signature, sizeof(GAME_SIGNATURE));
+        memcpy(tmp, signature, sizeof(GAME_SIGNATURE));
         tmp[sizeof(GAME_SIGNATURE)] = '\0';
 
         char gameSig[sizeof(GAME_SIGNATURE) + 1];
