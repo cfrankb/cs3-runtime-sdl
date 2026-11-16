@@ -134,6 +134,7 @@ public:
     int score() const;
     int lives() const;
     int health() const;
+    void addHealth(const int hp); // public so tests can observe damage (see t_game_ai)
     int sugar() const;
     bool hasExtraSpeed() const;
     void setMapArch(CMapArch *arch);
@@ -145,6 +146,7 @@ public:
     static userKeys_t &keys();
     std::vector<CActor> &getMonsters();
     CActor &getMonster(int i);
+    std::vector<CBoss> &getBosses(); // public so tests can inject bosses (see t_game_ai)
     void rebuildMonsterGrid(); // public so tests can sync the grid after getMonsters() injection
     std::vector<sfx_t> &getSfx();
     void playSound(const int id) const;
@@ -244,7 +246,6 @@ private:
     CGame();
     int clearAttr(const uint8_t attr);
     bool spawnMonsters();
-    void addHealth(const int hp);
     void addPoints(const int points);
     void addLife();
     int calcScoreLife() const;

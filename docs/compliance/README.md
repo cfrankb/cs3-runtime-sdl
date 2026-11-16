@@ -9,6 +9,12 @@ suite. Entry point for compliance material.
   `src/`, grouped by directory. Each row: file path, first 16 hex of its
   SHA-256, a `Verified` checkbox, and notes (including which `cs3-tests`
   suites exercise it).
+- [`src-coverage.md`](src-coverage.md) — gcov line-coverage percentage per
+  `src/**/*.cpp`, generated (never hand-edited). Regenerate with
+  `python3 itools/gen_coverage.py`: it configures/builds a disposable
+  instrumented `build-cov/` (out-of-source, git-ignored), runs `ctest`
+  (aborts without recording if tests fail), and parses `gcov` output.
+  Lines are gcov executable lines; branch coverage is not measured.
 
 ## Semantics
 

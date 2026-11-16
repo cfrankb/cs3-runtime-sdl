@@ -1151,6 +1151,11 @@ std::vector<CActor> &CGame::getMonsters()
     return m_monsters;
 }
 
+std::vector<CBoss> &CGame::getBosses()
+{
+    return m_bosses;
+}
+
 /**
  * @brief get a specific Monster
  *

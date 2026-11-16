@@ -35,6 +35,7 @@ COVERED = {
     "src/statedata": "t_statedata",
     "src/game_auto": "t_ifile",
     "src/game": "t_runtime, t_game",
+    "src/game_ai": "t_game_ai",
     "src/gamemixin": "t_runtime",
     "src/gamestats": "t_gamestats",
     "src/level": "t_level",

@@ -91,20 +91,30 @@ Notes from implementation:
 - `handleBullet` death paths covered: advance, blocked by monster tile,
   blocked by boulder tile (tile restored from PU), TTL+algo expiry.
 
-### Phase 3 — spawns
+### Phase 3 — spawns ✅ DONE 2026-11-16
 - Death of a respawn-flagged monster (from Phase 2 barrel scenario) queues
   a spawn → `manageSpawns(ticks)` respects `delay` (no spawn too early),
   blocked cell (existing monster at spawn point) defers, delay expiry
   re-adds the actor at the spawn point, decrements `active`.
+- Note: `manageSpawns` only fires on `(ticks & RESPAWN_SLICE) == 0`, and the
+  delay decrements once per passing call; the spawn happens on the call where
+  `delay` is already 0 (so `RESPAWN_DELAY`+1 slice ticks from a fresh queue).
+- `queueRespawn` is reached in tests via the `TYPE_ICECUBE` bullet-melt death
+  path in `handleBullet`; spawns verified behaviorally (no `m_spawns` accessor).
 
-### Phase 4 — bosses (needs Phase 0 accessor)
-- `handleBossPath`: with `data/bosses` loaded, place boss, set path algo
-  (`BossData::ASTAR` vs `NONE`); assert cached path updates and boss moves
-  (`t_ai_path.cpp` guarantees the pathfinder itself is sane now).
-- `handleBossBullet`: boss fire spawns bullets at cadence.
-- `handleBossHitboxContact`: player overlapping boss hitbox → damage/kill
-  path (`isPlayerDead()`/`killPlayer()` observable via public API).
-- `manageBosses` TTL handling (`BossData::NoTTL`, expiry → boss removed).
+### Phase 4 — bosses (needs Phase 0 accessor) ✅ DONE 2026-11-16
+- `handleBossPath`: with `data/bosses` loaded (same skip guard as `t_boss`),
+  a chasing boss advances toward the player (`boss.y()` grows).
+- `handleBossBullet`: a pinned chasing boss fires its bullet tile down the
+  rng cadence (tick-seeded rng looped until one fires); bullet spawns at the
+  boss edge facing the player.
+- `handleBossHitboxContact`: a `TILES_ANNIE2` tile under the MAIN hitbox
+  drives `addHealth(-damage)`; observable via the now-public `addHealth`
+  seam (health boots at 0, so damage was previously unobservable).
+- The plan's `manageBosses` TTL-removal item does **not** exist: `CBoss::getTTL`
+  is a constant `BossData::NoTTL` and `manageBosses` never erases bosses.
+  Replaced with `testBossStates` covering the real dispatch (Hidden/Death
+  skip, speed gate, patrol→chase engage).
 
 ## Risks / notes
 

@@ -16,8 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <filesystem>
+
 #include "../src/animzdata.h"
 #include "../src/attr.h"
+#include "../src/boss.h"
 #include "../src/bossdata.h"
 #include "../src/game.h"
 #include "../src/gamesfx.h"
@@ -28,9 +31,9 @@
 #include "../src/tilesdefs.h"
 #include "t_game_ai.h"
 
-// Phase 1 of docs/plans/game_ai-test-plan.md: dispatcher + simple movers
-// driven through CGame::manageMonsters(). Run LAST in tmain: it mutates the
-// CGame singleton (monsters/player/map).
+// Phases 1-4 of docs/plans/archive/game_ai-test-plan.md: monster/boss AI driven
+// through CGame::manageMonsters()/manageBosses()/manageSpawns(). Run LAST in
+// tmain: it mutates the CGame singleton (monsters/bosses/player/map).
 
 namespace
 {
@@ -68,6 +71,7 @@ namespace
         map.resize(MAP_SIZE, MAP_SIZE, TILES_BLANK, true);
         g_game->getMonsters().clear();
         g_game->getMonsters().reserve(16); // keep CActor& refs stable across spawn()
+        g_game->getBosses().clear();
         g_game->getSfx().clear();
         g_game->resetStats();
         g_game->player().move(MAP_SIZE - 1, MAP_SIZE - 1);
@@ -564,15 +568,15 @@ namespace
         g_game->rebuildMonsterGrid();
         for (int i = 0; i < RESPAWN_DELAY; ++i)
             g_game->manageSpawns(TICKS_ALL);
-        if (g_game->getMonsters().size() != 1)
+        if (!g_game->getMonsters().empty())
         {
             LOGE("spawns: second respawn came too early");
             return false;
         }
         g_game->manageSpawns(TICKS_ALL);
-        if (g_game->getMonsters().size() != 2)
+        if (g_game->getMonsters().size() != 1)
         {
-            LOGE("spawns: missing second respawn");
+            LOGE("spawns: missing second respawn (count %zu)", g_game->getMonsters().size());
             return false;
         }
 
@@ -615,6 +619,201 @@ namespace
         }
         return true;
     }
+
+    // ---------------- Phase 4: bosses ----------------
+
+    // real bossdata behind the same skip guard as t_boss.cpp
+    const bossData_t *bossFixture()
+    {
+        constexpr const char *INI_DIR = "data/bosses";
+        if (!std::filesystem::exists(std::string(INI_DIR) + "/bosses.ini"))
+        {
+            LOGI("boss: %s absent, skipping boss scenarios", INI_DIR);
+            return nullptr;
+        }
+        if (g_bossCount == 0 && loadBossData(INI_DIR, "data/bosses/data") != 0)
+        {
+            LOGE("boss: loadBossData failed");
+            return nullptr;
+        }
+        return g_bossCount > 0 ? g_bossData : nullptr;
+    }
+
+    const bossData_t *pickBoss(const bossData_t *all, std::function<bool(const bossData_t &)> pred)
+    {
+        for (int i = 0; i < g_bossCount; ++i)
+            if (pred(all[i]))
+                return &all[i];
+        return nullptr;
+    }
+
+    // manageBosses dispatch: Hidden/Death skip, speed gate, patrol->chase
+    // (the plan's TTL-removal item does not exist: CBoss::getTTL is a
+    // constant NoTTL and manageBosses never erases bosses)
+    bool testBossStates()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *data = &all[0];
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(12, 12, data); // world tile (6,6)
+        CBoss &boss = bosses.back();
+        boss.setSpeed(1);
+        g_game->player().move(6, 8); // distance 2
+        boss.setState(CBoss::BossState::Hidden);
+        g_game->manageBosses(1);
+        if (boss.y() != 12)
+        {
+            LOGE("boss states: hidden boss moved to y %d", boss.y());
+            return false;
+        }
+        boss.setState(CBoss::BossState::Death);
+        g_game->manageBosses(1);
+        if (boss.y() != 12)
+        {
+            LOGE("boss states: dead boss moved to y %d", boss.y());
+            return false;
+        }
+
+        // speed gate: tick 1 fails a speed-4 gate, tick 4 passes and moves
+        boss.setState(CBoss::BossState::Chase);
+        boss.setSpeed(4);
+        g_game->manageBosses(1);
+        if (boss.y() != 12)
+        {
+            LOGE("boss states: boss moved off the speed gate (y %d)", boss.y());
+            return false;
+        }
+        g_game->manageBosses(4);
+        if (boss.y() == 12)
+        {
+            LOGE("boss states: boss did not move when the speed gate passed");
+            return false;
+        }
+
+        // patrol engages chase within distance_chase
+        boss.setState(CBoss::BossState::Patrol);
+        boss.setSpeed(1);
+        g_game->manageBosses(5);
+        if (boss.state() != CBoss::BossState::Chase)
+        {
+            LOGE("boss states: patrol did not engage chase (state %d)", (int)boss.state());
+            return false;
+        }
+        return true;
+    }
+
+    // handleBossPath: a chasing boss (path algo or fallback) closes on the player
+    bool testBossPath()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *data =
+            pickBoss(all, [](const bossData_t &d)
+                     { return d.path != BossData::Path::NONE && d.distance_pursuit >= 3; });
+        if (!data)
+        {
+            LOGE("boss path: no bossdata with a path algo and pursuit >= 3");
+            return false;
+        }
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(12, 12, data); // half-tile coords: world tile (6,6)
+        CBoss &boss = bosses.back();
+        boss.setSpeed(1);
+        boss.setState(CBoss::BossState::Chase);
+        g_game->player().move(6, 9); // 3 tiles below
+        const int16_t y0 = boss.y();
+        g_game->manageBosses(1);
+        if (boss.y() <= y0)
+        {
+            LOGE("boss path: chasing boss did not advance (y %d -> %d)", y0, boss.y());
+            return false;
+        }
+        return true;
+    }
+
+    // handleBossBullet: chasing boss fires its bullet tile on the rng cadence
+    bool testBossBullet()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *data =
+            pickBoss(all, [](const bossData_t &d)
+                     {
+                         return d.bullet != TILES_BLANK && d.bullet_rate > 0 && d.hitbox.height <= 6 &&
+                                d.distance_attack >= d.hitbox.height + 1 &&
+                                d.distance_pursuit >= d.distance_attack;
+                     });
+        if (!data)
+        {
+            LOGE("boss bullet: no bossdata fires a bullet within reach of the map centre");
+            return false;
+        }
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(8, 8, data); // half-tile coords: world tile (4,4)
+        CBoss &boss = bosses.back();
+        boss.setSpeed(1);
+        const int spawnY = 4 + data->hitbox.height; // AIM_DOWN spawn row
+        g_game->player().move(4, spawnY + 1);
+        // the rng is seeded by the tick; keep the boss pinned so the firing
+        // window does not drift while handleBossPath chases the player
+        for (uint32_t t = 1; t <= 400 && g_game->getMonsters().empty(); ++t)
+        {
+            boss.move(Pos{8, 8});
+            boss.setState(CBoss::BossState::Chase);
+            g_game->manageBosses(t);
+        }
+        if (g_game->getMonsters().empty())
+        {
+            LOGE("boss bullet: none fired within 400 ticks");
+            return false;
+        }
+        const CActor &bullet = g_game->getMonsters().front();
+        if (bullet.type() != getTileDef(data->bullet).type || bullet.x() != 4 || bullet.y() != spawnY)
+        {
+            LOGE("boss bullet: wrong actor (type 0x%.2x at (%d,%d), want 0x%.2x at (4,%d))",
+                 bullet.type(), bullet.x(), bullet.y(), getTileDef(data->bullet).type, spawnY);
+            return false;
+        }
+        return true;
+    }
+
+    // handleBossHitboxContact: player tile under the MAIN hitbox takes damage
+    bool testBossHitboxContact()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *data = pickBoss(
+            all, [](const bossData_t &d)
+            { return d.damage > 0 && d.damage < 100 && d.is_goal; });
+        if (!data)
+        {
+            LOGE("boss contact: no goal bossdata with 0 < damage < 100");
+            return false;
+        }
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(12, 12, data); // MAIN hitbox covers world tile (6,6)
+        // pending goal boss keeps checkClosure off after addHealth
+        g_game->addHealth(100); // health boots at 0; make the hit observable
+        g_game->getMap().set(6, 6, TILES_ANNIE2); // contact is map-tile driven
+        const int before = g_game->health();
+        g_game->manageBosses(1); // contact runs ahead of the speed gate
+        if (g_game->health() >= before)
+        {
+            LOGE("boss contact: health %d unchanged from %d (primary damage %d)",
+                 g_game->health(), before, data->damage);
+            return false;
+        }
+        return true;
+    }
 }
 
 bool test_game_ai()
@@ -636,6 +835,12 @@ bool test_game_ai()
         {testBullet, "bullet"},
         {testBarrelBlast, "barrel blast"},
         {testBarrelFuse, "barrel fuse"},
+        {testSpawns, "spawns"},
+        {testSpawnsBlocked, "spawns blocked"},
+        {testBossStates, "boss states"},
+        {testBossPath, "boss path"},
+        {testBossBullet, "boss bullet"},
+        {testBossHitboxContact, "boss hitbox contact"},
     };
 
     int failed = 0;

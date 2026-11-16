@@ -2,6 +2,7 @@ data/*mapz.bak*
 .vscode/*
 backup/*
 build/*
+build-cov/*
 buildx/*
 workspace/*
 notes.txt

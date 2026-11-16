@@ -68,12 +68,14 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       offset, missing-file failure; sheet tables non-empty; `getChTile`
       128-entry wrap.
 - [ ] `logger.cpp` — log line lands in output file; levels filter correctly.
-- [ ] `game_ai.cpp` — AI tick logic against singleton + map fixture
+- [x] `game_ai.cpp` — AI tick logic against singleton + map fixture
       (982 lines, biggest untested block; do after ai_path helper exists).
-      Phase 1 (dispatcher/movers) + Phase 2 (MonsterV3/spawnBullet,
-      vamplant, egg, barrel blast/fuse, bullets) done in `t_game_ai.cpp`;
-      Phase 0 seam landed as public `rebuildMonsterGrid()`.
-      Phased plan: [game_ai-test-plan.md](game_ai-test-plan.md).
+      Phases 1–4 done in `t_game_ai.cpp`: dispatcher/movers, MonsterV3/
+      spawnBullet, vamplant, egg, barrel blast/fuse, bullets, spawns
+      (queueRespawn + manageSpawns delay/block/active), and bosses
+      (path/bullet/hitbox-contact/states). Seams: public `rebuildMonsterGrid()`
+      (Phase 0), `getBosses()` + public `addHealth` (Phase 4).
+      Plan archived: [game_ai-test-plan.md](archive/game_ai-test-plan.md).
 
 ## Tier 4 — not worth unit-testing (defer / integrate manually)
 
