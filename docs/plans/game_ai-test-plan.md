@@ -71,18 +71,25 @@ Via `manageMonsters`:
   `getTileDef(id).type == expected` inside the test so a table edit fails
   the test loudly instead of silently skipping the branch.
 
-### Phase 2 — interactions
-Via `manageMonsters` with multi-actor scenarios:
-- `handleMonsterV3` (`ticks`-parameterised behaviour).
-- `handleVamPlant` spawns into `newMonsters` → assert monster count grows.
-- `handleEgg` → hatches to monster on timeout.
-- `handleBarrel` + `blastRadius`: bullet hits barrel → monsters inside
-  radius deleted (indices in `deletedMonsters` processed in greater<>
-  order — assert survivor set, not deletion order).
-- `handleBullet` + `spawnBullet`: bullet advances, dies on solid tile or
-  after range; hits monster → monster deleted.
-- `isPushable` (public static table predicate) + `pushChain` via
-  `CGame::push()`-adjacent public path if reachable, else cover transitively.
+### Phase 2 — interactions ✅ DONE 2026-11-16
+Implemented in `tests/t_game_ai.cpp` (`testMonsterV3`, `testVamPlant`,
+`testEggHatch`, `testBullet`, `testBarrelBlast`, `testBarrelFuse`).
+Notes from implementation:
+- Plan expected "bullet hits monster → monster deleted"; the implementation
+  does not do that: a bullet cannot enter a monster's tile, so it dies and
+  the monster is untouched. The tests assert that reality; `blastRadius`
+  (barrel explosions) is what deletes mob monsters, verified there.
+- `spawnBullet` (private) covered transitively via `handleMonsterV3`: on a
+  tick passing both `speeds[def.speed]` and `ticks % def.rate` the shooter
+  spawns a `TYPE_FIREBALL` (count grows); a non-rate active tick fires
+  nothing.
+- Barrel fuse timing: the fuse is lit after the barrel's own index was
+  already processed that tick, so the barrel arms at full `BARREL_TTL`
+  (20, mirrored as a test constant — the scenario fails if it drifts).
+- Blast victims placed at vector indices after the barrel are deleted
+  before their own `handle*` runs, keeping the survivor set deterministic.
+- `handleBullet` death paths covered: advance, blocked by monster tile,
+  blocked by boulder tile (tile restored from PU), TTL+algo expiry.
 
 ### Phase 3 — spawns
 - Death of a respawn-flagged monster (from Phase 2 barrel scenario) queues

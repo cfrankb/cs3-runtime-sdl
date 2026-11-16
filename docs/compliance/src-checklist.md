@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 644a5dc |
+| Git HEAD | bb0d278 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 69 |
 | Verified items | 69 / 121 |
@@ -45,7 +45,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
 - [x] `src/game.cpp` `374e405ea736b139` — covered by t_runtime, t_game
 - [x] `src/game.h` `ea6f0cf6e704509a` — covered by t_runtime, t_game
-- [ ] `src/game_ai.cpp` `e9aac7af151aa17d` — PARTIAL: Phase 1 covered by t_game_ai
+- [ ] `src/game_ai.cpp` `e9aac7af151aa17d` — PARTIAL: Phases 1–2 covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
 - [x] `src/gamemixin.cpp` `a1bc1f602aba9f2f` — covered by t_runtime

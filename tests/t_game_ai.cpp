@@ -16,7 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "../src/animzdata.h"
 #include "../src/attr.h"
+#include "../src/bossdata.h"
 #include "../src/game.h"
 #include "../src/gamesfx.h"
 #include "../src/logger.h"
@@ -35,6 +37,9 @@ namespace
     constexpr int MAP_SIZE = 12;
     constexpr uint32_t TICKS_ALL = 840; // lcm(1..8): every speeds[] slot passes
     constexpr uint32_t TICKS_NONE = 841; // 29^2: only speeds[0..1] pass
+
+    // mirrors the anonymous enum in game.cpp; the fuse scenario fails if it drifts
+    constexpr int BARREL_TTL = 20;
 
     CGame *g_game = nullptr;
 
@@ -267,6 +272,238 @@ namespace
         }
         return true;
     }
+
+    // ---------------- Phase 2: interactions ----------------
+
+    bool testMonsterV3()
+    {
+        resetWorld();
+        const uint16_t tile = tileOf(TYPE_MONSTERV3);
+        const TileDef &def = getTileDef(tile);
+        if (!def.bullet || !def.rate || !def.range || !def.path)
+        {
+            LOGE("monsterV3: tile 0x%.2x lacks bullet/rate/range/path fields", tile);
+            return false;
+        }
+        CActor &v3 = spawn(tile, TYPE_MONSTERV3, 5, 5, AIM_DOWN);
+        g_game->player().move(5, 8); // distance 3 < range
+
+        g_game->manageMonsters(16); // in range: startPath (follows one step)
+        if (g_game->getMonsters().size() != 1 || v3.path() == nullptr ||
+            v3.pos() == Pos{5, 5})
+        {
+            LOGE("monsterV3: startPath did not engage at (%d,%d)", v3.x(), v3.y());
+            return false;
+        }
+
+        g_game->manageMonsters(24); // active tick, 24 % rate != 0: follow only, no fire
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("monsterV3: fired on a non-rate tick");
+            return false;
+        }
+
+        g_game->manageMonsters(32); // active and 32 % rate == 0: spawnBullet ahead
+        if (g_game->getMonsters().size() != 2)
+        {
+            LOGE("monsterV3: no bullet spawned on the rate tick (count %zu)",
+                 g_game->getMonsters().size());
+            return false;
+        }
+        if (g_game->getMonster(0).type() != TYPE_MONSTERV3)
+        {
+            LOGE("monsterV3: shooter missing after firing");
+            return false;
+        }
+        return true;
+    }
+
+    bool testVamPlant()
+    {
+        // propagates into adjacent swamp tile
+        resetWorld();
+        const uint16_t plantTile = tileOf(TYPE_VAMPLANT);
+        spawn(plantTile, TYPE_VAMPLANT, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 4, tileOf(TYPE_SWAMP)); // g_dirs scans AIM_UP first
+        g_game->manageMonsters(TICKS_ALL);
+        if (g_game->getMonsters().size() != 2 ||
+            CGame::getMap().at(5, 4) != TILES_VAMPLANT)
+        {
+            LOGE("vamplant: swamp not seeded (count %zu tile 0x%.2x)",
+                 g_game->getMonsters().size(), CGame::getMap().at(5, 4));
+            return false;
+        }
+        const int j = g_game->findMonsterAt(5, 4);
+        if (j == CGame::INVALID || g_game->getMonster(j).type() != TYPE_VAMPLANT)
+        {
+            LOGE("vamplant: seeded plant missing from grid");
+            return false;
+        }
+
+        // converts an adjacent monster into a plant
+        resetWorld();
+        spawn(plantTile, TYPE_VAMPLANT, 5, 5, AIM_DOWN);
+        CActor &monster = spawn(tileOf(TYPE_MONSTER, 2, AI_STICKY), TYPE_MONSTER, 5, 6, AIM_UP);
+        g_game->manageMonsters(TICKS_ALL);
+        if (monster.type() != TYPE_VAMPLANT || CGame::getMap().at(5, 6) != TILES_VAMPLANT)
+        {
+            LOGE("vamplant: monster not converted (type 0x%.2x tile 0x%.2x)",
+                 monster.type(), CGame::getMap().at(5, 6));
+            return false;
+        }
+        return true;
+    }
+
+    bool testEggHatch()
+    {
+        resetWorld();
+        const uint16_t eggTile = tileOf(TYPE_EGG);
+        const uint16_t hatchTile = getTileDef(eggTile).bullet;
+        if (!hatchTile)
+        {
+            LOGE("egg: tile 0x%.2x has no hatchling tile", eggTile);
+            return false;
+        }
+        CActor &egg = spawn(eggTile, TYPE_EGG, 5, 5, AIM_UP);
+
+        for (int i = 0; i < ANIMZ_EGG_HATCH_LEN - 1; ++i)
+            g_game->manageMonsters(TICKS_ALL);
+        if (egg.type() != TYPE_EGG)
+        {
+            LOGE("egg: hatched before frame %d", ANIMZ_EGG_HATCH_LEN);
+            return false;
+        }
+
+        g_game->manageMonsters(TICKS_ALL); // final frame: hatch
+        if (g_game->getMonsters().size() != 1 ||
+            egg.type() != getTileDef(hatchTile).type ||
+            CGame::getMap().at(5, 5) != hatchTile ||
+            egg.getPU() != TILES_EGG_CRACKED)
+        {
+            LOGE("egg: hatch did not swap actor/map (0x%.2x / 0x%.2x)",
+                 egg.type(), CGame::getMap().at(5, 5));
+            return false;
+        }
+        return true;
+    }
+
+    bool testBullet()
+    {
+        // advances on open ground
+        resetWorld();
+        const uint16_t ballTile = tileOf(TYPE_FIREBALL);
+        CActor &ball = spawn(ballTile, TYPE_FIREBALL, 5, 5, AIM_RIGHT);
+        g_game->manageMonsters(TICKS_ALL);
+        if (!expectPos("bullet: advances", ball, 6, 5))
+            return false;
+
+        // dies in front of a monster tile; the monster itself survives
+        // (blastRadius, not bullets, is what deletes mob monsters)
+        resetWorld();
+        spawn(ballTile, TYPE_FIREBALL, 5, 5, AIM_RIGHT);
+        spawn(tileOf(TYPE_MONSTER, 2, AI_STICKY), TYPE_MONSTER, 6, 5, AIM_UP);
+        g_game->manageMonsters(TICKS_ALL);
+        if (g_game->getMonsters().size() != 1 ||
+            g_game->getMonsters().front().type() != TYPE_MONSTER)
+        {
+            LOGE("bullet vs monster: survivors %zu", g_game->getMonsters().size());
+            return false;
+        }
+
+        // blocked by a boulder tile with no actor: dies, tile restored
+        resetWorld();
+        spawn(ballTile, TYPE_FIREBALL, 5, 5, AIM_RIGHT);
+        CGame::getMap().set(6, 5, tileOf(TYPE_BOULDER));
+        g_game->manageMonsters(TICKS_ALL);
+        if (!g_game->getMonsters().empty() || CGame::getMap().at(5, 5) != TILES_BLANK)
+        {
+            LOGE("bullet vs boulder: not cleaned up");
+            return false;
+        }
+
+        // range expiry: algo set and TTL exhausted -> dies even on open ground
+        resetWorld();
+        CActor &ball4 = spawn(ballTile, TYPE_FIREBALL, 5, 5, AIM_RIGHT);
+        ball4.setAlgo(BossData::Path::ASTAR);
+        ball4.setTTL(0);
+        g_game->manageMonsters(TICKS_ALL);
+        if (!g_game->getMonsters().empty() || CGame::getMap().at(6, 5) != TILES_BLANK)
+        {
+            LOGE("bullet ttl: not cleaned up");
+            return false;
+        }
+        return true;
+    }
+
+    bool testBarrelBlast()
+    {
+        resetWorld();
+        CActor &barrel = spawn(tileOf(TYPE_BARREL), TYPE_BARREL, 5, 5, AIM_UP);
+        barrel.setTTL(1); // explodes on this next active tick
+        const uint16_t monsterTile = tileOf(TYPE_MONSTER, 2, AI_STICKY);
+        spawn(monsterTile, TYPE_MONSTER, 5, 3, AIM_UP); // blast offset (0,-2)
+        spawn(monsterTile, TYPE_MONSTER, 6, 5, AIM_UP); // blast offset (1,0)
+        spawn(monsterTile, TYPE_MONSTER, 8, 5, AIM_UP); // offset (3,0): outside radius 2
+
+        g_game->manageMonsters(TICKS_ALL);
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("barrel blast: survivors %zu; expecting 1", g_game->getMonsters().size());
+            return false;
+        }
+        if (CGame::getMap().at(5, 5) != TILES_BARREL2EX || g_game->getSfx().empty())
+        {
+            LOGE("barrel blast: tile 0x%.2x, %zu sfx",
+                 CGame::getMap().at(5, 5), g_game->getSfx().size());
+            return false;
+        }
+        return true;
+    }
+
+    bool testBarrelFuse()
+    {
+        resetWorld();
+        spawn(tileOf(TYPE_BARREL), TYPE_BARREL, 6, 5, AIM_UP);
+        spawn(tileOf(TYPE_ICECUBE), TYPE_ICECUBE, 6, 6, AIM_NONE); // static blast victim
+        spawn(tileOf(TYPE_FIREBALL), TYPE_FIREBALL, 4, 5, AIM_RIGHT);
+
+        g_game->manageMonsters(TICKS_ALL); // bullet advances to (5,5)
+        const int b0 = g_game->findMonsterAt(6, 5);
+        if (b0 == CGame::INVALID || g_game->getMonster(b0).getTTL() != CActor::NoTTL)
+        {
+            LOGE("barrel fuse: armed before the bullet arrived");
+            return false;
+        }
+
+        g_game->manageMonsters(TICKS_ALL); // bullet dies on the barrel -> fuse lit
+        if (g_game->getMonsters().size() != 2)
+        {
+            LOGE("barrel fuse: bullet not consumed (count %zu)", g_game->getMonsters().size());
+            return false;
+        }
+        const int b1 = g_game->findMonsterAt(6, 5);
+        if (b1 == CGame::INVALID || g_game->getMonster(b1).getTTL() != BARREL_TTL)
+        {
+            LOGE("barrel fuse: ttl %d; expecting %d",
+                 b1 == CGame::INVALID ? -999 : g_game->getMonster(b1).getTTL(), BARREL_TTL);
+            return false;
+        }
+
+        for (int i = 0; i < BARREL_TTL - 1; ++i) // burn down to ttl 1
+            g_game->manageMonsters(TICKS_ALL);
+
+        g_game->manageMonsters(TICKS_ALL); // ttl reaches 0: explodes
+
+        if (!g_game->getMonsters().empty() ||
+            CGame::getMap().at(6, 5) != TILES_BARREL2EX ||
+            CGame::getMap().at(6, 6) != TILES_BLANK)
+        {
+            LOGE("barrel fuse: explosion cleanup (count %zu tiles 0x%.2x/0x%.2x)",
+                 g_game->getMonsters().size(), CGame::getMap().at(6, 5), CGame::getMap().at(6, 6));
+            return false;
+        }
+        return true;
+    }
 }
 
 bool test_game_ai()
@@ -282,6 +519,12 @@ bool test_game_ai()
         {testDrone, "drone"},
         {testCrusher, "crusher"},
         {testIceCube, "icecube"},
+        {testMonsterV3, "monsterV3"},
+        {testVamPlant, "vamplant"},
+        {testEggHatch, "egg hatch"},
+        {testBullet, "bullet"},
+        {testBarrelBlast, "barrel blast"},
+        {testBarrelFuse, "barrel fuse"},
     };
 
     int failed = 0;
