@@ -44,6 +44,7 @@
 #include "t_ai_path.h"
 #include "t_assetman.h"
 #include "t_tables.h"
+#include "t_game_ai.h"
 #include "../src/logger.h"
 
 #define FCT(x) {x, #x}
@@ -99,6 +100,7 @@ int main(int argc, char *args[])
         FCT(test_pathfinding),
         FCT(test_assetman),
         FCT(test_tables),
+        FCT(test_game_ai),
     };
 
     int failed = 0;

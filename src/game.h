@@ -145,6 +145,7 @@ public:
     static userKeys_t &keys();
     std::vector<CActor> &getMonsters();
     CActor &getMonster(int i);
+    void rebuildMonsterGrid(); // public so tests can sync the grid after getMonsters() injection
     std::vector<sfx_t> &getSfx();
     void playSound(const int id) const;
     void playTileSound(const int tileID) const;
@@ -237,7 +238,6 @@ private:
     void resetKeys();
     void clearKeyIndicators();
     void setQuiet(bool state);
-    void rebuildMonsterGrid();
     void updateMonsterGrid(const CActor &actor, const int index);
     void manageTrigger(const int x, const int y, const uint8_t attr);
 

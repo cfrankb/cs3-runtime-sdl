@@ -70,6 +70,8 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
 - [ ] `logger.cpp` — log line lands in output file; levels filter correctly.
 - [ ] `game_ai.cpp` — AI tick logic against singleton + map fixture
       (982 lines, biggest untested block; do after ai_path helper exists).
+      Phase 1 (dispatcher/movers) done in `t_game_ai.cpp`; Phase 0 seam
+      landed as public `rebuildMonsterGrid()`.
       Phased plan: [game_ai-test-plan.md](game_ai-test-plan.md).
 
 ## Tier 4 — not worth unit-testing (defer / integrate manually)
