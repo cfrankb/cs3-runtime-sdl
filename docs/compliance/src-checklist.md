@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | 0306d39 |
+| Git HEAD | b9337e6 |
 | Files tracked | 121 |
-| Covered by cs3-tests | 53 |
-| Verified items | 51 / 121 |
+| Covered by cs3-tests | 57 |
+| Verified items | 55 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -24,8 +24,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/assetman.cpp` `fd156396d2a83648`
 - [ ] `src/assetman.h` `7d4bc0e19fe999a5`
 - [ ] `src/attr.h` `f997bfc050e9663d`
-- [ ] `src/boss.cpp` `c86ea109a1e8d05c`
-- [ ] `src/boss.h` `1692c812fa358f22`
+- [x] `src/boss.cpp` `c86ea109a1e8d05c` — covered by t_boss
+- [x] `src/boss.h` `1692c812fa358f22` — covered by t_boss
 - [x] `src/bossdata.cpp` `5525be1c08f18052` — covered by t_bossdata
 - [x] `src/bossdata.h` `0f7efeb1c388d773` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
@@ -61,12 +61,12 @@ See [README](README.md) for the verification procedure.
 - [x] `src/layer.h` `5b326b8fb740de7a` — covered by t_map*
 - [ ] `src/layerdata.cpp` `ac81acaf0a834d9f`
 - [ ] `src/layerdata.h` `8c2ce0bbe17cc15e`
-- [ ] `src/level.cpp` `b919dac75ba69dbb`
-- [ ] `src/level.h` `d4498ca784adba50`
+- [x] `src/level.cpp` `b919dac75ba69dbb` — covered by t_level
+- [x] `src/level.h` `d4498ca784adba50` — covered by t_level
 - [ ] `src/logger.cpp` `349c670dd25912b5`
 - [ ] `src/logger.h` `b0aec1bb5c1d6f25`
 - [ ] `src/main.cpp` `cefe4430ffd2cdbe`
-- [x] `src/map.cpp` `8fe2c9a8fc5891bb` — covered by t_map*, t_runtime
+- [x] `src/map.cpp` `994d0a3010e99902` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
 - [x] `src/maparch.cpp` `b28f6c9acd1543e1` — covered by t_maparch_*
 - [x] `src/maparch.h` `9c6b979a896e52b2` — covered by t_maparch_*

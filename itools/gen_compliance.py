@@ -18,6 +18,7 @@ OUT = ROOT / "docs" / "compliance" / "src-checklist.md"
 
 # src file -> suites that exercise it directly (tests/*.cpp includes)
 COVERED = {
+    "src/boss": "t_boss",
     "src/bossdata": "t_bossdata",
     "src/actor": "t_actor",
     "src/ai_path": "PARTIAL CPath serialization + getPathAlgo only (t_actor); A*/BFS/LOS untested",
@@ -30,6 +31,7 @@ COVERED = {
     "src/game": "t_runtime, t_game",
     "src/gamemixin": "t_runtime",
     "src/gamestats": "t_gamestats",
+    "src/level": "t_level",
     "src/map": "t_map*, t_runtime",
     "src/layer": "t_map*",
     "src/maparch": "t_maparch_*",

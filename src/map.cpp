@@ -660,6 +660,10 @@ bool CMap::resize(uint16_t in_len, uint16_t in_hei, uint16_t t, bool fast)
     m_len = in_len;
     m_hei = in_hei;
 
+    // a map emptied by clear() has no layers; recreate the main layer
+    if (m_layers.empty())
+        addMainLayer();
+
     for (const auto &layer : m_layers)
         if (!layer->resize(in_len, in_hei, t, fast))
             return false;

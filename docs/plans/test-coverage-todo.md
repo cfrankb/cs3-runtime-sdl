@@ -31,10 +31,16 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
       with name/hp/type/path-algo sanity, unknown type null, `getHitboxes`
       (sheet, frame) probe + miss, `freeBossData` resets state.
       **Unblocks boss.cpp below.**
-- [ ] `boss.cpp` — `CBoss` serialize/deserialize round-trip (needs bossdata;
-      `write()` derefs `m_bossData`).
-- [ ] `level.cpp` — `fetchLevel(CMap&, fname)` against a real level file from
-      `data/`; verify map title/dims/attrs.
+- [x] `boss.cpp` — `t_boss.cpp`: `CBoss` round-trip (x/y/type/hp/speed/state/aim)
+      using production bossdata; clone constructed with the wrong boss type to
+      prove `read()` adopts the stream's type; bogus type byte rejected.
+      Skips with the same fixture guard.
+- [x] `level.cpp` — `t_level.cpp`: all three `fetchLevel` dispatches —
+      synthesized cs3 binary (64x64+7, convTable tile+attr spot checks incl.
+      out-of-table clamp), generated MAPZ round-trip, text `.map` via
+      `getChTile`, missing-file error. Fixed product bug found by test:
+      `CMap::resize` on a `clear()`ed map had no layers → assert; now
+      recreates the main layer.
 
 ## Tier 3 — need singleton or fixture scaffolding first
 
