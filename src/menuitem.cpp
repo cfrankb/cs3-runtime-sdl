@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "menuitem.h"
+#include <cstdio>
 
 CMenuItem::CMenuItem(const std::string &tmpl, const int role, CMenu *menu)
 {

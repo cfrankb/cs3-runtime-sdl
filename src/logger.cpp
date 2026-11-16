@@ -18,6 +18,7 @@
 // logger.cpp
 #include "logger.h"
 #include <cstdarg>
+#include <cstdlib>
 #include <cstring>
 
 #ifndef SDL_NOT_WANTED

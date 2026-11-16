@@ -16,6 +16,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "engine_hw.h"
+#include <cstdio>
+#include <cstdlib>
 #include <unordered_map>
 #include "menu.h"
 #include "color.h"

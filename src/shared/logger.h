@@ -24,6 +24,7 @@
 #define __LOGGER_H__
 
 #include <cstdio>
+#include <cstdlib>
 #include <mutex>
 #include <string>
 

@@ -17,6 +17,7 @@
 */
 
 #include "game.h"
+#include <cstdlib>
 #include <vector>
 #include "map.h"
 #include "boss.h"
