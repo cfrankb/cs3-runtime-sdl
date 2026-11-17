@@ -487,7 +487,8 @@ void EngineHW::drawSugarMeter(const int bx)
         !m_visualStates.sugarFx)
     {
         if (sugar > 0)
-            m_visualStates.sugarCubes[sugar - 1] = MAX_FX_COLOR;
+            m_visualStates.sugarCubes[(sugar < SUGAR_CUBES ? sugar : SUGAR_CUBES) - 1] =
+                MAX_FX_COLOR; // clamp: crafted saves can push S_SUGAR past SUGAR_CUBES
         m_visualStates.sugarFx = MAX_FX_COLOR;
     }
     else if (m_visualStates.sugarFx && updateNow)
@@ -1070,6 +1071,8 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
             const float x = hRect.x - sRect.x;
             const float y = hRect.y - sRect.y;
             SDL_FRect rect{x * SCALEF, y * SCALEF, hRect.width * SCALEF, hRect.height * SCALEF};
+            if (hpRatio <= 0.0f) // boss data with maxHp()==0: skip gauge (hp()/hpRatio would be inf)
+                continue;
             SDL_FRect rectH{x * SCALEF, y * SCALEF, static_cast<int>(boss.hp() / hpRatio) * SCALEF, hRect.height * SCALEF};
             drawRect(m_renderer, rect, SColor::BLACK, true);
             drawRect(m_renderer, rectH, SColor::toSColor(boss.data()->color_hp), true);
@@ -1231,6 +1234,11 @@ void EngineHW::drawSplash()
 {
 #define _F(_x_) static_cast<float>(_x_)
     const auto texture = m_textureSplash;
+    if (!texture)
+    {
+        LOGW("drawSplash: no splash texture loaded; skipping");
+        return;
+    }
     const int h = getHeight() * SCALE;
     const int w = getWidth() * SCALE;
     const float logoH = LOGO_SCALE * _F(h); // scaled logo

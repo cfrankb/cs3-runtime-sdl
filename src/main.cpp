@@ -366,6 +366,11 @@ int main(int argc, char *args[])
     data.clear();
 
     g_runtime->setSkill(params.skill);
+    if (maparch.size() == 0)
+    {
+        LOGE("map archive contains no maps; cannot start (was modulo by zero)");
+        return EXIT_FAILURE;
+    }
     const int startLevel = (params.level > 0 ? params.level - 1 : 0) % maparch.size();
     g_runtime->setStartLevel(startLevel);
     if (params.fullscreen)

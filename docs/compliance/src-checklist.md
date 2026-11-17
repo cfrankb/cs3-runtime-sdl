@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-17 |
-| Git HEAD | 512d2b7 |
+| Git HEAD | 0a10ff6 |
 | Files tracked | 119 |
 | Covered by cs3-tests | 70 |
 | Verified items | 80 / 119 |
@@ -36,9 +36,9 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/colormasks.h` `5dbd536c2c942b3d`
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
-- [x] `src/engine.cpp` `d08f4c76c1eb8136` — covered by t_engine
+- [x] `src/engine.cpp` `1e53ddad43dba94e` — covered by t_engine
 - [x] `src/engine.h` `9663c6f11da8872f` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `edcf76fa6afdbe0a`
+- [ ] `src/engine_hw.cpp` `1ee8009c5c530136`
 - [ ] `src/engine_hw.h` `1327f4c97b90aa35`
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
@@ -48,7 +48,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/game_ai.cpp` `485cbd0e61d2597c` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `b98bee7707fe8dcf` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
+- [x] `src/gamemixin.cpp` `2685bb44d6c3d19f` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
 - [x] `src/gamemixin.h` `3ea5272cd8f29e2c` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
@@ -65,7 +65,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
 - [x] `src/logger.cpp` `f6d8efa613669664` — covered by t_logger
 - [ ] `src/logger.h` `8775cdc1c8eaa735` — covered by t_logger
-- [ ] `src/main.cpp` `cefe4430ffd2cdbe`
+- [ ] `src/main.cpp` `8393db2ec6343bb1`
 - [x] `src/map.cpp` `48f1a503646865d5` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
 - [x] `src/maparch.cpp` `98605da56ae8827d` — covered by t_maparch_*
@@ -85,7 +85,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/recorder.cpp` `2bfd1c5bb0a0afa4` — covered by t_recorder
 - [x] `src/recorder.h` `ea6d5a523969090a` — covered by t_recorder
 - [ ] `src/rect.h` `1c32d3c3241f2ede`
-- [x] `src/runtime.cpp` `feec4ad2f4828194` — covered by t_runtime
+- [x] `src/runtime.cpp` `0e3c603789d85934` — covered by t_runtime
 - [x] `src/runtime.h` `afe265bf47345194` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables

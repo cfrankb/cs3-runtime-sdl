@@ -1604,7 +1604,7 @@ void CGameMixin::drawScores(CFrame &bitmap)
             color = CYAN;
         }
         bool showCaret = (color == YELLOW) && (m_ticks & CARET_SPEED);
-        snprintf(t, sizeof(t), " %.8d %.2d %s%c",
+        snprintf(t, sizeof(t), " %.8d %.2d %.16s%c",
                  m_hiscores[i].score,
                  m_hiscores[i].level,
                  m_hiscores[i].name,
@@ -2351,7 +2351,8 @@ void CGameMixin::drawSugarMeter(CFrame &bitmap, const int bx)
         !m_visualStates.sugarFx)
     {
         if (sugar > 0)
-            m_visualStates.sugarCubes[sugar - 1] = MAX_FX_COLOR;
+            m_visualStates.sugarCubes[(sugar < SUGAR_CUBES ? sugar : SUGAR_CUBES) - 1] =
+                MAX_FX_COLOR; // clamp: crafted saves can push S_SUGAR past SUGAR_CUBES
         m_visualStates.sugarFx = MAX_FX_COLOR;
     }
     else if (m_visualStates.sugarFx && updateNow)

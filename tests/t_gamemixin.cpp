@@ -184,6 +184,7 @@ public:
     uint8_t &keyRepeter_(int k) { return m_keyRepeters[k]; }
     visualStates_t &visual_() { return m_visualStates; }
     ColorMaps &colormaps_() { return m_colormaps; }
+    void sugarMeter_(CFrame &bitmap, int bx) { drawSugarMeter(bitmap, bx); }
 };
 
 bool checkMessage(TestRuntime &rt, int eventId, const std::string &line,
@@ -863,6 +864,26 @@ bool test_gamemixin_screen()
         return fail("status diamond shimmer");
     if (px(sbmp, 168, 2) != GREEN)
         return fail("status lives shimmer");
+
+    // sugar meter clamps out-of-range S_SUGAR (crafted save) to the last cube
+    CGame &gs = *CGame::getGame();
+    gs.stats().set(S_SUGAR, 200);
+    rt.visual_().rSugar = 0;
+    rt.visual_().sugarFx = 0;
+    memset(rt.visual_().sugarCubes, 0, sizeof(rt.visual_().sugarCubes));
+    CFrame meter(120, 64);
+    rt.sugarMeter_(meter, 0);
+    auto &cubes = rt.visual_().sugarCubes;
+    const size_t lastCube = sizeof(cubes) / sizeof(cubes[0]) - 1;
+    if (!rt.visual_().sugarFx || cubes[lastCube] != rt.visual_().sugarFx)
+        return fail("S_SUGAR=200 not clamped to last cube");
+    for (size_t i = 0; i < lastCube; ++i)
+        if (cubes[i] != 0)
+            return fail("clamp wrote wrong cube");
+    gs.stats().set(S_SUGAR, 0);
+    rt.visual_().sugarFx = 0;
+    memset(rt.visual_().sugarCubes, 0, sizeof(rt.visual_().sugarCubes));
+    rt.visual_().rSugar = 0;
 
     // classic health bar
     CFrame hb(240, 64);

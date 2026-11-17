@@ -1368,7 +1368,11 @@ bool CRuntime::loadScores()
     {
         if (file.getSize() == sizeof(m_hiscores))
         {
-            file.read(m_hiscores, sizeof(m_hiscores));
+            if (file.read(m_hiscores, sizeof(m_hiscores)) != static_cast<int>(sizeof(m_hiscores)))
+            {
+                LOGE("hiscore read failed. resetting to default.");
+                clearScores();
+            }
             file.close();
         }
         else
@@ -1482,6 +1486,11 @@ void CRuntime::openMusicForLevel(int i)
 {
     const CMap &map = m_game->getMap();
     const std::string metaMusic = map.statesConst().getS(StateValue::MUSIC);
+    if (metaMusic.empty() && m_musicFiles.empty())
+    {
+        LOGW("no music files available; skipping level music (was modulo by zero)");
+        return;
+    }
     const std::string filename = metaMusic.empty() ? m_musicFiles[i % m_musicFiles.size()] : metaMusic;
     openMusic(filename);
 }
@@ -2775,6 +2784,12 @@ std::string CRuntime::getMusicPath(const std::string &filename)
  */
 void CRuntime::loadColorMaps(const int userID)
 {
+    if (userID < 0 || userID >= static_cast<int>(m_userNames.size()))
+    {
+        LOGW("loadColorMaps: user id %d out of range (max %d)", userID,
+             static_cast<int>(m_userNames.size()) - 1);
+        return;
+    }
     std::string name = m_userNames[userID];
     std::string path = AssetMan::getPrefix() + "colormaps/" + name + ".ini";
     CFileWrap file;
@@ -2876,6 +2891,11 @@ Rez CRuntime::getScreenSize()
 {
     const SDL_DisplayID display = SDL_GetPrimaryDisplay();
     const SDL_DisplayMode *mode = SDL_GetDesktopDisplayMode(display);
+    if (!mode)
+    {
+        LOGW("SDL_GetDesktopDisplayMode failed: %s", SDL_GetError());
+        return Rez{0, 0};
+    }
     return Rez{mode->w, mode->h};
 }
 
@@ -2917,7 +2937,7 @@ void CRuntime::onOrientationChange()
 
 rect_t CRuntime::getSafeAreaWindow()
 {
-    SDL_Rect safe;
+    SDL_Rect safe = {};
     if (!SDL_GetWindowSafeArea(m_app.window, &safe))
     {
         LOGE("SDL_GetWindowSafeArea() failed; error: %s", SDL_GetError());

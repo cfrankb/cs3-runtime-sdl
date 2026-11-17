@@ -258,7 +258,7 @@ void Engine::drawScores()
 
         const auto &hiScore = mixin->getHiScoreAtIndex(i);
         bool showCaret = (color == YELLOW) && (m_ticks & CARET_SPEED);
-        snprintf(t, sizeof(t), " %.8d %.2d %s%c",
+        snprintf(t, sizeof(t), " %.8d %.2d %.16s%c",
                  hiScore.score,
                  hiScore.level,
                  hiScore.name,
