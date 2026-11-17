@@ -110,5 +110,4 @@ private:
     std::vector<CFrame *> m_frames;
     std::string m_name;
     std::unordered_map<std::string, std::string> m_tags;
-    friend class CFrameArray;
 };

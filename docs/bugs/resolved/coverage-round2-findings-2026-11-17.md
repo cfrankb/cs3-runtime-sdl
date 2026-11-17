@@ -9,6 +9,13 @@ Severity key: **H** = memory corruption / abort reachable from game data or
 normal calls; **M** = latent corruption, guarded paths today; **L** = silent
 state bug.
 
+> **Status 2026-11-18: BUG-1..BUG-6 all fixed and re-verified**
+> (`cmake --build build && ctest --test-dir build` green at HEAD `512d2b7`);
+> the `FINDING` workarounds in `tests/t_gamemixin.cpp` were removed. This report
+> is fully implemented and lives in `docs/bugs/resolved/`. The unbounded
+> full-blit `drawTile` pattern called out under BUG-1 is tracked separately in
+> `docs/audits/audit-src-2026-11-16.md` (Area 1, `engine_hw.h` `drawTile`).
+
 ---
 
 ## BUG-1 (H) `drawFont` / `drawRect` write unbounded past the bitmap
@@ -75,16 +82,17 @@ state bug.
   `test_frameset_container` exercises the non-empty path (the old
   empty-guard-only note was removed).
 
-## BUG-5 (fixed in working tree) missing `default:` in `drawLevelIntro`
+## BUG-5 (fixed) missing `default:` in `drawLevelIntro`
 
 - **Where:** `src/engine.cpp` `Engine::drawLevelIntro`, `src/gamemixin.cpp`
   `CGameMixin::drawLevelIntro`.
 - **Symptom (was):** an unmatched game mode left the stack buffer `t`
   uninitialised, then used it for `strlen`/`drawFont`.
-- **Status:** both switches gained `default: t[0] = '\0';` in the uncommitted
-  working-tree changes to `src/engine.cpp` / `src/gamemixin.cpp`. Move this
-  file to `docs/bugs/resolved/` once those are committed and re-verified
-  (`cmake --build build && ctest --test-dir build`).
+- **Status:** **Fixed.** Both switches carry `default: t[0] = '\0';`
+  (`src/engine.cpp:86-87`, `src/gamemixin.cpp:1110`), committed in `c38f854`
+  and re-verified 2026-11-18 (`cmake --build build && ctest --test-dir build`
+  green at HEAD `512d2b7`). All six findings in this file are now resolved;
+  this report moved to `docs/bugs/resolved/`.
 
 ## BUG-6 (L) `CGame::resetStats` leaves `S_PLAYER_HURT` and `S_BOAT`
 

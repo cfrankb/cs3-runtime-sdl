@@ -275,6 +275,18 @@ bool test_frame_fills()
         return false;
     }
 
+    // copy-and-swap assignment: usable from const lvalues, source stays intact
+    g = f;
+    const CFrame &cf = f;
+    CFrame fromConst;
+    fromConst = cf;
+    if (g.width() != 4 || g.at(3, 1) != 0xff112233 || fromConst.at(0, 0) != 0xff112233 ||
+        f.width() != 4 || f.at(0, 0) != 0xff112233)
+    {
+        LOGE("copy-assignment mismatch");
+        return false;
+    }
+
     CFrame h(1, 1);
     h.fill(0xff123456);
     h.inverse();

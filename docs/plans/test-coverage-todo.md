@@ -2,8 +2,9 @@
 
 Tracks adding unit tests to raise `cs3-tests` coverage of `src/`.
 State of play lives in [`../compliance/src-checklist.md`](../compliance/src-checklist.md)
-(71/121 verified) and [`../compliance/src-coverage.md`](../compliance/src-coverage.md)
-(42.2% total). Ordered by effort ascending; work top-down.
+(80/119 verified) and [`../compliance/src-coverage.md`](../compliance/src-coverage.md)
+(60.9% of 12087 gcov lines, regenerated 2026-11-18 at HEAD `512d2b7`).
+Ordered by effort ascending; work top-down.
 
 Acceptance for every item: new `tests/t_*.cpp` following existing harness
 style, registered in `tmain.cpp` + `tests/CMakeLists.txt`,
@@ -21,6 +22,9 @@ refreshed via `python3 itools/gen_compliance.py` and boxes flipped.
 - [x] `shared/DotArray.cpp` — `t_dotarray.cpp`: add/flush/`operator[]`,
       `setLimit` clipping, horizontal `lineTab` full coverage, `circle`
       bounds + degenerate r=0. Fixed inverted `isEmpty()` (no callers).
+      *(Moved out of `src/shared/` to `external/lgck-editor/` on 2026-11-18;
+      `src/shared/dot.h` keeps the `Dot` POD that `CFrame` needs — no longer
+      a coverage target here.)*
 - [x] `statedata.cpp` — `t_statedata.cpp`: non-empty, unique values/names,
       display↔enum agreement spot checks.
 

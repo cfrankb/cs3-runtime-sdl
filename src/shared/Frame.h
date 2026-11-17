@@ -30,7 +30,6 @@
 #include "dot.h"
 
 class CFrameSet;
-class CSS3Map;
 class CUndo;
 class IFile;
 
@@ -46,7 +45,7 @@ public:
     CFrame(CFrame &&src) noexcept;
     ~CFrame() = default;
 
-    CFrame &operator=(CFrame src);
+    CFrame &operator=(CFrame src); // copy-and-swap: universal assignment (const, rvalue, self)
     friend void swap(CFrame &a, CFrame &b) noexcept;
 
     inline bool isValid(int x, int y) const
@@ -74,7 +73,6 @@ public:
     bool hasTransparency() const;
     bool isEmpty() const;
 
-    CFrame &operator=(const CFrame &src);
     void clear();
     void resize(int len, int hei);
     void setTransparency(uint32_t rgba);
@@ -86,7 +84,6 @@ public:
     // CFrameSet *split(int pxSize, bool whole = true);
     CFrameSet *split(int pxSize, int pySize);
     void shrink();
-    const CSS3Map &getMap() const;
     void shiftUP(const bool wrap = true);
     void shiftDOWN(const bool wrap = true);
     void shiftLEFT(const bool wrap = true);

@@ -5,17 +5,17 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-17 |
-| Git HEAD | 64b8ec3 |
-| Files tracked | 121 |
-| Covered by cs3-tests | 72 |
-| Verified items | 81 / 121 |
+| Git HEAD | 512d2b7 |
+| Files tracked | 119 |
+| Covered by cs3-tests | 70 |
+| Verified items | 80 / 119 |
 
 See [README](README.md) for the verification procedure.
 
 ## src/
 
 - [x] `src/actor.cpp` `20ce3d6a863dae30` — covered by t_actor
-- [x] `src/actor.h` `f75afa81ea7778c6` — covered by t_actor
+- [x] `src/actor.h` `32676d726edbcd4d` — covered by t_actor
 - [x] `src/ai_path.cpp` `95dd11c9e7dbee71` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
@@ -37,19 +37,19 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
 - [x] `src/engine.cpp` `d08f4c76c1eb8136` — covered by t_engine
-- [x] `src/engine.h` `46992fe4dbfe3d3e` — covered by t_engine
+- [x] `src/engine.h` `9663c6f11da8872f` — covered by t_engine
 - [ ] `src/engine_hw.cpp` `edcf76fa6afdbe0a`
 - [ ] `src/engine_hw.h` `1327f4c97b90aa35`
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
 - [x] `src/game.cpp` `0d35561f60ae9093` — covered by t_runtime, t_game
-- [x] `src/game.h` `a5813455c42279e6` — covered by t_runtime, t_game
+- [x] `src/game.h` `693920bb9a2316bb` — covered by t_runtime, t_game
 - [x] `src/game_ai.cpp` `485cbd0e61d2597c` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
 - [x] `src/gamemixin.cpp` `b98bee7707fe8dcf` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
-- [x] `src/gamemixin.h` `c4e37105a2ee04f2` — covered by t_runtime
+- [x] `src/gamemixin.h` `3ea5272cd8f29e2c` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `174638c96b00ba1d` — covered by t_gamestats
@@ -113,20 +113,19 @@ See [README](README.md) for the verification procedure.
 
 ## src/shared/
 
-- [x] `src/shared/CRC.h` — replaced by zlib `crc32` 2026-11-18; moved to `external/lgck-editor/`
-- [x] `src/shared/dot.h` `4dbffaf2d6b88210` — covered by t_frame (Dot POD; DotArray moved to `external/lgck-editor/` 2026-11-18)
 - [x] `src/shared/FileMem.cpp` `55057ac122fe2b22` — covered by t_ifile
 - [x] `src/shared/FileMem.h` `1ed3f6247872ab7b` — covered by t_ifile
 - [x] `src/shared/FileWrap.cpp` `b62b4aed75e7b176` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
 - [x] `src/shared/Frame.cpp` `2f0482d4c8e3c49d` — covered by t_frame, t_frameset
-- [x] `src/shared/Frame.h` `d5aee8077ac34e01` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `26d50e44c5add460` — covered by t_frame, t_frameset
 - [x] `src/shared/FrameSet.cpp` `aabbe231cf3528ff` — covered by t_frameset
-- [x] `src/shared/FrameSet.h` `917ea6d58ec186fe` — covered by t_frameset
+- [x] `src/shared/FrameSet.h` `76fa6554394626fe` — covered by t_frameset
 - [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
 - [x] `src/shared/PngMagic.cpp` `2bceaffdd6ef8596` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
+- [x] `src/shared/dot.h` `4dbffaf2d6b88210` — covered by t_frame (Dot POD; DotArray moved to `external/lgck-editor/` 2026-11-18)
 - [x] `src/shared/helper.cpp` `17d69de5871db8d5` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
 - [ ] `src/shared/logger.h` `8775cdc1c8eaa735`

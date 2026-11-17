@@ -1,6 +1,6 @@
 #!/bin/bash
-TARGET_MAIN=/disks/salmon/cfrankb/toolkit/gcc/cs3-runtime-sdl
-TARGET_EDITOR=/disks/salmon/cfrankb/toolkit/qt/cs3-map-edit
+TARGET_MAIN=~/toolkit/gcc/cs3-runtime-sdl
+TARGET_EDITOR=~/toolkit/qt/cs3-map-edit
 set -e
 
 show_help () {
