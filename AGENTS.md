@@ -12,6 +12,7 @@ Documentation is modular under `docs/` (migrated 2026-10-29 from the monolithic 
 
 plans that are fully implemented should be moved to `docs/plans/archive`.
 bugs that are fixed should be moved to `docs/bugs/resolved`.
+audits that are resolved should be moved to `docs/audits/finalized`.
 
 ## Ponytail
 

@@ -1,0 +1,28 @@
+# Audit: src/shared/ISerial.h
+Date: 2026-11-17
+
+## Summary
+The header is small and mostly sound: no UB, no ODR/static-state issues, and the `!= IFILE_OK` return checks match the actual `IFile` implementations (verified in FileMem.cpp and FileWrap.cpp). The most important issue is that `readVector` reserves an unvalidated stream-supplied element count, so a corrupt or hostile game/save file can trigger a multi-gigabyte allocation and an uncaught `std::bad_alloc` (process abort). Second, the `ISerial` base class itself is dead polymorphism: one implementer, zero callers through the base, and a `write()` constness that is incompatible with the `writeVector` element contract used by the rest of the code. Counts: 0 Critical, 1 High, 2 Medium, 2 Low.
+
+## Findings
+
+### High
+- L110: [bug] [error-handling] `vec.reserve(count)` where `count` (L101–107) is a raw `uint32_t` read from the stream with no plausibility check: a corrupt file declaring e.g. 0xFFFFFFFF elements makes `reserve` attempt ~48 GB for `spawn_t` (12 B) and an uncaught `std::bad_alloc` calls `std::terminate` — a crash on malformed data instead of the documented `return false`. Fix: bound the reservation by the remaining stream, e.g. `vec.reserve(std::min<uint32_t>(count, static_cast<uint32_t>(std::max<long>(0, file.getSize() - file.tell()))));` (each element occupies ≥1 byte, so remaining bytes is a safe cap); per-element `elem.read` failures already catch the truncated tail.
+
+### Medium
+- L30–36 + L41–42 + L82–83: [shrink] The header carries two disjoint serialization contracts that never meet: `ISerial::write(IFile&)` (L35) is non-const while `writeVector` requires `bool write(IFile&) const` (L42), so the only `ISerial` implementer (`CFrameSet`, whose `write` is non-const, FrameSet.h:73) cannot be a `writeVector` element type, and neither element type actually used with the helpers (`spawn_t`, `automator_t`, game_auto.h:6/20) derives from `ISerial`. Fix: delete `ISerial` and let `CFrameSet` declare `read`/`write` directly, or make `ISerial::write` const and make the helpers take `T` constrained to it — one contract, not two.
+- L30–36: [dead] Repo-wide grep (`ISerial` in all `*.h/*.cpp/*.hpp/*.cc` under src/, tests/, examples/) shows exactly one derived class (`CFrameSet`, FrameSet.h:32) and no use of the base type anywhere: no `ISerial*`/`ISerial&` parameter, no container of them, no delete-via-base; `read`/`write` are only ever called on concrete types, so the virtual destructor and dynamic dispatch exist for zero call sites. Fix: remove the base (same edit as the finding above); `CFrameSet` keeps plain `bool read(IFile&)` / `bool write(IFile&)` members.
+
+### Low
+- L59: [bug] `static_cast<uint32_t>(vec.size())` silently truncates on 64-bit hosts if `vec.size() > UINT32_MAX`, writing a lying count and a corrupt stream that "successfully" reads back only `count` elements. Fix: `if (vec.size() > UINT32_MAX) { LOGE(...); return false; }` (one line, never taken in practice, but the cast is otherwise unchecked).
+- L82–83: [error-handling] The `readVector` documented contract ("T must provide: bool read(IFile&)") omits that `T elem;` (L113) and `push_back(std::move(elem))` (L120) also require `T` to be default-constructible and move-insertable; a non-conforming `T` fails deep inside the template instead of at a stated requirement. Fix: add the requirement to the doc comment (or a `static_assert(std::is_default_constructible_v<T>)`).
+
+## Notes
+- Implementers of `ISerial` (complete, via token grep): `CFrameSet` only (src/shared/FrameSet.h:32). Files including the header: src/shared/FrameSet.h, src/animator.cpp, src/game.cpp, tests/t_ifile.cpp.
+- `readVector`/`writeVector` call sites (complete): src/game.cpp:1311/1411 (`spawn_t`), src/animator.cpp:201/227 (`automator_t`), tests/t_ifile.cpp:287/307 (`spawn_t` round-trip, `test_ifile_vector`). All callers check the bool return and propagate failure.
+- Return-value contract verified: `IFile::read/write` (IFile.h:45–46) return `IFILE_OK(1)/IFILE_NOT_OK(0)` flags, not byte counts — confirmed in CFileMem::read/write (FileMem.cpp:55–79) and CFileWrap::read/write (FileWrap.cpp:71–85, which funnel to CFileMem for embedded assets). So the `!= IFILE_OK` checks at ISerial.h:60/102 are correct, and `%ld` with `IFile::tell()` (`long`) plus `%u` with `uint32_t` in all four LOGE calls match.
+- Element contract spot-check: `spawn_t`/`automator_t` (game_auto.h) both provide exactly `bool read(IFile&)` and `bool write(IFile&) const`; `CFrameSet::write`/`read` (FrameSet.cpp:229/234/413) return `bool`, propagate `IFile` failures, and record `m_lastError` — no contract violations found in sampled implementations.
+- ODR/static state: the header defines only a macro (`OBJECT_NAME`, L28), the `ISerial` class, and two function templates — no non-inline definitions, no statics; ODR-clean.
+- Asymmetry noted but acceptable: `readVector` clears the vector (L109) only after the count read succeeds, so a count-read failure leaves the input vector untouched while an element failure leaves it partial — the L86–87 doc comment covers the partial case; callers treat `false` as fatal so neither state is consumed.
+- Wire format is native-endian raw bytes, consistent with the rest of the codebase's `IFile` usage; not flagged.
+- Suggested runtime verification: seed a `CFileMem` with a 4-byte count of `0xFFFFFFFF` (or any count far exceeding remaining bytes) and call `readVector` — currently expected to abort with `std::bad_alloc`; after the L110 fix it should `LOGE` and return `false`. Also re-run the `t_ifile` suite (`test_ifile_vector`) after any change.

@@ -49,7 +49,7 @@ public:
     explicit CGameMixin();
     virtual ~CGameMixin();
     virtual void init(CMapArch *maparch, const int index);
-    inline bool isWithin(int val, int min, int max);
+    bool isWithin(int val, int min, int max);
     void enableHiScore();
     void setSkill(uint8_t skill);
     static int tickRate();
@@ -305,13 +305,13 @@ protected:
     void drawFont6x6(CFrame &frame, int x, int y, const char *text, const Color color = WHITE, const Color bgcolor = BLACK);
     void drawRect(CFrame &frame, const rect_t &rect, const Color color = GREEN, bool fill = true);
     void plotLine(CFrame &frame, int x0, int y0, const int x1, const int y1, const Color color);
-    inline void drawTimeout(CFrame &bitmap);
-    inline void drawKeys(CFrame &bitmap);
-    inline void drawSugarMeter(CFrame &bitmap, const int bx);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, const CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
-    inline void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const rect_t &rect, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    void drawTimeout(CFrame &bitmap);
+    void drawKeys(CFrame &bitmap);
+    void drawSugarMeter(CFrame &bitmap, const int bx);
+    void drawTile(CFrame &bitmap, const int x, const int y, const CFrame &tile, const bool alpha, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
+    void drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const rect_t &rect, const ColorMask colorMask = COLOR_NOCHANGE, std::unordered_map<uint32_t, uint32_t> *colorMap = nullptr);
     void drawTileFaz(CFrame &bitmap, const int x, const int y, CFrame &tile, int fazBitShift = 0, const ColorMask colorMask = COLOR_NOCHANGE);
-    inline CFrame *tile2Frame(const uint16_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
+    CFrame *tile2Frame(const uint16_t tileID, ColorMask &colorMask, std::unordered_map<uint32_t, uint32_t> *&colorMap);
     void drawHealthBar(CFrame &bitmap, const bool isPlayerHurt);
     void drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues);
     void drawScroll(CFrame &bitmap);

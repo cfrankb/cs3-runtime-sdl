@@ -281,6 +281,8 @@ void CActor::setPos(const Pos &pos)
 JoyAim CActor::findNextDir(const bool reverse) const
 {
     const int aim = m_aim;
+    if (aim >= TOTAL_AIMS)
+        return AIM_NONE; // AIM_NONE is an inactive-actor placeholder, not a table index
     int i = TOTAL_AIMS - 1;
     while (i >= 0)
     {
