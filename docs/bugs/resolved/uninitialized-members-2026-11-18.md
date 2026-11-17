@@ -1,7 +1,7 @@
 # BUG-H18 — Uninitialized members (NSDMI sweep)
 
 Date: 2026-11-18
-Audits closed: docs/audits/audit-src-2026-11-16.md (engine.h:220, engine.h:263-272),
+Audits closed: docs/audits/finalized/audit-src-2026-11-16.md (engine.h:220, engine.h:263-272),
 docs/audits/gamemixin.audit.md (Medium m_cx/m_cy/m_timer),
 docs/audits/game.cpp.audit.md (Medium m_mode/m_report; m_chuteTarget partially —
 serialization still open, save-format change deferred),

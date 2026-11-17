@@ -387,7 +387,11 @@ void CRuntime::run()
 void CRuntime::handleWindowResize()
 {
     int w = 0, h = 0;
-    SDL_GetRenderOutputSize(m_app.renderer, &w, &h);
+    if (!SDL_GetRenderOutputSize(m_app.renderer, &w, &h))
+    {
+        LOGW("SDL_GetRenderOutputSize failed: %s; keeping viewport", SDL_GetError());
+        return;
+    }
 
     SDL_Rect vp{0, 0, w, h};
     SDL_SetRenderViewport(m_app.renderer, &vp);
@@ -1224,13 +1228,25 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         LOGI("loading: %s", path.c_str());
     if (file.open(path.c_str(), "rb"))
     {
-        const int size = file.getSize();
+        const long size = file.getSize();
+        if (size <= 0)
+        {
+            LOGE("bad size %ld for %s", size, path.c_str());
+            file.close();
+            return false;
+        }
         char *data = new char[terminator ? size + 1 : size];
         if (terminator)
         {
             data[size] = '\0';
         }
-        file.read(data, size);
+        if (file.read(data, static_cast<int>(size)) != static_cast<int>(size))
+        {
+            LOGE("short read for %s", path.c_str());
+            delete[] data;
+            file.close();
+            return false;
+        }
         file.close();
         if (!m_quiet)
             LOGI("-> loaded %s: %d bytes", path.c_str(), size);
@@ -1278,7 +1294,7 @@ void CRuntime::parseHelp(char *text)
     m_helptext.clear();
     for (const auto &line : lines)
     {
-        if (memcmp(line.data(), marker, sizeof(marker)) == 0)
+        if (line.size() >= sizeof(marker) && memcmp(line.data(), marker, sizeof(marker)) == 0)
         {
 #ifndef __EMSCRIPTEN__
             m_helptext.emplace_back(line.data() + sizeof(marker));
@@ -1679,6 +1695,8 @@ void CRuntime::drawMenu(CFrame &bitmap, CMenu &menu, const int baseX, const int 
 
 void CRuntime::updateScroller()
 {
+    if (scrollerBufSize() < 2) // canvas narrower than the scroller: -1 would wrap
+        return;
     if (m_ticks & 1 && !m_credits.empty())
     {
         for (size_t i = 0; i < scrollerBufSize() - 1; ++i)
@@ -1817,13 +1835,21 @@ void CRuntime::takeScreenshot()
     const auto now = std::chrono::system_clock::now();
     const std::time_t currentTime = std::chrono::system_clock::to_time_t(now);
     const std::tm *localTime = std::localtime(&currentTime);
-    snprintf(filename, sizeof(filename), "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
-             localTime->tm_year + 1900,
-             localTime->tm_mon + 1,
-             localTime->tm_mday,
-             localTime->tm_hour,
-             localTime->tm_min,
-             localTime->tm_sec);
+    if (!localTime)
+    {
+        LOGW("std::localtime failed; using untimed screenshot name");
+        snprintf(filename, sizeof(filename), "screenshot.png");
+    }
+    else
+    {
+        snprintf(filename, sizeof(filename), "screenshot%.4d%.2d%.2d-%.2d%.2d%.2d.png",
+                 localTime->tm_year + 1900,
+                 localTime->tm_mon + 1,
+                 localTime->tm_mday,
+                 localTime->tm_hour,
+                 localTime->tm_min,
+                 localTime->tm_sec);
+    }
     const std::string path = m_workspace + filename;
     if (file.open(path.c_str(), "wb"))
     {
@@ -2521,8 +2547,6 @@ CMenu &CRuntime::initOptionMenu()
     std::vector<std::string> resolutions;
     for (const auto &rez : m_resolutions)
     {
-        if (rez.w < 640)
-            continue;
         snprintf(tmp, sizeof(tmp), "%dx%d", rez.w, rez.h);
         resolutions.emplace_back(tmp);
     }
@@ -2599,8 +2623,9 @@ void CRuntime::createResolutionList()
     for (int i = 0; i < numModes; ++i)
     {
         const SDL_DisplayMode &mode = *modes[i];
-        // ignore anything larger than 720p
-        if (mode.w > 1280 || mode.h > 800)
+        // ignore anything larger than 720p, and anything too small to play;
+        // the menu indexes m_resolutions directly so filtering belongs here
+        if (mode.w > 1280 || mode.h > 800 || mode.w < 640)
             continue;
         if (mode.w != pw || mode.h != ph)
             m_resolutions.emplace_back(Rez{mode.w, mode.h});

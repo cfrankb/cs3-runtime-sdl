@@ -151,10 +151,14 @@ void EngineHW::preloadAssets()
         return;
     }
 
-    m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
-    m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
-    m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS][IDX_FILENAME], TILE_SIZE, TILE_SIZE);
-    m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET][IDX_FILENAME], 16, 48);
+    if (!m_tileset_tiles.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TILES][IDX_FILENAME], TILE_SIZE, TILE_SIZE))
+        LOGE("failed to load tiles asset");
+    if (!m_tileset_animz.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_ANIMZ][IDX_FILENAME], TILE_SIZE, TILE_SIZE))
+        LOGE("failed to load animz asset");
+    if (!m_tileset_users.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_USERS][IDX_FILENAME], TILE_SIZE, TILE_SIZE))
+        LOGE("failed to load users asset");
+    if (!m_tileset_scroll.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_UISHEET][IDX_FILENAME], 16, 48))
+        LOGE("failed to load uisheet asset");
 
     LOGI("Creating texture variants");
     const uint32_t colorFilter = fazFilter(FAZ_INV_BITSHIFT);
@@ -189,12 +193,16 @@ void EngineHW::preloadAssets()
                                   //
                               });
 
-    m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0][IDX_FILENAME], g_sheet0_data);
-    m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data);
+    if (!m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0][IDX_FILENAME], g_sheet0_data))
+        LOGE("failed to load sheet0 asset");
+    if (!m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data))
+        LOGE("failed to load sheet1 asset");
 
     m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX][IDX_FILENAME]);
     m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH][IDX_FILENAME]);
     m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN][IDX_FILENAME]);
+    if (!m_textureTitlePix || !m_textureSplash || !m_textureTitleScreen)
+        LOGE("one or more title/splash textures failed to load; affected screens will be skipped");
 
     LOGI("loading boss data");
     if (loadBossData(AssetMan::getPrefix() + "bosses", AssetMan::getPrefix() + "bosses/data"))
@@ -802,7 +810,7 @@ void EngineHW::preloadHearts()
 {
     LOGI("preloadHearts");
 
-    CFrame *bitmap = new CFrame((FONT_SIZE + 1) * FONT_SIZE, 3 * FONT_SIZE);
+    CFrame bitmap((FONT_SIZE + 1) * FONT_SIZE, 3 * FONT_SIZE); // stack: load() copies
 
     auto drawHeart = [&bitmap, this](auto bx, auto by, auto health, auto color)
     {
@@ -814,7 +822,7 @@ void EngineHW::preloadHearts()
             {
                 const uint8_t bit = heart[y] & (1 << x);
                 if (bit)
-                    bitmap->at(bx + x, by + y) = x < (uint32_t)health ? color : BLACK;
+                    bitmap.at(bx + x, by + y) = x < (uint32_t)health ? color : BLACK;
             }
         }
     };
@@ -826,7 +834,7 @@ void EngineHW::preloadHearts()
         drawHeart(i * FONT_SIZE, FONT_SIZE * 2, i, WHITE);
     }
 
-    m_tileset_hearts.load(m_renderer, bitmap, FONT_SIZE, FONT_SIZE);
+    m_tileset_hearts.load(m_renderer, &bitmap, FONT_SIZE, FONT_SIZE);
 }
 
 void EngineHW::drawHealthBar(const bool isPlayerHurt)
@@ -877,6 +885,8 @@ void EngineHW::drawKeys()
         {
             // add visual sfx for key pickup
             const Tile *tile = m_tileset_tiles.getTile(k);
+            if (!tile)
+                continue; // crafted save with bogus key tile id
             SDL_Texture *texture = tile->texture;
             if (u == CGame::MAX_KEY_STATE)
             {
@@ -1253,7 +1263,7 @@ void EngineHW::drawSplash()
         (float)(texture->h) * scaleY,
     };
 
-    const float brFactor = 255 / 12;
+    const float brFactor = 255.f / 12;
     const int cur = SPLASH_DURATION - m_state.m_countdown;
     const float step = cur % 12;
     const int phase = cur / 12;

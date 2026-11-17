@@ -14,7 +14,7 @@ state bug.
 > the `FINDING` workarounds in `tests/t_gamemixin.cpp` were removed. This report
 > is fully implemented and lives in `docs/bugs/resolved/`. The unbounded
 > full-blit `drawTile` pattern called out under BUG-1 is tracked separately in
-> `docs/audits/audit-src-2026-11-16.md` (Area 1, `engine_hw.h` `drawTile`).
+> `docs/audits/finalized/audit-src-2026-11-16.md` (Area 1, `engine_hw.h` `drawTile`).
 
 ---
 

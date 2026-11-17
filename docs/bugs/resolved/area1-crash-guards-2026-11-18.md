@@ -1,7 +1,7 @@
 # BUG-H19 / BUG-H20 — Area-1 crash guards + SDL3 lifecycle
 
 Date: 2026-11-18
-Audits closed: docs/audits/audit-src-2026-11-16.md (the marked FIXED Medium/Low items:
+Audits closed: docs/audits/finalized/audit-src-2026-11-16.md (the marked FIXED Medium/Low items:
 SDL3 lifecycle cluster, both integer modulo-by-zero sites, sugar meter OOB write,
 drawSplash/getScreenSize/getSafeAreaWindow, loadColorMaps, loadScores, drawBossses
 hpRatio, ~CRuntime leaks).

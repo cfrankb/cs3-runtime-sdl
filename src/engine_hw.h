@@ -71,7 +71,7 @@ protected:
     void drawTimeout();
     void preloadHearts();
     void drawHealthBar(const bool isPlayerHurt);
-    virtual void fazeScreen(int str = 0xe) override;
+    virtual void fazeScreen(int str) override;
     void flashScreen();
     void drawKeys();
     const Tile *getMainLayerTile(const uint16_t tileID);
@@ -86,6 +86,8 @@ protected:
 
     inline void drawTile(const Tile *tile, const int x, const int y)
     {
+        if (!tile) // blank/special tiles: getMainLayerTile legitimately returns nullptr
+            return;
         constexpr const float SCALE = 2;
         SDL_FRect dst = {
             (float)x * SCALE,

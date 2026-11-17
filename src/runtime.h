@@ -1,3 +1,4 @@
+#pragma once
 /*
     cs3-runtime-sdl
     Copyright (C) 2024  Francois Blanchette

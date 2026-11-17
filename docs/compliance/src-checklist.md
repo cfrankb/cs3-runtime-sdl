@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-17 |
-| Git HEAD | 3ba53b5 |
+| Git HEAD | c04d895 |
 | Files tracked | 119 |
 | Covered by cs3-tests | 70 |
 | Verified items | 80 / 119 |
@@ -37,9 +37,9 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
 - [x] `src/engine.cpp` `1e53ddad43dba94e` — covered by t_engine
-- [x] `src/engine.h` `9663c6f11da8872f` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `1ee8009c5c530136`
-- [ ] `src/engine_hw.h` `1327f4c97b90aa35`
+- [x] `src/engine.h` `93e758dbd59b9eb4` — covered by t_engine
+- [ ] `src/engine_hw.cpp` `064b17ec994d2b6a`
+- [ ] `src/engine_hw.h` `bd24b12198d1a8a8`
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
@@ -65,7 +65,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
 - [x] `src/logger.cpp` `f6d8efa613669664` — covered by t_logger
 - [ ] `src/logger.h` `8775cdc1c8eaa735` — covered by t_logger
-- [ ] `src/main.cpp` `8393db2ec6343bb1`
+- [ ] `src/main.cpp` `add66424d2d85dab`
 - [x] `src/map.cpp` `48f1a503646865d5` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
 - [x] `src/maparch.cpp` `98605da56ae8827d` — covered by t_maparch_*
@@ -85,8 +85,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/recorder.cpp` `2bfd1c5bb0a0afa4` — covered by t_recorder
 - [x] `src/recorder.h` `ea6d5a523969090a` — covered by t_recorder
 - [ ] `src/rect.h` `1c32d3c3241f2ede`
-- [x] `src/runtime.cpp` `7d701770cf3882c0` — covered by t_runtime
-- [x] `src/runtime.h` `afe265bf47345194` — covered by t_runtime
+- [x] `src/runtime.cpp` `684d9b7af5f44a31` — covered by t_runtime
+- [x] `src/runtime.h` `45b07876aeee156a` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables
 - [x] `src/sheetdata.h` `51047aeaee728977` — covered by t_tables

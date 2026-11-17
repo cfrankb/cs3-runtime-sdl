@@ -50,8 +50,6 @@
 
 const uint32_t FPS = CRuntime::tickRate();
 
-#define EXIT_SUCCESS 0
-#define EXIT_FAILURE 1
 constexpr const char *DEFAULT_PREFIX = "data/";
 constexpr const char *DEFAULT_MAPARCH = "levels.mapz";
 constexpr const char *CONF_FILE = "game.cfg";
@@ -401,7 +399,7 @@ int main(int argc, char *args[])
 #endif
 #ifdef __EMSCRIPTEN__
     emscripten_set_fullscreenchange_callback(EMSCRIPTEN_EVENT_TARGET_DOCUMENT, NULL, EM_TRUE, on_fullscreen_change);
-    emscripten_set_main_loop_arg(emscripten_throttled_entry, &runtime, FPS, 1);
+    emscripten_set_main_loop_arg(emscripten_throttled_entry, g_runtime, FPS, 1);
 #else
     // FOR DESKTOP (Manjaro/Linux/Windows):
     // Manually maintain the 24Hz cadence (~41.6ms) while yielding CPU time cleanly.
