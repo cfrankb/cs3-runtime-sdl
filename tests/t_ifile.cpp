@@ -411,6 +411,77 @@ bool test_ifile_string_bounds()
     return true;
 }
 
+/**
+ * @brief BUG-C2: CFileMem transfers must reject negative sizes instead of
+ *        letting them wrap into huge size_t memcpy counts.
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_negative_size()
+{
+    char scratch[16] = {0};
+
+    CFileMem fm;
+    if (!fm.open("tests/out/negsize.dat", "rw"))
+    {
+        LOGE("can't open negsize.dat");
+        return false;
+    }
+    // populated buffer with a nonzero position: the write-wrap OOB path
+    if (fm.write("seed", 4) != IFILE_OK)
+    {
+        LOGE("seed write failed");
+        return false;
+    }
+    const long sizeBefore = fm.getSize();
+    const long posBefore = fm.tell();
+    if (fm.write(scratch, -1) != IFILE_NOT_OK)
+    {
+        LOGE("write(buf, -1) accepted");
+        return false;
+    }
+    if (fm.getSize() != sizeBefore || fm.tell() != posBefore)
+    {
+        LOGE("negative write altered the buffer");
+        return false;
+    }
+    if (fm.read(scratch, -1) != IFILE_NOT_OK)
+    {
+        LOGE("read(buf, -1) accepted");
+        return false;
+    }
+    if (fm.read(scratch, -1000000) != IFILE_NOT_OK)
+    {
+        LOGE("read(buf, -1000000) accepted");
+        return false;
+    }
+    // valid transfers must still work
+    if (fm.write("ok", 2) != IFILE_OK)
+    {
+        LOGE("write after rejected negatives failed");
+        return false;
+    }
+    if (!fm.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    char buf[8] = {0};
+    if (fm.read(buf, 6) != IFILE_OK)
+    {
+        LOGE("read of valid payload failed");
+        return false;
+    }
+    if (std::string(buf, 6) != "seedok")
+    {
+        LOGE("payload mismatch: %s", buf);
+        return false;
+    }
+    fm.close();
+    return true;
+}
+
 bool test_ifile_serializer(IFile &file, const char *context)
 {
     size_t expectedSize = 0;

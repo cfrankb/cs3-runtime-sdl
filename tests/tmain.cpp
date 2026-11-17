@@ -95,6 +95,7 @@ int main(int argc, char *args[])
         FCT(test_ifile_read_write),
         FCT(test_ifile_vector),
         FCT(test_ifile_string_bounds),
+        FCT(test_ifile_negative_size),
         FCT(test_png_magic),
         FCT(test_png_refs),
         FCT(test_png_roundtrip),

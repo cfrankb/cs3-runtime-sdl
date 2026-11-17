@@ -32,7 +32,7 @@ CFileMem::~CFileMem()
     close();
 }
 
-void CFileMem::append(const void *data, int size)
+void CFileMem::append(const void *data, size_t size)
 {
     const size_t newSize = m_ptr + size;
     if (newSize > m_buffer.size())
@@ -56,6 +56,8 @@ int CFileMem::read(void *buf, int size)
 {
     if (m_mode.find('r') == std::string::npos)
         return IFILE_NOT_OK;
+    if (size < 0)
+        return IFILE_NOT_OK;
     int leftBytes = m_buffer.size() - m_ptr;
     if (leftBytes >= size)
     {
@@ -73,6 +75,8 @@ int CFileMem::write(const void *buf, int size)
 {
     if (m_mode.find('w') == std::string::npos &&
         m_mode.find('a') == std::string::npos)
+        return IFILE_NOT_OK;
+    if (size < 0)
         return IFILE_NOT_OK;
     append(buf, size);
     return IFILE_OK;

@@ -44,6 +44,12 @@ entry to `docs/bugs/resolved` and flip the audit finding.
 - **Fix:** `if (size < 0) return IFILE_NOT_OK;` at top of `read` and `write`
   (assert in `append`); take `size_t` in `append`.
 - **Verify:** one assert-based unit test per entry point with `size = -1`.
+- **Status:** **Fixed.** `read()`/`write()` return `IFILE_NOT_OK` on negative
+  size; `append()` now takes `size_t` (no external callers; also removes the
+  `size_t`→`int` narrowing in the `operator<<(std::string_view)` writers).
+  Pinned by `test_ifile_negative_size` (`tests/t_ifile.cpp`); pre-fix binary
+  reports `write(buf, -1) accepted` then segfaults, post-fix `ctest` passes
+  100%.
 
 ### BUG-C3 (Critical) `parsePNG` copies attacker-sized chunk payloads into fixed buffers
 - **Where:** `src/shared/PngMagic.cpp` (audit `PngMagic.cpp.audit.md`
