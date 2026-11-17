@@ -102,6 +102,9 @@ CRuntime::~CRuntime()
 {
     if (m_music != nullptr)
         m_music->close();
+    for (SDL_Gamepad *pad : m_gameControllers)
+        SDL_CloseGamepad(pad);
+    m_gameControllers.clear();
     if (m_app.window)
     {
         if (!m_quiet)
@@ -109,8 +112,12 @@ CRuntime::~CRuntime()
         SDL_DestroyTexture(m_app.texture);
         SDL_DestroyRenderer(m_app.renderer);
         SDL_DestroyWindow(m_app.window);
+        m_app.window = nullptr;
     }
+    delete m_bitmap;
+    m_bitmap = nullptr;
     delete[] m_scroll;
+    SDL_Quit();
 }
 
 /**
@@ -2427,24 +2434,35 @@ bool CRuntime::initControllers()
     }
 
     // Check for connected controllers initially
-    int count;
-    SDL_GetJoysticks(&count);
-    for (int i = 0; i < count; ++i)
+    // SDL3 enumeration APIs return instance IDs, not array positions.
+    int count = 0;
+    SDL_JoystickID *joysticks = SDL_GetJoysticks(&count);
+    if (!joysticks)
     {
-        if (SDL_IsGamepad(i))
+        LOGW("SDL_GetJoysticks failed: %s", SDL_GetError());
+    }
+    else
+    {
+        for (int i = 0; i < count; ++i)
         {
-            SDL_Gamepad *controller = SDL_OpenGamepad(i);
-            if (controller)
+            if (SDL_IsGamepad(joysticks[i]))
             {
-                m_gameControllers.emplace_back(controller);
-                if (!m_quiet)
-                    LOGI("Opened Game Controller: %d: %s", i, SDL_GetGamepadName(controller));
-            }
-            else
-            {
-                LOGE("Could not open game controller:%d! SDL_Error: %s", i, SDL_GetError());
+                SDL_Gamepad *controller = SDL_OpenGamepad(joysticks[i]);
+                if (controller)
+                {
+                    m_gameControllers.emplace_back(controller);
+                    if (!m_quiet)
+                        LOGI("Opened Game Controller: %d: %s", joysticks[i],
+                             SDL_GetGamepadName(controller));
+                }
+                else
+                {
+                    LOGE("Could not open game controller:%d! SDL_Error: %s", joysticks[i],
+                         SDL_GetError());
+                }
             }
         }
+        SDL_free(joysticks);
     }
     if (m_gameControllers.empty())
     {
@@ -2556,20 +2574,23 @@ CMenu &CRuntime::initUserMenu()
 void CRuntime::createResolutionList()
 {
     // Get all connected displays
-    int numDisplays;
+    int numDisplays = 0;
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
-    if (numDisplays <= 0)
+    if (!display || numDisplays <= 0)
     {
         LOGE("No displays found: %s", SDL_GetError());
+        SDL_free(display);
         return;
     }
 
     const int displayIndex = 0;
-    int numModes;
+    int numModes = 0;
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
-    if (numModes < 1)
+    SDL_free(display);
+    if (!modes || numModes < 1)
     {
         LOGE("SDL_GetFullscreenDisplayModes failed: %s", SDL_GetError());
+        SDL_free(modes);
         return;
     }
     m_resolutions.clear();
@@ -2586,6 +2607,7 @@ void CRuntime::createResolutionList()
         pw = mode.w;
         ph = mode.h;
     }
+    SDL_free(modes);
 }
 
 /**
@@ -2693,19 +2715,22 @@ void CRuntime::resize(int w, int h)
 void CRuntime::listResolutions(int displayIndex)
 {
     // Get all connected displays
-    int numDisplays;
+    int numDisplays = 0;
     SDL_DisplayID *display = SDL_GetDisplays(&numDisplays);
-    if (numDisplays <= 0)
+    if (!display || displayIndex < 0 || displayIndex >= numDisplays)
     {
         LOGE("No displays found: %s", SDL_GetError());
+        SDL_free(display);
         return;
     }
 
-    int numModes;
+    int numModes = 0;
     SDL_DisplayMode **modes = SDL_GetFullscreenDisplayModes(display[displayIndex], &numModes);
-    if (numModes < 1)
+    SDL_free(display);
+    if (!modes || numModes < 1)
     {
         LOGE("SDL_GetFullscreenDisplayModes failed:%s", SDL_GetError());
+        SDL_free(modes);
         return;
     }
 
@@ -2717,6 +2742,7 @@ void CRuntime::listResolutions(int displayIndex)
         if (!m_quiet)
             LOGI("Mode %d: %dx%d @ %fHz", i, mode.w, mode.h, mode.refresh_rate);
     }
+    SDL_free(modes);
 }
 
 /**

@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-17 |
-| Git HEAD | 0a10ff6 |
+| Git HEAD | 3ba53b5 |
 | Files tracked | 119 |
 | Covered by cs3-tests | 70 |
 | Verified items | 80 / 119 |
@@ -85,7 +85,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/recorder.cpp` `2bfd1c5bb0a0afa4` — covered by t_recorder
 - [x] `src/recorder.h` `ea6d5a523969090a` — covered by t_recorder
 - [ ] `src/rect.h` `1c32d3c3241f2ede`
-- [x] `src/runtime.cpp` `0e3c603789d85934` — covered by t_runtime
+- [x] `src/runtime.cpp` `7d701770cf3882c0` — covered by t_runtime
 - [x] `src/runtime.h` `afe265bf47345194` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables

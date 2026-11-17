@@ -10,4 +10,4 @@ rules
 
 - tests must be wired to the github-ci workflows 
 
-
+- use valgrind to validate there are no memory leaks
