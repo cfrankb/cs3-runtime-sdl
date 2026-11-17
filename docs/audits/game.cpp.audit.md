@@ -20,7 +20,15 @@ Date: 2026-11-16
 
 ### Medium
 
+**FIXED 2026-11-18 (maintainer option 1): both lists now gated by
+`CGame::countWithinBudget(count, getSize()-tell(), MIN_*_RECORD)` before
+`resize` — corrupt counts are rejected with LOGE instead of a `bad_alloc`
+spike. Validation-only: no serialized fields touched, no `ENGINE_VERSION`
+bump.**
 - L1250-1261 / L1265-1276: [bug][error-handling] `m_monsters.resize(actorCount)` and `m_bosses.resize(bossCount)` with counts read straight from the save file, no sanity bound — a corrupt save with a huge count triggers a massive allocation / uncaught `std::bad_alloc`. Fix: read each element and `push_back`, or bound the count against remaining file size.
+**FIXED 2026-11-18: boss count now read via `_R`; truncated saves return
+false. Check pinned by `CGame::countWithinBudget` cases in
+`tests/t_game.cpp`.**
 - L1266: [error-handling] `readfile(&bossCount, sizeof(uint32_t));` return value is the only I/O result in `read()` not wrapped in `_R` — a truncated file silently continues with `bossCount == 0` and `read()` returns true. Fix: use `_R(&bossCount, sizeof(bossCount))`.
 **FIXED 2026-11-18 (BUG-H18):** `m_mode = MODE_TITLE`, `m_report = {}` in header. - game.h:221/234 (constructed at L89-101): [bug] `m_mode` and `m_report` have no default initializer and are not set in the constructor; `mode()` / `originalMapReport()` before the first `setMode()`/`loadLevel()` read uninitialized values.
 **PARTIALLY FIXED 2026-11-18 (BUG-H18):** `m_chuteTarget = {}` default-init added; serialization still missing (deferred — save-format change needs `ENGINE_VERSION` bump). - L430 (`m_chuteTarget`): [bug] `m_chuteTarget` is never initialized and never serialized in `write()` (L1327-1417) while `S_CHUTE` *is* persisted via `m_gameStats`; after a save during a chute transition, `loadLevel()` uses a stale/uninitialized target (the `isValid` check at L431 only partially mitigates garbage).

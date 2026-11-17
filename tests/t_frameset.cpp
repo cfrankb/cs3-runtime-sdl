@@ -441,6 +441,31 @@ bool test_frameset_container()
         return false;
     }
 
+    // copy ctor: deep copy; destroying the copy leaves the original intact
+    const size_t n = fs.size();
+    {
+        CFrameSet copy(fs);
+        if (copy.size() != n || copy[0] == fs[0] ||
+            std::string(copy.getName()) != "myset")
+        {
+            LOGE("copy ctor mismatch");
+            return false;
+        }
+    }
+    if (fs.size() != n || fs[0] == nullptr)
+    {
+        LOGE("copy ctor dtor damaged original");
+        return false;
+    }
+
+    // self-assignment must not empty the set
+    fs = fs;
+    if (fs.size() != n || std::string(fs.getName()) != "myset")
+    {
+        LOGE("self-assignment emptied the set");
+        return false;
+    }
+
     // resize up: new slots are null; clear() deletes them safely
     dup.resize(fs.size() + 2);
     if (dup.size() != fs.size() + 2 || dup[fs.size()] != nullptr)

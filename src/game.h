@@ -189,6 +189,7 @@ public:
     void deleteMonster(const int i);
     static Random &getRandom();
     static bool validateSignature(const char *signature, const uint32_t version);
+    static bool countWithinBudget(uint32_t count, long remainingBytes, uint32_t minRecordBytes);
     bool isMonsterType(const uint8_t typeID) const;
     static bool isFruit(const uint8_t tileID);
     static bool isBonusItem(const uint8_t tileID);

@@ -35,6 +35,7 @@ public:
     CFrameSet();
     ~CFrameSet();
     CFrameSet(CFrameSet *s);
+    CFrameSet(const CFrameSet &s);
 
     enum Format : uint32_t
     {
@@ -49,6 +50,7 @@ public:
     int operator--();
     CFrame *operator[](int) const;
     CFrameSet &operator=(CFrameSet &s);
+    CFrameSet &operator=(const CFrameSet &s);
     int add(CFrame *pFrame);
     void setName(const char *s);
     const char *getName() const;

@@ -705,6 +705,33 @@ namespace
         return true;
     }
 
+    // Maintainer ruling 2026-11-18: barrel blast damages bosses even while
+    // Hidden (off screen); blastRadius deliberately applies no state guard
+    // and CBoss::subtainDamage's death guard keeps corpse hits as no-ops.
+    bool testHiddenBossBlast()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(12, 10, &all[0]); // half-tile coords: world tile (6,5)
+        CBoss &boss = bosses.back();
+        boss.setState(CBoss::BossState::Hidden);
+        const int hp0 = boss.hp();
+
+        CActor &barrel = spawn(tileOf(TYPE_BARREL), TYPE_BARREL, 5, 5, AIM_UP);
+        barrel.setTTL(1); // explodes next tick; blast radius 2 covers (6,5)
+
+        g_game->manageMonsters(TICKS_ALL);
+        if (boss.hp() >= hp0)
+        {
+            LOGE("hidden boss blast: hp %d -> %d; expecting blast damage", hp0, boss.hp());
+            return false;
+        }
+        return true;
+    }
+
     // handleBossPath: a chasing boss (path algo or fallback) closes on the player
     bool testBossPath()
     {
@@ -879,6 +906,7 @@ bool test_game_ai()
         {testSpawns, "spawns"},
         {testSpawnsBlocked, "spawns blocked"},
         {testBossStates, "boss states"},
+        {testHiddenBossBlast, "hidden boss blast"},
         {testBossPath, "boss path"},
         {testBossBullet, "boss bullet"},
         {testBossHitboxContact, "boss hitbox contact"},

@@ -16,6 +16,12 @@ CFrameSet is the frame-set container plus importers for five legacy formats (IMA
 **FIXED 2026-11-17 (BUG-H5):** totalSize bounded by srcSize*1032+1024. **L335-348: [perf][algo] readSolid pre-allocates `buffer(totalSize)` (L344) purely from declared dimensions: 1024 frames x 512x512x4 = 1 GiB allocated from a ~4 KiB file, since the L304 file-size check only validates the *compressed* blob size; uncompress fails afterward but the allocation spike (plus `srcBuffer` + per-frame copies) is the DoS. Fix: cap totalSize against a fraction of file size (e.g. `srcSize * 300 + slack` style bound, or zlib's compressBound reverse) before allocating.
 
 ### Medium
+**FIXED 2026-11-18 (maintainer-approved, option 1): declared deep-copying
+`CFrameSet(const CFrameSet &)` and `operator=(const CFrameSet &)`; the
+compiler-generated shallow forms are now suppressed. Source-compatible — all
+previously-compiling copy sites keep compiling but now duplicate frames
+instead of risking double-free. Pinned in `tests/t_frameset.cpp` (copy-ctor
+independence, self-assignment).**
 - FrameSet.h:51 / cpp:532: [bug] rule-of-three violation: the only declared copy-assignment takes a *non-const* ref, so the compiler still declares the implicit `operator=(const CFrameSet&)` and the implicit copy constructor, both shallow-copying the owned raw `m_frames` pointers -> latent double-free for any value-copy site (none found in-repo — needs verification for external builder/editor users). Fix: `delete` the implicit forms or implement proper const-ref copy semantics.
 **FIXED 2026-11-18 (BUG-H18):** `int m_currFrame = -1;`. - FrameSet.h:85 / cpp:75-79: [ub] `m_currFrame` is never initialized in the default constructor or the pointer ctor (L81-95); `currFrame()` (L1378) returns an indeterminate value if read before `setCurrFrame`. No in-repo caller reads it (only tests/t_frameset.cpp, always after set — needs verification of builder users).
 **FIXED 2026-11-18 (manual leak review): local `delete` on the parse-failure return; frame never escapes the method so the ownership contract is untouched.**
@@ -36,6 +42,8 @@ inserts null slots — fill before dereference. Pinned in
 - L389-391: [ub] if `file.read(&tagCount, ...)` fails, the error message formats the still-uninitialized `tagCount`; initialize `uint32_t tagCount = 0`.
 - L497-500: [error-handling] the "Extra data after OBL5" LOGW runs even when `result == false` (unknown version / failed read), producing misleading warnings; gate on `result`.
 - L979-982: [error-handling] importOBL5 discards the local set's `getLastError()` and substitutes the generic "unsupported OBL5 version", losing the real cause (dimension/zlib detail) for callers.
+**FIXED 2026-11-18: const-ref `operator=` (canonical) carries the
+`this == &s` guard; non-const overload delegates to it.**
 - L532-534: [bug] `operator=` calls `clear()` before reading the source, so self-assignment (`x = x`) empties the set; add a `this == &s` guard.
 - L574-578: [integer] `add()` returns `m_frames.size() - 1` — implicit size_t->int narrowing (and -1-style return on empty pre-state impossible here, but the conversion is silent). Fix: `static_cast<int>`.
 - L216-217: [error-handling] `file << k; file << v;` tag payload writes unchecked — on the CFileWrap disk path a mid-tags write failure returns `true` from writeSolid with a corrupt tag section (CFileMem always succeeds, which is why tests miss it).

@@ -43,9 +43,9 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `0d35561f60ae9093` — covered by t_runtime, t_game
-- [x] `src/game.h` `693920bb9a2316bb` — covered by t_runtime, t_game
-- [x] `src/game_ai.cpp` `485cbd0e61d2597c` — covered by t_game_ai
+- [x] `src/game.cpp` `3ac7fef23bded2bd` — covered by t_runtime, t_game
+- [x] `src/game.h` `95347c4b9ec2940a` — covered by t_runtime, t_game
+- [x] `src/game_ai.cpp` `d411289ad04c1a52` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
 - [x] `src/gamemixin.cpp` `2685bb44d6c3d19f` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
@@ -119,8 +119,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
 - [x] `src/shared/Frame.cpp` `e770c772c7235e34` — covered by t_frame, t_frameset
 - [x] `src/shared/Frame.h` `8f36eea27a514d0f` — covered by t_frame, t_frameset
-- [x] `src/shared/FrameSet.cpp` `b337e6ceb8a128bd` — covered by t_frameset
-- [x] `src/shared/FrameSet.h` `76fa6554394626fe` — covered by t_frameset
+- [x] `src/shared/FrameSet.cpp` `f75c4e85c08c8ed9` — covered by t_frameset
+- [x] `src/shared/FrameSet.h` `c2ad06019dee15a3` — covered by t_frameset
 - [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
 - [x] `src/shared/PngMagic.cpp` `2bceaffdd6ef8596` — covered by t_pngmagic

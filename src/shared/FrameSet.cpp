@@ -550,17 +550,40 @@ void CFrameSet::copyTags(CFrameSet &src)
 
 CFrameSet &CFrameSet::operator=(CFrameSet &s)
 {
+    return operator=(static_cast<const CFrameSet &>(s));
+}
+
+CFrameSet &CFrameSet::operator=(const CFrameSet &s)
+{
+    // Self-assignment must not empty the set (audit L532 finding).
+    if (this == &s)
+        return *this;
     clear();
-    m_frames.reserve(s.getSize());
-    for (size_t i = 0; i < s.getSize(); i++)
+    m_frames.reserve(s.m_frames.size());
+    for (CFrame *src : s.m_frames)
     {
         CFrame *frame = new CFrame;
-        frame->copy(s[i]);
+        frame->copy(src);
         m_frames.emplace_back(frame);
     }
-    copyTags(s);
-    m_name = s.getName();
+    m_tags = s.m_tags;
+    m_name = s.m_name;
     return *this;
+}
+
+CFrameSet::CFrameSet(const CFrameSet &s)
+{
+    // Deep copy: the set owns its slots, so a copy must duplicate them
+    // (the implicit copy ctor shallow-copied raw pointers -> double free).
+    m_frames.reserve(s.m_frames.size());
+    for (CFrame *src : s.m_frames)
+    {
+        CFrame *frame = new CFrame;
+        frame->copy(src);
+        m_frames.emplace_back(frame);
+    }
+    m_name = s.m_name;
+    m_tags = s.m_tags;
 }
 
 /**

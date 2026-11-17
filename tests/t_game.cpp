@@ -152,6 +152,32 @@ namespace
         return true;
     }
 
+    bool testCountWithinBudget()
+    {
+        // save-count gate: allocation must not outrun the file bytes
+        if (!CGame::countWithinBudget(10, 10 * 12, 12))
+        {
+            LOGE("countWithinBudget: exact budget rejected");
+            return false;
+        }
+        if (CGame::countWithinBudget(11, 10 * 12, 12))
+        {
+            LOGE("countWithinBudget: over-budget count accepted");
+            return false;
+        }
+        if (CGame::countWithinBudget(0xFFFFFFFFu, 1024, 12))
+        {
+            LOGE("countWithinBudget: hostile count accepted (overflow?)");
+            return false;
+        }
+        if (CGame::countWithinBudget(1, -4, 12) || !CGame::countWithinBudget(0, 0, 12))
+        {
+            LOGE("countWithinBudget: edge handling wrong");
+            return false;
+        }
+        return true;
+    }
+
     bool testAddKey()
     {
         resetWorld();
@@ -540,6 +566,7 @@ bool testLevelBounds()
 bool test_game()
 {
     return testValidateSignature() &&
+           testCountWithinBudget() &&
            testAddKey() &&
            testPurgeSfx() &&
            testScanPos() &&

@@ -64,10 +64,11 @@ frame-owning API:
 - Methods that return a raw `CFrame *` for inspection (e.g. `operator[]`,
   `currFrame()`) do **not** transfer ownership; the set keeps and frees it.
 
-The `set(i, frame)` overwrite-without-delete and `resize()` null-growth are
-consistent with this model and are pinned in `tests/t_frameset.cpp`; the
-residual leak is a known open finding (`docs/audits/FrameSet.cpp.audit.md`),
-not a bug to "fix" unilaterally. `docs/shared-surface.md` carries the full
+Ownership (maintainer ruling, leak review 2026-11-18): `set(i, frame)` is
+delete-on-replace and `resize()` truncation deletes the dropped tail — the set
+owns every slot it holds. Behavior pinned in `tests/t_frameset.cpp`.
+`resize()` growth still inserts null slots: fill them before any dereference.
+`toBmp` was deprecated and removed. `docs/shared-surface.md` carries the full
 status.
 
 ## Session start

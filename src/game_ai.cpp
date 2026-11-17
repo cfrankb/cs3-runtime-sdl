@@ -211,7 +211,7 @@ void CGame::handleBossHitboxContact(CBoss &boss)
                          (void)type;
                          return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
                      },
-                     [boss, this, &playerDamage](const HitResult &r)
+                     [&boss, this, &playerDamage](const HitResult &r)
                      {
                          playerDamage = std::max(boss.damage(r.type), playerDamage); // find player damage
                      });
@@ -791,6 +791,9 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
     }
 
     // test boss hitbox
+    // Hidden/Death bosses are deliberately NOT skipped: blast damage applies
+    // whether or not the boss is on screen (maintainer ruling 2026-11-18).
+    // Corpse hits are already no-ops in CBoss::subtainDamage's death guard.
     for (auto &boss : m_bosses)
     {
         int bossDamage = 0;
@@ -800,7 +803,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
                 // check if damage can occur
                 return type != BossData::HitBoxType::SPECIAL1 && p == bp.toPos();
             },
-                             [boss, &bp, &bossDamage](const HitResult &)
+                             [&bp, &bossDamage](const HitResult &)
                              {
                                  // compute maximum damage
                                  bossDamage = std::max(bp.damage, bossDamage); //

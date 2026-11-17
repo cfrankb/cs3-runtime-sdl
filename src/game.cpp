@@ -56,6 +56,11 @@ namespace GamePrivate
     // after the union split, see actor.h); old saves are rejected.
     constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x000f;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
+    // Minimum on-disk bytes of one saved monster/boss record: the fixed
+    // serialized fields plus at least one path-tag byte (CActor common
+    // section is 11 fields >= 1 byte each; CBoss is 13 fixed bytes).
+    constexpr uint32_t MIN_ACTOR_RECORD = 12;
+    constexpr uint32_t MIN_BOSS_RECORD = 13;
     Random g_randomz(12345, 0);
 
     enum
@@ -1187,6 +1192,15 @@ CActor &CGame::getMonster(int i)
     return m_monsters[i];
 }
 
+bool CGame::countWithinBudget(uint32_t count, long remainingBytes, uint32_t minRecordBytes)
+{
+    // Corrupt save counts must be rejected, not turned into an allocation
+    // storm: every declared record has to consume at least
+    // minRecordBytes of the remaining stream.
+    return remainingBytes >= 0 &&
+           static_cast<uint64_t>(count) * minRecordBytes <= static_cast<uint64_t>(remainingBytes);
+}
+
 bool CGame::validateSignature(const char *signature, const uint32_t version)
 {
     if (memcmp(signature, GAME_SIGNATURE, sizeof(GAME_SIGNATURE)) != 0)
@@ -1275,6 +1289,12 @@ bool CGame::read(IFile &sfile)
     // monsters
     uint32_t actorCount = 0;
     _R(&actorCount, sizeof(uint32_t));
+    if (!countWithinBudget(actorCount, sfile.getSize() - sfile.tell(), MIN_ACTOR_RECORD))
+    {
+        LOGE("save declares %u monsters over %ld remaining bytes; rejected",
+             actorCount, sfile.getSize() - sfile.tell());
+        return false;
+    }
     m_monsters.clear();
     m_monsters.resize(actorCount);
     for (size_t i = 0; i < actorCount; ++i)
@@ -1289,7 +1309,13 @@ bool CGame::read(IFile &sfile)
 
     // bosses
     uint32_t bossCount = 0;
-    readfile(&bossCount, sizeof(uint32_t));
+    _R(&bossCount, sizeof(uint32_t));
+    if (!countWithinBudget(bossCount, sfile.getSize() - sfile.tell(), MIN_BOSS_RECORD))
+    {
+        LOGE("save declares %u bosses over %ld remaining bytes; rejected",
+             bossCount, sfile.getSize() - sfile.tell());
+        return false;
+    }
     m_bosses.clear();
     m_bosses.resize(bossCount);
     for (size_t i = 0; i < bossCount; ++i)
