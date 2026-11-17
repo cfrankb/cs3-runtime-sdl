@@ -26,8 +26,6 @@
 #include <zlib.h>
 #include "Frame.h"
 #include "FrameSet.h"
-#include "DotArray.h"
-#include "CRC.h"
 #include "IFile.h"
 #include "helper.h"
 #include <cstdint>
@@ -298,7 +296,6 @@ uint32_t CFrame::toNet(const uint32_t a)
 bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data)
 {
     png.clear();
-    CCRC crc;
 
     // compress the data ....................................
     int scanLine = m_width * 4;
@@ -336,7 +333,7 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     memcpy(t, sig, 8);
     t += 8;
 
-    uint32_t crc32;
+    uint32_t crcValue;
 
     // png_IHDR ---------------------------------------------
     png_IHDR &ihdr = *((png_IHDR *)t);
@@ -351,8 +348,9 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     ihdr.Interlace = 0;
     // ihdr.CRC = 0;
     t += png_IHDR_Size;
-    crc32 = toNet(crc.crc(((uint8_t *)&ihdr) + 4, png_IHDR_Size - 4));
-    memcpy(t, &crc32, 4);
+    crcValue = toNet(static_cast<uint32_t>(
+        crc32(0, ((uint8_t *)&ihdr) + 4, png_IHDR_Size - 4)));
+    memcpy(t, &crcValue, 4);
     t += 4;
 
     // png_IDAT ....................................................
@@ -378,8 +376,9 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
         t += 4;
         memcpy(t, cData.data() + cDataOffset, chunkSize);
         t += chunkSize;
-        crc32 = toNet(crc.crc(chunkData, chunkSize + 4));
-        memcpy(t, &crc32, 4);
+        crcValue = toNet(static_cast<uint32_t>(
+            crc32(0, chunkData, chunkSize + 4)));
+        memcpy(t, &crcValue, 4);
         t += 4;
 
         cDataOffset += chunkSize;
@@ -393,7 +392,8 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
         memcpy(t, obl5data.data(), obl5data.size());
         png_OBL5 &obl5 = *((png_OBL5 *)t);
         obl5.Length = toNet(obl5size - 12);
-        uint32_t iCrc = toNet(crc.crc(t + 4, obl5size - 8));
+        uint32_t iCrc = toNet(static_cast<uint32_t>(
+            crc32(0, t + 4, obl5size - 8)));
         memcpy(t + obl5size - 4, &iCrc, 4);
         t += obl5size;
     }
@@ -402,7 +402,7 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     png_IEND &iend = *((png_IEND *)t);
     iend.Lenght = 0;
     memcpy(iend.ChunkType, "IEND", 4);
-    iend.CRC = toNet(crc.crc((uint8_t *)"IEND", 4));
+    iend.CRC = toNet(static_cast<uint32_t>(crc32(0, (uint8_t *)"IEND", 4)));
 
     return true;
 }

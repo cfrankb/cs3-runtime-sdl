@@ -15,6 +15,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+// MAINTAINER DIRECTIVE (2026-11-18): DO NOT TOUCH this file's "dead"
+// surface. The zero-production-caller functions flagged in
+// docs/audits/helper.cpp.audit.md (toUpper, upperClean, copyFile, concat,
+// raw-pointer compressData) are KEPT on maintainer instruction — same
+// policy as the logger.h LOGF/Qt compatibility layer (BUG-H16). Do not
+// delete them or their tests/t_helper.cpp coverage without asking.
+
 #include <cstring>
 #include <cstdint>
 #include <cstdio>

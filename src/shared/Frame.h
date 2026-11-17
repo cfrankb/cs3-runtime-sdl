@@ -17,14 +17,19 @@
 */
 
 #pragma once
+
+// MAINTAINER DIRECTIVE (2026-11-18): the CFrame contract is FROZEN — do
+// not remove or re-sign declared members, including the test-only editor
+// API flagged in docs/audits/Frame.cpp.audit.md. The Dot POD moved to
+// dot.h unchanged (CDotArray moved to external/lgck-editor/).
+
 #include <string>
 #include <cstdint>
 #include <vector>
 #include <stdexcept>
-#include "DotArray.h"
+#include "dot.h"
 
 class CFrameSet;
-class CDotArray;
 class CSS3Map;
 class CUndo;
 class IFile;

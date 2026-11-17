@@ -113,22 +113,21 @@ See [README](README.md) for the verification procedure.
 
 ## src/shared/
 
-- [ ] `src/shared/CRC.h` `7af840600f7ae4b6`
-- [x] `src/shared/DotArray.cpp` `46c8de18e21f6bb0` — covered by t_dotarray
-- [x] `src/shared/DotArray.h` `3a6825207d20e511` — covered by t_dotarray
+- [x] `src/shared/CRC.h` — replaced by zlib `crc32` 2026-11-18; moved to `external/lgck-editor/`
+- [x] `src/shared/dot.h` `4dbffaf2d6b88210` — covered by t_frame (Dot POD; DotArray moved to `external/lgck-editor/` 2026-11-18)
 - [x] `src/shared/FileMem.cpp` `55057ac122fe2b22` — covered by t_ifile
 - [x] `src/shared/FileMem.h` `1ed3f6247872ab7b` — covered by t_ifile
 - [x] `src/shared/FileWrap.cpp` `b62b4aed75e7b176` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
-- [x] `src/shared/Frame.cpp` `9400ee008ce0232f` — covered by t_frame, t_frameset
-- [x] `src/shared/Frame.h` `4ac3c092ec9db1d5` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.cpp` `2f0482d4c8e3c49d` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `d5aee8077ac34e01` — covered by t_frame, t_frameset
 - [x] `src/shared/FrameSet.cpp` `aabbe231cf3528ff` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `917ea6d58ec186fe` — covered by t_frameset
-- [x] `src/shared/IFile.h` `e00ca428ebdc6dda` — covered by t_ifile
+- [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
-- [x] `src/shared/PngMagic.cpp` `0516f61d2f0f1bc4` — covered by t_pngmagic
+- [x] `src/shared/PngMagic.cpp` `2bceaffdd6ef8596` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
-- [x] `src/shared/helper.cpp` `3b294aeb79584b43` — covered by t_helper, t_runtime, t_map*
+- [x] `src/shared/helper.cpp` `17d69de5871db8d5` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
 - [ ] `src/shared/logger.h` `8775cdc1c8eaa735`
 - [ ] `src/shared/ss_limits.h` `e62b799121380518`

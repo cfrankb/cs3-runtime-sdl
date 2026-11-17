@@ -38,7 +38,6 @@
 #include "t_randomz.h"
 #include "t_parseargs.h"
 #include "t_statedata.h"
-#include "t_dotarray.h"
 #include "t_bossdata.h"
 #include "t_boss.h"
 #include "t_level.h"
@@ -126,7 +125,6 @@ int main(int argc, char *args[])
         FCT(test_random),
         FCT(test_parseargs),
         FCT(test_statedata),
-        FCT(test_dotarray),
         FCT(test_bossdata),
         FCT(test_bossdata_hostile),
         FCT(test_boss),

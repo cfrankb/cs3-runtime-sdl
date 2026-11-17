@@ -23,7 +23,6 @@
 #include <cstring>
 #include <cstdio>
 #include <cmath>
-#include "CRC.h"
 #include "IFile.h"
 #include "logger.h"
 
@@ -135,7 +134,6 @@ const std::string_view getFilteringName(uint8_t i)
 
 bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
 {
-    CCRC crc;
     auto fileSize = file.getSize();
     if (fileSize < 0)
     {
@@ -229,13 +227,14 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
         memcpy(chunkDataRaw.data(), chunkType, sizeof(chunkType));
         uint8_t *chunkData = chunkDataRaw.data() + sizeof(chunkType);
 
-        int32_t crc32;
-        file.read(&crc32, sizeof(crc32));
-        pos += sizeof(crc32);
-        crc32 = CFrame::toNet(crc32);
+        int32_t chunkCrc;
+        file.read(&chunkCrc, sizeof(chunkCrc));
+        pos += sizeof(chunkCrc);
+        chunkCrc = CFrame::toNet(chunkCrc);
         // Check crc32 for each chunk
-        int crc32c = crc.crc(chunkDataRaw.data(), chunkSize + sizeof(chunkType));
-        if (crc32 != crc32c)
+        int32_t crc32c = static_cast<int32_t>(
+            crc32(0, chunkDataRaw.data(), chunkSize + sizeof(chunkType)));
+        if (chunkCrc != crc32c)
         {
             set.setLastError("chunk CRC32 checksum doesn't match");
             return false;

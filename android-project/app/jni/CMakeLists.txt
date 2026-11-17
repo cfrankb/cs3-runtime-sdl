@@ -36,7 +36,6 @@ add_library(main SHARED
         ../../../src/randomz.cpp
         ../../../src/recorder.cpp
         ../../../src/runtime.cpp
-        ../../../src/shared/DotArray.cpp
         ../../../src/shared/FileMem.cpp
         ../../../src/shared/FileWrap.cpp
         ../../../src/shared/Frame.cpp

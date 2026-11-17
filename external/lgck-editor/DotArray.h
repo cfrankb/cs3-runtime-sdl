@@ -18,22 +18,13 @@
 
 #pragma once
 
-#include <cstdint>
+// Staged 2026-11-18 for the external LGCK editor (bin/utils/sync.sh):
+// zero production callers in the runtime repo (docs/audits/DotArray.cpp.audit.md).
+// The Dot POD now lives in src/shared/dot.h (synced to the editor's
+// src/shared); the editor build must compile against that and drop any
+// older DotArray.h that still defines Dot itself.
+#include "dot.h"
 #include <vector>
-
-struct Dot
-{
-    Dot(const int _x = 0, const int _y = 0, const uint32_t _color = 0)
-    {
-        x = _x;
-        y = _y;
-        color = _color;
-    }
-
-    int x;
-    int y;
-    uint32_t color;
-};
 
 class CDotArray
 {

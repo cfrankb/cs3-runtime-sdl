@@ -18,6 +18,12 @@
 
 #pragma once
 
+// MAINTAINER DIRECTIVE (2026-11-18): this is the engine's file-interface
+// contract and it is FROZEN — do not remove, rename, or re-sign members,
+// including the "production-dead" virtuals flagged in
+// docs/audits/IFile.h.audit.md. Two backends plus the external LGCK
+// builder/editor (bin/utils/sync.sh) compile against this exact surface.
+
 #define IFILE_OK 1
 #define IFILE_NOT_OK 0
 

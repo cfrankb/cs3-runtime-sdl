@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 #include "../src/logger.h"
-#include "../src/shared/DotArray.h"
+#include "../src/shared/dot.h"
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/Frame.h"
 #include "../src/shared/FrameSet.h"

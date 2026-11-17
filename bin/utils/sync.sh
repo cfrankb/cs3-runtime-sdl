@@ -53,9 +53,12 @@ elif [[ "$1" == "-g" ]] ; then
     cp $TARGET_MAIN/src/shared/FileWrap.* $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/FileMem.* $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/IFile.h $TARGET_EDITOR/src/shared
+    cp $TARGET_MAIN/src/shared/dot.h $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/ss_limits.h $TARGET_EDITOR/src/shared
     cp $TARGET_MAIN/src/shared/PngMagic.* $TARGET_EDITOR/src/shared
-    cp $TARGET_MAIN/src/shared/DotArray.* $TARGET_EDITOR/src/shared
+    # CDotArray moved out of the runtime (2026-11-18); staged here for the editor.
+    # The editor must take Dot from dot.h and delete its own DotArray.h Dot copy.
+    #cp $TARGET_MAIN/external/lgck-editor/DotArray.* $TARGET_EDITOR/src/shared
 
 elif [[ "$1" == "-m" ]] ; then
     echo "updating map in runtime"

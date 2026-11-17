@@ -19,7 +19,6 @@
 #include <cstring>
 #include <cstdlib>
 #include <zlib.h>
-#include "../src/shared/CRC.h"
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/helper.h"
 #include "../src/logger.h"
@@ -263,7 +262,8 @@ bool test_png_corrupt()
         return false;
     }
 
-    // single-byte corruption of the first chunk's CRC (first exercise of CRC.h)
+    // single-byte corruption of the first chunk's CRC (first exercise of the
+// zlib crc32 chunk check)
     const int ihdrLen = (png[8] << 24) | (png[9] << 16) | (png[10] << 8) | png[11];
     std::vector<uint8_t> crc(png);
     crc[8 + 4 + 4 + ihdrLen] ^= 0x01; // first CRC byte of IHDR
@@ -349,9 +349,9 @@ void appendChunk(std::vector<uint8_t> &png, const char type[4],
     const size_t crcStart = png.size();
     png.insert(png.end(), type, type + 4);
     png.insert(png.end(), data.begin(), data.end());
-    CCRC crc;
     pushBE(png, static_cast<uint32_t>(
-                    crc.crc(png.data() + crcStart, static_cast<int>(png.size() - crcStart))));
+                    crc32(0, png.data() + crcStart,
+                          static_cast<unsigned>(png.size() - crcStart))));
 }
 
 // 8x8 4-bit indexed PNG: column 0 uses palette index 0 (transparent via tRNS),
@@ -825,8 +825,7 @@ bool test_png_hostile_chunks()
     huge[17] = 0x01; // width = 65536
     huge[18] = 0;
     huge[19] = 0;
-    CCRC crc;
-    const uint32_t c = static_cast<uint32_t>(crc.crc(huge.data() + 12, 4 + 13));
+    const uint32_t c = static_cast<uint32_t>(crc32(0, huge.data() + 12, 4 + 13));
     huge[29] = static_cast<uint8_t>(c >> 24);
     huge[30] = static_cast<uint8_t>(c >> 16);
     huge[31] = static_cast<uint8_t>(c >> 8);

@@ -1,4 +1,12 @@
 # Audit: src/shared/CRC.h
+
+**REPLACED 2026-11-18 (maintainer directive):** all 7 call sites
+(Frame.cpp ×4, PngMagic.cpp, t_pngmagic.cpp ×2) now call zlib
+`crc32(0, buf, len)` directly; the class duplicates it bit-for-bit.
+`CRC.h` moved to `external/lgck-editor/` (not synced by `sync.sh`;
+kept as staging in case the editor carries its own copy). Shadowing
+locals named `crc32` were renamed (`crcValue`, `chunkCrc`).
+`ctest` 1/1 green — PNG CRC accept/reject paths unchanged.
 Date: 2026-11-17
 
 ## Summary
