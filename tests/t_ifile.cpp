@@ -482,6 +482,112 @@ bool test_ifile_negative_size()
     return true;
 }
 
+/**
+ * @brief BUG-C10: the disk backend must decode all three string length tiers
+ *        (raw byte <0xff, 0xff+uint16, 0xff+0xffff+uint32) and emit an
+ *        encoding byte-identical to CFileMem's.
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_string_tiers()
+{
+    const std::vector<std::string> samples = {
+        std::string(5, 'a'),      // byte tier
+        std::string(300, 'b'),    // 16-bit tier
+        std::string(65535, 'c'),  // 32-bit tier boundary
+        std::string(100000, 'd'), // 32-bit tier
+    };
+
+    CFileMem mem;
+    if (!mem.open("tests/out/strtiers_mem.dat", "rw"))
+    {
+        LOGE("can't open strtiers_mem.dat");
+        return false;
+    }
+    for (const auto &s : samples)
+        mem << std::string_view(s);
+
+    CFileWrap disk;
+    if (!disk.open("tests/out/strtiers_disk.dat", "w+b"))
+    {
+        LOGE("can't open strtiers_disk.dat");
+        return false;
+    }
+    for (const auto &s : samples)
+        disk << std::string_view(s);
+
+    // both backends run the same codec: encodings must match byte for byte
+    const auto &memBuf = mem.buffer();
+    if (disk.getSize() != static_cast<long>(memBuf.size()))
+    {
+        LOGE("disk encoding size %ld; expecting %zu", disk.getSize(), memBuf.size());
+        return false;
+    }
+    if (!disk.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    std::vector<uint8_t> diskBuf(memBuf.size());
+    if (!memBuf.empty() &&
+        disk.read(diskBuf.data(), static_cast<int>(diskBuf.size())) != IFILE_OK)
+    {
+        LOGE("failed reading back disk encoding");
+        return false;
+    }
+    if (diskBuf != memBuf)
+    {
+        LOGE("disk and memory encodings differ");
+        return false;
+    }
+
+    // all samples must round-trip on the disk backend
+    if (!disk.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    for (const auto &s : samples)
+    {
+        std::string back;
+        if (!(disk >> back))
+        {
+            LOGE("disk read failed for size %zu", s.size());
+            return false;
+        }
+        if (back != s)
+        {
+            LOGE("disk round-trip mismatch at size %zu (got %zu)", s.size(), back.size());
+            return false;
+        }
+    }
+    if (disk.tell() != disk.getSize())
+    {
+        LOGE("disk stream not consumed exactly");
+        return false;
+    }
+
+    // and on the memory backend (the codec reference)
+    if (!mem.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    for (const auto &s : samples)
+    {
+        std::string back;
+        if (!(mem >> back) || back != s)
+        {
+            LOGE("memory round-trip failed at size %zu", s.size());
+            return false;
+        }
+    }
+    disk.close();
+    mem.close();
+    return true;
+}
+
 bool test_ifile_serializer(IFile &file, const char *context)
 {
     size_t expectedSize = 0;

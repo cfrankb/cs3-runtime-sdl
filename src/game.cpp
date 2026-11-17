@@ -397,14 +397,29 @@ bool CGame::loadLevel(const GameMode mode)
 {
     if (!m_quiet)
         LOGI("loading level: %d ...", m_level + 1);
+
+    // extract level from MapArch (BUG-C7: at() yields nullptr out of range;
+    // m_level can come from a save or setLevel unchecked). Checked before any
+    // state mutation so a bogus level leaves the game untouched.
+    if (m_mapArch == nullptr)
+    {
+        LOGE("loadLevel: no map archive set");
+        return false;
+    }
+    CMap *levelMap = m_mapArch->at(m_level);
+    if (levelMap == nullptr)
+    {
+        LOGE("loadLevel: level %d outside archive (%zu maps)", m_level, m_mapArch->size());
+        return false;
+    }
+
     setMode(mode);
 
     // clear used items list when entering a new level
     if (mode == MODE_CHUTE || mode == MODE_LEVEL_INTRO)
         m_usedItems.clear();
 
-    // extract level from MapArch
-    m_map = *(m_mapArch->at(m_level));
+    m_map = *levelMap;
 
     // remove used item
     for (const auto &pos : m_usedItems)
@@ -1222,6 +1237,14 @@ bool CGame::read(IFile &sfile)
     _R(&m_lives, sizeof(m_lives));
     _R(&m_health, sizeof(m_health));
     _R(&m_level, sizeof(m_level));
+    // BUG-C7: a corrupt save must not smuggle an out-of-range level past the
+    // loadLevel gate. Validated whenever an archive is loaded (headless runs
+    // without one rely on the loadLevel check instead).
+    if (m_mapArch != nullptr && (m_level < 0 || m_level >= static_cast<int>(m_mapArch->size())))
+    {
+        LOGE("save refers to level %d outside the loaded archive", m_level);
+        return false;
+    }
     _R(&m_nextLife, sizeof(m_nextLife));
     _R(&m_diamonds, sizeof(m_diamonds));
     _R(m_keys.tiles, sizeof(m_keys.tiles));

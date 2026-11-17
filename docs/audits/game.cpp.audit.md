@@ -10,7 +10,7 @@ Date: 2026-11-16
 
 ### Critical
 
-- L407: [bug] `m_map = *(m_mapArch->at(m_level));` — `CMapArch::at()` (maparch.h:41) returns `nullptr` for out-of-range indices, so an out-of-range `m_level` (settable unchecked via `setLevel()` L570-573, or read raw from a save file at L1224 with no bound check) causes a null-pointer dereference. Also `m_mapArch` itself is never null-checked here. Fix: check the returned pointer (and `m_mapArch`) and `LOGE`/return false; validate `m_level` against `m_mapArch->size()` after `read()`.
+- L407: [bug] **FIXED 2026-11-17** (docs/bugs/resolved/critical-triage-2026-11-17.md BUG-C7; `testLevelBounds`). Original finding: `m_map = *(m_mapArch->at(m_level));` — `CMapArch::at()` (maparch.h:41) returns `nullptr` for out-of-range indices, so an out-of-range `m_level` (settable unchecked via `setLevel()` L570-573, or read raw from a save file at L1224 with no bound check) causes a null-pointer dereference. Also `m_mapArch` itself is never null-checked here. Fixed: `loadLevel()` checks `m_mapArch` and `at()` result before mutating state; `read()` validates `m_level` against `m_mapArch->size()` when an archive is loaded.
 
 ### High
 

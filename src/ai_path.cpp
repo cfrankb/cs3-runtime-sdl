@@ -119,6 +119,10 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
         Node *current = openList.top();
         openList.pop();
 
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
         // Reached goal
         if (current->pos == goalPos)
         {
@@ -182,10 +186,20 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
             int newHCost = manhattanDistance(newPos, goalPos);
 
             auto it = nodes.find(newPos);
-            if (it == nodes.end() || newGCost < it->second->gCost)
+            if (it == nodes.end())
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
                 openList.push(nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // BUG-C9: relax in place. Reassigning the unique_ptr here
+                // freed the Node while openList still held its raw pointer.
+                // Re-push the same pointer so the heap sees the improved
+                // fCost; the stale copy is skipped on pop via closedList.
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.push(it->second.get());
             }
         }
     }
@@ -444,6 +458,10 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
         Node *current = openList.top();
         openList.pop();
 
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
         if (current->pos == goalPos)
         {
             std::vector<Pos> path;
@@ -462,7 +480,10 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
         for (int i = 0; i < 4; ++i)
         {
             const Pos newPos = {static_cast<int16_t>(current->pos.x + g_deltas[i].x), static_cast<int16_t>(current->pos.y + g_deltas[i].y)};
-            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei || closedList[newPos])
+            // find(), not operator[]: BUG-C9's pop skip treats map membership
+            // as closed, so no false-valued probes may enter closedList
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei ||
+                closedList.find(newPos) != closedList.end())
                 continue;
 
             // probe canMove from the expanded node so the entered cell is checked
@@ -474,9 +495,17 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
                 continue;
 
             int newGCost = current->gCost + 1;
-            if (!nodes[newPos] || newGCost < nodes[newPos]->gCost)
+            if (!nodes[newPos])
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, manhattanDistance(newPos, goalPos), current);
+                openList.push(nodes[newPos].get());
+            }
+            else if (newGCost < nodes[newPos]->gCost)
+            {
+                // BUG-C9: relax in place (see AStar); replacing the unique_ptr
+                // would free the Node still referenced by openList
+                nodes[newPos]->gCost = newGCost;
+                nodes[newPos]->parent = current;
                 openList.push(nodes[newPos].get());
             }
         }

@@ -1,5 +1,10 @@
 # Action plan: critical issues from docs/audits (2026-11-17)
 
+**Status: COMPLETE 2026-11-17.** All 10 entries (14 Critical findings) fixed,
+pinned by tests that fail on the pre-fix binaries, `ctest` 100%. BUG-C9 also
+verified under a dedicated ASan build (`build-asan`,
+`-DCMAKE_CXX_FLAGS=-fsanitize=address`).
+
 Source: per-file audits in `docs/audits/` dated 2026-11-16/17. 14 Critical
 findings across 9 files, grouped into 6 fix clusters. Each BUG below may
 cover several audit findings; the audit file+line is given so the fix can be
@@ -138,6 +143,13 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   read raw from a save (L1224) → null deref.
 - **Fix:** null-check the returned pointer and `m_mapArch`; validate
   `m_level < m_mapArch->size()` after `read()`, LOGE + return false.
+- **Status:** **Fixed.** `loadLevel()` gates `m_mapArch != nullptr` and
+  `at(m_level) != nullptr` *before* `setMode`/`usedItems` mutation;
+  `CGame::read()` rejects a save whose `m_level` falls outside the loaded
+  archive (check skipped when no archive is loaded — headless save roundtrip
+  tests pin that). Pinned by `testLevelBounds` (null arch, level above size,
+  negative level); pre-fix binary segfaults on the null arch, post-fix
+  `ctest` passes 100%.
 - **Verify:** test: out-of-range level via save/load path returns failure.
 
 ### BUG-C8 (Critical) gamemixin render path derefs null frames from `FrameSet::operator[]`
@@ -151,6 +163,13 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   at cpp:756); validate `num < frames->size()` with LOGW.
 - **Verify:** render test with an out-of-range animz/tile index; expect skip,
   no crash.
+- **Status:** **Fixed.** `continue` on null `calcSpecialFrame()` in both
+  viewport loops; overlay `emplace` requires non-null tile; `drawBossses`
+  validates `0 <= num < frames->size()` (and non-null entry) with LOGW.
+  Pinned by a synthesized case in `test_gamemixin_bosses` (copy of real
+  `bossData_t` with `sheet=0, aims=1, moving={0,1}` + emptied `sheet0`);
+  pre-fix binary aborts on `vector<CFrame*>::operator[]`, post-fix draws
+  nothing and `ctest` passes 100%.
 
 ### BUG-C9 (Critical) A* use-after-free on g-cost improvement
 - **Where:** `src/ai_path.cpp:187` and `:479` (`AStar`/`AStarSmooth`) (audit
@@ -163,6 +182,17 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   pop skip stale entries via `closedList.count(current->pos)`.
 - **Verify:** extend `t_ai_path` with a map that forces a g-cost relaxation;
   run under ASan if available.
+- **Status:** **Fixed.** Both `AStar` and `AStarSmooth` relax `gCost`/`parent`
+  in place and re-push the same pointer; pop skips stale copies via
+  `closedList` membership (and `AStarSmooth`'s `closedList[newPos]` probe
+  became a `find()` so it no longer seeds false-valued entries). The test map
+  (8x6, start (2,5), goal (7,0), 7 walls — mined by a search-identical
+  simulation, the branch fires only via heap tie-breaks) joins
+  `test_pathfinding` for AStar+BFS. Pre-fix ASan build (`build-asan`) reports
+  `heap-use-after-free` at `t_ai_path.cpp`; post-fix ASan run is clean
+  (exit 0) and `ctest` passes 100%. Drive-by: unblocking the ASan run exposed
+  an unflagged pre-existing OOB read at `level.cpp:89` (`std::string` built
+  from an unterminated vector via `strlen`); fixed with the sized ctor.
 
 ### BUG-C10 (Critical) `CFileWrap` string reader can't decode the 32-bit length its writer emits
 - **Where:** `src/shared/FileWrap.cpp:154-171` vs writer L203-210 (audit
@@ -175,6 +205,15 @@ entry to `docs/bugs/resolved` and flip the audit finding.
 - **Verify:** string round-trip test spanning all three length tiers
   (<254, 65535-boundary, ≥65535) on both backends, asserting identical
   results.
+- **Status:** **Fixed.** Disk reader decodes `uint8_t`/`uint16_t`/`uint32_t`
+  locals mirroring `CFileMem` (byte <0xff; 0xff→uint16; uint16 0xffff→uint32
+  content size), plus a remaining-bytes bound mirroring BUG-C1 so a hostile
+  32-bit length can't trigger a 4GB `resize`. Size-0 payload skips the `fread`
+  (empty string no longer fails the disk backend). Pinned by
+  `test_ifile_string_tiers`: 5/300/65535/100000-byte strings round-trip on
+  both backends and the two encodings compare byte-identical; pre-fix binary
+  fails with "disk round-trip mismatch at size 65535", post-fix `ctest`
+  passes 100%.
 
 ---
 

@@ -151,26 +151,33 @@ bool CFileWrap::operator>>(std::string &str)
     }
     else
     {
-        int size = 0;
-        if (fread(&size, 1, 1, m_file) != 1)
+        // BUG-C10: decode with width-exact locals mirroring CFileMem: a byte
+        // < 0xff is the length; 0xff introduces a uint16; a uint16 of 0xffff
+        // introduces the uint32 content size. Reusing one int for all reads
+        // made the 0xffff case dead and desynced the stream on 32-bit writes.
+        uint8_t byte = 0;
+        if (fread(&byte, sizeof(byte), 1, m_file) != 1)
             return false;
-        if (size == 0xff)
+        uint32_t size = byte;
+        if (byte == 0xff)
         {
-            if (size == 0xffff)
+            uint16_t w16 = 0;
+            if (fread(&w16, sizeof(w16), 1, m_file) != 1)
+                return false;
+            size = w16;
+            if (w16 == 0xffff)
             {
                 // 32 bits version
                 if (fread(&size, sizeof(uint32_t), 1, m_file) != 1)
                     return false;
             }
-            else
-            {
-                // 16 bits
-                if (fread(&size, sizeof(uint16_t), 1, m_file) != 1)
-                    return false;
-            }
         }
+        // the declared payload must actually be in the file (mirrors BUG-C1)
+        const long remain = getSize() - ftell(m_file);
+        if (remain < 0 || static_cast<size_t>(size) > static_cast<size_t>(remain))
+            return false;
         str.resize(size); // Allocate space in str
-        if (fread(str.data(), size, 1, m_file) != 1)
+        if (size != 0 && fread(str.data(), size, 1, m_file) != 1)
         {
             str.clear(); // Reset on failure
             return false;

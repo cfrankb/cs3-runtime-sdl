@@ -1276,6 +1276,34 @@ bool test_gamemixin_bosses()
         return true; // data not deployed: skip (same policy as t_boss)
     if (g_bossCount == 0 && loadBossData(INI_DIR, "data/bosses/data") != 0)
         return true;
+    // BUG-C8: a frame number outside the sheet is skipped, not dereferenced.
+    // Synthesized copy keeps the case independent of real sheet ids:
+    // currentFrame() == 0 against an emptied sheet0.
+    if (g_bossCount > 0)
+    {
+        bossData_t synth = g_bossData[0];
+        synth.sheet = 0;
+        synth.aims = 1;
+        synth.moving.base = 0;
+        synth.moving.lenght = 1;
+        TestRuntime rt;
+        installFixture(rt);
+        CGame &game = *CGame::getGame();
+        auto &bosses = game.getBosses();
+        bosses.clear();
+        bosses.emplace_back(4, 4, &synth);
+        rt.sheet0_() = std::make_unique<CFrameSet>(); // no frames at all
+        CFrame bmp(64, 64);
+        bmp.fill(BLACK);
+        rt.drawBossses(bmp, 0, 0, 8, 8); // pre-fix: nullptr frame deref
+        if (nonBlack(bmp, 0, 0, bmp.width(), bmp.height()) != 0)
+        {
+            bosses.clear();
+            return fail("out-of-range boss frame was drawn");
+        }
+        bosses.clear();
+    }
+
     const bossData_t *data = nullptr;
     for (int i = 0; i < g_bossCount; ++i)
     {

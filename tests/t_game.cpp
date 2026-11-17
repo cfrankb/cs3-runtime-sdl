@@ -30,6 +30,7 @@
 #include "../src/layerdata.h"
 #include "../src/logger.h"
 #include "../src/map.h"
+#include "../src/maparch.h"
 #include "../src/sprtypes.h"
 #include "../src/statedata.h"
 #include "../src/states.h"
@@ -476,6 +477,45 @@ namespace
         }
         return true;
     }
+// BUG-C7: loadLevel must reject a null archive or an out-of-range level
+// instead of dereferencing at()'s nullptr. Mutates and restores the
+// singleton's arch/level/mode; no archive is set anywhere else in cs3-tests.
+bool testLevelBounds()
+{
+    CGame *game = CGame::getGame();
+    const int savedLevel = game->level();
+    const CGame::GameMode savedMode = game->mode();
+    bool ok = true;
+
+    game->setMapArch(nullptr);
+    game->setLevel(0);
+    if (game->loadLevel(CGame::MODE_IDLE))
+    {
+        LOGE("loadLevel accepted a null archive");
+        ok = false;
+    }
+
+    CMapArch arch;
+    arch.add(std::make_unique<CMap>(MAP_SIZE, MAP_SIZE));
+    game->setMapArch(&arch);
+    game->setLevel(1);
+    if (game->loadLevel(CGame::MODE_IDLE))
+    {
+        LOGE("loadLevel accepted level 1 of a 1-map archive");
+        ok = false;
+    }
+    game->setLevel(-1);
+    if (game->loadLevel(CGame::MODE_IDLE))
+    {
+        LOGE("loadLevel accepted negative level");
+        ok = false;
+    }
+
+    game->setMapArch(nullptr);
+    game->setLevel(savedLevel);
+    game->setMode(savedMode);
+    return ok;
+}
 } // namespace
 
 bool test_game()
@@ -488,5 +528,6 @@ bool test_game()
            testClosureDeath() &&
            testClosureLevelComplete() &&
            testClosureExitGate() &&
-           testClosureChute();
+           testClosureChute() &&
+           testLevelBounds();
 }

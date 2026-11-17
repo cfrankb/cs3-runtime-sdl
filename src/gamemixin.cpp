@@ -789,6 +789,8 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
         const int x = sprite.x - mx;
         const int y = sprite.y - my;
         CFrame *tile = calcSpecialFrame(sprite);
+        if (tile == nullptr)
+            continue; // BUG-C8: bad animz/tile index; skip like base tiles
         bool firstY = oy && y == 0;
         bool lastY = oy && y == rows;
         bool firstX = ox && x == 0;
@@ -867,7 +869,7 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
                     const uint16_t refID = m_animator->getLayerTile(tileID);
                     tile = (*m_layerTiles)[refID];
                     const layerdata_t &data = getLayerTileDef(refID);
-                    if (data.tileType == LayerTileType::Foreground)
+                    if (tile != nullptr && data.tileType == LayerTileType::Foreground)
                     {
                         const int px = x * TILE_SIZE;
                         const int py = y * TILE_SIZE;
@@ -897,6 +899,8 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
         const int x = sprite.x - mx;
         const int y = sprite.y - my;
         CFrame *tile = calcSpecialFrame(sprite);
+        if (tile == nullptr)
+            continue; // BUG-C8: bad animz/tile index; skip like base tiles
         drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, true);
     }
 
@@ -968,6 +972,14 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         }
 
         const int num = boss.currentFrame();
+        // BUG-C8: currentFrame() is data-driven (aims/base/lenght); out of
+        // range means operator[] yields nullptr — skip the boss, not the level
+        if (num < 0 || num >= static_cast<int>(frames->size()) || (*frames)[num] == nullptr)
+        {
+            LOGW("boss 0x%.2x frame %d outside sheet %d (%zu frames)",
+                 boss.data()->type, num, boss.data()->sheet, frames->size());
+            continue;
+        }
         CFrame &frame = *(*frames)[num];
         const hitbox_t &hitbox = boss.hitbox();
 

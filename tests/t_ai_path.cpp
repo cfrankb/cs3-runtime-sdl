@@ -167,6 +167,27 @@ bool test_pathfinding()
         !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10))
         return false;
 
+    // BUG-C9: map whose heap tie-breaks force a g-cost relaxation (a node
+    // already in openList is reached cheaper); pre-fix freed the old Node
+    // there while openList still held its raw pointer (heap-use-after-free
+    // under ASan). Layout from a search-identical simulation of the pre-fix
+    // loop: only this start/goal/wall set fires the branch.
+    {
+        CMap &map = CGame::getMap();
+        map.clear();
+        map.resize(8, 6, 0, true);
+        constexpr int RELAX_WALLS[][2] = {{1, 0}, {1, 1}, {0, 3}, {3, 3}, {6, 3}, {0, 4}, {7, 5}};
+        for (const auto &w : RELAX_WALLS)
+            map.set(w[0], w[1], BLOCKED);
+        if (!checkPath("AStar", sprite, aStar, Pos{2, 5}, Pos{7, 0}, 10) ||
+            !checkPath("BFS", sprite, bfs, Pos{2, 5}, Pos{7, 0}, 10))
+            return false;
+    }
+
+    // restore the gap-wall map for the sealed-wall cases below
+    fillMap(10);
+    wallColumn(1, 0, 2);
+
     // fully sealed wall: no path
     wallColumn(1, 3, 9);
     sprite.move(Pos{0, 0});
