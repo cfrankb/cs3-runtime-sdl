@@ -419,12 +419,12 @@ int main(int argc, char *args[])
         SDL_Delay(1);
     }
 #endif
-    // ~CRuntime calls SDL_Quit; the game still owns the SDL_mixer sound, so
-    // destroy the runtime first, then the game singleton (its ~CSndSDL does
-    // Mix_CloseAudio and must run before static destruction touches SDL)
-    runtime.reset();
-    g_runtime = nullptr;
+    // CGame owns the SDL3_mixer device (~CSndSDL does Mix_CloseAudio) and
+    // ~CRuntime calls SDL_Quit, which frees the mixer's audio stream. The game
+    // must therefore die before the runtime, not after.
     CGame::destroy();
+    g_runtime = nullptr;
+    runtime.reset();
 #ifdef STEAM_BUILD
     ShutdownSteam();
 #endif
