@@ -7,7 +7,7 @@ Overall the file is compact and mostly correct, but the save/load path (`read()`
 ## Findings
 
 ### Critical
-- L43–52: [bug/ub] Constructor dereferences `data` unconditionally (`data->speed` L47, and via `setSolidOperator()` L51→L495 `m_bossData->type`) while boss.h L58 gives the parameter a default of `nullptr` — `CBoss()` or any call with a failed `getBossData()` result is a guaranteed null deref. Fix: drop the `= nullptr` default, or bail out early (`LOGE` + safe defaults) when `data == nullptr`.
+- L43–52: [bug/ub] **FIXED 2026-11-17** (docs/bugs/critical-triage-2026-11-17.md BUG-C6). Original finding: Constructor dereferences `data` unconditionally (`data->speed` L47, and via `setSolidOperator()` L51→L495 `m_bossData->type`) while boss.h L58 gives the parameter a default of `nullptr` — `CBoss()` or any call with a failed `getBossData()` result is a guaranteed null deref. Fixed by dropping the defaulted param (explicit defaulted ctor + member initializers serve the save-load resize), and `read()` now calls `setSolidOperator()`.
 
 ### High
 - L43–52: [bug/ub] `m_aim` is never initialized in the constructor (only set by `move()` L230, `setAim()`, or `read()`). A freshly spawned boss rendered/animated before its first move reads an indeterminate `uint8_t` in `currentFrame()` (L309) → UB and a garbage frame index. Fix: initialize `m_aim = AIM_DOWN` (or `AIM_NONE` with the guard below) in the constructor.

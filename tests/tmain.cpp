@@ -127,6 +127,7 @@ int main(int argc, char *args[])
         FCT(test_statedata),
         FCT(test_dotarray),
         FCT(test_bossdata),
+        FCT(test_bossdata_hostile),
         FCT(test_boss),
         FCT(test_level),
         FCT(test_pathfinding),

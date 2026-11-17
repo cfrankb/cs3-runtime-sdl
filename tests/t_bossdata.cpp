@@ -17,6 +17,8 @@
 */
 
 #include <filesystem>
+#include <fstream>
+#include <string>
 #include "../src/logger.h"
 #include "../src/bossdata.h"
 #include "t_bossdata.h"
@@ -120,5 +122,86 @@ bool test_bossdata()
         return false;
     }
 
+    return true;
+}
+
+/**
+ * @brief BUG-C5: malformed hitbox JSON and bare INI keywords must be
+ *        rejected with warnings, not null-deref / vector OOB; recorded
+ *        hitbox counts must never exceed MAX_HITBOX_PER_FRAME.
+ *
+ * @return true
+ * @return false
+ */
+bool test_bossdata_hostile()
+{
+    namespace fs = std::filesystem;
+    const std::string dir = "tests/out/bd_hostile";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+
+    auto write_file = [&dir](const char *name, const std::string &content)
+    {
+        std::ofstream out(dir + "/" + name);
+        out << content;
+    };
+
+    // five boxes in the same cell of one frame -> destination array holds 4
+    write_file("hb_five.json",
+               R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[)"
+               R"({"x":0,"y":0,"w":8,"h":8,"type":1},)"
+               R"({"x":1,"y":1,"w":8,"h":8,"type":2},)"
+               R"({"x":2,"y":2,"w":8,"h":8,"type":3},)"
+               R"({"x":3,"y":3,"w":8,"h":8,"type":1},)"
+               R"({"x":4,"y":4,"w":8,"h":8,"type":2}]})");
+    // hitbox entry missing "x" (pre-fix: null deref)
+    write_file("hb_missing.json",
+               R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[{"y":0,"w":8,"h":8,"type":1}]})");
+    // non-object hitbox entries (pre-fix: null deref via hb.find on Number)
+    write_file("hb_scalar.json",
+               R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[7]})");
+    write_file("bosses.ini",
+               "[ClampTest]\ntype 3\nhp 5\nmoving 2 hb_five.json\n"
+               "[MissingKey]\ntype 4\nhp 5\nmoving 2 hb_missing.json\n"
+               "[ScalarEntry]\ntype 5\nhp 5\nmoving 2 hb_scalar.json\n"
+               "[BareWords]\nhp\ntype 6\nmoving # consumed by comment\n"
+               "aims\n");
+
+    freeBossData();
+    if (loadBossData(dir.c_str(), dir.c_str()) != 0)
+    {
+        LOGE("bossdata: hostile fixture load should survive with warnings");
+        return false;
+    }
+    if (g_bossCount < 1)
+    {
+        LOGE("bossdata: hostile fixture produced no bosses");
+        return false;
+    }
+
+    bool saw_clamped = false;
+    for (int i = 0; i < g_hitboxCount; ++i)
+    {
+        if (g_hitboxes[i].count < 0 || g_hitboxes[i].count > MAX_HITBOX_PER_FRAME)
+        {
+            LOGE("bossdata: hitbox entry %d count %d exceeds cap", i, g_hitboxes[i].count);
+            return false;
+        }
+        if (g_hitboxes[i].count == MAX_HITBOX_PER_FRAME)
+            saw_clamped = true;
+    }
+    if (!saw_clamped)
+    {
+        LOGE("bossdata: 5-box frame did not clamp to %d", MAX_HITBOX_PER_FRAME);
+        return false;
+    }
+    // malformed JSON files must have contributed nothing
+    if (g_hitboxCount != 1)
+    {
+        LOGE("bossdata: expected 1 hitbox frame, got %d", g_hitboxCount);
+        return false;
+    }
+
+    freeBossData();
     return true;
 }

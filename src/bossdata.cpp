@@ -387,17 +387,41 @@ namespace
             return false;
         }
 
-        int frameWidth = frame->find("width")->asInt();
-        int frameHeight = frame->find("height")->asInt();
-        int cols = frame->find("cols")->asInt();
+        int frameWidth = 0;
+        int frameHeight = 0;
+        int cols = 0;
+        auto numAt = [](const JsonValue &obj, const char *key, int &out) -> bool
+        {
+            const JsonValue *v = obj.find(key);
+            if (!v || v->type != JsonValue::Type::Number)
+                return false;
+            out = v->asInt();
+            return true;
+        };
+        if (!numAt(*frame, "width", frameWidth) ||
+            !numAt(*frame, "height", frameHeight) ||
+            !numAt(*frame, "cols", cols) ||
+            frameWidth <= 0 || frameHeight <= 0 || cols <= 0)
+        {
+            LOGE("Error: bad frame schema in '%s'.\n", path.c_str());
+            return false;
+        }
 
         for (const JsonValue &hb : hbs->arr)
         {
-            int x = hb.find("x")->asInt();
-            int y = hb.find("y")->asInt();
-            int w = hb.find("w")->asInt();
-            int h = hb.find("h")->asInt();
-            int type = hb.find("type")->asInt();
+            int x = 0;
+            int y = 0;
+            int w = 0;
+            int h = 0;
+            int type = 0;
+            if (hb.type != JsonValue::Type::Object ||
+                !numAt(hb, "x", x) || !numAt(hb, "y", y) ||
+                !numAt(hb, "w", w) || !numAt(hb, "h", h) ||
+                !numAt(hb, "type", type))
+            {
+                LOGE("Error: bad hitbox entry in '%s'.\n", path.c_str());
+                return false;
+            }
             if (type == 0)
                 continue; // ignored frame marker, same as parse.py
 
@@ -694,22 +718,18 @@ namespace
                     seq.fields[k] = v;
                 };
 
-                if (item == "type")
-                    setScalar("type", e[1]);
-                else if (item == "hp")
-                    setScalar("hp", e[1]);
-                else if (item == "score")
-                    setScalar("score", e[1]);
-                else if (item == "path")
-                    setScalar("path", e[1]);
-                else if (item == "attack_sound")
-                    setScalar("attack_sound", e[1]);
-                else if (item == "is_goal")
-                    setScalar("is_goal", e[1]);
-                else if (item == "show_details")
-                    setScalar("show_details", e[1]);
-                else if (item == "aims")
-                    setScalar("aims", e[1]);
+                if (item == "type" || item == "hp" || item == "score" ||
+                    item == "path" || item == "attack_sound" || item == "is_goal" ||
+                    item == "show_details" || item == "aims")
+                {
+                    if (e.size() < 2)
+                    {
+                        LOGW("Warning: '%s' on line %d is missing a value: %s\n",
+                             item.c_str(), lineNo, t.c_str());
+                        continue;
+                    }
+                    setScalar(item, e[1]);
+                }
                 else if (item == "moving" || item == "attack" || item == "hurt" ||
                          item == "death" || item == "idle")
                 {
@@ -728,6 +748,11 @@ namespace
         void handleSeq(BossAccum &seq, const std::string &seqName,
                        const std::vector<std::string> &e)
         {
+            if (e.size() < 2)
+            {
+                LOGW("Warning: %s line is missing a frame count.\n", seqName.c_str());
+                return;
+            }
             std::string hitboxFile = e.size() == 3 ? e[2] : "";
 
             if (!hitboxFile.empty())
@@ -830,7 +855,13 @@ int loadBossData(const std::string &iniDir, const std::string &hitboxDir)
     {
         sprite_hitbox_t s{};
         s.spriteID = fr.spriteID;
-        s.count = static_cast<int>(fr.boxes.size());
+        // only MAX_HITBOX_PER_FRAME boxes fit in sprite_hitbox_t; recording
+        // more would make the consumer (CBoss::draw) read past hitboxes[]
+        if (fr.boxes.size() > MAX_HITBOX_PER_FRAME)
+            LOGW("Warning: frame %d has %zu hitboxes; keeping %d.\n",
+                 fr.spriteID, fr.boxes.size(), MAX_HITBOX_PER_FRAME);
+        s.count = static_cast<int>(std::min(fr.boxes.size(),
+                                            static_cast<size_t>(MAX_HITBOX_PER_FRAME)));
         for (size_t i = 0; i < fr.boxes.size() && i < MAX_HITBOX_PER_FRAME; ++i)
             s.hitboxes[i] = fr.boxes[i];
         hb.push_back(s);

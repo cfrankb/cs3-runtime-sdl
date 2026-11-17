@@ -18,3 +18,4 @@
 #pragma once
 
 bool test_bossdata();
+bool test_bossdata_hostile();

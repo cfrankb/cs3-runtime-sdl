@@ -437,6 +437,9 @@ bool CBoss::read(IFile &sfile)
         return false;
     }
     m_bossData = data;
+    // BUG-C6 follow-up: like the ctor, restored bosses need their tile-check
+    // operator; without it isSolid callers deref a null member pointer.
+    setSolidOperator();
 
     m_framePtr = 0;
     _R(&m_framePtr, DATA_SIZE);

@@ -101,6 +101,15 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   `handleSeq`.
 - **Verify:** malformed-JSON and bare-keyword INI fixtures in the bossdata
   loader tests; expect load failure, no crash.
+- **Status:** **Fixed.** `numAt()` checks every `find()` result and the
+  `hb` entry type (LOGE + fail); `frameWidth/Height/cols` must be present
+  and > 0 (also closes the `x / frameWidth` div-by-zero); `s.count` clamped
+  to `MAX_HITBOX_PER_FRAME` with LOGW; `e.size() < 2` guards added in
+  `handleSeq` and once before the scalar chain. Pinned by
+  `test_bossdata_hostile` (crafted `tests/out/bd_hostile` fixtures:
+  missing-key JSON, non-object hitbox entry, 5-box frame clamps to 4, bare
+  `hp`/`aims`/`moving` lines); pre-fix binary segfaults, post-fix `ctest`
+  passes 100%.
 
 ### BUG-C6 (Critical) `CBoss` constructor takes a defaulted-null `bossData_t*`
 - **Where:** `src/boss.cpp` ctor L43-52, `src/boss.h:58` (audit
@@ -111,6 +120,14 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   `getBossData()` and skip boss creation on failure (LOGE).
 - **Verify:** compile-level (no default) + grep confirms no caller relies on
   the default.
+- **Status:** **Fixed.** `= nullptr` dropped; spawn site (`game.cpp` attr
+  loop) already checked `getBossData()` before constructing. The save-load
+  path's `vector::resize` now uses an explicit `CBoss() = default` backed by
+  default member initializers (`m_bossData = nullptr`, `m_aim = AIM_NONE` —
+  also closes the audit's uninit-`m_aim` High). Follow-up: `CBoss::read()`
+  now calls `setSolidOperator()` after resolving `m_bossData`, so
+  restored-from-save bosses no longer hold a null `m_solidCheck`. Compile +
+  existing game/save tests pass 100%.
 
 ## P3 — Isolated live crashes
 
