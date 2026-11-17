@@ -105,6 +105,9 @@ CRuntime::~CRuntime()
     for (SDL_Gamepad *pad : m_gameControllers)
         SDL_CloseGamepad(pad);
     m_gameControllers.clear();
+    // engine owns renderer-bound TileSet textures; members destruct after this
+    // body, so destroy them before the renderer/window/SDL_Quit below
+    m_engine.reset();
     if (m_app.window)
     {
         if (!m_quiet)
@@ -117,6 +120,9 @@ CRuntime::~CRuntime()
     delete m_bitmap;
     m_bitmap = nullptr;
     delete[] m_scroll;
+    // ~CSndSDL does Mix_CloseAudio; release it while SDL audio is still open
+    // (CGame's reference is dropped earlier, in main, via CGame::destroy)
+    m_sound.reset();
     SDL_Quit();
 }
 

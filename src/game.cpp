@@ -1730,10 +1730,14 @@ bool CGame::isRageMode() const
     return m_gameStats->get(S_RAGE_TIMER) != 0;
 }
 
+static std::unique_ptr<CGame> s_instance;
+
 CGame *CGame::getGame()
 {
-    static std::unique_ptr<CGame> instance(new CGame);
-    return instance.get();
+    // lazy: CGameMixin's ctor runs before static init in some builds
+    if (s_instance == nullptr)
+        s_instance = std::unique_ptr<CGame>(new CGame);
+    return s_instance.get();
 }
 
 /**
@@ -1783,7 +1787,7 @@ bool CGame::isFrozen() const
  */
 void CGame::destroy()
 {
-    getGame();
+    s_instance.reset();
 }
 
 /**

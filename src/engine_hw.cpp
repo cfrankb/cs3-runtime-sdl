@@ -810,9 +810,10 @@ void EngineHW::preloadHearts()
 {
     LOGI("preloadHearts");
 
-    CFrame bitmap((FONT_SIZE + 1) * FONT_SIZE, 3 * FONT_SIZE); // stack: load() copies
+    // heap: TileSet::load() takes ownership and deletes m_frame in its destructor
+    CFrame *bitmap = new CFrame((FONT_SIZE + 1) * FONT_SIZE, 3 * FONT_SIZE);
 
-    auto drawHeart = [&bitmap, this](auto bx, auto by, auto health, auto color)
+    auto drawHeart = [bitmap, this](auto bx, auto by, auto health, auto color)
     {
         //      const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
         const uint8_t *heart = m_font.rawData() + (CHARS_HEART - CHARS_CUSTOM + CHARS_CUSTOM_BASE) * FONT_SIZE;
@@ -822,7 +823,7 @@ void EngineHW::preloadHearts()
             {
                 const uint8_t bit = heart[y] & (1 << x);
                 if (bit)
-                    bitmap.at(bx + x, by + y) = x < (uint32_t)health ? color : BLACK;
+                    bitmap->at(bx + x, by + y) = x < (uint32_t)health ? color : BLACK;
             }
         }
     };
@@ -834,7 +835,7 @@ void EngineHW::preloadHearts()
         drawHeart(i * FONT_SIZE, FONT_SIZE * 2, i, WHITE);
     }
 
-    m_tileset_hearts.load(m_renderer, &bitmap, FONT_SIZE, FONT_SIZE);
+    m_tileset_hearts.load(m_renderer, bitmap, FONT_SIZE, FONT_SIZE);
 }
 
 void EngineHW::drawHealthBar(const bool isPlayerHurt)

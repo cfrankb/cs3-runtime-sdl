@@ -73,7 +73,7 @@ bool TileSet::load(SDL_Renderer *renderer, const std::string_view &filename, con
 
 bool TileSet::load(SDL_Renderer *renderer, CFrame *frame, const int sx, const int sy)
 {
-    m_frame = frame;
+    m_frame = frame; // takes ownership; destructor deletes it
     m_sx = sx;
     m_sy = sy;
     m_texture = createTexture(renderer, m_frame);
