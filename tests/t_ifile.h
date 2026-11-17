@@ -21,3 +21,4 @@ bool test_ifile();
 bool test_ifile_create();
 bool test_ifile_read_write();
 bool test_ifile_vector();
+bool test_ifile_string_bounds();

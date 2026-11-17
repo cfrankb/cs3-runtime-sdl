@@ -331,6 +331,86 @@ bool test_ifile_vector()
     return true;
 }
 
+/**
+ * @brief BUG-C1: CFileMem string reader must reject stream-declared lengths
+ *        that exceed the buffer instead of reading past it.
+ *
+ * @return true
+ * @return false
+ */
+bool test_ifile_string_bounds()
+{
+    auto must_fail = [](const std::vector<uint8_t> &buf, const char *what)
+    {
+        CFileMem fm;
+        fm.replace(buf.data(), buf.size());
+        std::string str("untouched");
+        if (fm >> str)
+        {
+            LOGE("[%s] expected failure, got success", what);
+            return false;
+        }
+        if (str != "untouched")
+        {
+            LOGE("[%s] str modified on failure path", what);
+            return false;
+        }
+        return true;
+    };
+
+    // 1-byte header claims 16 bytes of payload, none present
+    if (!must_fail({0x10}, "short header claims payload"))
+        return false;
+    // 0xffff 16-bit extension claims 32767 bytes, none present
+    if (!must_fail({0xff, 0xff, 0x7f}, "16-bit length overrun"))
+        return false;
+    // 0xffff 0xffff 32-bit extension claims 256 bytes, none present
+    if (!must_fail({0xff, 0xff, 0xff, 0xff, 0x00, 0x01, 0x00, 0x00}, "32-bit length overrun"))
+        return false;
+    // 3-byte tail: 32-bit extension would read 1 byte past the buffer
+    if (!must_fail({0xff, 0xff, 0xff}, "truncated 32-bit extension"))
+        return false;
+    // header present but payload truncated
+    if (!must_fail({0x04, 'a', 'b'}, "truncated payload"))
+        return false;
+
+    // valid data must still round-trip after the fix
+    CFileMem fm;
+    if (!fm.open("tests/out/stringbounds.dat", "wb"))
+    {
+        LOGE("can't open stringbounds.dat");
+        return false;
+    }
+    const std::string text("The quick brown fox.");
+    fm << std::string_view(text);
+    const size_t encodedSize = fm.getSize();
+    if (!fm.seek(0))
+    {
+        LOGE("seek(0) failed");
+        return false;
+    }
+    std::string back;
+    if (!(fm >> back))
+    {
+        LOGE("valid string read failed");
+        return false;
+    }
+    if (back != text)
+    {
+        LOGE("round-trip mismatch '%s'", back.c_str());
+        return false;
+    }
+    // buffer exhausted: reading one more string must fail, not over-read
+    fm.seek(static_cast<long>(encodedSize));
+    if (fm >> back)
+    {
+        LOGE("expected failure reading past end of buffer");
+        return false;
+    }
+    fm.close();
+    return true;
+}
+
 bool test_ifile_serializer(IFile &file, const char *context)
 {
     size_t expectedSize = 0;

@@ -132,10 +132,15 @@ bool CFileMem::operator>>(std::string &str)
         // implemented 32 bits version
         if (length == 0xffff)
         {
+            if (m_ptr + sizeof(uint32_t) > m_buffer.size())
+                return false;
             memcpy(&length, &m_buffer[m_ptr], sizeof(uint32_t));
             m_ptr += sizeof(uint32_t);
         }
     }
+    // the declared payload must actually be in the buffer (BUG-C1)
+    if (length > m_buffer.size() - m_ptr)
+        return false;
     str.resize(length);
     if (length != 0)
     {
