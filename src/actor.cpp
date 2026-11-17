@@ -187,7 +187,7 @@ bool CActor::canMove(const JoyAim aim) const
     if (game->isGranularSolidFromPos(pos, aim))
         return false;
 
-    const uint8_t c = map.at(newPos.x, newPos.y);
+    const uint16_t c = map.at(newPos.x, newPos.y);
     const TileDef &def = getTileDef(c);
     if (def.type == TYPE_BACKGROUND)
     {
@@ -232,7 +232,7 @@ bool CActor::canMove(const JoyAim aim) const
 void CActor::move(const JoyAim aim)
 {
     CMap &map = CGame::getMap();
-    const uint8_t c = map.at(m_x, m_y);
+    const uint16_t c = map.at(m_x, m_y);
     map.set(m_x, m_y, m_pu);
 
     const Pos pos = CGame::translate(Pos{m_x, m_y}, aim);
@@ -250,7 +250,7 @@ void CActor::move(const JoyAim aim)
  * @return uint8_t
  */
 
-uint8_t CActor::getPU() const
+uint16_t CActor::getPU() const
 {
     return m_pu;
 }
@@ -261,7 +261,7 @@ uint8_t CActor::getPU() const
  * @param c
  */
 
-void CActor::setPU(const uint8_t c)
+void CActor::setPU(const uint16_t c)
 {
     m_pu = c;
 }
@@ -337,7 +337,7 @@ void CActor::setAim(const JoyAim aim)
 
 bool CActor::isPlayerThere(JoyAim aim) const
 {
-    const uint8_t c = tileAt(aim);
+    const uint16_t c = tileAt(aim);
     const TileDef &def = getTileDef(c);
     return def.type == TYPE_PLAYER;
 }
@@ -346,9 +346,9 @@ bool CActor::isPlayerThere(JoyAim aim) const
  * @brief Get tileID at give relative position
  *
  * @param aim
- * @return uint8_t
+ * @return uint16_t
  */
-uint8_t CActor::tileAt(JoyAim aim) const
+uint16_t CActor::tileAt(JoyAim aim) const
 {
     const CMap &map = CGame::getMap();
     const Pos &p = CGame::translate(Pos{m_x, m_y}, aim);

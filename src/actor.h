@@ -68,14 +68,14 @@ public:
     {
         m_attr = attr;
     }
-    uint8_t getPU() const;
-    void setPU(const uint8_t c);
+    uint16_t getPU() const;
+    void setPU(const uint16_t c);
     void setPos(const Pos &pos);
     JoyAim getAim() const override;
     void setAim(const JoyAim aim) override;
     JoyAim findNextDir(const bool reverse = false) const;
     bool isPlayerThere(JoyAim aim) const;
-    uint8_t tileAt(JoyAim aim) const;
+    uint16_t tileAt(JoyAim aim) const;
     void setType(const uint8_t type);
     bool isWithin(const int x1, const int y1, const int x2, const int y2) const;
     bool read(IFile &file);
@@ -151,7 +151,9 @@ private:
     uint16_t m_frame = 0;
     uint16_t m_algo = 0;
     JoyAim m_aim = AIM_NONE;
-    uint8_t m_pu = 0;
+    // tileID widened to uint16_t (matches uint16_t layer tiles; maintainer
+    // ruling 2026-11-18). Wire record widened; ENGINE_VERSION bumped.
+    uint16_t m_pu = 0;
     uint8_t m_attr = 0;
     int32_t m_ttl = 0;
     Pos m_origin = {};

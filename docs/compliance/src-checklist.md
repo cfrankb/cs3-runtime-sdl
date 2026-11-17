@@ -14,8 +14,8 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `eb762bceca89ccd5` — covered by t_actor
-- [x] `src/actor.h` `32676d726edbcd4d` — covered by t_actor
+- [x] `src/actor.cpp` `6590459458f288b0` — covered by t_actor
+- [x] `src/actor.h` `491ec3975613f24d` — covered by t_actor
 - [x] `src/ai_path.cpp` `8e83d41e140b1d32` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
@@ -43,7 +43,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `3ac7fef23bded2bd` — covered by t_runtime, t_game
+- [x] `src/game.cpp` `1dc6c6b301ca91c5` — covered by t_runtime, t_game
 - [x] `src/game.h` `95347c4b9ec2940a` — covered by t_runtime, t_game
 - [x] `src/game_ai.cpp` `6745d964a9651d5d` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile

@@ -54,7 +54,7 @@ namespace GamePrivate
 {
     // Actor wire format changed (m_frame serialized separately from m_algo
     // after the union split, see actor.h); old saves are rejected.
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x000f;
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0010;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     // Minimum on-disk bytes of one saved monster/boss record: the fixed
     // serialized fields plus at least one path-tag byte (CActor common
@@ -188,7 +188,7 @@ bool CGame::move(const JoyAim aim)
     const Pos pos = CGame::translate(m_player.pos(), aim);
     if (pos == m_player.pos())
         return false;
-    const uint8_t tileID = m_player.tileAt(aim);
+    const uint16_t tileID = m_player.tileAt(aim);
     const TileDef &def = getTileDef(tileID);
     if (isPushable(def.type))
     {
@@ -238,7 +238,7 @@ bool CGame::move(const JoyAim aim)
  */
 void CGame::consume()
 {
-    const uint8_t pu = m_player.getPU();
+    const uint16_t pu = m_player.getPU();
     const TileDef &def = getTileDef(pu);
     const auto &result = scanPos(m_player.pos(), JoyAim::AIM_NONE);
     const bool isWater = result.isWater || def.type == TYPE_SWAMP;

@@ -18,6 +18,11 @@ Status (re-verified against `src/actor.cpp` on 2026-11-18, `cs3-runtime-tests` g
 **FIXED 2026-11-18: `== CPath::Result::MoveSuccesful`; verified all callers
 (game_ai.cpp:200, 557) discard the bool, so zero runtime impact.**
 - L604: [bug] `startPath` returns `CPath::Result` implicitly converted to `bool`: `NoValidPath` (2) and `NotConfigured` (3) are truthy, so a failed path search reports success. Fix: `return m_path->followPath(...) == CPath::Result::MoveSuccesful;` (needs verification of intended semantics — game_ai.cpp:855-857 does distinguish the results).
+**FIXED 2026-11-18 (maintainer ruling: tileID is `uint16_t`, downstream of
+the `uint16_t` layer tiles). `m_pu`, `getPU`/`setPU`, `tileAt` and the four
+receiving locals widened; wire record widened → `ENGINE_VERSION` +
+`EXPECTED_VERSION` bumped together to `0x0200_0010`. `addKey`/`key_t.tiles`
+key storage left `uint8_t` (not in ruling scope).**
 - L184, L229, L236, L347: [bug] `const uint8_t c = map.at(...)` / `m_pu = map.at(...)` truncate `CMap::at`'s `uint16_t` return (map.h:127). Latent while tile IDs stay < 256 (none found in tilesdefs.h today, needs verification against level archives); fix: use `uint16_t` locals or an explicit checked narrowing. `m_pu` itself is `uint8_t` (actor.h:153), so full fix touches the member type.
 - L269-273: [bug] `setPos()` teleports without moving the map cell or re-syncing `m_pu`; a subsequent `move()` (L230) then writes the stale `m_pu` from the old cell into the new one. Callers must maintain the invariant manually — verify all `setPos` callers do, or make `setPos` take over the map bookkeeping like `move()` does.
 - L405-409: [dead] Null check after `std::make_unique` is unreachable — `make_unique` throws `std::bad_alloc`, it never returns null. As written, allocation failure escapes as an exception instead of the function's `false` contract. Delete the check (L402 `if (!m_path)` already guards).

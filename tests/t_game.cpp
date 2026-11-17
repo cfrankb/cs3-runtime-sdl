@@ -49,7 +49,7 @@ namespace
     // mirrors the file-local GAME_SIGNATURE/ENGINE_VERSION in game.cpp;
     // a save-format bump must update this (and the format docs) together
     constexpr char EXPECTED_SIGNATURE[5] = {'C', 'S', '3', 'b'};
-    constexpr uint32_t EXPECTED_VERSION = (0x0200 << 16) + 0x000f;
+    constexpr uint32_t EXPECTED_VERSION = (0x0200 << 16) + 0x0010;
 
     // mirrors the CLOSURE_TIMER constant in game.cpp
     constexpr int CLOSURE_TIMER = 7;
