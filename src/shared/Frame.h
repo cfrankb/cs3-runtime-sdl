@@ -21,7 +21,7 @@
 // MAINTAINER DIRECTIVE (2026-11-18): the CFrame contract is FROZEN — do
 // not remove or re-sign declared members, including the test-only editor
 // API flagged in docs/audits/Frame.cpp.audit.md. The Dot POD moved to
-// dot.h unchanged (CDotArray moved to external/lgck-editor/).
+// dot.h unchanged (CDotArray deprecated and deleted 2026-11-18).
 
 #include <string>
 #include <cstdint>

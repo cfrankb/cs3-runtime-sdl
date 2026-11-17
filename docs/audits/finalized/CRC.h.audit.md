@@ -1,5 +1,8 @@
 # Audit: src/shared/CRC.h
 
+**CLOSED 2026-11-18:** staging copy `external/lgck-editor/CRC.h` deleted on
+maintainer directive ("deprecated, safe to remove"); all findings moot.
+
 **REPLACED 2026-11-18 (maintainer directive):** all 7 call sites
 (Frame.cpp ×4, PngMagic.cpp, t_pngmagic.cpp ×2) now call zlib
 `crc32(0, buf, len)` directly; the class duplicates it bit-for-bit.

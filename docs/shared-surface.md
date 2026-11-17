@@ -7,7 +7,8 @@ different machine). The authoritative inventory is `sync.sh` itself:
 
 - `-g` runtime code: most of `src/` (actor, game, gamemixin, map, states,
   …) plus `src/shared/` (Frame, FrameSet, FileWrap, FileMem, IFile,
-  dot.h, ss_limits, PngMagic, and `external/lgck-editor/DotArray.*`).
+  dot.h, ss_limits, PngMagic). (`DotArray.*` and `CRC.h` staging in
+  `external/lgck-editor/` deleted 2026-11-18 — deprecated by maintainer.)
 - `-a`: `src/tiles*.{h,cpp}`, `src/animzdata*.h`. `-s`: `statedata.*`.
 - In-repo second consumer: `android-project/app/jni/CMakeLists.txt`
   (lists `src/shared/*.cpp` explicitly).

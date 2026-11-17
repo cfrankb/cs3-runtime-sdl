@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-17 |
-| Git HEAD | c04d895 |
+| Git HEAD | 5cd5c42 |
 | Files tracked | 119 |
 | Covered by cs3-tests | 70 |
 | Verified items | 80 / 119 |
@@ -118,14 +118,14 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FileWrap.cpp` `b62b4aed75e7b176` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
 - [x] `src/shared/Frame.cpp` `2f0482d4c8e3c49d` — covered by t_frame, t_frameset
-- [x] `src/shared/Frame.h` `26d50e44c5add460` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `a11ae1953a99ad91` — covered by t_frame, t_frameset
 - [x] `src/shared/FrameSet.cpp` `aabbe231cf3528ff` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `76fa6554394626fe` — covered by t_frameset
 - [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
 - [x] `src/shared/PngMagic.cpp` `2bceaffdd6ef8596` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
-- [x] `src/shared/dot.h` `4dbffaf2d6b88210` — covered by t_frame (Dot POD; DotArray moved to `external/lgck-editor/` 2026-11-18)
+- [x] `src/shared/dot.h` `7c2b6c1c22085889` — covered by t_frame (Dot POD; CDotArray deleted 2026-11-18)
 - [x] `src/shared/helper.cpp` `17d69de5871db8d5` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
 - [ ] `src/shared/logger.h` `8775cdc1c8eaa735`

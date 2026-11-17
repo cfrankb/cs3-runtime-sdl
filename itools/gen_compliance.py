@@ -31,7 +31,6 @@ COVERED = {
     "src/animator": "t_animator",
     "src/parseargs": "t_parseargs",
     "src/randomz": "t_randomz",
-    "src/shared/DotArray": "t_dotarray",
     "src/statedata": "t_statedata",
     "src/game_auto": "t_ifile",
     "src/game": "t_runtime, t_game",

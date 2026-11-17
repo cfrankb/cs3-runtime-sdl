@@ -20,10 +20,9 @@
 
 #include <cstdint>
 
-// The Dot POD CFrame::draw/save consume. CDotArray moved out of the
-// runtime to external/lgck-editor/ (BUG-DOTARRAY-MOVE, 2026-11-18):
-// it had zero production callers here; only the external LGCK editor
-// rasterizes dots (bin/utils/sync.sh).
+// The Dot POD CFrame::draw/save consume. CDotArray was deprecated and
+// deleted 2026-11-18 (BUG-DOTARRAY-MOVE): it had zero production callers
+// here; only the external LGCK editor rasterizes dots.
 
 struct Dot
 {
