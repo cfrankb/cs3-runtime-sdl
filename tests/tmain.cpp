@@ -32,6 +32,7 @@
 #include "t_ifile.h"
 #include "t_frameset.h"
 #include "t_pngmagic.h"
+#include "t_engine.h"
 #include "t_actor.h"
 #include "t_animator.h"
 #include "t_randomz.h"
@@ -111,6 +112,12 @@ int main(int argc, char *args[])
         FCT(test_animator_layer_tiles),
         FCT(test_animator_automators),
         FCT(test_animator_read_fail),
+        FCT(test_engine_gather_sprites),
+        FCT(test_engine_event_text),
+        FCT(test_engine_level_summary),
+        FCT(test_engine_resize_game_menu),
+        FCT(test_engine_keyboard),
+        FCT(test_engine_screens),
         FCT(test_random),
         FCT(test_parseargs),
         FCT(test_statedata),
@@ -123,6 +130,14 @@ int main(int argc, char *args[])
         FCT(test_tables),
         FCT(test_logger),
         FCT(test_gamemixin),
+        FCT(test_gamemixin_primitives),
+        FCT(test_gamemixin_frames_routing),
+        FCT(test_gamemixin_viewports),
+        FCT(test_gamemixin_screen),
+        FCT(test_gamemixin_screens),
+        FCT(test_gamemixin_input),
+        FCT(test_gamemixin_bosses),
+        FCT(test_gamemixin_savegame),
         FCT(test_game_ai),
         FCT(test_menu_nav),
         FCT(test_menu_disabled),

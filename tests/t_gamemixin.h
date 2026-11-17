@@ -18,3 +18,11 @@
 #pragma once
 
 bool test_gamemixin();
+bool test_gamemixin_primitives();
+bool test_gamemixin_frames_routing();
+bool test_gamemixin_viewports();
+bool test_gamemixin_screen();
+bool test_gamemixin_screens();
+bool test_gamemixin_input();
+bool test_gamemixin_bosses();
+bool test_gamemixin_savegame();

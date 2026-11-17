@@ -192,7 +192,7 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
 
 ## Tier 5 — needs a stub subclass, still no SDL (~960 lines, ~53% → ~61%)
 
-- [ ] `engine.cpp` (344 @ 0%) — `Engine` is an abstract base with 0 SDL calls.
+- [x] `engine.cpp` (344 @ 0%) — `Engine` is an abstract base with 0 SDL calls.
       A ~20-line `TestEngine : Engine` with empty pure-virtual bodies (same
       expose-protected trick `t_gamemixin.cpp` uses) unlocks the real logic:
       `gatherSprites` viewport culling (`cameraContext_t` zoom/scale math —
@@ -201,7 +201,10 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       `initVirtualKeyboard`/`drawVirtualKeyboard`, `getEventText` parity with
       `CGameMixin::getEventText` (two near-duplicate implementations — a test
       that asserts both agree is the cheap guard against one drifting).
-- [ ] `gamemixin.cpp` (1454 @ 15.7%) — the single biggest block in `src/`
+      Done round 2 Phase D: 0% → 98.8%; drift guard passes; the `switch` in
+      `drawLevelIntro` has no `default:` (untreated mode leaves `t`
+      uninitialised — finding, avoided in tests).
+- [x] `gamemixin.cpp` (1454 @ 15.7%) — the single biggest block in `src/`
       (~1225 uncovered lines) and it calls no SDL: every `draw*` takes a
       `CFrame &` and rasterises in software. Drive it from the existing
       headless `TestRuntime : CRuntime` + map/bossdata fixtures and assert
@@ -214,6 +217,12 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       `enableHiScore`, `setSkill`. `mainLoop`/`manageGamePlay` last — they
       fan out into audio and menu state; assert state transitions over N
       ticks only.
+      Done round 2 Phase E: 15.7% → 67.7%. `mainLoop`/`manageGamePlay`
+      skipped (headless-unsafe, fan into audio/SDL loops). Findings:
+      unbounded `drawFont`/`drawRect` writes; `getEventText` aborts on an
+      empty MSG state string (`split(text)[0]` unchecked);
+      `drawViewPortDynamic` `at()`-OOB with odd camera at map edge;
+      `resetStats` leaves `S_PLAYER_HURT`/`S_BOAT`.
 
 ## Tier 6 — SDL-bound: one dummy-driver test, no mocks (~570 lines, → ~66%)
 

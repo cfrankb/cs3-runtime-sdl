@@ -244,6 +244,26 @@ calls (`std::vector<std::string> calls`, last rect/text). No product change.
 | `keyboard` | `initVirtualKeyboard`/`drawVirtualKeyboard` build the key layout; buffer append/backspace behaviour through `drawVirtualKeyboard` |
 | `misc` | `resize`, `updateEngineState`, `drawTest`, `drawOptions`, `drawUserMenu`, `drawHelpScreen`, `drawTitleScreen`, `drawUI(CGameUI &)` from Phase B — recorded-call assertions only |
 
+**Result (D): engine.cpp 0% → 98.8%.** `TestEngine : Engine` records the
+eight pure-virtual hooks (fonts/rects with args, menu+base coords, faze
+string, counters) and exposes the protected seam
+(`gatherSprites`/`getEventText`/`resizeGameMenu`/`summary`, t_gamemixin
+pattern); `TestMixin : CRuntime` doubles as the `CGameMixin` Engine needs
+AND the drift-guard twin of `getEventText` — 13 event ids x 2 tick phases
+agree exactly (lines/color/scales/baseY), so the two implementations are
+currently in sync. Pinned behaviours: monster sprites need BOTH viewport
+containment AND `isSpecialCase` tile while sfx need only the viewport;
+`initLevelSummary` percentages vs the game's own `MapReport` pair (the
+live map is NOT empty after prior suites — formula pinned, not 100s);
+score row colors pair-alternate DARK/LIGHT via `i & 2` (pairs, not
+rows — 4/5 DARK, 6/7 LIGHT); ranked+recording row is YELLOW with caret
+glyph, ranked-only CYAN; keyboard is 49 buttons (26+10+10 specials +
+3 keys — the specials string is 10 chars, not 12); title-screen scroll
+shadow sits 2px ABOVE baseline; menu shift `menuBaseY=124` at width*2 >
+800. Findings: none new; only 4 lines remain uncovered (unmatched
+`drawLevelIntro` mode default leaves `t` uninitialised — avoided, the
+`switch` has no `default:`).
+
 Expected: ~344 lines → ≥70% (+240).
 
 ## Phase E — `tests/t_gamemixin.cpp` extension (1454 @ 15.7%, biggest block)
@@ -296,6 +316,29 @@ next):
 
 Expected: ≥55% of the file (≈+640 of 1225 dark lines). If 3–5 stall on asset
 loading, stop and record it; do not add product seams to force them.
+
+**Result (E): gamemixin.cpp 15.7% → 67.7%; total 53.7% → 60.7%.** Eight
+cases appended to `t_gamemixin.cpp` (`primitives`, `frames_routing`,
+`viewports`, `screen`, `screens`, `input`, `bosses`, `savegame`) driving a
+fixture of solid-coloured `CFrame` tilesets + a `0xff`-filled font atlas so
+every glyph renders a solid block; pixel asserts compare against the fixture
+colour at the mapped coordinate. Boss case reuses deployed `data/bosses`
+(skip-guarded like `t_boss`); savegame round-trips through `CFileMem`
+including the in-place name patch at `SAVENAME_PTR_OFFSET`. Plan item 7
+(`mainLoop`/`manageGamePlay`) was skipped — headless they fan into audio +
+SDL event loops and crash; recorded below, checklist note updated.
+Pinned behaviours: camera `m_cx`/`m_cy` are HALF-PIXEL units
+(`mx = m_cx / 2`); `drawKeys` decays indicators AFTER drawing (one extra
+all-white frame at MAX); `tile2Frame` dead branch keys off `health() == 0`
+(`killPlayer` only spends lives) and uses `PLAYER_FRAMES` (not
+`PLAYER_TOTAL_FRAMES`) for the dead index; input scan order is
+`Key_Space < Key_0 < Key_9 < Key_Period`; `resetStats()` does not clear
+`S_PLAYER_HURT`/`S_BOAT`. Findings (all pinned around, not fixed):
+`drawFont`/`drawRect` write unbounded past the bitmap (choke bitmap widths
+to fit); `getEventText` reads `split(text)[0]` unchecked — an MSG event
+with an empty state string aborts; `drawViewPortDynamic` with an odd camera
+offset flush to the map edge calls `map->at(width)` which throws; `drawUI`
+anchors `baseY` on `getWidth()` (fixture needed W=112 to stay in bounds).
 
 ## Phase F — `tests/t_sdl_smoke.cpp` (optional, gated on A–E landing)
 

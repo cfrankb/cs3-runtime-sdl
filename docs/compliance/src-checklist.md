@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-16 |
-| Git HEAD | b1b1be8 |
+| Git HEAD | c1dbc97 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 72 |
-| Verified items | 79 / 121 |
+| Verified items | 81 / 121 |
 
 See [README](README.md) for the verification procedure.
 
@@ -36,8 +36,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/colormasks.h` `5dbd536c2c942b3d`
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
-- [ ] `src/engine.cpp` `9d9b5986f796223b`
-- [ ] `src/engine.h` `46992fe4dbfe3d3e`
+- [x] `src/engine.cpp` `9d9b5986f796223b` — covered by t_engine
+- [x] `src/engine.h` `46992fe4dbfe3d3e` — covered by t_engine
 - [ ] `src/engine_hw.cpp` `db19684f3fe8e716`
 - [ ] `src/engine_hw.h` `1327f4c97b90aa35`
 - [ ] `src/events.h` `a25720e0e5b896e4`
@@ -48,7 +48,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/game_ai.cpp` `ed85aab1ec755fe9` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — partial: t_runtime, t_gamemixin (rules paths; draw/input SDL-bound)
+- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
 - [x] `src/gamemixin.h` `387b8b032d8430cf` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
