@@ -182,9 +182,13 @@ by lines-of-coverage per unit of effort; `N` = gcov executable lines at `%`.
       row-filter matrix (NONE/SUB/UP/AVERAGE/PAETH), split-IDAT, bad filter
       byte and corrupt-zlib rejection. 89.0%. obLT header is native-endian;
       "unsupported oblt version" return is unreachable — findings recorded.
-- [ ] `animator.cpp` (83 @ 24.1%) — `animate()` frame advance/loop,
-      `getSpecialInfo`, `reloadTileData` with the synthetic `g_layerdata`
-      entries `t_game.cpp` already builds.
+- [x] `animator.cpp` (83 @ 24.1%) — DONE via `tests/t_animator.cpp`
+      extension: sequence advance/wrap with tick check, special-case
+      membership + `getSpecialInfo`, `reloadTileData` on patched scratch
+      `g_layerdata` slots with speed-gated advance and manual/idle identity,
+      out-of-range layer tile LOGW guard, full automator lifecycle
+      (ttl burn → advance → terminal deactivate), `read` failure branches.
+      88.0%. Only the three `write()` I/O-failure branches remain dark.
 
 ## Tier 5 — needs a stub subclass, still no SDL (~960 lines, ~53% → ~61%)
 

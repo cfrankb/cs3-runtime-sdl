@@ -18,3 +18,7 @@
 #pragma once
 
 bool test_animator();
+bool test_animator_sequences();
+bool test_animator_layer_tiles();
+bool test_animator_automators();
+bool test_animator_read_fail();

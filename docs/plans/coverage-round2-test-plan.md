@@ -212,6 +212,21 @@ writer must match; the "unsupported oblt version" error return in
 entries `t_game.cpp` already builds, `read`/`write` round-trip.
 Expected: → ≥80% (+45).
 
+**Result (C5): 24.1% → 88.0%.** Added `test_animator_sequences` (main-layer
+advance through `start..start+len-1` then wrap over LEN+2 ticks with offset
+tick check; `isSpecialCase` membership incl. negative; `getSpecialInfo` for
+plain/special/unknown tiles), `test_animator_layer_tiles` (`reloadTileData`
+via patched scratch `g_layerdata` slots — animated tile registers and
+advances only on `offset % animeSpeed == 0`, manual and idle tiles fall back
+to identity; out-of-range tileLayer slot poked into a serialized stream via
+`CFileWrap` `rb+` — `CFileMem::write` only appends, so in-place pokes need
+a real file — then `animate()` takes the LOGW guard without crashing),
+`test_animator_automators` (ttl burn → `A→B` advance onto the map layer with
+`ttl` re-armed from `g_layerdata[B].animeSpeed` → deactivation at terminal
+tile; blank-tile automator deactivates; inactive one untouched),
+`test_animator_read_fail` (empty stream and truncated tileLayer rejected).
+Remaining dark: the three `write()` I/O-failure branches only.
+
 ## Phase D — `tests/t_engine.cpp` (`Engine` base, 344 lines @ 0%)
 
 `Engine` is an abstract base with **zero** SDL references; eight pure
