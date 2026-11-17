@@ -15,6 +15,8 @@ Status (re-verified against `src/actor.cpp` on 2026-11-18, `cs3-runtime-tests` g
 **FIXED 2026-11-17 (BUG-H12):** union split into two `uint16_t` members; move ctor/assign carry both. **L596: [bug] `m_algo = algo` in `startPath` clobbers `m_frame`: `m_frame`/`m_algo` share a `uint16_t` union (actor.h L147-151), and the engine renders `.frame = monster.frame()` for all actors (engine.cpp:375, gamemixin.cpp:701), so any actor that both animates and follows a path renders a frame index taken from the path-algo id (potential animation-table overrun in the renderer, needs verification). Egg hatch (game_ai.cpp:809-822) relies on the overwrite being sequential, but nothing enforces that discipline. Fix: split into two members unless the union is provably safe for every actor class; at minimum document the invariant at L596.
 
 ### Medium
+**FIXED 2026-11-18: `== CPath::Result::MoveSuccesful`; verified all callers
+(game_ai.cpp:200, 557) discard the bool, so zero runtime impact.**
 - L604: [bug] `startPath` returns `CPath::Result` implicitly converted to `bool`: `NoValidPath` (2) and `NotConfigured` (3) are truthy, so a failed path search reports success. Fix: `return m_path->followPath(...) == CPath::Result::MoveSuccesful;` (needs verification of intended semantics — game_ai.cpp:855-857 does distinguish the results).
 - L184, L229, L236, L347: [bug] `const uint8_t c = map.at(...)` / `m_pu = map.at(...)` truncate `CMap::at`'s `uint16_t` return (map.h:127). Latent while tile IDs stay < 256 (none found in tilesdefs.h today, needs verification against level archives); fix: use `uint16_t` locals or an explicit checked narrowing. `m_pu` itself is `uint8_t` (actor.h:153), so full fix touches the member type.
 - L269-273: [bug] `setPos()` teleports without moving the map cell or re-syncing `m_pu`; a subsequent `move()` (L230) then writes the stale `m_pu` from the old cell into the new one. Callers must maintain the invariant manually — verify all `setPos` callers do, or make `setPos` take over the map bookkeeping like `move()` does.
@@ -24,6 +26,9 @@ Status (re-verified against `src/actor.cpp` on 2026-11-18, `cs3-runtime-tests` g
 ### Low
 - L69+L78, L85+L92: [shrink] `m_path` is set twice — once in the member-init list, again in the ctor body. Remove the body assignments.
 - L85-97: [bug] Second ctor lacks the aim validation the first ctor performs (L71-72); `AIM_UP`-out-of-range or arbitrary aims pass silently. Route both ctors through one validating init.
+**FIXED 2026-11-18: `readCommon` rejects `m_aim >= TOTAL_AIMS && m_aim !=
+AIM_NONE` with LOGE (AIM_NONE stays legal — saved placeholder for inactive
+actors). Pinned in `t_actor` forged-record aim cases.**
 - L444: [error-handling] `m_aim` is deserialized raw with no range check, unlike the ctor which validates aim values; a corrupt save yields an arbitrary `m_aim` (0-255) that feeds the L288 table index. Add a post-read validity check with `LOGE` (defense in depth for the Critical finding).
 - L561-565: [error-handling] `move(int16_t, int16_t)` silently wraps out-of-range/negative coordinates via `& 0xff` (e.g. y=-1 → 255, teleporting the actor off-map). Clamp to map bounds or `LOGW` on out-of-range input.
 - L527-530: [dead] Free `operator^=(JoyAim&, int)` has no callers anywhere in the repo (only its declaration in joyaim.h and this definition). Delete both.

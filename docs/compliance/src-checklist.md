@@ -14,9 +14,9 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `20ce3d6a863dae30` — covered by t_actor
+- [x] `src/actor.cpp` `eb762bceca89ccd5` — covered by t_actor
 - [x] `src/actor.h` `32676d726edbcd4d` — covered by t_actor
-- [x] `src/ai_path.cpp` `95dd11c9e7dbee71` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.cpp` `8e83d41e140b1d32` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator

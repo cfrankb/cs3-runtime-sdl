@@ -517,7 +517,7 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
 CPath::Result CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar)
 {
     // Check if path is invalid or timed out
-    if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout <= 0)
+    if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout == 0)
     {
         m_cachedDirections = astar.findPath(sprite, playerPos);
         m_pathIndex = 0;
@@ -615,19 +615,29 @@ bool CPath::read(IFile &sfile)
     m_cachedDirections.clear();
     size_t pathSize = 0;
     _R(&pathSize, DATA_SIZE);
-    checkBound(pathSize, MAX_PATH_SIZE);
+    if (!checkBound(pathSize, MAX_PATH_SIZE))
+        return false;
     for (size_t i = 0; i < pathSize; ++i)
     {
         JoyAim dir;
         _R(&dir, sizeof(dir));
+        // cached directions only ever hold AIM_UP..AIM_RIGHT (see g_dirs);
+        // AIM_NONE/0xff and other garbage never legitimately reach the wire
+        if (dir >= TOTAL_AIMS)
+        {
+            LOGE("CPath::read: corrupt direction %.2x", dir);
+            return false;
+        }
         m_cachedDirections.emplace_back(dir);
     }
     m_pathIndex = 0;
     _R(&m_pathIndex, DATA_SIZE);
-    checkBound(m_pathIndex, MAX_PATH_SIZE);
+    if (!checkBound(m_pathIndex, MAX_PATH_SIZE))
+        return false;
     m_pathTimeout = 0;
     _R(&m_pathTimeout, DATA_SIZE);
-    checkBound(m_pathTimeout, MAX_PATH_SIZE);
+    if (!checkBound(m_pathTimeout, MAX_PATH_SIZE))
+        return false;
 
     return true;
 }
@@ -685,5 +695,7 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
 
 void CPath::setTimeout(int timeout)
 {
-    m_pathTimeout = timeout;
+    // m_pathTimeout is size_t: a negative argument would wrap to a huge
+    // value and disable path expiry
+    m_pathTimeout = timeout < 0 ? 0 : static_cast<size_t>(timeout);
 }

@@ -130,6 +130,7 @@ int main(int argc, char *args[])
         FCT(test_boss),
         FCT(test_level),
         FCT(test_pathfinding),
+        FCT(test_path_load_validation),
         FCT(test_assetman),
         FCT(test_tables),
         FCT(test_logger),

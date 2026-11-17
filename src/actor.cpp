@@ -451,6 +451,14 @@ bool CActor::readCommon(ReadFunc readfile)
         return false;
     if (!readfile(&m_aim, sizeof(m_aim)))
         return false;
+    // defense in depth (audit L444): the ctor validates aim, and a raw
+    // m_aim feeds the g_aims table lookup; AIM_NONE is the only valid
+    // out-of-range value (inactive-actor placeholder, saved routinely)
+    if (m_aim >= TOTAL_AIMS && m_aim != AIM_NONE)
+    {
+        LOGE("CActor::read: invalid aim %.2x", m_aim);
+        return false;
+    }
     if (!readfile(&m_pu, sizeof(m_pu)))
         return false;
     if (!readfile(&m_algo, sizeof(m_algo)))
@@ -612,5 +620,6 @@ bool CActor::startPath(const Pos &playerPos, const uint8_t algo, const int ttl)
     if (!m_path)
         m_path = std::make_unique<CPath>();
     m_ttl = ttl;
-    return m_path->followPath(*this, playerPos, *pathAlgo);
+    // Result is not a bool: NoValidPath/NotConfigured are truthy ints
+    return m_path->followPath(*this, playerPos, *pathAlgo) == CPath::Result::MoveSuccesful;
 }

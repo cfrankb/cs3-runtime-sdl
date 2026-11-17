@@ -157,6 +157,45 @@ bool test_path_algos()
     }
     mem.close();
 
+    // hostile save: m_aim is deserialized raw (audit L444); only AIM_UP..
+    // AIM_RIGHT or the AIM_NONE placeholder may come off the wire
+    CFileMem afm;
+    if (!afm.open("", "wb"))
+    {
+        LOGE("actor aim: CFileMem open failed");
+        return false;
+    }
+    if (!actor.write(afm))
+    {
+        LOGE("actor aim: serialize failed");
+        return false;
+    }
+    const std::vector<uint8_t> record = afm.buffer();
+    afm.close();
+    auto reload_with_aim = [&record](uint8_t aim)
+    {
+        std::vector<uint8_t> forged = record;
+        forged[3] = aim; // record layout: x, y, type, aim, ...
+        CFileMem fm;
+        fm.replace(forged.data(), forged.size());
+        if (!fm.open("", "rb"))
+            return false;
+        CActor probe(0, 0, 0, AIM_UP);
+        const bool ok = probe.read(fm);
+        fm.close();
+        return ok;
+    };
+    if (reload_with_aim(0x7f))
+    {
+        LOGE("actor aim: accepted corrupt aim 0x7f");
+        return false;
+    }
+    if (!reload_with_aim(AIM_NONE))
+    {
+        LOGE("actor aim: rejected legitimate AIM_NONE record");
+        return false;
+    }
+
     std::filesystem::remove("tests/out/actor_path.dat");
     return true;
 }

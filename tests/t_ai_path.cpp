@@ -23,6 +23,7 @@
 #include "../src/isprite.h"
 #include "../src/actor.h"
 #include "../src/bossdata.h"
+#include "../src/shared/FileMem.h"
 #include "t_ai_path.h"
 
 namespace
@@ -209,5 +210,86 @@ bool test_pathfinding()
     }
 
     fillMap(1); // leave a trivial map for any later test
+    return true;
+}
+
+// CPath::read gates hostile save records: checkBound results reject
+// pathSize/pathIndex/pathTimeout over MAX_PATH_SIZE and out-of-range
+// directions; a CPath::write round-trip stays accepted.
+bool test_path_load_validation()
+{
+    // wire layout: pathSize(2 LE) + pathSize x dir(1) + pathIndex(2) + pathTimeout(2)
+    auto load = [](const std::vector<uint8_t> &bytes)
+    {
+        CFileMem fm;
+        fm.replace(bytes.data(), bytes.size());
+        if (!fm.open("", "rb"))
+        {
+            LOGE("path load: CFileMem open failed");
+            return false;
+        }
+        CPath path;
+        const bool ok = path.read(fm);
+        fm.close();
+        return ok;
+    };
+
+    // valid record: one cached AIM_DOWN step, index 0, timeout 5
+    if (!load({1, 0, AIM_DOWN, 0, 0, 5, 0}))
+    {
+        LOGE("path load: rejected a valid record");
+        return false;
+    }
+    // pathSize 4225 > MAX_PATH_SIZE (4096)
+    if (load({0x81, 0x10}))
+    {
+        LOGE("path load: accepted oversized pathSize");
+        return false;
+    }
+    // pathIndex over the cap
+    if (load({1, 0, AIM_DOWN, 0x81, 0x10, 0, 0}))
+    {
+        LOGE("path load: accepted oversized pathIndex");
+        return false;
+    }
+    // pathTimeout over the cap
+    if (load({1, 0, AIM_DOWN, 0, 0, 0x81, 0x10}))
+    {
+        LOGE("path load: accepted oversized pathTimeout");
+        return false;
+    }
+    // out-of-range direction
+    if (load({1, 0, 0x7f, 0, 0, 0, 0}))
+    {
+        LOGE("path load: accepted corrupt direction byte");
+        return false;
+    }
+    // truncated record (claims a direction it does not carry)
+    if (load({1, 0}))
+    {
+        LOGE("path load: accepted truncated record");
+        return false;
+    }
+
+    // end-to-end: whatever CPath::write produces must reload cleanly
+    CFileMem fm;
+    if (!fm.open("", "wb"))
+    {
+        LOGE("path write: CFileMem open failed");
+        return false;
+    }
+    CPath src;
+    if (!src.write(fm))
+    {
+        LOGE("path write: CPath::write failed");
+        return false;
+    }
+    const std::vector<uint8_t> bytes = fm.buffer();
+    fm.close();
+    if (!load(bytes))
+    {
+        LOGE("path load: rejected a freshly written record");
+        return false;
+    }
     return true;
 }

@@ -18,3 +18,4 @@
 #pragma once
 
 bool test_pathfinding();
+bool test_path_load_validation();

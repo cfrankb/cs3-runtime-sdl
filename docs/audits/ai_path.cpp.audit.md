@@ -14,14 +14,22 @@ Four path searchers (AStar, BFS, LineOfSight, AStarSmooth) plus a caching driver
 
 ### Medium
 - L117–121 / L442–445: [algo] No staleness check on pop: a node already in `closedList` can be popped again (duplicates are pushed on every improvement) and re-expanded, wasting work; this is also the delivery mechanism for the Critical UAF. Same one-line guard as above fixes both.
+**FIXED 2026-11-18: all three gates now `return false` (BUG-H6a policy);
+forged-record cases pinned by `t_ai_path::test_path_load_validation`.**
 - L581, L590, L593: [error-handling] `checkBound(...)` return values are ignored — a corrupt save with `pathSize`/`m_pathIndex`/`m_pathTimeout` over `MAX_PATH_SIZE` logs but is then loaded anyway. Fix: `if (!checkBound(...)) return false;`.
 - L117 / L218 / L442: [perf] No node-expansion cap on any search. An unreachable goal forces a full-grid exploration, and each expansion does 4 × (move + canMove + move-back) sprite mutations (L174–177, L265–268, L469–472) — the most expensive inner loop possible. `MAX_PATH_SIZE` (L40) exists but only gates save loading. Fix: cap expansions (e.g. L40 * factor) and return `{}` with `LOGW`.
+**FIXED 2026-11-18: clamps negatives to 0.**
 - L649–651: [bug] `setTimeout(int)` assigns straight to `size_t m_pathTimeout`; a negative argument wraps to a huge value, disabling path expiry. Guard with `if (timeout >= 0)` / clamp.
 - L123–155 / L223–255 / L309: [algo] "start == goal" returns an empty vector, indistinguishable from "no path"; `CPath::followPath` (L497) maps empty → `NoValidPath`, so an actor standing on its goal is reported as unpathable. Empty-vector-as-failure overloads `IPath::findPath`; if this matters, give `IPath` a `Result` out-param. (needs verification whether the gameplay symptom matters)
 
 ### Low
+**PARTIAL FIX 2026-11-18: comparison is now `== 0`. The empty-path
+re-search-every-turn behavior left as-is (plausible intentional retry).**
 - L491: [bug] `m_pathTimeout <= 0` on unsigned `size_t` is a tautological comparison; write `== 0`. Also when the recompute at L493 yields an empty path (L497–502), the timeout isn't consumed, so blocked actors re-run the full search **every** turn despite `PATH_TIMEOUT_MAX` — may be intentional retry, but it defeats the timeout's cost-limiting purpose.
 - L580, L589, L592: [bug] `_R(&pathSize, 2)` reads 2 bytes into a zero-initialized `size_t` (and same for `m_pathIndex`/`m_pathTimeout`): little-endian-dependent, and the matching `_W` at L607/612/613 silently truncates any value > 65535 on write (the 4096 cap is never enforced there). Use fixed-width `uint16_t` locals for the wire format.
+**FIXED 2026-11-18: `read` rejects `dir >= TOTAL_AIMS` (searches only ever
+emit `g_dirs` values; downstream `CGame::translate` switch made garbage aims
+inert but they polluted `setAim`). Pinned in `test_path_load_validation`.**
 - L584–585: [error-handling] `JoyAim dir` is read from the save with no range check against `TOTAL_AIMS`; a garbage value flows into `sprite.setAim()`/`canMove()`. (needs verification of downstream range handling)
 - L261, L465: [perf] `visited[newPos]` / `closedList[newPos]` in a lookup context default-inserts keys, bloating the map on every rejected neighbor. Use `.count()`/`find()` (as A* correctly does at L170).
 - L477: [perf] `nodes[newPos]` hashed twice (three times counting the assignment at L479); reuse a `find()` iterator like the AStar version does.
