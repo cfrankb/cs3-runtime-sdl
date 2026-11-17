@@ -49,7 +49,7 @@ namespace
     // mirrors the file-local GAME_SIGNATURE/ENGINE_VERSION in game.cpp;
     // a save-format bump must update this (and the format docs) together
     constexpr char EXPECTED_SIGNATURE[5] = {'C', 'S', '3', 'b'};
-    constexpr uint32_t EXPECTED_VERSION = (0x0200 << 16) + 0x000e;
+    constexpr uint32_t EXPECTED_VERSION = (0x0200 << 16) + 0x000f;
 
     // mirrors the CLOSURE_TIMER constant in game.cpp
     constexpr int CLOSURE_TIMER = 7;
@@ -374,6 +374,25 @@ namespace
         return ok;
     }
 
+    // a hit with 2 shields must still cost health; casting the float damage
+    // factor to int truncated it to 0, which made shields total immunity
+    bool testShieldDamage()
+    {
+        CBoss *boss = nullptr;
+        if (!setupAlive(&boss))
+            return true; // fixture absent: skip
+        g_game->stats().set(S_SHIELD, 2);
+        const int before = g_game->health();
+        g_game->addHealth(-10);
+        const int after = g_game->health();
+        if (after >= before)
+        {
+            LOGE("shield damage: health %d -> %d with 2 shields", before, after);
+            return false;
+        }
+        return true;
+    }
+
     bool testClosureDeath()
     {
         CBoss *boss = nullptr;
@@ -526,6 +545,7 @@ bool test_game()
            testScanPos() &&
            testGranularSolid() &&
            testClosureDeath() &&
+           testShieldDamage() &&
            testClosureLevelComplete() &&
            testClosureExitGate() &&
            testClosureChute() &&

@@ -77,6 +77,7 @@ CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAi
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
+    m_frame = 0;
     m_ttl = CActor::NoTTL;
     m_attr = 0;
     m_origin = Pos{x, y};
@@ -91,6 +92,7 @@ CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
     m_pu = TILES_BLANK;
     m_path = nullptr;
     m_algo = BossData::Path::NONE;
+    m_frame = 0;
     m_ttl = CActor::NoTTL;
     m_attr = 0;
     m_origin = pos;
@@ -100,6 +102,7 @@ CActor::CActor(CActor &&other) noexcept
     : m_x(other.m_x),
       m_y(other.m_y),
       m_type(other.m_type),
+      m_frame(other.m_frame),
       m_algo(other.m_algo),
       m_aim(other.m_aim),
       m_pu(other.m_pu),
@@ -113,6 +116,7 @@ CActor::CActor(CActor &&other) noexcept
     other.m_x = 0;
     other.m_y = 0;
     other.m_type = 0;
+    other.m_frame = 0;
     other.m_aim = AIM_UP;
     other.m_pu = 0;
     other.m_algo = BossData::Path::NONE;
@@ -131,6 +135,7 @@ CActor &CActor::operator=(CActor &&other) noexcept
         m_type = other.m_type;
         m_aim = other.m_aim;
         m_pu = other.m_pu;
+        m_frame = other.m_frame;
         m_algo = other.m_algo;
         m_path = std::move(other.m_path);
         m_ttl = other.m_ttl;
@@ -140,6 +145,7 @@ CActor &CActor::operator=(CActor &&other) noexcept
         other.m_x = 0;
         other.m_y = 0;
         other.m_type = 0;
+        other.m_frame = 0;
         other.m_aim = AIM_UP;
         other.m_pu = 0;
         other.m_algo = BossData::Path::NONE;
@@ -449,6 +455,8 @@ bool CActor::readCommon(ReadFunc readfile)
         return false;
     if (!readfile(&m_algo, sizeof(m_algo)))
         return false;
+    if (!readfile(&m_frame, sizeof(m_frame)))
+        return false;
     if (!readfile(&m_ttl, sizeof(m_ttl)))
         return false;
     if (!readfile(&m_attr, sizeof(m_attr)))
@@ -507,6 +515,8 @@ bool CActor::writeCommon(WriteFunc writefile) const
     if (!writefile(&m_pu, sizeof(m_pu)))
         return false;
     if (!writefile(&m_algo, sizeof(m_algo)))
+        return false;
+    if (!writefile(&m_frame, sizeof(m_frame)))
         return false;
     if (!writefile(&m_ttl, sizeof(m_ttl)))
         return false;

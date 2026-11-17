@@ -306,7 +306,10 @@ int CBoss::currentFrame() const
     const boss_seq_t *seq = getCurrentSeq();
     if (seq == nullptr)
         return 0;
-    const int normalizedAim = m_aim % m_bossData->aims;
+    // aims are validated/warned at load (bossdata build); clamp kept here
+    // as defense-in-depth so the modulo can never divide by zero.
+    const int aims = m_bossData->aims > 0 ? m_bossData->aims : 1;
+    const int normalizedAim = m_aim % aims;
     const int baseFrame = seq->base + seq->lenght * normalizedAim;
     return baseFrame + m_framePtr;
 }
@@ -443,25 +446,37 @@ bool CBoss::read(IFile &sfile)
 
     m_framePtr = 0;
     _R(&m_framePtr, DATA_SIZE);
-    checkBound(m_framePtr, MAX_FRAME);
-    _R(&m_x, sizeof(m_x)); // uint16_t
-    checkBound(m_x, MAX_POS);
-    _R(&m_y, sizeof(m_y)); // uint16_t
-    checkBound(m_y, MAX_POS);
+    if (!checkBound(m_framePtr, MAX_FRAME))
+        return false;
+    _R(&m_x, sizeof(m_x)); // int16_t
+    if (!checkBound(m_x, MAX_POS))
+        return false;
+    _R(&m_y, sizeof(m_y)); // int16_t
+    if (!checkBound(m_y, MAX_POS))
+        return false;
 
     m_hp = 0;
     _R(&m_hp, DATA_SIZE);
-    checkBound(m_hp, MAX_HP);
+    if (!checkBound(m_hp, MAX_HP))
+        return false;
 
     _R(&m_state, sizeof(m_state)); // uint8_t
-    checkBound((uint8_t)m_state, (uint8_t)BossState::MAX_STATES);
+    if (!checkBound((uint8_t)m_state, (uint8_t)BossState::MAX_STATES))
+        return false;
 
     m_speed = 0;
     _R(&m_speed, DATA_SIZE);
-    checkBound(m_speed, MAX_SPEED);
+    if (!checkBound(m_speed, MAX_SPEED))
+        return false;
 
     _R(&m_aim, sizeof(m_aim)); // uint8_t
-    checkBound(static_cast<uint8_t>(m_aim), JoyAim::TOTAL_AIMS);
+    // AIM_NONE is a legal on-disk value (a boss restored before its first
+    // move); currentFrame() folds it into range with the aims modulo.
+    if (m_aim >= JoyAim::TOTAL_AIMS && m_aim != JoyAim::AIM_NONE)
+    {
+        LOGE("boss aim %u outside expected -- expected < %u", m_aim, (unsigned)JoyAim::TOTAL_AIMS);
+        return false;
+    }
 
     // read path
     m_path.read(sfile);

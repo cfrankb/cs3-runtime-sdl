@@ -34,6 +34,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <climits>
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
@@ -83,7 +84,15 @@ namespace
                     return &kv.second;
             return nullptr;
         }
-        int asInt() const { return static_cast<int>(num); }
+        int asInt() const
+        {
+            // out-of-int-range JSON numbers are UB to cast; saturate instead
+            if (num >= static_cast<double>(INT_MAX))
+                return INT_MAX;
+            if (num <= static_cast<double>(INT_MIN))
+                return INT_MIN;
+            return static_cast<int>(num);
+        }
     };
 
     class JsonParser
@@ -422,6 +431,11 @@ namespace
                 LOGE("Error: bad hitbox entry in '%s'.\n", path.c_str());
                 return false;
             }
+            if (x < 0 || y < 0 || w < 0 || h < 0)
+            { // negative coords would produce negative col/row/frame ids
+                LOGE("Error: negative hitbox coord in '%s'.\n", path.c_str());
+                return false;
+            }
             if (type == 0)
                 continue; // ignored frame marker, same as parse.py
 
@@ -513,6 +527,15 @@ namespace
             d.color_hp = resolveColor(get("color_hp"));
             d.color_name = resolveColor(get("color_name"));
             d.aims = std::atoi(get("aims").c_str());
+            if (d.aims <= 0)
+            {
+                // aim count feeds the frame layout and CBoss::currentFrame()
+                // modulo: flag garbage/missing keys at load instead of
+                // silently dividing by zero later.
+                LOGW("Warning: boss '%s' has garbage/missing aims (%d); using 1\n",
+                     name.c_str(), d.aims);
+                d.aims = 1;
+            }
 
             auto seqFrom = [&](const char *name) -> boss_seq_t
             {
@@ -784,6 +807,12 @@ namespace
             seq.fields[seqName + "_len"] = std::to_string(count);
 
             int aims = seq.fields.count("aims") ? std::atoi(seq.fields.at("aims").c_str()) : 1;
+            if (aims <= 0)
+            {
+                LOGW("Warning: sequence '%s' of boss '%s' has garbage/missing aims (%d); using 1\n",
+                     seqName.c_str(), seq.name.c_str(), aims);
+                aims = 1;
+            }
             frame += count * aims;
         }
 

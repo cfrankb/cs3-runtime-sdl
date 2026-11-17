@@ -1192,26 +1192,29 @@ CFrame *EngineHW::getFrame(const std::string &filepath)
 int EngineHW::drawTitlePix(int offsetY)
 {
     const size_t QUAD_COUNT = 4;
+    if (ASSET_TITLESCREEN >= m_assetFiles.size())
+        return 0;
     const float width = SCALEF * getWidth();
     const float height = SCALEF * getHeight();
 
     std::vector<float> quad;
-    for (size_t i = 0; i < QUAD_COUNT; ++i)
-    {
-        if (i + 1 > m_assetFiles[ASSET_TITLESCREEN].size())
-            break;
-        quad.push_back(std::atof(m_assetFiles[ASSET_TITLESCREEN][i + 1].c_str()));
-    }
+    const auto &fields = m_assetFiles[ASSET_TITLESCREEN];
+    for (size_t i = 1; i < fields.size() && quad.size() < QUAD_COUNT; ++i)
+        quad.push_back(std::atof(fields[i].c_str()));
 
-    SDL_FRect src_low = {
-        quad[0], //(float)284,
-        quad[1], //(float)26,
-        quad[2], //(float)824,
-        quad[3], //(float)619,
-    };
+    SDL_FRect src_low = {};
     SDL_FRect *src = nullptr;
     if (quad.size() == QUAD_COUNT)
-        src = width <= 1024 ? &src_low : nullptr;
+    {
+        src_low = {
+            quad[0], //(float)284,
+            quad[1], //(float)26,
+            quad[2], //(float)824,
+            quad[3], //(float)619,
+        };
+        if (width <= 1024)
+            src = &src_low;
+    }
 
     SDL_FRect dst = {
         (float)0,

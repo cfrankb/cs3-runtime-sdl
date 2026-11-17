@@ -257,7 +257,8 @@ private:
     void handleMonster(CActor &actor, const TileDef &def);
     void handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ticks);
     void handleDrone(CActor &actor, const TileDef &def);
-    void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters);
+    void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters,
+                        const std::set<int, std::greater<int>> &deletedMonsters);
     void handleCrusher(CActor &actor, const bool speeds[]);
     void handleIceCube(CActor &actor);
     void handleBullet(CActor &actor, const TileDef &def, const int i, const bulletData_t &bullet, std::set<int, std::greater<int>> &deletedMonsters);

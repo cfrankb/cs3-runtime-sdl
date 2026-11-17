@@ -34,6 +34,7 @@ bool test_actor()
     actor.setPU(0x77);
     actor.setAttr(0x40);
     actor.setAlgo(BossData::ASTAR);
+    actor.setFrame(7); // must survive round-trip independently of algo
     actor.setTTL(99);
     actor.setOrigin(Pos{1, 2});
 
@@ -84,6 +85,7 @@ bool test_actor()
         {"aim", clone.getAim(), actor.getAim()},
         {"pu", clone.getPU(), actor.getPU()},
         {"algo", clone.algo(), actor.algo()},
+        {"frame", clone.frame(), actor.frame()},
         {"ttl", clone.getTTL(), actor.getTTL()},
         {"attr", clone.attr(), actor.attr()},
         {"origin.x", clone.origin().x, actor.origin().x},

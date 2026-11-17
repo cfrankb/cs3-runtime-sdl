@@ -397,7 +397,9 @@ void CGame::manageMonsters(const uint32_t ticks)
         }
 
         const TileDef &def = getTileDef(tileID);
-        if (!speeds[def.speed])
+        // TileDef::speed is generated data; out-of-range values are not
+        // throttled rather than reading past the speeds[] array
+        if (def.speed < speedCount && !speeds[def.speed])
             continue;
 
         if (actor.type() == TYPE_MONSTER)
@@ -414,7 +416,7 @@ void CGame::manageMonsters(const uint32_t ticks)
         }
         else if (actor.type() == TYPE_VAMPLANT)
         {
-            handleVamPlant(actor, def, newMonsters);
+            handleVamPlant(actor, def, newMonsters, deletedMonsters);
         }
         else if (RANGE(actor.type(), ATTR_CRUSHER_MIN, ATTR_CRUSHER_MAX))
         {
@@ -537,6 +539,9 @@ void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ti
                     if (actor.canMove(aim))
                     {
                         Pos t = translate(actor.pos(), aim);
+                        // WARNING: spawnBullet emplaces into m_monsters and may
+                        // reallocate, invalidating `actor`; nothing below may
+                        // touch actor after this call
                         spawnBullet(t.x, t.y, aim, def.bullet); // TILES_FIREBALL_SM);
                     }
                 }
@@ -603,7 +608,8 @@ void CGame::handleDrone(CActor &actor, const TileDef &def)
     actor.setAim(aim);
 }
 
-void CGame::handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters)
+void CGame::handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters,
+                           const std::set<int, std::greater<int>> &deletedMonsters)
 {
     static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
 
@@ -628,7 +634,9 @@ void CGame::handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor
                  defT.type == TYPE_MONSTERV3)
         {
             const int j = findMonsterAt(p.x, p.y);
-            if (j == INVALID)
+            // a monster already killed this tick is erased at end of
+            // manageMonsters; converting it here would orphan the tile
+            if (j == INVALID || deletedMonsters.count(j))
                 continue;
             CActor &m = m_monsters[j];
             m.setType(TYPE_VAMPLANT);
@@ -888,7 +896,9 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             playSound(SOUND_SPLASH01);
             const Pos &pos = translate(actor.pos(), aim);
             int i = findMonsterAt(pos.x, pos.y);
-            if (i != INVALID)
+            // guard like blastRadius: a monster already killed this tick must
+            // not be queued twice or have its restored tile clobbered
+            if (i != INVALID && !deletedMonsters.count(i))
             {
                 queueRespawn(i);
                 deletedMonsters.insert(i);
@@ -910,7 +920,8 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             playSound(SOUND_EXPLOSION1);
             const Pos &pos = translate(actor.pos(), aim);
             int i = findMonsterAt(pos.x, pos.y);
-            if (i != INVALID)
+            // guard like blastRadius (see icecube branch above)
+            if (i != INVALID && !deletedMonsters.count(i))
             {
                 queueRespawn(i);
                 deletedMonsters.insert(i);

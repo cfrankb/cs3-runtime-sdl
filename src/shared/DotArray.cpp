@@ -83,7 +83,7 @@ int CDotArray::lineTab(const uint32_t color, const Dot dot1, const Dot dot2, boo
     int y = dot1.y;
     int sx = (dot1.x < dot2.x) ? 1 : -1;
     int sy = (dot1.y < dot2.y) ? 1 : -1;
-    for (int i = 0; i <= dx; ++i)
+    for (int i = 0; i <= std::max(dx, dy); ++i) // dominant axis, not just dx
     {
         add(color, x, y);
         int e2 = 2 * err;
@@ -127,6 +127,12 @@ int CDotArray::circle(const uint32_t color, const Dot dot1, const Dot dot2, bool
         add(color, x0 - dx, y0 + dy);
         add(color, x0 + dx, y0 - dy);
         add(color, x0 - dx, y0 - dy);
+        // swapped octant reflections; without them the circle is two
+        // C-shapes open left/right
+        add(color, x0 + dy, y0 + dx);
+        add(color, x0 - dy, y0 + dx);
+        add(color, x0 + dy, y0 - dx);
+        add(color, x0 - dy, y0 - dx);
     };
     plot_sym(x, y); // Initial
     while (y >= x)

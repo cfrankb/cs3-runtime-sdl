@@ -805,6 +805,35 @@ bool test_png_hostile_chunks()
     if (!must_reject(png, "chunk size beyond file", "invalid chunk size"))
         return false;
 
+    // obLT v2 rects must stay inside the frame: explode() fails soft and
+    // parsePNG propagates it instead of throwing std::out_of_range
+    oblt.clear();
+    le32(oblt, 0); le32(oblt, 2); le32(oblt, 1); // v2, Count 1
+    const uint16_t badUnit[4] = {4, 0, 8, 8};    // x + sx = 12 > frame width 8
+    for (const uint16_t v : badUnit)
+    {
+        oblt.push_back(static_cast<uint8_t>(v & 0xff));
+        oblt.push_back(static_cast<uint8_t>(v >> 8));
+    }
+    if (!must_reject(withOblt(oblt), "obLT v2 unit outside frame", "obLT v2 unit"))
+        return false;
+
+    // hostile IHDR width beyond CFrame::MAX_FRAME_DIM must be rejected
+    // before the frame is allocated (patch IHDR width 8 -> 65536 + CRC)
+    std::vector<uint8_t> huge = base; // sig(8) size(4) type(4) data(13) crc(4)
+    huge[16] = 0x00;
+    huge[17] = 0x01; // width = 65536
+    huge[18] = 0;
+    huge[19] = 0;
+    CCRC crc;
+    const uint32_t c = static_cast<uint32_t>(crc.crc(huge.data() + 12, 4 + 13));
+    huge[29] = static_cast<uint8_t>(c >> 24);
+    huge[30] = static_cast<uint8_t>(c >> 16);
+    huge[31] = static_cast<uint8_t>(c >> 8);
+    huge[32] = static_cast<uint8_t>(c);
+    if (!must_reject(huge, "IHDR width beyond MAX_FRAME_DIM", "dimensions too large"))
+        return false;
+
     // the valid fixture (incl. a legal obLT v2) must still parse
     const std::vector<uint8_t> valid = build4bppPng(true);
     CFrameSet fs;

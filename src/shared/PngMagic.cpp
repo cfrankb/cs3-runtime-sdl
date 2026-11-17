@@ -379,6 +379,12 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
                 offsetY = 8 - (height & 7);
                 height += offsetY;
             }
+            // CFrame's ctor throws; a hostile IHDR must fail the parse instead
+            if (width < 0 || height < 0 || width > CFrame::MAX_FRAME_DIM || height > CFrame::MAX_FRAME_DIM)
+            {
+                set.setLastError("png dimensions too large");
+                return false;
+            }
             std::unique_ptr<CFrame> frame = std::make_unique<CFrame>(width, height);
             memset(frame->getRGB().data(), 0, sizeof(uint32_t) * frame->width() * frame->height());
 
@@ -414,6 +420,12 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
                 {
                     std::string error = "unsupported obLT version:" + std::to_string(obl5t_version);
                     set.setLastError(error.c_str());
+                    return false;
+                }
+                // explode() rejects obLT rects outside the frame instead of throwing
+                if (frame->getLastError()[0] != '\0')
+                {
+                    set.setLastError(frame->getLastError());
                     return false;
                 }
             }

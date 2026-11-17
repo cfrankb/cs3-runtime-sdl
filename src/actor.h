@@ -144,11 +144,12 @@ private:
     uint8_t m_x;
     uint8_t m_y;
     uint8_t m_type;
-    union
-    {
-        uint16_t m_frame;
-        uint16_t m_algo;
-    };
+    // was a uint16_t union shared with m_algo: startPath() clobbered the
+    // rendered frame index with the path-algo id (actor.cpp startPath).
+    // Split changed the actor wire record (both fields now serialized
+    // separately); ENGINE_VERSION bumped to 0x0200000f.
+    uint16_t m_frame;
+    uint16_t m_algo;
     JoyAim m_aim;
     uint8_t m_pu;
     uint8_t m_attr;

@@ -201,6 +201,17 @@ bool test_bossdata_hostile()
         LOGE("bossdata: expected 1 hitbox frame, got %d", g_hitboxCount);
         return false;
     }
+    // garbage/missing aims (BareWords fixture) must be normalized to >= 1
+    // at load so CBoss::currentFrame() can never divide by zero
+    for (int i = 0; i < g_bossCount; ++i)
+    {
+        if (g_bossData[i].aims < 1)
+        {
+            LOGE("bossdata: boss '%s' aims %d not normalized at load",
+                 g_bossData[i].name, g_bossData[i].aims);
+            return false;
+        }
+    }
 
     freeBossData();
     return true;

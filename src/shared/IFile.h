@@ -24,6 +24,18 @@
 #include <string>
 #include <string_view>
 
+// IFile contract (pinned 2026-11-17; both CFileWrap and CFileMem must obey):
+// - Wire format for the string operators: little-endian length prefix,
+//   1 byte when length < 0xff, else 0xff + uint16, and when that uint16 is
+//   0xffff a following uint32 carries the real length. int is a raw 4-byte
+//   host-order passthrough. Both backends must encode/decode identically.
+// - read()/write() return an IFILE_OK/IFILE_NOT_OK *flag*, never a byte
+//   count; callers must compare against IFILE_OK only.
+// - read(buf, 0) and write(buf, 0) are success no-ops returning IFILE_OK.
+// - seek(): negative offsets fail; seeking past EOF succeeds (reads then
+//   fail). open() releases any previously held handle before reopening.
+// - close() flushes and releases; inspecting data after close() is valid
+//   only on CFileMem until the object is destroyed.
 class IFile
 {
 public:

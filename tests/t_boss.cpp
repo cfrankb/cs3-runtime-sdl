@@ -118,7 +118,60 @@ bool test_boss()
         return false;
     }
 
+    // save-field bounds are enforced now; an out-of-range byte must fail the load
+    auto readRecord = [&](const uint8_t *rec, size_t len, const char *what)
+    {
+        CFileMem f;
+        if (!f.open("tests/out/boss_field.dat", "rw+"))
+        {
+            LOGE("boss: can't open boss_field.dat");
+            return false;
+        }
+        const bool ok = f.write(rec, len) == IFILE_OK && f.seek(0);
+        CBoss junk(0, 0, getBossData(BOSS_HARPY));
+        const bool accepted = ok && junk.read(f);
+        f.close();
+        if (accepted)
+            LOGE("boss: %s was accepted", what);
+        return !accepted;
+    };
+    uint8_t rec[] = {
+        data->type, // 0:  boss type
+        0, 0,       // 1:  framePtr
+        10, 0,      // 3:  x
+        20, 0,      // 5:  y
+        100, 0,     // 7:  hp
+        0x7f,       // 9:  state (>= MAX_STATES)
+        1, 0,       // 10: speed
+        0,          // 12: aim
+        0, 0,       // 13: path size
+        0, 0,       // 15: path index
+        0, 0        // 17: path timeout
+    };
+    if (!readRecord(rec, sizeof(rec), "state 0x7f"))
+        return false;
+    rec[9] = CBoss::Hidden;
+    rec[12] = AIM_NONE; // never-moved boss: legal, must still load
+    {
+        CFileMem f;
+        if (!f.open("tests/out/boss_field.dat", "rw+"))
+        {
+            LOGE("boss: can't open boss_field.dat");
+            return false;
+        }
+        const bool ok = f.write(rec, sizeof(rec)) == IFILE_OK && f.seek(0);
+        CBoss good(0, 0, getBossData(BOSS_HARPY));
+        const bool accepted = ok && good.read(f);
+        f.close();
+        if (!accepted)
+        {
+            LOGE("boss: AIM_NONE record was rejected");
+            return false;
+        }
+    }
+
     std::filesystem::remove("tests/out/boss.dat");
     std::filesystem::remove("tests/out/boss_bad.dat");
+    std::filesystem::remove("tests/out/boss_field.dat");
     return true;
 }

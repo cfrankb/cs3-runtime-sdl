@@ -17,8 +17,8 @@ The loader is well-structured (recursive-descent JSON, mirrored parse.py INI rul
 
 ### High
 
-- `L390-408`: [validation][ub] no range validation on JSON numbers: `frameWidth`/`frameHeight` of 0 → integer division by zero at L404-405 (`x / frameWidth`); negative `x`/`y` produce negative col/row/id and colliding negative `frame_id`. Validate width/height/cols > 0 and x/y >= 0, LOGE+reject the box otherwise.
-- `L86, L390-400`: [ub] `asInt()` is `static_cast<int>(num)`; a JSON number outside int range (e.g. `1e20`) is UB per the standard. Clamp to INT_MIN/INT_MAX (or reject) in `asInt()`.
+**FIXED 2026-11-17 (BUG-C5 + BUG-H6b):** width/height/cols > 0 and negative coords rejected. **`L390-408`: [validation][ub] no range validation on JSON numbers: `frameWidth`/`frameHeight` of 0 → integer division by zero at L404-405 (`x / frameWidth`); negative `x`/`y` produce negative col/row/id and colliding negative `frame_id`. Validate width/height/cols > 0 and x/y >= 0, LOGE+reject the box otherwise.
+**FIXED 2026-11-17 (BUG-H6b):** `asInt()` saturates. **`L86, L390-400`: [ub] `asInt()` is `static_cast<int>(num)`; a JSON number outside int range (e.g. `1e20`) is UB per the standard. Clamp to INT_MIN/INT_MAX (or reject) in `asInt()`.
 
 ### Medium
 

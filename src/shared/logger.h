@@ -18,6 +18,7 @@
 // logger.h
 /// Logging macros for info, warning, error, and fatal messages.
 /// Usage: LOGI("Message %s", str); LOGF("Fatal error %d", code);
+/// LOGF must be called as a standalone statement (see note below LOGF).
 
 #pragma once
 #ifndef __LOGGER_H__
@@ -49,8 +50,12 @@ private:
     static std::mutex m_mutex;
 };
 
+// NOTE: this header and src/shared/logger.h must be kept byte-identical;
+// src/*.cpp and src/shared/*.cpp each resolve #include "logger.h" to their
+// own directory copy (see logger.h.audit.md; consolidate if they ever drift).
 #if defined(USE_QFILE)
 #include <QtLogging>
+#include <QDebug>
 #define printf qDebug
 #define LOGI(...) qInfo(__VA_ARGS__)
 #define LOGW(...) qWarning(__VA_ARGS__)
@@ -66,8 +71,15 @@ private:
 #define LOGE(...)                           \
     if (Logger::level() <= Logger::L_ERROR) \
     Logger::log(Logger::L_ERROR, __FILE_NAME__, __VA_ARGS__)
+// DO NOT DELETE LOGF or the USE_QFILE/Qt block above: they are kept
+// deliberately (maintainer decision 2026-11-17, see
+// docs/audits/logger.h.audit.md BUG-H16). An earlier agent removed them as
+// "dead code"; that was rejected. CAUTION: LOGF expands unbraced, so
+// `if (cond) LOGF(...);` logs conditionally but ALWAYS exits; call LOGF as
+// a standalone statement.
 #define LOGF(...)                                             \
     Logger::log(Logger::L_FATAL, __FILE_NAME__, __VA_ARGS__); \
     exit(1)
 #endif
+
 #endif

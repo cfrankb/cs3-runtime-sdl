@@ -81,22 +81,36 @@ bool copyFile(const std::string in, const std::string out, std::string &errMsg)
     FILEWRAP tfile;
     if (sfile.open(in, "rb"))
     {
-        int size = sfile.getSize();
-        std::vector<char> buf(size);
-        sfile.read(buf.data(), size);
-        sfile.close();
-        if (tfile.open(out.c_str(), "wb"))
+        const long sz = sfile.getSize();
+        if (sz < 0 || sz > INT_MAX)
         {
-            tfile.write(buf.data(), size);
-            tfile.close();
+            errMsg = "couldn't size: " + in;
+            result = false;
         }
         else
         {
-            const int bufferSize = out.length() + 128;
-            std::vector<char> tmp(bufferSize);
-            snprintf(tmp.data(), bufferSize, "couldn't write: %s", out.c_str());
-            errMsg = tmp.data();
-            result = false;
+            const int size = static_cast<int>(sz);
+            std::vector<char> buf(size);
+            const bool readOk = size == 0 || sfile.read(buf.data(), size) == IFILE_OK;
+            sfile.close();
+            if (readOk && tfile.open(out.c_str(), "wb"))
+            {
+                const bool writeOk = size == 0 || tfile.write(buf.data(), size) == IFILE_OK;
+                tfile.close();
+                if (!writeOk)
+                {
+                    errMsg = "couldn't write: " + out;
+                    result = false;
+                }
+            }
+            else
+            {
+                const int bufferSize = out.length() + 128;
+                std::vector<char> tmp(bufferSize);
+                snprintf(tmp.data(), bufferSize, "couldn't write: %s", out.c_str());
+                errMsg = tmp.data();
+                result = false;
+            }
         }
     }
     else
@@ -122,11 +136,18 @@ bool concat(const std::list<std::string> files, std::string out, std::string &ms
             std::string in = *iterator;
             if (sfile.open(in, "rb"))
             {
-                int size = sfile.getSize();
-                std::vector<char> buf(size);
-                sfile.read(buf.data(), size);
+                const long sz = sfile.getSize();
+                const int size = static_cast<int>(sz);
+                const bool sizeOk = sz >= 0 && sz <= INT_MAX;
+                std::vector<char> buf(sizeOk ? size : 0);
+                const bool readOk = sizeOk && (size == 0 || sfile.read(buf.data(), size) == IFILE_OK);
                 sfile.close();
-                tfile.write(buf.data(), size);
+                if (!readOk || (size != 0 && tfile.write(buf.data(), size) != IFILE_OK))
+                {
+                    msg = "couldn't read: " + in;
+                    result = false;
+                    break;
+                }
             }
             else
             {
@@ -201,9 +222,14 @@ std::vector<uint8_t> readFile(const char *fname)
         LOGE("failed to read:%s", fname);
         return {};
     }
-    size_t size = file.getSize();
-    std::vector<uint8_t> data(size);
-    if (file.read(data.data(), size) != IFILE_OK)
+    const long size = file.getSize();
+    if (size < 0 || size > INT_MAX)
+    {
+        LOGE("cannot size %s", fname);
+        return {};
+    }
+    std::vector<uint8_t> data(static_cast<size_t>(size));
+    if (size > 0 && file.read(data.data(), static_cast<int>(size)) != IFILE_OK)
     {
         LOGE("can't read data for %s", fname);
         return {};

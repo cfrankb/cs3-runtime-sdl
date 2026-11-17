@@ -32,6 +32,10 @@ class IFile;
 class CFrame
 {
 public:
+    // hard ceiling accepted by the ctor (it throws beyond this); MAX_IMAGE_SIZE
+    // in ss_limits.h is the smaller cap the OBL5 read/write paths enforce
+    static constexpr int MAX_FRAME_DIM = 4096;
+
     CFrame(int width = 0, int height = 0);
     CFrame(const CFrame &src) = default;
     CFrame(CFrame &&src) noexcept;

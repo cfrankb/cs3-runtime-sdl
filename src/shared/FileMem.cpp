@@ -112,6 +112,8 @@ long CFileMem::getSize()
 
 bool CFileMem::seek(long p)
 {
+    if (p < 0)
+        return false; // negative positions would index the buffer out of bounds
     m_ptr = p;
     return true;
 }
@@ -142,8 +144,10 @@ bool CFileMem::operator>>(std::string &str)
             m_ptr += sizeof(uint32_t);
         }
     }
-    // the declared payload must actually be in the buffer (BUG-C1)
-    if (length > m_buffer.size() - m_ptr)
+    // the declared payload must actually be in the buffer (BUG-C1); the
+    // m_ptr > size test stops the size_t subtraction underflowing after a
+    // legal past-EOF seek
+    if (m_ptr > m_buffer.size() || length > m_buffer.size() - m_ptr)
         return false;
     str.resize(length);
     if (length != 0)

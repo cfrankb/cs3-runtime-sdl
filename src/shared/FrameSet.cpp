@@ -125,7 +125,9 @@ bool CFrameSet::writeSolid(IFile &file)
         }
         int len = frame->width();
         int hei = frame->height();
-        if (len <= 0 || hei <= 0 || len > 4096 || hei > 4096)
+        // must match readSolid's MAX_IMAGE_SIZE gate (L326) or such a set
+        // would save cleanly but be un-loadable (round-trip loss)
+        if (len <= 0 || hei <= 0 || len > MAX_IMAGE_SIZE || hei > MAX_IMAGE_SIZE)
         {
             m_lastError = "Invalid frame dimensions at index " + std::to_string(i);
             return false;
@@ -341,12 +343,25 @@ bool CFrameSet::readSolid(IFile &file, int size)
         totalSize += frameSize;
     }
 
+    // The declared dimensions are untrusted: 1024 x 512 x 512 would pre-
+    // allocate 1 GiB from a tiny file. Deflate's best ratio is ~1/1032, so
+    // anything beyond that bound can never actually decompress.
+    if (totalSize > static_cast<int64_t>(srcSize) * 1032 + 1024)
+    {
+        m_lastError = "Declared pixel data size too large for compressed stream";
+        return false;
+    }
+
     std::vector<uint8_t> buffer(totalSize);
     uint8_t *ptr = buffer.data();
 
     // read OBL5Data (compressed)
     std::vector<uint8_t> srcBuffer(srcSize);
-    file.read(srcBuffer.data(), srcSize);
+    if (file.read(srcBuffer.data(), srcSize) != IFILE_OK)
+    {
+        m_lastError = "Failed to read compressed data";
+        return false;
+    }
     uLong destLen = totalSize;
 
     const int err = uncompress(
@@ -397,8 +412,11 @@ bool CFrameSet::readSolid(IFile &file, int size)
     {
         std::string key;
         std::string val;
-        file >> key;
-        file >> val;
+        if (!(file >> key) || !(file >> val))
+        {
+            m_lastError = "Failed to read tag at index " + std::to_string(i);
+            return false;
+        }
         if (key.length() > TAG_KEY_MAX || val.size() > TAG_VAL_MAX)
         {
             m_lastError = "Failed to read or invalid tag at index " + std::to_string(i);
@@ -1331,7 +1349,8 @@ bool CFrameSet::toPng(std::vector<uint8_t> &png)
                sy.data(), size * sizeof(uint16_t));
 
         // inject obldata into png
-        frame->toPng(png, obl5t);
+        if (!frame->toPng(png, obl5t))
+            return false;
     }
     return true;
 }
@@ -1353,8 +1372,16 @@ void CFrameSet::setTag(const char *tag, const char *v)
 
 void CFrameSet::toSubset(CFrameSet &dest, int start, int end)
 {
-    const int last = end == -1 ? getSize() - 1 : end;
-    dest.reserve(last - start);
+    // clamp the requested range to what exists; hostile or empty ranges
+    // yield an empty subset instead of length_error/OOB reads
+    int last = end == -1 ? static_cast<int>(getSize()) - 1 : end;
+    if (start < 0)
+        start = 0;
+    if (last > static_cast<int>(getSize()) - 1)
+        last = static_cast<int>(getSize()) - 1;
+    if (start > last)
+        return;
+    dest.reserve(last - start + 1);
     for (int i = start; i <= last; ++i)
     {
         CFrame *frame = new CFrame;

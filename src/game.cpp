@@ -52,7 +52,9 @@
 
 namespace GamePrivate
 {
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x000e;
+    // Actor wire format changed (m_frame serialized separately from m_algo
+    // after the union split, see actor.h); old saves are rejected.
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x000f;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     Random g_randomz(12345, 0);
 
@@ -934,8 +936,9 @@ void CGame::addHealth(const int hp)
              hurtStage == HurtNone)
     {
         const int shields = std::min(m_gameStats->get(S_SHIELD), (int)MAX_SHIELDS);
-        const float damageFactor = (MAX_FACTOR - shields) / (float)MAX_FACTOR;
-        const int hpToken = (int)damageFactor * (hp * (1 + 1 * skill));
+        // integer math: a float factor truncated with (int) cast the factor
+        // itself to 0 for 1 or 2 shields, which made shields total immunity
+        const int hpToken = hp * (MAX_FACTOR - shields) * (1 + skill) / MAX_FACTOR;
         m_health = std::max(m_health + hpToken, 0);
         playSound(SOUND_OUCHFAST);
     }
@@ -1196,7 +1199,7 @@ bool CGame::validateSignature(const char *signature, const uint32_t version)
         memcpy(gameSig, GAME_SIGNATURE, sizeof(GAME_SIGNATURE));
         gameSig[sizeof(GAME_SIGNATURE)] = '\0';
 
-        LOGW("savefile signature mismatch: `%s` -- expecting `%s`", signature, gameSig);
+        LOGW("savefile signature mismatch: `%s` -- expecting `%s`", tmp, gameSig);
         return false;
     }
     if (version != ENGINE_VERSION)
@@ -1900,13 +1903,16 @@ bool CGame::shadowActorMove(CActor &actor, const JoyAim aim)
     }
 
     const Pos newPos = CGame::translate(actor.pos(), aim);
-    if (monsterIndex != INVALID && m_map.isValid(newPos.x, newPos.y))
+    if (monsterIndex == INVALID || !m_map.isValid(newPos.x, newPos.y))
     {
-        m_monsterGrid[CMap::toKey(newPos.x, newPos.y)] = monsterIndex;
-        actor.move(aim);
-        return true;
+        // put back the entry we removed above, otherwise the actor stays in
+        // m_monsters but is invisible to findMonsterAt()
+        updateMonsterGrid(actor, monsterIndex);
+        return false;
     }
-    return false;
+    m_monsterGrid[CMap::toKey(newPos.x, newPos.y)] = monsterIndex;
+    actor.move(aim);
+    return true;
 }
 
 void CGame::rebuildMonsterGrid()

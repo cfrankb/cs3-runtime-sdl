@@ -542,7 +542,15 @@ CPath::Result CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPa
         }
         else
         {
-            CGame::getGame()->shadowActorMove(*static_cast<CActor *>(&sprite), aim);
+            // unchecked downcast was UB for any other ISprite; fail safe
+            CActor *actor = dynamic_cast<CActor *>(&sprite);
+            if (!actor)
+            {
+                LOGE("CPath::followPath: non-boss sprite %p is not a CActor",
+                     static_cast<void *>(&sprite));
+                return Result::Blocked;
+            }
+            CGame::getGame()->shadowActorMove(*actor, aim);
         }
         ++m_pathIndex;
         --m_pathTimeout;

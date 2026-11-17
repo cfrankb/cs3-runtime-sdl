@@ -22,6 +22,23 @@ Follow the Ponytail rules in [ponytail/AGENTS.md](https://github.com/DietrichGeb
 
 use LOGI, LOGW, LOGE and LOGF
 
+## Never remove compatibility layers
+
+Do not delete *any* compatibility layer, back-compat branch, or legacy
+format handler as "dead code" — even when it has zero call sites or is not
+compiled by the default build. Ask the maintainer first. Removed items so
+far (all rejected and restored 2026-11-17): the `LOGF` macro and the
+`USE_QFILE`/Qt block in `src/logger.h` and `src/shared/logger.h` (kept
+byte-identical; see `docs/audits/logger.h.audit.md`, BUG-H16). `LOGF`
+expands unbraced: call it as a standalone statement, never as the body of
+a bare `if`.
+
+When a change to serialized state (savegame/recorder/actor wire records)
+removes or alters a field that another member implicitly carried, mirror
+the serializer/deserializer pair *and* bump `ENGINE_VERSION`
+(`src/game.cpp`) plus the mirrored `EXPECTED_VERSION` in `tests/t_game.cpp`
+together — see BUG-H12.
+
 ## Session start
 - Reload `docs/spec/README.md` (and the modules it indexes) and compare against `docs/compliance/README.md` (and its modules).
 

@@ -4,8 +4,8 @@
 
 | Checkpoint | Value |
 |---|---|
-| Date | 2026-11-16 |
-| Git HEAD | c1dbc97 |
+| Date | 2026-11-17 |
+| Git HEAD | 64b8ec3 |
 | Files tracked | 121 |
 | Covered by cs3-tests | 72 |
 | Verified items | 81 / 121 |
@@ -14,9 +14,9 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `1ecdbe5a28721251` — covered by t_actor
-- [x] `src/actor.h` `b169d17893baf80e` — covered by t_actor
-- [x] `src/ai_path.cpp` `e786e094375b18ec` — covered by t_ai_path, t_actor
+- [x] `src/actor.cpp` `20ce3d6a863dae30` — covered by t_actor
+- [x] `src/actor.h` `f75afa81ea7778c6` — covered by t_actor
+- [x] `src/ai_path.cpp` `95dd11c9e7dbee71` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
@@ -24,9 +24,9 @@ See [README](README.md) for the verification procedure.
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
 - [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f997bfc050e9663d`
-- [x] `src/boss.cpp` `e2f86b5afdc2172c` — covered by t_boss
-- [x] `src/boss.h` `c31f3c81cfca0e04` — covered by t_boss
-- [x] `src/bossdata.cpp` `5525be1c08f18052` — covered by t_bossdata
+- [x] `src/boss.cpp` `2c42d33bfdd0c576` — covered by t_boss
+- [x] `src/boss.h` `68c87debad7456b0` — covered by t_boss
+- [x] `src/bossdata.cpp` `723ea50a3c49ce8c` — covered by t_bossdata
 - [x] `src/bossdata.h` `0f7efeb1c388d773` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
 - [ ] `src/chars.h` `0982da541f3fc76e`
@@ -36,20 +36,20 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/colormasks.h` `5dbd536c2c942b3d`
 - [ ] `src/defaults.h` `82a6e848a63df830`
 - [ ] `src/dirs.h` `0709071e265a3ba5`
-- [x] `src/engine.cpp` `9d9b5986f796223b` — covered by t_engine
+- [x] `src/engine.cpp` `d08f4c76c1eb8136` — covered by t_engine
 - [x] `src/engine.h` `46992fe4dbfe3d3e` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `db19684f3fe8e716`
+- [ ] `src/engine_hw.cpp` `edcf76fa6afdbe0a`
 - [ ] `src/engine_hw.h` `1327f4c97b90aa35`
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `d955625db0712557` — covered by t_runtime, t_game
-- [x] `src/game.h` `cad4d5e0cbb85795` — covered by t_runtime, t_game
-- [x] `src/game_ai.cpp` `ed85aab1ec755fe9` — covered by t_game_ai
+- [x] `src/game.cpp` `0d35561f60ae9093` — covered by t_runtime, t_game
+- [x] `src/game.h` `a5813455c42279e6` — covered by t_runtime, t_game
+- [x] `src/game_ai.cpp` `485cbd0e61d2597c` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `5bfef318488ec5bd` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
-- [x] `src/gamemixin.h` `387b8b032d8430cf` — covered by t_runtime
+- [x] `src/gamemixin.cpp` `b98bee7707fe8dcf` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
+- [x] `src/gamemixin.h` `c4e37105a2ee04f2` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `174638c96b00ba1d` — covered by t_gamestats
@@ -61,10 +61,10 @@ See [README](README.md) for the verification procedure.
 - [x] `src/layer.h` `5b326b8fb740de7a` — covered by t_map*
 - [x] `src/layerdata.cpp` `ac81acaf0a834d9f` — covered by t_tables
 - [x] `src/layerdata.h` `8c2ce0bbe17cc15e` — covered by t_tables
-- [x] `src/level.cpp` `b919dac75ba69dbb` — covered by t_level
+- [x] `src/level.cpp` `cf0211482c836b0f` — covered by t_level
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
 - [x] `src/logger.cpp` `f6d8efa613669664` — covered by t_logger
-- [ ] `src/logger.h` `d4a28967b6e98c90` — covered by t_logger
+- [ ] `src/logger.h` `8775cdc1c8eaa735` — covered by t_logger
 - [ ] `src/main.cpp` `cefe4430ffd2cdbe`
 - [x] `src/map.cpp` `48f1a503646865d5` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
@@ -85,8 +85,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/recorder.cpp` `2bfd1c5bb0a0afa4` — covered by t_recorder
 - [x] `src/recorder.h` `ea6d5a523969090a` — covered by t_recorder
 - [ ] `src/rect.h` `1c32d3c3241f2ede`
-- [x] `src/runtime.cpp` `029cf0f47abf057f` — covered by t_runtime
-- [x] `src/runtime.h` `08ab887f2a4a1bfd` — covered by t_runtime
+- [x] `src/runtime.cpp` `feec4ad2f4828194` — covered by t_runtime
+- [x] `src/runtime.h` `afe265bf47345194` — covered by t_runtime
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables
 - [x] `src/sheetdata.h` `51047aeaee728977` — covered by t_tables
@@ -114,23 +114,23 @@ See [README](README.md) for the verification procedure.
 ## src/shared/
 
 - [ ] `src/shared/CRC.h` `7af840600f7ae4b6`
-- [x] `src/shared/DotArray.cpp` `0d7337e68f456dc0` — covered by t_dotarray
+- [x] `src/shared/DotArray.cpp` `46c8de18e21f6bb0` — covered by t_dotarray
 - [x] `src/shared/DotArray.h` `3a6825207d20e511` — covered by t_dotarray
-- [x] `src/shared/FileMem.cpp` `c65e7dc2b71d9140` — covered by t_ifile
-- [x] `src/shared/FileMem.h` `2a83f8ea3f73b7bf` — covered by t_ifile
-- [x] `src/shared/FileWrap.cpp` `c96ca9d8c074412f` — covered by t_ifile, t_recorder
+- [x] `src/shared/FileMem.cpp` `55057ac122fe2b22` — covered by t_ifile
+- [x] `src/shared/FileMem.h` `1ed3f6247872ab7b` — covered by t_ifile
+- [x] `src/shared/FileWrap.cpp` `b62b4aed75e7b176` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
-- [x] `src/shared/Frame.cpp` `7b89f7a559c86a3d` — covered by t_frame, t_frameset
-- [x] `src/shared/Frame.h` `b9dee218bab8ee86` — covered by t_frame, t_frameset
-- [x] `src/shared/FrameSet.cpp` `45804ad3c73d96b1` — covered by t_frameset
+- [x] `src/shared/Frame.cpp` `9400ee008ce0232f` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `4ac3c092ec9db1d5` — covered by t_frame, t_frameset
+- [x] `src/shared/FrameSet.cpp` `aabbe231cf3528ff` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `917ea6d58ec186fe` — covered by t_frameset
-- [x] `src/shared/IFile.h` `c97f77321536adee` — covered by t_ifile
-- [x] `src/shared/ISerial.h` `abeac28232cce604` — covered by t_ifile
-- [x] `src/shared/PngMagic.cpp` `f0120e355100cd6a` — covered by t_pngmagic
+- [x] `src/shared/IFile.h` `e00ca428ebdc6dda` — covered by t_ifile
+- [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
+- [x] `src/shared/PngMagic.cpp` `0516f61d2f0f1bc4` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
-- [x] `src/shared/helper.cpp` `517c1b75cb88687c` — covered by t_helper, t_runtime, t_map*
+- [x] `src/shared/helper.cpp` `3b294aeb79584b43` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
-- [ ] `src/shared/logger.h` `90c8ae1c2b098faa`
+- [ ] `src/shared/logger.h` `8775cdc1c8eaa735`
 - [ ] `src/shared/ss_limits.h` `e62b799121380518`
 
 ## src/shared/implementers/

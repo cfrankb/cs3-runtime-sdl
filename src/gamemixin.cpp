@@ -1372,7 +1372,7 @@ void CGameMixin::manageGamePlay()
             {
                 game.stats().set(S_PLAYER_HURT, CGame::HurtStart);
             }
-            else if (*(reinterpret_cast<uint32_t *>(joyState)))
+            else if (joyState[0] | joyState[1] | joyState[2] | joyState[3])
             {
                 m_playerFrameOffset = (m_playerFrameOffset + 1) & PLAYER_STD_FRAMES;
             }
@@ -2487,10 +2487,14 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
     if (m_healthBar == HEALTHBAR_HEARTHS)
     {
         int step = FONT_SIZE;
-        const int maxHealth = game.maxHealth() / 2 / FONT_SIZE;
+        int maxHealth = game.maxHealth() / 2 / FONT_SIZE;
         int health = game.health() / 2;
         int bx = 2;
         int by = bitmap.height() - 12;
+        // bitmap.at() throws beyond the frame; cap hearts to the bitmap width
+        const int room = (bitmap.width() - bx) / FONT_SIZE;
+        if (maxHealth > room)
+            maxHealth = room;
         for (int i = 0; i < maxHealth; ++i)
         {
             drawHearth(bx, by, health > 0 ? health : 0);
@@ -2625,7 +2629,7 @@ void CGameMixin::initUI()
 void CGameMixin::drawUI(CFrame &bitmap, CGameUI &ui)
 {
     const int baseX = getWidth() - ui.width() - ui.margin();
-    const int baseY = getWidth() - ui.height() - ui.margin();
+    const int baseY = getHeight() - ui.height() - ui.margin();
     for (const auto &btn : ui.buttons())
     {
         int x = baseX + btn.x;

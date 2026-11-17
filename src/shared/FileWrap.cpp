@@ -72,28 +72,37 @@ int CFileWrap::read(void *buf, int size)
 {
     if (m_memFile)
         return m_memFile->read(buf, size);
-    else
-        return fread(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
+    if (!m_file)
+        return IFILE_NOT_OK;
+    if (size == 0)
+        return IFILE_OK; // reading nothing is not a failure
+    return fread(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
 }
 
 int CFileWrap::write(const void *buf, int size)
 {
     if (m_memFile)
         return m_memFile->write(buf, size);
-    else
-        return fwrite(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
+    if (!m_file)
+        return IFILE_NOT_OK;
+    if (size == 0)
+        return IFILE_OK; // writing nothing is not a failure
+    return fwrite(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
 }
 
 bool CFileWrap::open(const std::string_view &fileName, const std::string_view &mode)
 {
     m_mode = mode;
+    close(); // release any previously open FILE* before switching targets
+    if (fileName.empty())
+        return false;
     if ((m_memFile = findFile(fileName)))
     {
         return m_memFile->open(fileName, mode);
     }
     else
     {
-        m_file = fopen(fileName.data(), mode.data());
+        m_file = fopen(std::string(fileName).c_str(), std::string(mode).c_str());
         return m_file != nullptr;
     }
 }
@@ -119,7 +128,7 @@ long CFileWrap::getSize()
     {
         return m_memFile->getSize();
     }
-    else
+    else if (m_file)
     {
         long cur = ftell(m_file);
         fseek(m_file, 0, SEEK_END);
@@ -127,20 +136,21 @@ long CFileWrap::getSize()
         fseek(m_file, cur, SEEK_SET);
         return w;
     }
+    return -1;
 }
 
 bool CFileWrap::seek(long p)
 {
     if (m_memFile)
         return m_memFile->seek(p);
-    else if (fseek(m_file, p, SEEK_SET) != 0)
-        return false;
-    return true;
+    return m_file && fseek(m_file, p, SEEK_SET) == 0;
 }
 
 long CFileWrap::tell()
 {
-    return m_memFile ? m_memFile->tell() : ftell(m_file);
+    if (m_memFile)
+        return m_memFile->tell();
+    return m_file ? ftell(m_file) : -1;
 }
 
 bool CFileWrap::operator>>(std::string &str)
@@ -151,6 +161,8 @@ bool CFileWrap::operator>>(std::string &str)
     }
     else
     {
+        if (!m_file)
+            return false;
         // BUG-C10: decode with width-exact locals mirroring CFileMem: a byte
         // < 0xff is the length; 0xff introduces a uint16; a uint16 of 0xffff
         // introduces the uint32 content size. Reusing one int for all reads

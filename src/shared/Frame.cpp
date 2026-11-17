@@ -40,7 +40,7 @@
 
 CFrame::CFrame(int width, int height) : m_width(width), m_height(height)
 {
-    if (width < 0 || height < 0 || width > 4096 || height > 4096)
+    if (width < 0 || height < 0 || width > MAX_FRAME_DIM || height > MAX_FRAME_DIM)
     {
         std::string lastError = "Invalid dimensions: " + std::to_string(width) + "x" + std::to_string(height);
         throw std::invalid_argument(lastError);
@@ -315,9 +315,9 @@ bool CFrame::toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5da
     int err = compressData(rdata, cData);
     if (err != Z_OK)
     {
-        m_lastError = "Zlib decompression error " + std::to_string(err) + ": " + zError(err);
+        m_lastError = "Zlib compression error " + std::to_string(err) + ": " + zError(err);
         LOGE("CFrame::toPng error: %d", err);
-        return true;
+        return false;
     }
 
     const uLong cDataSize = cData.size();
@@ -930,6 +930,15 @@ CFrameSet *CFrame::explode(int count, uint16_t *sx, uint16_t *sy, CFrameSet *set
     int mx = 0;
     for (int i = 0; i < count; ++i)
     {
+        // obLT is file data: clip() would throw out of m_rgb, so validate first
+        if (sx[i] == 0 || sy[i] == 0 || mx + sx[i] > m_width || sy[i] > m_height)
+        {
+            m_lastError = "obLT unit " + std::to_string(i) + " " + std::to_string(sx[i]) +
+                          "x" + std::to_string(sy[i]) + " at x=" + std::to_string(mx) +
+                          " outside " + std::to_string(m_width) + "x" + std::to_string(m_height);
+            LOGW("CFrame::explode: %s", m_lastError.c_str());
+            return set;
+        }
         CFrame *frame = clip(mx, 0, sx[i], sy[i]);
         set->add(frame);
         mx += sx[i];
@@ -950,10 +959,27 @@ CFrameSet *CFrame::explode(std::vector<CFrame::oblv2DataUnit_t> &metadata, CFram
         CFrame *frame;
         if (unit.x != INVALID && unit.y != INVALID)
         {
+            if (unit.sx == 0 || unit.sy == 0 || unit.x >= m_width || unit.y >= m_height ||
+                unit.x + unit.sx > m_width || unit.y + unit.sy > m_height)
+            {
+                m_lastError = "obLT v2 unit " + std::to_string(unit.sx) + "x" +
+                              std::to_string(unit.sy) + " at " + std::to_string(unit.x) +
+                              "," + std::to_string(unit.y) + " outside " +
+                              std::to_string(m_width) + "x" + std::to_string(m_height);
+                LOGW("CFrame::explode: %s", m_lastError.c_str());
+                return set;
+            }
             frame = clip(unit.x, unit.y, unit.sx, unit.sy);
         }
         else
         {
+            if (unit.sx == 0 || unit.sy == 0 || unit.sx > MAX_FRAME_DIM || unit.sy > MAX_FRAME_DIM)
+            {
+                m_lastError = "obLT v2 unit dimensions " + std::to_string(unit.sx) + "x" +
+                              std::to_string(unit.sy) + " rejected";
+                LOGW("CFrame::explode: %s", m_lastError.c_str());
+                return set;
+            }
             frame = new CFrame(unit.sx, unit.sy);
         }
         set->add(frame);

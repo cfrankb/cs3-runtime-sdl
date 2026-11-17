@@ -85,6 +85,16 @@ bool test_dotarray()
         }
     }
 
+    // steep/vertical lines must reach their endpoint (dx/dy dominant axis)
+    dots.flush();
+    const int v = dots.lineTab(0x22, Dot(5, 0), Dot(5, 10));
+    if (v != 11 || dots[v - 1].x != 5 || dots[v - 1].y != 10)
+    {
+        LOGE("vertical lineTab drew %d dots ending (%d, %d); expecting 11 at (5, 10)",
+             v, dots[v - 1].x, dots[v - 1].y);
+        return false;
+    }
+
     // circle: r = |10-20|/2 = 5 around (20,15), symmetric plot
     dots.setLimit(400, 400);
     const int c = dots.circle(0x33, Dot(20, 10), Dot(20, 20));
@@ -98,6 +108,24 @@ bool test_dotarray()
         if (d.x < 15 || d.x > 25 || d.y < 10 || d.y > 20)
         {
             LOGE("circle dot (%d, %d) outside bounds", d.x, d.y);
+            return false;
+        }
+    }
+    {
+        // the horizontal extrema (15,15)/(25,15) must be plotted: without
+        // the swapped-octant reflections they are missing
+        bool left = false;
+        bool right = false;
+        for (const auto &d : dots.dots())
+        {
+            if (d.x == 15 && d.y == 15)
+                left = true;
+            if (d.x == 25 && d.y == 15)
+                right = true;
+        }
+        if (!left || !right)
+        {
+            LOGE("circle missing horizontal extrema (left=%d right=%d)", left, right);
             return false;
         }
     }

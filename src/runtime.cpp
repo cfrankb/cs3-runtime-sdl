@@ -872,9 +872,13 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     bool isAndroid = false;
 #endif
     (void)isAndroid;
+    // SDL button ids are 1-based and can exceed the known set on exotic mice
+    const unsigned button = static_cast<unsigned>(event.button.button);
+    const bool knownButton = button > 0 && button < sizeof(m_mouseButtons);
     if (event.type == SDL_EVENT_MOUSE_BUTTON_UP)
     {
-        m_mouseButtons[event.button.button] = BUTTON_RELEASED;
+        if (knownButton)
+            m_mouseButtons[button] = BUTTON_RELEASED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (m_trace)
             LOGI("SDL_EVENT_MOUSE_BUTTON_UP button: %d x=%f y=%f c=%u",
@@ -890,7 +894,8 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
     }
     else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
     {
-        m_mouseButtons[event.button.button] = BUTTON_PRESSED;
+        if (knownButton)
+            m_mouseButtons[button] = BUTTON_PRESSED;
         pos_t pos = windowPos2texturePos(posF_t{event.button.x, event.button.y});
         if (m_trace)
         {
@@ -957,7 +962,8 @@ void CRuntime::onMouseEvent(const SDL_Event &event)
         {
             m_menus->followPointer(pos.x, pos.y);
         }
-        else if (event.button.button == SDL_BUTTON_LEFT && mode == CGame::MODE_PLAY)
+        // motion events carry the button bitmask in motion.state, not button.button
+        else if ((event.motion.state & SDL_BUTTON_LMASK) && mode == CGame::MODE_PLAY)
         {
             handleMouse(pos.x, pos.y);
         }
@@ -1093,10 +1099,10 @@ void CRuntime::onGamePadEvent(const SDL_Event &event)
             break;
         default:
             LOGI("Controller: %s - Button %s: %s [%d]",
-                 SDL_GetGamepadName(controller),
+                 controller ? SDL_GetGamepadName(controller) : "?",
                  buttonState ? "DOWN" : "UP",
-                 SDL_GetGamepadStringForButton((SDL_GamepadButton)event.button.button),
-                 event.button.button);
+                 SDL_GetGamepadStringForButton((SDL_GamepadButton)event.gbutton.button),
+                 event.gbutton.button);
         }
 #endif
     }
@@ -1759,6 +1765,11 @@ void CRuntime::takeScreenshot()
 
     CFrame bitmap(w, h);
     SDL_Surface *surface = SDL_RenderReadPixels(m_app.renderer, nullptr);
+    if (!surface)
+    {
+        LOGE("SDL_RenderReadPixels SDL_Error: %s", SDL_GetError());
+        return;
+    }
     const char *name = SDL_GetPixelFormatName(surface->format);
     LOGI("Surface format: %s\n", name);
 
@@ -1780,7 +1791,11 @@ void CRuntime::takeScreenshot()
     SDL_DestroySurface(conv);
 
     std::vector<uint8_t> png;
-    bitmap.toPng(png);
+    if (!bitmap.toPng(png))
+    {
+        LOGE("screenshot png failed: %s", bitmap.getLastError());
+        return;
+    }
     CFileWrap file;
     char filename[64];
     const auto now = std::chrono::system_clock::now();

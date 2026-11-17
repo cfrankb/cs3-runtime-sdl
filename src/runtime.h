@@ -170,7 +170,9 @@ private:
     bool m_trace = false;
     bool m_isRunning = true;
     CFrame *m_bitmap = nullptr;
-    uint8_t m_mouseButtons[3];
+    // Indexed directly by SDL button ids (SDL_BUTTON_LEFT=1 .. SDL_BUTTON_X2=5),
+    // so the array must cover SDL_BUTTON_X2; other ids are rejected at the write.
+    uint8_t m_mouseButtons[SDL_BUTTON_X2 + 1] = {};
     std::string m_input;
     bool m_hasFocus;
     std::unique_ptr<MenuManager> m_menus;
