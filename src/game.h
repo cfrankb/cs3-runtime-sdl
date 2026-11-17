@@ -210,15 +210,17 @@ public:
     };
 
 private:
-    Pos m_chuteTarget;
+    Pos m_chuteTarget = {};
+    // ponytail: m_chuteTarget is still not serialized; adding it changes the
+    // save format (ENGINE_VERSION bump) — do it with the game.cpp save-load audit.
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;
     int m_score = 0;
-    int m_nextLife;
+    int m_nextLife; // set in ctor (SCORE_LIFE is not visible in this header)
     int m_diamonds = 0;
     inline static userKeys_t m_keys;
-    GameMode m_mode;
+    GameMode m_mode = MODE_TITLE;
     int m_introHint = 0;
     std::vector<Event> m_events;
     std::vector<CActor> m_monsters;
@@ -231,7 +233,7 @@ private:
     std::unique_ptr<CGameStats> m_gameStats;
     std::vector<Pos> m_usedItems;
     std::unordered_map<uint16_t, int> m_monsterGrid;
-    MapReport m_report;
+    MapReport m_report = {};
     std::unique_ptr<CAnimator> m_animator;
     std::vector<automator_t> m_automators;
     std::vector<spawn_t> m_spawns;

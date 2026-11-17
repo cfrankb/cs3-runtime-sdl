@@ -231,22 +231,22 @@ protected:
         int rLives = 0;
         int rSugar = 0;
         int sugarFx = 0;
-        uint8_t sugarCubes[SUGAR_CUBES];
+        uint8_t sugarCubes[SUGAR_CUBES] = {};
     };
 
     struct message_t
     {
-        int scaleX;
-        int scaleY;
-        int baseY;
-        Color color;
+        int scaleX = 0;
+        int scaleY = 0;
+        int baseY = 0;
+        Color color = {};
         std::string lines[3];
     };
 
-    hiscore_t m_hiscores[MAX_SCORES];
-    uint8_t m_joyState[JOY_AIMS];
-    uint8_t m_vjoyState[JOY_AIMS];
-    uint8_t m_buttonState[Button_Count];
+    hiscore_t m_hiscores[MAX_SCORES] = {};
+    uint8_t m_joyState[JOY_AIMS] = {};
+    uint8_t m_vjoyState[JOY_AIMS] = {};
+    uint8_t m_buttonState[Button_Count] = {};
     uint32_t m_ticks = 0;
     CAnimator *m_animator;
     std::unique_ptr<CFrameSet> m_tiles;
@@ -277,15 +277,15 @@ protected:
     int m_optionCooldown = 0;
     // bool m_gameMenuActive = false;
     int m_gameMenuCooldown = 0;
-    int m_cx;
-    int m_cy;
+    int m_cx = 0;
+    int m_cy = 0;
     int m_cameraMode = CAMERA_MODE_STATIC;
     int m_healthBar = HEALTHBAR_CLASSIC;
-    int m_currentEvent;
-    int m_eventCountdown;
-    int m_timer;
-    int _WIDTH;
-    int _HEIGHT;
+    int m_currentEvent = 0;
+    int m_eventCountdown = 0;
+    int m_timer = 0;
+    int _WIDTH = 0;
+    int _HEIGHT = 0;
     ColorMaps m_colormaps;
     visualStates_t m_visualStates;
     CGameUI m_ui;

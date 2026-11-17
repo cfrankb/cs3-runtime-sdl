@@ -82,7 +82,7 @@ public:
     void resize(int size);
 
 private:
-    int m_currFrame;
+    int m_currFrame = -1;
     enum
     {
         FNT_SIZE = 8,

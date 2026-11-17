@@ -36,15 +36,15 @@ class CGameMixin;
 
 struct EngineState
 {
-    bool m_paused;
-    int m_prompt;
-    int m_musicMuted;
-    int m_currentEvent;
-    int m_playerFrameOffset;
-    int m_cameraMode;
-    int m_cx;
-    int m_cy;
-    int m_countdown;
+    bool m_paused = false;
+    int m_prompt = 0;
+    int m_musicMuted = 0;
+    int m_currentEvent = 0;
+    int m_playerFrameOffset = 0;
+    int m_cameraMode = 0;
+    int m_cx = 0;
+    int m_cy = 0;
+    int m_countdown = 0;
 };
 
 class Engine
@@ -217,59 +217,59 @@ protected:
         int rLives = 0;
         int rSugar = 0;
         int sugarFx = 0;
-        uint8_t sugarCubes[SUGAR_CUBES];
+        uint8_t sugarCubes[SUGAR_CUBES] = {};
     };
 
     struct cameraContext_t
     {
-        int mx;
-        int ox;
-        int my;
-        int oy;
+        int mx = 0;
+        int ox = 0;
+        int my = 0;
+        int oy = 0;
     };
 
     struct sprite_t
     {
-        int16_t x;
-        int16_t y;
-        uint16_t tileID;
-        uint8_t aim;
-        uint8_t attr;
-        uint8_t frame;
+        int16_t x = 0;
+        int16_t y = 0;
+        uint16_t tileID = 0;
+        uint8_t aim = 0;
+        uint8_t attr = 0;
+        uint8_t frame = 0;
     };
 
     struct visualCues_t
     {
-        bool diamondShimmer;
-        bool livesShimmer;
+        bool diamondShimmer = false;
+        bool livesShimmer = false;
     };
 
     struct message_t
     {
-        int scaleX;
-        int scaleY;
-        int baseY;
-        Color color;
+        int scaleX = 0;
+        int scaleY = 0;
+        int baseY = 0;
+        Color color = {};
         std::string lines[3];
     };
 
     struct hiscore_t
     {
-        int32_t score;
-        int32_t level;
-        char name[MAX_NAME_LENGTH];
+        int32_t score = 0;
+        int32_t level = 0;
+        char name[MAX_NAME_LENGTH] = {};
     };
 
-    uint64_t m_ticks;
-    CGame *m_game;
+    uint64_t m_ticks = 0;
+    CGame *m_game = nullptr;
     visualStates_t m_visualStates;
     EngineState m_state;
 
-    int m_width;
-    int m_height;
+    int m_width = 0;
+    int m_height = 0;
     MenuManager *m_menus = nullptr;
     CAnimator *m_animator = nullptr;
-    CGameMixin *m_gameMixin;
+    CGameMixin *m_gameMixin = nullptr;
     std::vector<std::vector<std::string>> m_assetFiles;
     Summary m_summary;
     std::unique_ptr<CGameUI> m_virtualKeyboard;

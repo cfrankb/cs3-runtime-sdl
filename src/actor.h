@@ -141,20 +141,20 @@ public:
     }
 
 private:
-    uint8_t m_x;
-    uint8_t m_y;
-    uint8_t m_type;
+    uint8_t m_x = 0;
+    uint8_t m_y = 0;
+    uint8_t m_type = 0;
     // was a uint16_t union shared with m_algo: startPath() clobbered the
     // rendered frame index with the path-algo id (actor.cpp startPath).
     // Split changed the actor wire record (both fields now serialized
     // separately); ENGINE_VERSION bumped to 0x0200000f.
-    uint16_t m_frame;
-    uint16_t m_algo;
-    JoyAim m_aim;
-    uint8_t m_pu;
-    uint8_t m_attr;
-    int32_t m_ttl;
-    Pos m_origin;
+    uint16_t m_frame = 0;
+    uint16_t m_algo = 0;
+    JoyAim m_aim = AIM_NONE;
+    uint8_t m_pu = 0;
+    uint8_t m_attr = 0;
+    int32_t m_ttl = 0;
+    Pos m_origin = {};
     template <typename ReadFunc>
     bool readCommon(ReadFunc readfile);
     template <typename WriteFunc>
