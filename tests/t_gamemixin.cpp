@@ -333,6 +333,19 @@ bool test_gamemixin_primitives()
     if (px(bmp, 2, 2) != RED || px(bmp, 3, 3) != BLACK)
         return fail("drawRect outline");
 
+    // BUG-1: overflowing drawFont/drawRect clip instead of writing past the
+    // bitmap (previously heap corruption / SIGSEGV)
+    bmp.fill(BLACK);
+    rt.drawFont(bmp, 60, 62, "ABCDEF", WHITE);
+    rt.drawRect(bmp, rect_t{.x = 62, .y = 62, .width = 64, .height = 64}, RED, true);
+    if (px(bmp, 62, 62) != RED || px(bmp, 63, 63) != RED)
+        return fail("drawRect clipped overflow not drawn");
+    bmp.fill(BLACK);
+    rt.drawRect(bmp, rect_t{.x = -8, .y = -8, .width = 16, .height = 16}, RED, false);
+    if (px(bmp, 7, 0) != RED || px(bmp, 0, 7) != RED || px(bmp, 7, 7) != RED ||
+        px(bmp, 0, 0) != BLACK)
+        return fail("drawRect negative origin not clipped");
+
     // drawTile full-blit (const overload)
     CFrame &tile5 = *rt.tiles_()->operator[](5);
     const uint32_t c5 = solidColor(5, 1);
@@ -518,10 +531,7 @@ bool test_gamemixin_frames_routing()
         rt.tile2Frame(TILES_ANNIE2, mask, map);
         if (mask != COLOR_GRAYSCALE || map != nullptr)
             return fail("freeze mask");
-        game.resetStats();
-        // FINDING: CGame::resetStats does not clear S_PLAYER_HURT / S_BOAT
-        game.stats().set(S_PLAYER_HURT, CGame::HurtNone);
-        game.stats().set(S_BOAT, 0);
+        game.resetStats(); // now clears S_PLAYER_HURT / S_BOAT too
     }
 
     // color maps
@@ -707,10 +717,7 @@ bool test_gamemixin_viewports()
         return fail("dynamic viewport even offset");
     if (px(bmp, 16, 0) != BLACK)
         return fail("dynamic viewport blank");
-    // Odd camera offsets (ox=1) probe one column past the window: with the
-    // window already flush to the map edge map->at(width) throws —
-    // FINDING: drawViewPortDynamic lacks a bound on x + mx. Keep mx one tile
-    // inside the edge (camX = 2 * mx + ox) to exercise the half-clip.
+    // Odd camera offsets (ox=1) probe one column past the window.
     map.getMainLayer()->set(5, 6, TILES_BRICKS_2);
     rt.camX() = 11; // mx = 5, ox = 1: first column half-clipped at x=0
     rt.drawViewPortDynamic(bmp);
@@ -718,6 +725,21 @@ bool test_gamemixin_viewports()
         px(bmp, 8, 0) != solidColor(TILES_BRICKS_3, 1))
         return fail("dynamic viewport odd offset");
     map.getMainLayer()->set(5, 6, TILES_BLANK);
+    // BUG-3: flush half-pixel window to the map edge: the over-wide half
+    // column/row is clipped, map->at(width) is never read (used to throw
+    // std::out_of_range).
+    map.getMainLayer()->set(9, 9, TILES_BRICKS_2);
+    rt.camX() = 13; // mx = 6, ox = 1: x == cols would read at(10)
+    rt.camY() = 13;
+    bmp.fill(BLACK);
+    rt.drawViewPortDynamic(bmp);
+    if (px(bmp, 40, 40) != solidColor(TILES_BRICKS_2, 1))
+        return fail("dynamic viewport edge tile missing");
+    if (px(bmp, 56, 40) != BLACK)
+        return fail("dynamic viewport edge half-column drawn");
+    map.getMainLayer()->set(9, 9, TILES_BLANK);
+    rt.camX() = 12;
+    rt.camY() = 12;
     rt.setCameraMode(TestRuntime::CAMERA_MODE_STATIC);
 
     // drawScroll: left/mid/right uisheet parts along the bottom
@@ -883,8 +905,6 @@ bool test_gamemixin_screen()
     CFrame fbmp(112, 104);
     const int eventBefore = rt.event();
     const uint16_t timeoutBefore2 = map.statesConst().getU(TIMEOUT);
-    // FINDING: getEventText reads split(text)[0] unchecked: an MSG event with
-    // an empty state string aborts. Provide the text before drawScreen.
     const std::string msg0Before = map.states().getS(MSG0);
     map.states().setS(MSG0, "ALPHA\nBETA");
     map.states().setU(TIMEOUT, 0);
@@ -940,7 +960,8 @@ bool test_gamemixin_screens()
     const int widthBefore = rt.width_();
     const int heightBefore = rt.height_();
 
-    // drawScores: 304 wide keeps every centred string inside the bitmap
+    // drawScores fixture 304 wide (drawFont now clips, but centred strings
+    // are laid out for this width)
     rt.setWidth(304);
     rt.setHeight(208);
     CFrame bmp(304, 208);
@@ -1468,6 +1489,17 @@ bool test_gamemixin()
         LOGE("test_gamemixin: MSG0 lines wrong");
         return false;
     }
+
+    // empty MSG state string: no abort, blank lines, raised baseY
+    game.getMap().states().setS(MSG0, "");
+    msg = rt.getEventText(100);
+    if (!msg.lines[0].empty() || !msg.lines[1].empty() || !msg.lines[2].empty() ||
+        msg.baseY != 100 - 14)
+    {
+        LOGE("test_gamemixin: empty MSG0 not blank");
+        return false;
+    }
+    game.getMap().states().setS(MSG0, "alpha\nbeta");
 
     // unhandled event: empty message
     rt.event() = EVENT_NONE;

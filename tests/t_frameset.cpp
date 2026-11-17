@@ -340,12 +340,20 @@ bool test_frameset_container()
         LOGE("operator++ mismatch (idx %d)", idx);
         return false;
     }
-    // NOTE: non-empty operator-- is UB (`delete m_frames[getSize()]` reads
-    // one-past-the-end) — only the empty-set guard path is exercised here.
+    // operator-- deletes the last frame (leak fixed; see BUG on one-past-the-end delete)
     CFrameSet emptySet;
     if (--emptySet != 0)
     {
         LOGE("operator-- on empty set not 0");
+        return false;
+    }
+    CFrameSet decSet;
+    CFrame *keep = new CFrame(1, 1);
+    decSet.add(keep);
+    decSet.add(new CFrame(2, 2));
+    if (--decSet != 0 || decSet.size() != 1 || decSet[0] != keep)
+    {
+        LOGE("operator-- mismatch");
         return false;
     }
 

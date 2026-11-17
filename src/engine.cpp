@@ -82,6 +82,9 @@ void Engine::drawLevelIntro()
         break;
     case CGame::MODE_CHUTE:
         snprintf(t, sizeof(t), "DROP TO LEVEL %.2d", m_game->level() + 1);
+        break;
+    default:
+        t[0] = '\0';
     };
 
     const int x = (getWidth() - strlen(t) * 2 * FONT_SIZE) / 2;
@@ -465,10 +468,10 @@ Engine::message_t Engine::getEventText(const int baseY)
     {
         const std::string tmp = m_game->getMap().states().getS(m_state.m_currentEvent);
         const auto list = split(tmp, '\n');
-        const std::string &line1 = list[0];
+        const std::string &line1 = list.size() > 0 ? list[0] : "";
         const std::string &line2 = list.size() > 1 ? list[1] : "";
         const std::string &line3 = list.size() > 2 ? list[2] : "";
-        const int y = list.size() == 0 ? baseY - 14 : baseY + -8 * (std ::min(list.size(), (size_t)3));
+        const int y = list.size() == 0 ? baseY - 14 : baseY + -8 * (std::min(list.size(), (size_t)3));
         return {
             .scaleX = 1,
             .scaleY = 1,

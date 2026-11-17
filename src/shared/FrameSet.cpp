@@ -567,8 +567,7 @@ int CFrameSet::operator--()
 {
     if (this->getSize() == 0)
         return 0;
-    delete m_frames[this->getSize()];
-    removeAt(this->getSize() - 1);
+    delete removeAt(this->getSize() - 1);
     return this->getSize() - 1;
 }
 

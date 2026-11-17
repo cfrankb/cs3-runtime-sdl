@@ -553,7 +553,9 @@ void CGame::resetStats()
         S_TIME_TAKEN,
         S_CHUTE,
         S_FLASH,
-        S_TIME_FREEZE_TIMER};
+        S_TIME_FREEZE_TIMER,
+        S_PLAYER_HURT,
+        S_BOAT};
     for (const auto &stat : stats)
     {
         m_gameStats->set(stat, 0);

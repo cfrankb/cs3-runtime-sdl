@@ -102,6 +102,7 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
 {
     uint32_t *rgba = frame.getRGB().data();
     const int rowPixels = frame.width();
+    const int frameHeight = frame.height();
     const int fontSize = FONT_SIZE;
     const int fontOffset = fontSize;
     const int textSize = strlen(text);
@@ -122,10 +123,16 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
                 const uint32_t &pixColor = font[yy] & bitFilter ? color : bgcolor;
                 for (int stepY = 0; stepY < scaleY; ++stepY)
                 {
+                    const int py = yy * scaleY + y + stepY;
+                    if (py < 0 || py >= frameHeight)
+                        continue;
                     for (int stepX = 0; stepX < scaleX; ++stepX)
                     {
+                        const int px = xx * scaleX + x + stepX;
+                        if (px < 0 || px >= rowPixels)
+                            continue;
                         if (pixColor)
-                            rgba[(yy * scaleY + y + stepY) * rowPixels + xx * scaleX + x + stepX] = pixColor;
+                            rgba[py * rowPixels + px] = pixColor;
                     }
                 }
             }
@@ -213,25 +220,29 @@ void CGameMixin::drawRect(CFrame &frame, const rect_t &rect, const Color color, 
 {
     uint32_t *rgba = frame.getRGB().data();
     const int rowPixels = frame.width();
+    const int y0 = std::max(0, rect.y);
+    const int y1 = std::min(frame.height(), rect.y + rect.height);
+    const int x0 = std::max(0, rect.x);
+    const int x1 = std::min(rowPixels, rect.x + rect.width);
     if (fill)
     {
-        for (int y = 0; y < rect.height; y++)
+        for (int y = y0; y < y1; y++)
         {
-            for (int x = 0; x < rect.width; x++)
+            for (int x = x0; x < x1; x++)
             {
-                rgba[(rect.y + y) * rowPixels + rect.x + x] = color;
+                rgba[y * rowPixels + x] = color;
             }
         }
     }
     else
     {
-        for (int y = 0; y < rect.height; y++)
+        for (int y = y0; y < y1; y++)
         {
-            for (int x = 0; x < rect.width; x++)
+            for (int x = x0; x < x1; x++)
             {
-                if (y == 0 || y == rect.height - 1 || x == 0 || x == rect.width - 1)
+                if (y == rect.y || y == rect.y + rect.height - 1 || x == rect.x || x == rect.x + rect.width - 1)
                 {
-                    rgba[(rect.y + y) * rowPixels + rect.x + x] = color;
+                    rgba[y * rowPixels + x] = color;
                 }
             }
         }
@@ -732,6 +743,10 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
         int px = ox ? -halfOffset : 0;
         for (int x = 0; x < cols + ox; ++x)
         {
+            if (x + mx >= map->width())
+                break;
+            if (y + my >= map->height())
+                break;
             bool firstX = ox && x == 0;
             bool lastX = ox && x == cols;
             uint16_t tileID = map->at(x + mx, y + my);
@@ -1078,6 +1093,9 @@ void CGameMixin::drawLevelIntro(CFrame &bitmap)
         break;
     case CGame::MODE_CHUTE:
         snprintf(t, sizeof(t), "DROP TO LEVEL %.2d", m_game->level() + 1);
+        break;
+    default:
+        t[0] = '\0';
     };
 
     const int x = (getWidth() - strlen(t) * 2 * FONT_SIZE) / 2;
@@ -2142,7 +2160,7 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
     {
         const std::string tmp = m_game->getMap().states().getS(m_currentEvent);
         const auto list = split(tmp, '\n');
-        const std::string &line1 = list[0];
+        const std::string &line1 = list.size() > 0 ? list[0] : "";
         const std::string &line2 = list.size() > 1 ? list[1] : "";
         const std::string &line3 = list.size() > 2 ? list[2] : "";
         const int y = list.size() == 0 ? baseY - 14 : baseY + -8 * (std::min(list.size(), (size_t)3));
