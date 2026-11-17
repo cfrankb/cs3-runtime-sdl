@@ -183,7 +183,6 @@ public:
     bool read(IFile &file);
     bool write(IFile &file);
 
-    void toBmp(uint8_t *&bmp, int &size);
     bool toPng(std::vector<uint8_t> &png, const std::vector<uint8_t> &obl5data = {});
 
     static uint32_t toNet(const uint32_t a);

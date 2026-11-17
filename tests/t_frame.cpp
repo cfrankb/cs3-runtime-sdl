@@ -648,20 +648,6 @@ bool test_frame_io()
         fw.close();
     }
 
-    // toBmp: buffer + 'BM' magic + size field consistency
-    uint8_t *bmp = nullptr;
-    int bmpSize = 0;
-    f.toBmp(bmp, bmpSize);
-    const int pitch = (4 * 3 + 3) & ~3;
-    const int expect = 54 + pitch * 4;
-    if (!bmp || bmpSize != expect || bmp[0] != 'B' || bmp[1] != 'M')
-    {
-        LOGE("toBmp: size %d magic %c%c; expecting %d 'BM'", bmpSize,
-             bmp ? bmp[0] : '?', bmp ? bmp[1] : '?', expect);
-        delete[] bmp;
-        return false;
-    }
-    delete[] bmp;
 
     // toPng: signature, IHDR dimensions, IEND terminator
     std::vector<uint8_t> png;

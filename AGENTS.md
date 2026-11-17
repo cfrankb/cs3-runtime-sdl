@@ -33,11 +33,42 @@ byte-identical; see `docs/audits/logger.h.audit.md`, BUG-H16). `LOGF`
 expands unbraced: call it as a standalone statement, never as the body of
 a bare `if`.
 
+Never remove the version logic that provides backward compatibility for
+`CMap` or `CLayer`: the `CMap::MapVersion` enum and the `ver >= VERSIONn`
+branches in `CMap::read` (`src/map.h`, `src/map.cpp`), and the version
+branches in `CLayer::readCommon` (`src/layer.h`). New fields get a *new*
+version level handled alongside the old branches — never widen an existing
+branch.
+
 When a change to serialized state (savegame/recorder/actor wire records)
 removes or alters a field that another member implicitly carried, mirror
 the serializer/deserializer pair *and* bump `ENGINE_VERSION`
 (`src/game.cpp`) plus the mirrored `EXPECTED_VERSION` in `tests/t_game.cpp`
 together — see BUG-H12.
+
+Any modification to the **data structure** of `CActor`, `CMap`, or `CLayer`
+(adds, removes, reorders or retypes members) is a serialized-state change
+and requires the `ENGINE_VERSION` bump described above. Behavior-only
+changes to their member functions do not.
+
+## CFrame / CFrameSet data ownership
+
+The `CFrame` and `CFrameSet` contracts are bound to **active external
+projects** — do not change their declared surface or ownership behavior
+without checking those consumers. Consider this rule before touching any
+frame-owning API:
+
+- Data is **owned by the class** unless a method returns the pointer.
+- `removeAll()` (and `removeAt()`) **strip ownership** and hand it back to
+  the host, which then owns and must `delete` the returned frame(s).
+- Methods that return a raw `CFrame *` for inspection (e.g. `operator[]`,
+  `currFrame()`) do **not** transfer ownership; the set keeps and frees it.
+
+The `set(i, frame)` overwrite-without-delete and `resize()` null-growth are
+consistent with this model and are pinned in `tests/t_frameset.cpp`; the
+residual leak is a known open finding (`docs/audits/FrameSet.cpp.audit.md`),
+not a bug to "fix" unilaterally. `docs/shared-surface.md` carries the full
+status.
 
 ## Session start
 - Reload `docs/spec/README.md` (and the modules it indexes) and compare against `docs/compliance/README.md` (and its modules).

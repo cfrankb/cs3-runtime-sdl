@@ -1,5 +1,17 @@
 # Shared surface — sister-project consumers
 
+> **STATUS 2026-11-18 (maintainer):** the external LGCK editor is
+> **deprecated and no longer maintained**; the "verify against the editor
+> before removing" caveat in the audits is moot for editor-only consumers.
+> However, the `CFrame` and `CFrameSet` contracts remain **bound to other
+> active projects** — their freezes stay in force, and their declared
+> surface and behavior must not change without checking those consumers.
+>
+> **Ownership rule (`CFrame`/`CFrameSet`):** data is owned by the class
+> unless a pointer is returned to the caller; `removeAll()`/`removeAt()`
+> strip ownership and hand it back to the host, which must delete.
+> `tests/t_frameset.cpp` pins this behavior.
+
 Many files in this repo are not ours alone: `bin/utils/sync.sh` delivers
 them to the external LGCK editor checkout
 (`$TARGET_EDITOR=/disks/salmon/cfrankb/toolkit/qt/cs3-map-edit`, a

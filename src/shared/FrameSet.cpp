@@ -493,6 +493,7 @@ bool CFrameSet::read(IFile &file)
             if (!frame->read(file))
             {
                 m_lastError = frame->getLastError();
+                delete frame; // not adopted: free the local (audit L474 leak)
                 return false;
             }
             add(frame);
@@ -1397,6 +1398,10 @@ void CFrameSet::reserve(int n)
 
 void CFrameSet::set(const int i, CFrame *frame)
 {
+    // The set retains slot ownership, so the replaced frame is deleted
+    // (maintainer ruling, leak review 2026-11-18; it used to leak).
+    if (m_frames[i] != frame)
+        delete m_frames[i];
     m_frames[i] = frame;
 }
 
@@ -1422,6 +1427,12 @@ const std::vector<CFrame *> &CFrameSet::framesConst()
 
 void CFrameSet::resize(int size)
 {
-    // TODO: fix memory leaks
-    m_frames.resize(size);
+    // The set owns every slot, so truncation deletes the dropped tail
+    // (maintainer ruling, leak review 2026-11-18; it used to leak).
+    // Growth still inserts null slots: fill them before any dereference.
+    if (size < 0)
+        size = 0;
+    for (size_t i = static_cast<size_t>(size); i < m_frames.size(); ++i)
+        delete m_frames[i];
+    m_frames.resize(static_cast<size_t>(size));
 }

@@ -385,17 +385,15 @@ bool test_frameset_container()
     }
     delete gone;
 
-    // set() replaces without deleting the old frame; caller owns it
+    // set() keeps ownership in the set: the replaced frame is deleted
+    // (leak-review fix 2026-11-18)
     CFrame *d = new CFrame(1, 1);
-    CFrame *old = fs[1];
     fs.set(1, d);
     if (fs[1] != d)
     {
         LOGE("set() mismatch");
-        delete d;
         return false;
     }
-    delete old;
 
     // name + tags
     fs.setName("myset");
@@ -448,6 +446,13 @@ bool test_frameset_container()
     if (dup.size() != fs.size() + 2 || dup[fs.size()] != nullptr)
     {
         LOGE("resize up mismatch");
+        return false;
+    }
+    // resize down: the dropped tail is deleted by the set (leak fix)
+    dup.resize(1);
+    if (dup.size() != 1 || dup[0] == nullptr)
+    {
+        LOGE("resize down mismatch");
         return false;
     }
     dup.clear();

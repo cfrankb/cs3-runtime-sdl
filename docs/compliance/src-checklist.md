@@ -117,9 +117,9 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FileMem.h` `1ed3f6247872ab7b` — covered by t_ifile
 - [x] `src/shared/FileWrap.cpp` `b62b4aed75e7b176` — covered by t_ifile, t_recorder
 - [x] `src/shared/FileWrap.h` `979cc0c4d7b65267` — covered by t_ifile, t_recorder
-- [x] `src/shared/Frame.cpp` `2f0482d4c8e3c49d` — covered by t_frame, t_frameset
-- [x] `src/shared/Frame.h` `a11ae1953a99ad91` — covered by t_frame, t_frameset
-- [x] `src/shared/FrameSet.cpp` `aabbe231cf3528ff` — covered by t_frameset
+- [x] `src/shared/Frame.cpp` `e770c772c7235e34` — covered by t_frame, t_frameset
+- [x] `src/shared/Frame.h` `8f36eea27a514d0f` — covered by t_frame, t_frameset
+- [x] `src/shared/FrameSet.cpp` `b337e6ceb8a128bd` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `76fa6554394626fe` — covered by t_frameset
 - [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
