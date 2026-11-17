@@ -206,6 +206,16 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
         memcpy(ct, chunkType, sizeof(chunkType));
         ct[sizeof(chunkType)] = '\0';
 
+        // a hostile chunk length must fit in the remaining file bytes
+        // (BUG-C3: gate before any allocation or fixed-buffer copy)
+        if (chunkSize < 0 || pos + chunkSize + sizeof(int32_t) > fileSize)
+        {
+            char tmp[128];
+            snprintf(tmp, sizeof(tmp), "invalid chunk size %d for chunk [%s]", chunkSize, ct);
+            set.setLastError(tmp);
+            return false;
+        }
+
         // read chunkdata
         std::vector<uint8_t> chunkDataRaw(chunkSize + sizeof(chunkType));
         if (chunkSize != 0 && file.read(chunkDataRaw.data() + sizeof(chunkType), chunkSize) != IFILE_OK)
@@ -233,6 +243,11 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
 
         if (memcmp(chunkType, "IHDR", CHUNK_TYPE_LEN) == 0)
         {
+            if (chunkSize != 13)
+            {
+                set.setLastError("invalid IHDR chunk size");
+                return false;
+            }
             memcpy(((uint8_t *)&ihdr) + 8, chunkData, chunkSize);
             memcpy(ihdr.ChunkType, chunkType, 4);
             ihdr.Lenght = chunkSize;
@@ -249,6 +264,11 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
 
         else if (memcmp(chunkType, "PLTE", CHUNK_TYPE_LEN) == 0)
         {
+            if (chunkSize > (int32_t)sizeof(plte) || chunkSize % (int32_t)RGB_BYTES != 0)
+            {
+                set.setLastError("invalid PLTE chunk size");
+                return false;
+            }
             memcpy(plte, chunkData, chunkSize);
         }
 
@@ -269,6 +289,11 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
 
         else if (memcmp(chunkType, "tRNS", CHUNK_TYPE_LEN) == 0)
         {
+            if (chunkSize > (int32_t)sizeof(trns))
+            {
+                set.setLastError("invalid tRNS chunk size");
+                return false;
+            }
             memcpy(trns, chunkData, chunkSize);
             trns_found = true;
         }
@@ -280,12 +305,24 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
 
         else if (memcmp(chunkType, png_chunk_OBL5, CHUNK_TYPE_LEN) == 0)
         {
+            if (chunkSize < 12)
+            {
+                set.setLastError("obLT chunk too small");
+                return false;
+            }
             CFrame::png_OBL5 obl5t;
             char *t = (char *)&obl5t;
             memcpy(t + 8, chunkData, 12);
             obl5t_version = obl5t.Version;
             if (obl5t.Version == OBLT_VERSION0)
             {
+                // sx/sy arrays (2 * uint16 * Count) must be in the chunk payload
+                const uint64_t needed = 12ull + 2ull * sizeof(uint16_t) * obl5t.Count;
+                if (needed > (uint64_t)chunkSize)
+                {
+                    set.setLastError("obLT count exceeds chunk size");
+                    return false;
+                }
                 // version 0x0000 is supported
                 obl5t_count = obl5t.Count;
                 obl5t_sx.resize(obl5t.Count);
@@ -297,6 +334,13 @@ bool parsePNG(CFrameSet &set, IFile &file, int orgPos, bool skipOblt)
             }
             else if (obl5t.Version == OBLT_VERSION2)
             {
+                // metadata units must be in the chunk payload
+                const uint64_t needed = 12ull + sizeof(CFrame::oblv2DataUnit_t) * (uint64_t)obl5t.Count;
+                if (needed > (uint64_t)chunkSize)
+                {
+                    set.setLastError("obLT count exceeds chunk size");
+                    return false;
+                }
                 // version 0x0002 is supported
                 obl5t_count = obl5t.Count;
                 obl5t_metadatav2.resize(obl5t.Count);

@@ -818,40 +818,38 @@ bool CFrameSet::importIMC1(IFile &file, const long org)
 
     // allocating destination buffer
     std::vector<uint8_t> dest(destSize, '\0');
-    auto ptr = dest.data();
-    if (ptr == nullptr)
-    {
-        m_lastError = "allocation error";
-        return false;
-    }
 
-    // decoding RLE-like data
+    // decoding RLE-like data (BUG-C4: bound source escapes and destination runs)
+    // NB: real IMC1 streams may carry trailing filler past an exactly-full
+    // destination (the original decoder stopped one byte short); a decoder
+    // that treats a dest-full literal as padding stays compatible, while an
+    // escape run that overruns dest is rejected outright.
     int cpt = 0;
-    while (cpt < imc1Head.SizeData - 1)
+    size_t out = 0;
+    while (cpt < imc1Head.SizeData && out < (size_t)destSize)
     {
-        if (*ptrIMC1 == 0xff)
+        if (ptrIMC1[cpt] == 0xff)
         {
-            for (int loop = ptrIMC1[2] + ptrIMC1[3] * 256; loop; loop--, ptr++)
+            // escape sequence: 0xff, value, count low, count high
+            if (cpt + 4 > imc1Head.SizeData)
             {
-                *ptr = ptrIMC1[1];
+                m_lastError = "truncated IMC1 escape sequence";
+                return false;
             }
-            ptrIMC1 += 4;
+            const int run = ptrIMC1[cpt + 2] + ptrIMC1[cpt + 3] * 256;
+            if (out + (size_t)run > (size_t)destSize)
+            {
+                m_lastError = "IMC1 run exceeds destination buffer";
+                return false;
+            }
+            memset(dest.data() + out, ptrIMC1[cpt + 1], run);
+            out += run;
             cpt += 4;
         }
         else
         {
-            *ptr = *ptrIMC1;
-            ptr++;
-            ptrIMC1++;
-            cpt++;
+            dest[out++] = ptrIMC1[cpt++];
         }
-    }
-    if (cpt > imc1Head.SizeData)
-    {
-        char tmp[128];
-        snprintf(tmp, sizeof(tmp), "IMC1 decoding went outside of range %d. reached: %d", imc1Head.SizeData, cpt);
-        m_lastError = tmp;
-        return false;
     }
 
     // converting ima/FNT data to bitmap

@@ -77,6 +77,13 @@ entry to `docs/bugs/resolved` and flip the audit finding.
   import when exceeded.
 - **Verify:** crafted 1x1 IMC1 fixture through `extract()`; expect import
   failure.
+- **Status:** **Fixed.** Decoder rewritten index-based: escape sequences must
+  fit in the source; a run that overruns `destSize` fails the import.
+  Literals past an exactly-full destination are treated as padding (real IMC1
+  files carry trailing filler the old one-byte-short decoder discarded —
+  pinned by `ALIH1LF0.IMA` in `test_frameset_families`). Pinned by
+  `test_frameset_hostile_imc1`; pre-fix binary accepts the run overrun then
+  segfaults, post-fix `ctest` passes 100%.
 
 ## P2 — Boss data pipeline
 

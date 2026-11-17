@@ -19,6 +19,7 @@
 #include "../src/shared/Frame.h"
 #include "../src/shared/FrameSet.h"
 #include "../src/shared/FileWrap.h"
+#include "../src/shared/FileMem.h"
 #include "../src/logger.h"
 #include "thelper.h"
 #include <cstdio>
@@ -473,6 +474,72 @@ bool test_frameset_container()
     if (fs.currFrame() != 999)
     {
         LOGE("setCurrFrame unexpectedly clamped");
+        return false;
+    }
+    return true;
+}
+
+/**
+ * @brief BUG-C4: the IMC1 RLE decoder must bound escape sequences against
+ *        the source and run lengths against the destination buffer.
+ *
+ * @return true
+ * @return false
+ */
+bool test_frameset_hostile_imc1()
+{
+    // header: "IMC1" + len(1) + hei(1) -> destSize = 1*1*8*8 = 64
+    auto buildImc1 = [](const std::vector<uint8_t> &payload)
+    {
+        std::vector<uint8_t> v = {'I', 'M', 'C', '1', 1, 1};
+        const int32_t sizeData = static_cast<int32_t>(payload.size());
+        const uint8_t *p = reinterpret_cast<const uint8_t *>(&sizeData);
+        v.insert(v.end(), p, p + 4);
+        v.insert(v.end(), payload.begin(), payload.end());
+        return v;
+    };
+    auto must_fail = [&buildImc1](const std::vector<uint8_t> &payload, const char *what)
+    {
+        const std::vector<uint8_t> data = buildImc1(payload);
+        CFileMem mem;
+        mem.replace(data.data(), data.size());
+        CFrameSet fs;
+        if (fs.extract(mem) || std::string(fs.getLastError()).empty())
+        {
+            LOGE("imc1: %s accepted [%s]", what, fs.getLastError());
+            return false;
+        }
+        return true;
+    };
+
+    // run of 255 overflows the 64-byte destination (pre-fix heap overrun)
+    if (!must_fail({0x00, 0xff, 0x41, 0xff, 0x00}, "run overrun"))
+        return false;
+    // escape truncated at end of source (pre-fix read past the source)
+    if (!must_fail({0xff, 0x41, 0x00}, "truncated escape"))
+        return false;
+    // trailing literals past a full destination are padding (compat with
+    // real IMC1 files, which the old one-byte-short decoder also discarded)
+    {
+        const std::vector<uint8_t> data = buildImc1(std::vector<uint8_t>(70, 0x33));
+        CFileMem mem;
+        mem.replace(data.data(), data.size());
+        CFrameSet fs;
+        if (!fs.extract(mem) || fs.size() != 1)
+        {
+            LOGE("imc1: literal padding rejected [%s]", fs.getLastError());
+            return false;
+        }
+    }
+
+    // a well-formed stream (single run exactly filling dest) still imports
+    const std::vector<uint8_t> ok_data = buildImc1({0xff, 0x42, 64, 0x00});
+    CFileMem mem;
+    mem.replace(ok_data.data(), ok_data.size());
+    CFrameSet fs;
+    if (!fs.extract(mem) || fs.size() != 1)
+    {
+        LOGE("imc1: well-formed stream rejected [%s]", fs.getLastError());
         return false;
     }
     return true;

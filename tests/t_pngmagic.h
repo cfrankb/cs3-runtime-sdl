@@ -24,3 +24,4 @@ bool test_png_corrupt();
 bool test_png_orgpos();
 bool test_png_4bpp();
 bool test_png_filters();
+bool test_png_hostile_chunks();

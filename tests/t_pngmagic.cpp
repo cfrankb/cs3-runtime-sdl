@@ -708,3 +708,110 @@ bool test_png_filters()
     }
     return true;
 }
+
+/**
+ * @brief BUG-C3: chunk payloads must be bounded against their destinations
+ *        before any copy, even when the attacker computes a valid CRC.
+ *
+ * @return true
+ * @return false
+ */
+bool test_png_hostile_chunks()
+{
+    auto must_reject = [](const std::vector<uint8_t> &png, const char *what,
+                          const char *err_substr)
+    {
+        CFrameSet fs;
+        const std::string path = "tests/out/hostile.png";
+        if (parseBytes(fs, png, path.c_str()) ||
+            std::string(fs.getLastError()).find(err_substr) == std::string::npos)
+        {
+            LOGE("hostile: %s accepted [%s]", what, fs.getLastError());
+            return false;
+        }
+        return true;
+    };
+
+    // chunk declared larger than the fixed destination (valid CRC over oversized payload)
+    std::vector<uint8_t> png(std::begin(PNG_SIG), std::end(PNG_SIG));
+    appendChunk(png, "IHDR", std::vector<uint8_t>(64, 0xaa));
+    appendChunk(png, "IEND", {});
+    if (!must_reject(png, "oversized IHDR", "IHDR"))
+        return false;
+
+    png.assign(std::begin(PNG_SIG), std::end(PNG_SIG));
+    appendChunk(png, "PLTE", std::vector<uint8_t>(801, 0xaa)); // > 768
+    appendChunk(png, "IEND", {});
+    if (!must_reject(png, "oversized PLTE", "PLTE"))
+        return false;
+
+    png.assign(std::begin(PNG_SIG), std::end(PNG_SIG));
+    appendChunk(png, "PLTE", std::vector<uint8_t>(10, 0xaa)); // not %3
+    appendChunk(png, "IEND", {});
+    if (!must_reject(png, "PLTE not a multiple of 3", "PLTE"))
+        return false;
+
+    png.assign(std::begin(PNG_SIG), std::end(PNG_SIG));
+    appendChunk(png, "tRNS", std::vector<uint8_t>(300, 0xaa)); // > 256
+    appendChunk(png, "IEND", {});
+    if (!must_reject(png, "oversized tRNS", "tRNS"))
+        return false;
+
+    // hostile obLT chunks spliced into an otherwise valid stream (before IEND)
+    const std::vector<uint8_t> base = build4bppPng(false);
+    auto withOblt = [&base](const std::vector<uint8_t> &obltData)
+    {
+        std::vector<uint8_t> png(base.begin(), base.end() - 12); // drop IEND chunk
+        appendChunk(png, "obLT", obltData);
+        appendChunk(png, "IEND", {});
+        return png;
+    };
+    auto le32 = [](std::vector<uint8_t> &v, uint32_t n)
+    {
+        for (int b = 0; b < 4; ++b)
+            v.push_back(static_cast<uint8_t>((n >> (8 * b)) & 0xff));
+    };
+
+    std::vector<uint8_t> oblt;
+    le32(oblt, 0); le32(oblt, 2); le32(oblt, 1000); // v2, Count 1000
+    oblt.insert(oblt.end(), 8, 0x11);               // payload claims 8000 bytes
+    if (!must_reject(withOblt(oblt), "obLT v2 Count overrun", "obLT"))
+        return false;
+
+    oblt.clear();
+    le32(oblt, 0); le32(oblt, 0); le32(oblt, 1000); // v0, Count 1000
+    oblt.insert(oblt.end(), 8, 0x11);
+    if (!must_reject(withOblt(oblt), "obLT v0 Count overrun", "obLT"))
+        return false;
+
+    oblt.clear();
+    oblt.resize(8, 0); // shorter than the 12-byte obLT header
+    if (!must_reject(withOblt(oblt), "truncated obLT header", "obLT"))
+        return false;
+
+    // negative and absurd chunk lengths
+    png.assign(std::begin(PNG_SIG), std::end(PNG_SIG));
+    pushBE(png, 0xffffffffu); // decodes to -1
+    png.insert(png.end(), {'I', 'E', 'N', 'D'});
+    pushBE(png, 0);
+    if (!must_reject(png, "negative chunk size", "invalid chunk size"))
+        return false;
+
+    png.assign(std::begin(PNG_SIG), std::end(PNG_SIG));
+    pushBE(png, 0x7fffffffu); // larger than the whole file
+    png.insert(png.end(), {'I', 'D', 'A', 'T'});
+    png.insert(png.end(), 4, 0);
+    pushBE(png, 0);
+    if (!must_reject(png, "chunk size beyond file", "invalid chunk size"))
+        return false;
+
+    // the valid fixture (incl. a legal obLT v2) must still parse
+    const std::vector<uint8_t> valid = build4bppPng(true);
+    CFrameSet fs;
+    if (!parseBytes(fs, valid, "tests/out/hostile_ok.png") || fs.size() != 2)
+    {
+        LOGE("hostile: valid obLT v2 stream rejected [%s]", fs.getLastError());
+        return false;
+    }
+    return true;
+}
