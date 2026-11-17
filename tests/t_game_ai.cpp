@@ -755,9 +755,13 @@ namespace
         g_game->player().move(6, 9); // 3 tiles below
         const int16_t y0 = boss.y();
         g_game->manageBosses(1);
-        if (boss.y() <= y0)
+        // Maintainer ruling 2026-11-18: exactly one step per tick — the
+        // greedy fallback is skipped when the path AI moved the boss.
+        // (Un-gated double-move would advance 2 half-tiles.)
+        if (boss.y() != y0 + 1)
         {
-            LOGE("boss path: chasing boss did not advance (y %d -> %d)", y0, boss.y());
+            LOGE("boss path: chasing boss advanced %d half-tiles in one tick (y %d -> %d); expecting exactly 1",
+                 boss.y() - y0, y0, boss.y());
             return false;
         }
         return true;

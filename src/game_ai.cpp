@@ -133,15 +133,19 @@ void CGame::handleBossPath(CBoss &boss)
         return;
     }
 
+    bool pathMoved = false;
     const uint8_t algo = boss.data()->path;
     if (algo != BossData::Path::NONE)
     {
         auto pathAI = CPath::getPathAlgo(algo);
         if (pathAI)
-            boss.followPath(playerPos, *pathAI);
+            pathMoved = boss.followPath(playerPos, *pathAI);
     }
 
-    // Fallback movement
+    // Fallback movement: recovery only when the path AI did not move the
+    // boss this tick (maintainer ruling 2026-11-18: one move per tick).
+    if (pathMoved)
+        return;
     if (bx < player.x() && boss.canMove(JoyAim::AIM_RIGHT))
     {
         boss.move(JoyAim::AIM_RIGHT);
