@@ -77,7 +77,6 @@ CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAi
     m_type = type;
     m_aim = aim;
     m_pu = TILES_BLANK;
-    m_path = nullptr;
     m_algo = BossData::Path::NONE;
     m_frame = 0;
     m_ttl = CActor::NoTTL;
@@ -85,19 +84,10 @@ CActor::CActor(const uint8_t x, const uint8_t y, const uint8_t type, const JoyAi
     m_origin = Pos{x, y};
 }
 
-CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim) : m_path(nullptr)
+// delegates so both ctors share the aim validation (audit L85-97)
+CActor::CActor(const Pos &pos, uint8_t type, JoyAim aim)
+    : CActor(static_cast<uint8_t>(pos.x), static_cast<uint8_t>(pos.y), type, aim)
 {
-    m_x = pos.x;
-    m_y = pos.y;
-    m_type = type;
-    m_aim = aim;
-    m_pu = TILES_BLANK;
-    m_path = nullptr;
-    m_algo = BossData::Path::NONE;
-    m_frame = 0;
-    m_ttl = CActor::NoTTL;
-    m_attr = 0;
-    m_origin = pos;
 }
 
 CActor::CActor(CActor &&other) noexcept

@@ -49,8 +49,8 @@ tests and contradicted the intended semantics.)
 - L436-459, L417-425: [error-handling] Every failed field read returns `false` with no `LOGE`/`LOGW`, and a mid-record failure leaves the actor half-overwritten (fields mutated before the failure, `m_path` possibly replaced at L404) with no rollback or diagnostic. **FIXED 2026-11-18 (diagnostics half): both `CActor::read` and `CActor::readPath` read-lambdas now `LOGE` the failed size + stream offset, covering all field reads without per-field boilerplate (offset + fixed field order localizes the field; existing truncated/forged-record tests in `t_actor` exercise the path and stay green).** No rollback added: callers treat a `false` as fatal for the whole savegame load, so a half-read actor never enters play.
 
 ### Low
-- L69+L78, L85+L92: [shrink] `m_path` is set twice — once in the member-init list, again in the ctor body. Remove the body assignments.
-- L85-97: [bug] Second ctor lacks the aim validation the first ctor performs (L71-72); `AIM_UP`-out-of-range or arbitrary aims pass silently. Route both ctors through one validating init.
+- L69+L78, L85+L92: [shrink] `m_path` is set twice — once in the member-init list, again in the ctor body. Remove the body assignments. **FIXED 2026-11-18: body assignments deleted (init-list stands).**
+- L85-97: [bug] Second ctor lacks the aim validation the first ctor performs; arbitrary aims pass silently. Route both ctors through one validating init. **FIXED 2026-11-18: `CActor(Pos,...)` now delegates to the validating scalar ctor; one validating init, duplicate body gone. Side benefit: `m_origin` can no longer disagree with the truncated `m_x/m_y`. All in-tree callers pass literal/default valid aims, so tightening is behavior-neutral for them.**
 **FIXED 2026-11-18: `readCommon` rejects `m_aim >= TOTAL_AIMS && m_aim !=
 AIM_NONE` with LOGE (AIM_NONE stays legal — saved placeholder for inactive
 actors). Pinned in `t_actor` forged-record aim cases.**

@@ -14,7 +14,7 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `8ae7cd611a320e46` — covered by t_actor
+- [x] `src/actor.cpp` `cd3577ff5a9d4856` — covered by t_actor
 - [x] `src/actor.h` `403d9ae3a540e43f` — covered by t_actor
 - [x] `src/ai_path.cpp` `8e83d41e140b1d32` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
