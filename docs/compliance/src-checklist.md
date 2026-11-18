@@ -121,7 +121,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/Frame.h` `8f36eea27a514d0f` — covered by t_frame, t_frameset
 - [x] `src/shared/FrameSet.cpp` `8b6a502a7759dd42` — covered by t_frameset
 - [x] `src/shared/FrameSet.h` `c2ad06019dee15a3` — covered by t_frameset
-- [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
+- [x] `src/shared/IFile.h` `ffac8b69a6de4d72` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
 - [x] `src/shared/PngMagic.cpp` `8c644ec38f8f4962` — covered by t_pngmagic
 - [x] `src/shared/PngMagic.h` `8c9b54494f7128b9` — covered by t_pngmagic
