@@ -24,7 +24,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
 - [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f997bfc050e9663d`
-- [x] `src/boss.cpp` `ff8fee8736bf94b1` — covered by t_boss
+- [x] `src/boss.cpp` `04a94e61aa8e0786` — covered by t_boss
 - [x] `src/boss.h` `c4b8941365ec4562` — covered by t_boss
 - [x] `src/bossdata.cpp` `723ea50a3c49ce8c` — covered by t_bossdata
 - [x] `src/bossdata.h` `0f7efeb1c388d773` — covered by t_bossdata
@@ -63,8 +63,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/layerdata.h` `8c2ce0bbe17cc15e` — covered by t_tables
 - [x] `src/level.cpp` `cf0211482c836b0f` — covered by t_level
 - [x] `src/level.h` `d4498ca784adba50` — covered by t_level
-- [x] `src/logger.cpp` `f6d8efa613669664` — covered by t_logger
-- [ ] `src/logger.h` `306ea0b2f210dd1b` — covered by t_logger
+- [x] `src/logger.cpp` `8a953cf4a6759361` — covered by t_logger
+- [ ] `src/logger.h` `675db989f5a0c1a1` — covered by t_logger
 - [ ] `src/main.cpp` `add66424d2d85dab`
 - [x] `src/map.cpp` `48f1a503646865d5` — covered by t_map*, t_runtime
 - [x] `src/map.h` `2555c9ff4957ee4a` — covered by t_map*, t_runtime
@@ -128,7 +128,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/dot.h` `7c2b6c1c22085889` — covered by t_frame (Dot POD; CDotArray deleted 2026-11-18)
 - [x] `src/shared/helper.cpp` `17d69de5871db8d5` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*
-- [ ] `src/shared/logger.h` `306ea0b2f210dd1b`
+- [ ] `src/shared/logger.h` `675db989f5a0c1a1`
 - [ ] `src/shared/ss_limits.h` `9f51cf187e8d6572`
 
 ## src/shared/implementers/

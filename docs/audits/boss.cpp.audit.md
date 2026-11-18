@@ -26,7 +26,7 @@ documented inclusive `MAX_*` sanity bounds. Stale as of 2026-11-18 review.**
 - L62–70: [shrink] `isGhostBlocked()` calls `game->scanPos()` (a line scan) for every candidate tile inside the `canMove()` tile loop (L194–206) → O(tiles × scan) per boss per tick, just to read `result.isWater`. Fix: derive water from the tile def already fetched at L68, or cache. (needs runtime cost verification)
 
 ### Low
-**DECLINED 2026-11-18 (maintainer ruling — restored byte-identical): the per-type branch chain is deliberate design, a named extension point per boss type; it must not be collapsed to a ternary. LOGI/LOGW kept with it. - L495–508: [shrink] Four branches of `setSolidOperator()` all assign `&CBoss::isSolid`; the whole chain is `m_solidCheck = (m_bossData->type == BOSS_GHOST) ? &CBoss::isGhostBlocked : &CBoss::isSolid;`.
+**DECLINED 2026-11-18 (maintainer ruling — restored byte-identical): the chain is future-proofing — "coded that way to make it easier to extend later should there be newer operators added", one named branch per boss type as the wiring point. A DO-NOT-collapse comment now guards the function. - L495–508: [shrink] Four branches of `setSolidOperator()` all assign `&CBoss::isSolid`; the whole chain is `m_solidCheck = (m_bossData->type == BOSS_GHOST) ? &CBoss::isGhostBlocked : &CBoss::isSolid;`.
 - L495: [error-handling] **DECLINED 2026-11-18 (same ruling)** — `LOGI` stays with the branch chain.
 - L323–327: [shrink] **FIXED 2026-11-18** — `maxHp()` is now `hp * (2 + skill) / 2` (integer; identical results for all non-negative inputs, verified against the old fp form's floor).
 - L243: [shrink] **DECLINED 2026-11-18** — `sqrt` truncation left as-is; the audit itself rates it tolerable and callers only compare against `distance_*` thresholds.

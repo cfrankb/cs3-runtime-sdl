@@ -25,7 +25,7 @@
 #include <SDL3/SDL.h>
 #endif
 
-Logger::Level Logger::m_minLevel = Logger::L_INFO;
+std::atomic<Logger::Level> Logger::m_minLevel{Logger::L_INFO};
 FILE *Logger::m_output = nullptr;
 std::mutex Logger::m_mutex;
 

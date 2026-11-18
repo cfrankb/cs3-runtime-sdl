@@ -515,6 +515,10 @@ bool CBoss::write(IFile &tfile)
     return true;
 }
 
+// DO NOT collapse this per-type branch chain: one named branch per boss
+// type is the intended extension point for wiring a different solid-check
+// operator to a specific type when new ones are added
+// (maintainer ruling 2026-11-18; see docs/audits/boss.cpp.audit.md).
 void CBoss::setSolidOperator()
 {
     LOGI("set solidOperator for boss %.2x", m_bossData->type);

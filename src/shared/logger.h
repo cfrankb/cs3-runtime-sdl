@@ -24,6 +24,7 @@
 #ifndef __LOGGER_H__
 #define __LOGGER_H__
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
@@ -49,7 +50,9 @@ public:
     static Level level() { return m_minLevel; };
 
 private:
-    static Level m_minLevel;
+    // atomic: every LOGx macro reads the level while setLevel may write it
+    // from another thread (audit L41, data-race hardening)
+    static std::atomic<Level> m_minLevel;
     static FILE *m_output;
     static std::mutex m_mutex;
 };
@@ -66,15 +69,28 @@ private:
 #define LOGE(...) qCritical(__VA_ARGS__)
 #define LOGF(...) qFatal(__VA_ARGS__)
 #else
-#define LOGI(...)                          \
-    if (Logger::level() <= Logger::L_INFO) \
-    Logger::log(Logger::L_INFO, __FILE_NAME__, __VA_ARGS__)
-#define LOGW(...)                          \
-    if (Logger::level() <= Logger::L_WARN) \
-    Logger::log(Logger::L_WARN, __FILE_NAME__, __VA_ARGS__)
-#define LOGE(...)                           \
-    if (Logger::level() <= Logger::L_ERROR) \
-    Logger::log(Logger::L_ERROR, __FILE_NAME__, __VA_ARGS__)
+// do/while(0) wrappers make the macros single statements: an `else` after
+// LOGx(...) can no longer bind to the level-filter `if` (audit L60-68).
+// LOGF deliberately keeps its unbraced form (maintainer ruling BUG-H16):
+// call it as a standalone statement, never as the body of a bare `if`.
+#define LOGI(...)                           \
+    do                                      \
+    {                                       \
+        if (Logger::level() <= Logger::L_INFO) \
+            Logger::log(Logger::L_INFO, __FILE_NAME__, __VA_ARGS__); \
+    } while (0)
+#define LOGW(...)                           \
+    do                                      \
+    {                                       \
+        if (Logger::level() <= Logger::L_WARN) \
+            Logger::log(Logger::L_WARN, __FILE_NAME__, __VA_ARGS__); \
+    } while (0)
+#define LOGE(...)                            \
+    do                                       \
+    {                                        \
+        if (Logger::level() <= Logger::L_ERROR) \
+            Logger::log(Logger::L_ERROR, __FILE_NAME__, __VA_ARGS__); \
+    } while (0)
 // DO NOT DELETE LOGF or the USE_QFILE/Qt block above: they are kept
 // deliberately (maintainer decision 2026-11-17, see
 // docs/audits/logger.h.audit.md BUG-H16). An earlier agent removed them as
