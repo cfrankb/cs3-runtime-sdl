@@ -272,7 +272,10 @@ std::vector<JoyAim> BFS::findPath(ISprite &sprite, const Pos &goalPos) const
         for (size_t i = 0; i < g_deltas.size(); ++i)
         {
             Pos newPos = {static_cast<int16_t>(current.x + g_deltas[i].x), static_cast<int16_t>(current.y + g_deltas[i].y)};
-            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei || visited[newPos])
+            // find(), not operator[]: operator[] would default-insert false
+            // keys for every rejected neighbor (only true is ever inserted)
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei ||
+                visited.find(newPos) != visited.end())
                 continue;
 
             // probe canMove from the expanded node so the entered cell is checked
@@ -495,18 +498,21 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
                 continue;
 
             int newGCost = current->gCost + 1;
-            if (!nodes[newPos])
+            // find() first: operator[] here default-inserted a *null* entry for
+            // every probed neighbor and re-hashed on each access
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, manhattanDistance(newPos, goalPos), current);
                 openList.push(nodes[newPos].get());
             }
-            else if (newGCost < nodes[newPos]->gCost)
+            else if (newGCost < it->second->gCost)
             {
                 // BUG-C9: relax in place (see AStar); replacing the unique_ptr
                 // would free the Node still referenced by openList
-                nodes[newPos]->gCost = newGCost;
-                nodes[newPos]->parent = current;
-                openList.push(nodes[newPos].get());
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.push(it->second.get());
             }
         }
     }

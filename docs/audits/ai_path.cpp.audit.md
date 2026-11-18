@@ -31,9 +31,9 @@ re-search-every-turn behavior left as-is (plausible intentional retry).**
 emit `g_dirs` values; downstream `CGame::translate` switch made garbage aims
 inert but they polluted `setAim`). Pinned in `test_path_load_validation`.**
 - L584–585: [error-handling] `JoyAim dir` is read from the save with no range check against `TOTAL_AIMS`; a garbage value flows into `sprite.setAim()`/`canMove()`. (needs verification of downstream range handling)
-- L261, L465: [perf] `visited[newPos]` / `closedList[newPos]` in a lookup context default-inserts keys, bloating the map on every rejected neighbor. Use `.count()`/`find()` (as A* correctly does at L170).
-- L477: [perf] `nodes[newPos]` hashed twice (three times counting the assignment at L479); reuse a `find()` iterator like the AStar version does.
-- L381–401: [perf] `smoothPath` is O(n²) LOS probes, each probe itself an O(path) walk with sprite moves (L393). Acceptable for short paths; note only.
+- L261, L465: [perf] **FIXED 2026-11-18** — BFS lookup is now `visited.find(newPos) != visited.end()` (only `true` is ever inserted, so membership is equivalent); the AStarSmooth `closedList` probe was already converted to `find()` in the BUG-C9 round. Original finding: `visited[newPos]` / `closedList[newPos]` in lookup contexts default-inserted keys, bloating the map on every rejected neighbor.
+- L477: [perf] **FIXED 2026-11-18** — relaxation block now opens with one `nodes.find(newPos)`; the null/default insert is gone and the `else`-branch reads go through the iterator. Original finding: `nodes[newPos]` hashed up to three times per neighbor — and `if (!nodes[newPos])` *inserted a null entry* for every probed cell.
+- L381–401: [perf] **NOTED 2026-11-18** — accepted as-is per audit ("acceptable for short paths"): `smoothPath` remains O(n²) LOS probes, each an O(path) walk with sprite moves. No code change.
 - L41–49: [shrink] `g_dirs[]` and `g_deltas` are parallel arrays kept in sync only by a comment; merge into one `std::array<std::pair<Pos, JoyAim>, 4>` so the pairing is structural.
 - L385–391: [dead] Bounds check on `start`/`end` in `smoothPath` can never fire — every element of `path` was bounds-checked before it was pushed (L465). Defensive-only code.
 - L499–500, L524–525: [dead] Commented-out `LOGI` blocks.
