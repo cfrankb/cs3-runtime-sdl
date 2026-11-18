@@ -749,7 +749,7 @@ void CFrame::shiftDOWN(bool wrap)
 
 void CFrame::shiftLEFT(const bool wrap)
 {
-    if (m_height <= 1 || m_width <= 0)
+    if (m_width <= 1 || m_height <= 0)
     {
         m_lastError = "Invalid dimensions for shiftLEFT: " + std::to_string(m_width) + "x" + std::to_string(m_height);
         return;
@@ -770,7 +770,7 @@ void CFrame::shiftLEFT(const bool wrap)
 
 void CFrame::shiftRIGHT(const bool wrap)
 {
-    if (m_height <= 1 || m_width <= 0)
+    if (m_width <= 1 || m_height <= 0)
     {
         m_lastError = "Invalid dimensions for shiftRIGHT: " + std::to_string(m_width) + "x" + std::to_string(m_height);
         return;
@@ -830,6 +830,13 @@ void CFrame::copy(const CFrame *src)
 
 void CFrame::shadow(int factor)
 {
+    if (factor <= 0)
+    {
+        // (rgb & alpha) / factor was a SIGFPE for factor 0
+        m_lastError = "Invalid shadow factor: " + std::to_string(factor);
+        LOGW("CFrame::shadow: %s", m_lastError.c_str());
+        return;
+    }
     for (int y = 0; y < m_height; ++y)
     {
         for (int x = 0; x < m_width; ++x)

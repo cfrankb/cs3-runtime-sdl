@@ -231,6 +231,38 @@ bool test_frame_transforms()
             return false;
         }
     }
+    // 1-row x N frame must shift (guard previously tested m_height, refusing it)
+    {
+        CFrame r(4, 1);
+        for (int x = 0; x < 4; ++x)
+        {
+            r.at(x, 0) = static_cast<uint32_t>(x + 1);
+        }
+        r.shiftLEFT(false);
+        if (r.at(0, 0) != 2 || r.at(3, 0) != 0)
+        {
+            LOGE("shiftLEFT refused a valid 1-row frame");
+            return false;
+        }
+        r.shiftRIGHT(true);
+        if (r.at(0, 0) != 0 || r.at(1, 0) != 2)
+        {
+            LOGE("shiftRIGHT wrong on 1-row frame");
+            return false;
+        }
+    }
+    // shadow(0) must be refused, not divide-by-zero, and leave pixels alone
+    {
+        CFrame z(2, 1);
+        z.at(0, 0) = 0x40112233;
+        z.at(1, 0) = 0x40112233;
+        z.shadow(0);
+        if (z.at(0, 0) != 0x40112233)
+        {
+            LOGE("shadow(0) mutated the frame");
+            return false;
+        }
+    }
     return true;
 }
 

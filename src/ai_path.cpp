@@ -619,8 +619,9 @@ bool CPath::read(IFile &sfile)
     //////////////////////////////////////
     // Read Path (saved)
     m_cachedDirections.clear();
-    size_t pathSize = 0;
-    _R(&pathSize, DATA_SIZE);
+    uint16_t u16 = 0;
+    _R(&u16, DATA_SIZE);
+    size_t pathSize = u16;
     if (!checkBound(pathSize, MAX_PATH_SIZE))
         return false;
     for (size_t i = 0; i < pathSize; ++i)
@@ -637,11 +638,13 @@ bool CPath::read(IFile &sfile)
         m_cachedDirections.emplace_back(dir);
     }
     m_pathIndex = 0;
-    _R(&m_pathIndex, DATA_SIZE);
+    _R(&u16, DATA_SIZE);
+    m_pathIndex = u16;
     if (!checkBound(m_pathIndex, MAX_PATH_SIZE))
         return false;
     m_pathTimeout = 0;
-    _R(&m_pathTimeout, DATA_SIZE);
+    _R(&u16, DATA_SIZE);
+    m_pathTimeout = u16;
     if (!checkBound(m_pathTimeout, MAX_PATH_SIZE))
         return false;
 
@@ -656,14 +659,18 @@ bool CPath::write(IFile &tfile)
     };
 
     constexpr size_t DATA_SIZE = 2;
-    const auto pathSize = m_cachedDirections.size();
+    // values are bounded by MAX_PATH_SIZE / PATH_TIMEOUT_MAX, so the
+    // uint16 wire fields cannot truncate
+    const uint16_t pathSize = static_cast<uint16_t>(m_cachedDirections.size());
     _W(&pathSize, DATA_SIZE);
     for (const auto &dir : m_cachedDirections)
     {
         _W(&dir, sizeof(dir));
     }
-    _W(&m_pathIndex, DATA_SIZE);
-    _W(&m_pathTimeout, DATA_SIZE);
+    const uint16_t pathIndex = static_cast<uint16_t>(m_pathIndex);
+    const uint16_t pathTimeout = static_cast<uint16_t>(m_pathTimeout);
+    _W(&pathIndex, DATA_SIZE);
+    _W(&pathTimeout, DATA_SIZE);
 
     return true;
 }

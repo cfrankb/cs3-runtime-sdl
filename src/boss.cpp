@@ -452,7 +452,9 @@ bool CBoss::read(IFile &sfile)
     setSolidOperator();
 
     m_framePtr = 0;
-    _R(&m_framePtr, DATA_SIZE);
+    uint16_t u16 = 0;
+    _R(&u16, DATA_SIZE);
+    m_framePtr = u16;
     if (!checkBound(m_framePtr, MAX_FRAME))
         return false;
     _R(&m_x, sizeof(m_x)); // int16_t
@@ -463,7 +465,8 @@ bool CBoss::read(IFile &sfile)
         return false;
 
     m_hp = 0;
-    _R(&m_hp, DATA_SIZE);
+    _R(&u16, DATA_SIZE);
+    m_hp = u16;
     if (!checkBound(m_hp, MAX_HP))
         return false;
 
@@ -472,7 +475,8 @@ bool CBoss::read(IFile &sfile)
         return false;
 
     m_speed = 0;
-    _R(&m_speed, DATA_SIZE);
+    _R(&u16, DATA_SIZE);
+    m_speed = u16;
     if (!checkBound(m_speed, MAX_SPEED))
         return false;
 
@@ -500,13 +504,17 @@ bool CBoss::write(IFile &tfile)
     };
 
     constexpr size_t DATA_SIZE = 2;
+    uint16_t u16 = 0;
     _W(&m_bossData->type, sizeof(uint8_t));
-    _W(&m_framePtr, DATA_SIZE);
+    u16 = static_cast<uint16_t>(m_framePtr);
+    _W(&u16, DATA_SIZE);
     _W(&m_x, sizeof(m_x)); // uint16_t
     _W(&m_y, sizeof(m_y)); // uint16_t
-    _W(&m_hp, DATA_SIZE);
+    u16 = static_cast<uint16_t>(m_hp);
+    _W(&u16, DATA_SIZE);
     _W(&m_state, sizeof(m_state)); // uint8_t
-    _W(&m_speed, DATA_SIZE);
+    u16 = static_cast<uint16_t>(m_speed);
+    _W(&u16, DATA_SIZE);
     _W(&m_aim, sizeof(m_aim)); // uint8_t
 
     // write path

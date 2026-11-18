@@ -26,7 +26,7 @@ forged-record cases pinned by `t_ai_path::test_path_load_validation`.**
 **PARTIAL FIX 2026-11-18: comparison is now `== 0`. The empty-path
 re-search-every-turn behavior left as-is (plausible intentional retry).**
 - L491: [bug] `m_pathTimeout <= 0` on unsigned `size_t` is a tautological comparison; write `== 0`. Also when the recompute at L493 yields an empty path (L497–502), the timeout isn't consumed, so blocked actors re-run the full search **every** turn despite `PATH_TIMEOUT_MAX` — may be intentional retry, but it defeats the timeout's cost-limiting purpose.
-- L580, L589, L592: [bug] `_R(&pathSize, 2)` reads 2 bytes into a zero-initialized `size_t` (and same for `m_pathIndex`/`m_pathTimeout`): little-endian-dependent, and the matching `_W` at L607/612/613 silently truncates any value > 65535 on write (the 4096 cap is never enforced there). Use fixed-width `uint16_t` locals for the wire format.
+- L580, L589, L592: [bug] **FIXED 2026-11-18 (0x0011 cluster):** `read()`/`write()` now use `uint16_t` locals for `pathSize`/`m_pathIndex`/`m_pathTimeout` (wire layout unchanged; LE dependency gone, in-memory types no longer alias the 2-byte fields). Values stay bounded by `MAX_PATH_SIZE`/`PATH_TIMEOUT_MAX`. Original finding: `_R(&pathSize, 2)` reads 2 bytes into a zero-initialized `size_t` (and same for `m_pathIndex`/`m_pathTimeout`): little-endian-dependent, and the matching `_W` silently truncates any value > 65535 on write (the 4096 cap is never enforced there).
 **FIXED 2026-11-18: `read` rejects `dir >= TOTAL_AIMS` (searches only ever
 emit `g_dirs` values; downstream `CGame::translate` switch made garbage aims
 inert but they polluted `setAim`). Pinned in `test_path_load_validation`.**

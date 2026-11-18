@@ -216,8 +216,8 @@ public:
 
 private:
     Pos m_chuteTarget = {};
-    // ponytail: m_chuteTarget is still not serialized; adding it changes the
-    // save format (ENGINE_VERSION bump) — do it with the game.cpp save-load audit.
+    // serialized after gameStats since the 0x0011 save-format bump
+    // (S_CHUTE flag itself lives in gameStats)
     int m_lives = 0;
     int m_health = 0;
     int m_level = 0;

@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <unordered_map>
+#include <cstdint>
 #include <cstring>
 #include <stdarg.h>
 #include <string>
@@ -54,7 +55,7 @@ namespace GamePrivate
 {
     // Actor wire format changed (m_frame serialized separately from m_algo
     // after the union split, see actor.h); old saves are rejected.
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0010;
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0011;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     // Minimum on-disk bytes of one saved monster/boss record: the fixed
     // serialized fields plus at least one path-tag byte (CActor common
@@ -1319,6 +1320,12 @@ bool CGame::read(IFile &sfile)
         LOGE("failed to read gamestats");
         return false;
     };
+    // BUG-H18: chute landing position (S_CHUTE flag itself is in gameStats)
+    if (!m_chuteTarget.read(sfile))
+    {
+        LOGE("failed to read chute target");
+        return false;
+    }
 
     // reading map
     CMap &map = getMap();
@@ -1372,9 +1379,9 @@ bool CGame::read(IFile &sfile)
 
     // used items
     m_usedItems.clear();
-    size_t usedItemCount = 0;
+    uint32_t usedItemCount = 0;
     _R(&usedItemCount, sizeof(uint32_t));
-    for (size_t i = 0; i < usedItemCount; ++i)
+    for (uint32_t i = 0; i < usedItemCount; ++i)
     {
         Pos pos;
         pos.read(sfile);
@@ -1453,6 +1460,12 @@ bool CGame::write(IFile &tfile)
         LOGE("failed write gameStats");
         return false;
     }
+    // mirror of read(): chute landing position
+    if (!m_chuteTarget.write(tfile))
+    {
+        LOGE("failed write chute target");
+        return false;
+    }
 
     // saving map
     CMap &map = getMap();
@@ -1463,37 +1476,39 @@ bool CGame::write(IFile &tfile)
     }
 
     // monsters
-    size_t actorCount = m_monsters.size();
+    const uint32_t actorCount = static_cast<uint32_t>(m_monsters.size());
     _W(&actorCount, sizeof(uint32_t));
     for (size_t i = 0; i < m_monsters.size(); ++i)
     {
         if (!m_monsters[i].write(tfile))
         {
-            LOGE("failed to write actor %lu of %lu", i, actorCount);
+            LOGE("failed to write actor %lu of %u", i, actorCount);
             return false;
         }
     }
 
     // bosses
-    size_t bossCount = m_bosses.size();
+    const uint32_t bossCount = static_cast<uint32_t>(m_bosses.size());
     _W(&bossCount, sizeof(uint32_t));
     for (size_t i = 0; i < m_bosses.size(); ++i)
     {
         if (!m_bosses[i].write(tfile))
         {
-            LOGE("failed to write boss %lu of %lu", i, bossCount);
+            LOGE("failed to write boss %lu of %u", i, bossCount);
             return false;
         }
     }
 
     // used items
-    size_t usedItemCount = m_usedItems.size();
+    const uint32_t usedItemCount = static_cast<uint32_t>(m_usedItems.size());
     _W(&usedItemCount, sizeof(uint32_t));
     for (const Pos &pos : m_usedItems)
         pos.write(tfile);
 
     // save sfx
-    uint16_t sfxCount = (uint16_t)m_sfx.size();
+    if (m_sfx.size() > UINT16_MAX)
+        LOGW("sfx list of %zu exceeds uint16 save field; truncating", m_sfx.size());
+    const uint16_t sfxCount = static_cast<uint16_t>(m_sfx.size());
     _W(&sfxCount, sizeof(sfxCount));
     for (const auto &sfx : m_sfx)
         _W(&sfx, sizeof(sfx));

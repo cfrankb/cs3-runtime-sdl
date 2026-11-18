@@ -1928,13 +1928,13 @@ bool CGameMixin::read(IFile &sfile, std::string &name)
     _R(&m_healthRef, sizeof(m_healthRef));
     _R(&m_countdown, sizeof(m_countdown));
 
-    size_t ptr = 0;
+    uint32_t ptr = 0;
     sfile.seek(SAVENAME_PTR_OFFSET);
     // fseek(sfile, SAVENAME_PTR_OFFSET, SEEK_SET);
     _R(&ptr, sizeof(uint32_t));
     sfile.seek(ptr);
     // fseek(sfile, ptr, SEEK_SET);
-    size_t size = 0;
+    uint16_t size = 0;
     _R(&size, sizeof(uint16_t));
     std::vector<char> tmp(size + 1, 0); // NUL-terminated: name = tmp.data()
     _R(tmp.data(), size);
@@ -1954,10 +1954,12 @@ bool CGameMixin::write(IFile &tfile, const std::string &name)
     _W(&m_healthRef, sizeof(m_healthRef));
     _W(&m_countdown, sizeof(m_countdown));
 
-    const size_t ptr = tfile.tell();
-    const size_t size = name.size();
+    // save name must fit the uint16 wire length
+    const std::string trimmed = name.substr(0, 65535);
+    const uint32_t ptr = static_cast<uint32_t>(tfile.tell());
+    const uint16_t size = static_cast<uint16_t>(trimmed.size());
     _W(&size, sizeof(uint16_t));
-    _W(name.c_str(), name.size());
+    _W(trimmed.data(), trimmed.size());
     // save EOF offset
     auto offset = tfile.tell();
     tfile.seek(SAVENAME_PTR_OFFSET);
