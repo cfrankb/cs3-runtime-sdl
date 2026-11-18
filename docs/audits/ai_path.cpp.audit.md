@@ -13,7 +13,7 @@ Four path searchers (AStar, BFS, LineOfSight, AStarSmooth) plus a caching driver
 **FIXED 2026-11-17 (BUG-H13):** `dynamic_cast` + null-check + LOGE. **L516: [ub] `*static_cast<CActor *>(&sprite)` — unchecked downcast of `ISprite&` for every non-boss. Currently safe only by caller convention (`CActor::followPath` at actor.cpp:580/603 and `CBoss::followPath` at boss.cpp:372 are the only callers; non-CActor callers would be UB). Fix: hoist `shadowActorMove`-equivalent into `ISprite`, or `dynamic_cast<CActor *>` + null-check + `LOGE`. (needs verification that no future/other ISprite reaches this)
 
 ### Medium
-- L117–121 / L442–445: [algo] No staleness check on pop: a node already in `closedList` can be popped again (duplicates are pushed on every improvement) and re-expanded, wasting work; this is also the delivery mechanism for the Critical UAF. Same one-line guard as above fixes both.
+- L117–121 / L442–445: [algo] **FIXED 2026-11-17** (BUG-C9 relaxation redesign; stale-pop skip via `closedList` verified at ai_path.cpp:122-123 and :464-465). Original finding: No staleness check on pop: a node already in `closedList` can be popped again (duplicates are pushed on every improvement) and re-expanded, wasting work; this is also the delivery mechanism for the Critical UAF. Same one-line guard as above fixes both.
 **FIXED 2026-11-18: all three gates now `return false` (BUG-H6a policy);
 forged-record cases pinned by `t_ai_path::test_path_load_validation`.**
 - L581, L590, L593: [error-handling] `checkBound(...)` return values are ignored — a corrupt save with `pathSize`/`m_pathIndex`/`m_pathTimeout` over `MAX_PATH_SIZE` logs but is then loaded anyway. Fix: `if (!checkBound(...)) return false;`.

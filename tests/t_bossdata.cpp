@@ -160,12 +160,19 @@ bool test_bossdata_hostile()
     // non-object hitbox entries (pre-fix: null deref via hb.find on Number)
     write_file("hb_scalar.json",
                R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[7]})");
+    // 300-deep JSON array nesting: parser depth cap (64) must reject the
+    // file, not overflow the recursive-descent stack
+    write_file("hb_deep.json",
+               R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":)"
+               + std::string(300, '[') + std::string(300, ']') + "}");
     write_file("bosses.ini",
                "[ClampTest]\ntype 3\nhp 5\nmoving 2 hb_five.json\n"
                "[MissingKey]\ntype 4\nhp 5\nmoving 2 hb_missing.json\n"
                "[ScalarEntry]\ntype 5\nhp 5\nmoving 2 hb_scalar.json\n"
                "[BareWords]\nhp\ntype 6\nmoving # consumed by comment\n"
-               "aims\n");
+               "aims\n"
+               "[DeepNest]\ntype 7\nhp fast\nmoving 2 hb_deep.json\n"
+               "[RefTest]\ntype 8\nhp 5\nattack @nothere hb_five.json\nmoving 2\n");
 
     freeBossData();
     if (loadBossData(dir.c_str(), dir.c_str()) != 0)
@@ -195,11 +202,33 @@ bool test_bossdata_hostile()
         LOGE("bossdata: 5-box frame did not clamp to %d", MAX_HITBOX_PER_FRAME);
         return false;
     }
-    // malformed JSON files must have contributed nothing
+    // malformed/deep-nested JSON files must have contributed nothing, and
+    // the @ref line's hitbox file must be ignored (parse.py parity)
     if (g_hitboxCount != 1)
     {
         LOGE("bossdata: expected 1 hitbox frame, got %d", g_hitboxCount);
         return false;
+    }
+    // garbage hp ("hp fast") must be flagged and normalized to 0 at load
+    {
+        bool found = false;
+        for (int i = 0; i < g_bossCount; ++i)
+        {
+            if (std::string(g_bossData[i].name) == "DeepNest")
+            {
+                found = true;
+                if (g_bossData[i].hp != 0)
+                {
+                    LOGE("bossdata: garbage hp survived as %d", g_bossData[i].hp);
+                    return false;
+                }
+            }
+        }
+        if (!found)
+        {
+            LOGE("bossdata: DeepNest fixture boss missing after hostile load");
+            return false;
+        }
     }
     // garbage/missing aims (BareWords fixture) must be normalized to >= 1
     // at load so CBoss::currentFrame() can never divide by zero

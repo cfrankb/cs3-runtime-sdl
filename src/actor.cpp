@@ -24,6 +24,7 @@
 #include "sprtypes.h"
 #include "attr.h"
 #include <cstdio>
+#include <cstdlib> // std::abs(int) (audit L550)
 #include <cmath>
 #include <stdexcept>
 #include <memory>

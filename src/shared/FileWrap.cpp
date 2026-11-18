@@ -74,9 +74,11 @@ int CFileWrap::read(void *buf, int size)
         return m_memFile->read(buf, size);
     if (!m_file)
         return IFILE_NOT_OK;
+    if (size < 0)
+        return IFILE_NOT_OK; // negative length would wrap to a huge size_t
     if (size == 0)
         return IFILE_OK; // reading nothing is not a failure
-    return fread(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
+    return fread(buf, (size_t)size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
 }
 
 int CFileWrap::write(const void *buf, int size)
@@ -85,9 +87,11 @@ int CFileWrap::write(const void *buf, int size)
         return m_memFile->write(buf, size);
     if (!m_file)
         return IFILE_NOT_OK;
+    if (size < 0)
+        return IFILE_NOT_OK; // negative length would wrap to a huge size_t
     if (size == 0)
         return IFILE_OK; // writing nothing is not a failure
-    return fwrite(buf, size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
+    return fwrite(buf, (size_t)size, 1, m_file) == 1 ? IFILE_OK : IFILE_NOT_OK;
 }
 
 bool CFileWrap::open(const std::string_view &fileName, const std::string_view &mode)

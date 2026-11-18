@@ -59,6 +59,42 @@
 // ---------------------------------------------------------------------------
 namespace
 {
+    // INI numeric fields go through these instead of bare atoi: garbage
+    // ("hp = fast") used to silently become 0 at this mod-data trust
+    // boundary. Base 0 accepts the hex forms `type` may use.
+    int toInt(const std::string &s, const char *key)
+    {
+        if (s.empty())
+            return 0; // absent field defaults to 0, not garbage
+        const char *c = s.c_str();
+        char *endp = nullptr;
+        long v = std::strtol(c, &endp, 0);
+        if (endp == c || *endp != '\0')
+        {
+            LOGW("Warning: field '%s' value '%s' is not numeric; using 0\n", key, c);
+            return 0;
+        }
+        if (v > INT_MAX)
+            return INT_MAX;
+        if (v < INT_MIN)
+            return INT_MIN;
+        return static_cast<int>(v);
+    }
+    uint8_t toU8(const std::string &s, const char *key)
+    {
+        if (s.empty())
+            return 0;
+        const char *c = s.c_str();
+        char *endp = nullptr;
+        long v = std::strtol(c, &endp, 0);
+        if (endp == c || *endp != '\0' || v < 0 || v > 255)
+        {
+            LOGW("Warning: field '%s' value '%s' outside 0..255; using 0\n", key, c);
+            return 0;
+        }
+        return static_cast<uint8_t>(v);
+    }
+
     struct JsonValue
     {
         enum class Type : uint8_t
@@ -102,6 +138,7 @@ namespace
         {
             p = text;
             end = text + len;
+            depth_ = 0;
             skipWs();
             if (!parseValue(root_))
                 return false;
@@ -113,6 +150,7 @@ namespace
     private:
         const char *p = nullptr;
         const char *end = nullptr;
+        int depth_ = 0;
         JsonValue root_;
 
         void skipWs()
@@ -136,6 +174,18 @@ namespace
         }
 
         bool parseValue(JsonValue &out)
+        {
+            // depth cap: '[[[[...' in a modded file would otherwise
+            // overflow the stack via recursive descent (audit Medium)
+            if (depth_ >= 64)
+                return false;
+            ++depth_;
+            bool ok = parseValueInner(out);
+            --depth_;
+            return ok;
+        }
+
+        bool parseValueInner(JsonValue &out)
         {
             skipWs();
             if (p >= end)
@@ -176,6 +226,15 @@ namespace
                 JsonValue v;
                 if (!parseValue(v))
                     return false;
+                for (const auto &prev : out.obj)
+                {
+                    if (prev.first == kv.str)
+                    {
+                        LOGW("Warning: duplicate JSON key '%s'; keeping first\n",
+                             kv.str.c_str());
+                        break;
+                    }
+                }
                 out.obj.emplace_back(std::move(kv.str), std::move(v));
                 skipWs();
                 if (p < end && *p == ',')
@@ -497,36 +556,36 @@ namespace
                 return it == fields.end() ? std::string() : it->second;
             };
 
-            d.speed = std::atoi(get("speed").c_str());
-            d.speed_anime = std::atoi(get("speed_anime").c_str());
-            d.hp = std::atoi(get("hp").c_str());
-            d.type = static_cast<uint8_t>(std::strtoul(get("type").c_str(), nullptr, 0));
-            d.score = std::atoi(get("score").c_str());
-            d.damage = std::atoi(get("damage").c_str());
-            d.damage_attack = std::atoi(get("damage_attack").c_str());
-            d.damage_special1 = std::atoi(get("damage_special1").c_str());
-            d.damage_special2 = std::atoi(get("damage_special2").c_str());
+            d.speed = toInt(get("speed"), "speed");
+            d.speed_anime = toInt(get("speed_anime"), "speed_anime");
+            d.hp = toInt(get("hp"), "hp");
+            d.type = toU8(get("type"), "type");
+            d.score = toInt(get("score"), "score");
+            d.damage = toInt(get("damage"), "damage");
+            d.damage_attack = toInt(get("damage_attack"), "damage_attack");
+            d.damage_special1 = toInt(get("damage_special1"), "damage_special1");
+            d.damage_special2 = toInt(get("damage_special2"), "damage_special2");
             d.flags = resolveFlags(get("flags"));
             d.path = resolvePath(get("path"));
             d.bullet = resolveTile(get("bullet"));
-            d.bullet_rate = static_cast<uint8_t>(std::atoi(get("bullet_rate").c_str()));
+            d.bullet_rate = toU8(get("bullet_rate"), "bullet_rate");
             d.bullet_algo = resolvePath(get("bullet_algo"));
             d.bullet_sound = resolveSound(get("bullet_sound"));
             {
                 std::string ttl = get("bullet_ttl");
-                d.bullet_ttl = (ttl == "NoTTL") ? BossData::NoTTL : std::atoi(ttl.c_str());
+                d.bullet_ttl = (ttl == "NoTTL") ? BossData::NoTTL : toInt(ttl, "bullet_ttl");
             }
             d.attack_sound = resolveSound(get("attack_sound"));
-            d.distance_chase = std::atoi(get("distance_chase").c_str());
-            d.distance_pursuit = std::atoi(get("distance_pursuit").c_str());
-            d.distance_attack = std::atoi(get("distance_attack").c_str());
+            d.distance_chase = toInt(get("distance_chase"), "distance_chase");
+            d.distance_pursuit = toInt(get("distance_pursuit"), "distance_pursuit");
+            d.distance_attack = toInt(get("distance_attack"), "distance_attack");
             std::string goal = get("is_goal");
             d.is_goal = (goal == "true" || goal == "1");
             std::string show = get("show_details");
             d.show_details = (show == "true" || show == "1");
             d.color_hp = resolveColor(get("color_hp"));
             d.color_name = resolveColor(get("color_name"));
-            d.aims = std::atoi(get("aims").c_str());
+            d.aims = toInt(get("aims"), "aims");
             if (d.aims <= 0)
             {
                 // aim count feeds the frame layout and CBoss::currentFrame()
@@ -778,31 +837,46 @@ namespace
             }
             std::string hitboxFile = e.size() == 3 ? e[2] : "";
 
-            if (!hitboxFile.empty())
-            {
-                std::string full = baseDir + "/" + hitboxFile;
-                if (!readHitboxFile(full, GRID_SIZE, frame, sheet, hitboxFrames))
-                    return;
-            }
-
             if (e[1].front() == '@')
             {
                 // reference to another sequence already defined on this boss
                 std::string ref = e[1].substr(1);
                 auto it = seq.fields.find(ref + "_base");
-                if (it != seq.fields.end())
+                if (it == seq.fields.end())
                 {
-                    boss_seq_t s{};
-                    s.base = std::atoi(it->second.c_str());
-                    auto lit = seq.fields.find(ref + "_len");
-                    s.lenght = lit == seq.fields.end() ? 0 : std::atoi(lit->second.c_str());
-                    seq.fields[seqName + "_base"] = std::to_string(s.base);
-                    seq.fields[seqName + "_len"] = std::to_string(s.lenght);
+                    LOGW("Warning: '%s' on line %d references undefined sequence '%s'\n",
+                         seqName.c_str(), lineNo, ref.c_str());
+                    return;
                 }
+                if (!hitboxFile.empty())
+                    LOGW("Warning: hitbox file `%s` on line %d ignored for @ref sequence\n",
+                         hitboxFile.c_str(), lineNo); // parse.py ignores it too
+                boss_seq_t s{};
+                s.base = std::atoi(it->second.c_str());
+                auto lit = seq.fields.find(ref + "_len");
+                s.lenght = lit == seq.fields.end() ? 0 : std::atoi(lit->second.c_str());
+                seq.fields[seqName + "_base"] = std::to_string(s.base);
+                seq.fields[seqName + "_len"] = std::to_string(s.lenght);
                 return;
             }
 
-            int count = std::atoi(e[1].c_str());
+            if (!hitboxFile.empty())
+            {
+                std::string full = baseDir + "/" + hitboxFile;
+                // failure must NOT skip base/len below or every later
+                // sequence's frames shift (audit Medium); just lose the boxes
+                if (!readHitboxFile(full, GRID_SIZE, frame, sheet, hitboxFrames))
+                    LOGW("Warning: continuing '%s' on line %d without hitbox file '%s'\n",
+                         seqName.c_str(), lineNo, hitboxFile.c_str());
+            }
+
+            int count = toInt(e[1], seqName.c_str());
+            if (count < 0)
+            {
+                LOGW("Warning: negative frame count on line %d (%d); using 0\n",
+                     lineNo, count);
+                count = 0;
+            }
             seq.fields[seqName + "_base"] = std::to_string(frame);
             seq.fields[seqName + "_len"] = std::to_string(count);
 

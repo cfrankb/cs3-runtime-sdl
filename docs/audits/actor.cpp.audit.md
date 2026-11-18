@@ -4,7 +4,13 @@ Date: 2026-11-17
 ## Summary
 Overall the file is small and mostly clean (unique_ptr-owned path, deleted copy ops, symmetric serialization), but the aim-table lookup in `findNextDir` is a live out-of-bounds read when `m_aim == AIM_NONE` (0xff), which game code stores in actors routinely. Secondary concerns: the `m_frame`/`m_algo` union aliasing crossed through `startPath`, an enum→bool success check that treats `NoValidPath` as success, and silent deserialization failures. Counts: 0 Critical (1 downgraded to Low, see Triage), 1 High, 5 Medium, 7 Low.
 
-Status (re-verified against `src/actor.cpp` on 2026-11-18, `cs3-runtime-tests` green): the downgraded Critical is **closed** by the range guard now at `actor.cpp:289-291`; the High is **closed** (BUG-H12). Open: 5 Medium (incl. unvalidated `m_aim` from `read()`) + 7 Low.
+Status (re-verified line-by-line against `src/actor.cpp` on 2026-11-18,
+`cs3-runtime-tests` green): all Critical/High/Medium findings and 5 of 7
+Low findings are closed (fixed, ruled, or documented); the earlier "Open:
+5 Medium + 7 Low" tally was stale. Remaining open: the dead
+`operator^=` deletion (awaiting maintainer removal ruling) and the
+`const Pos` style item (declined — see Low entries). `<cstdlib>` include
+added 2026-11-18 for `std::abs(int)`.
 
 ## Findings
 
@@ -56,8 +62,8 @@ AIM_NONE` with LOGE (AIM_NONE stays legal — saved placeholder for inactive
 actors). Pinned in `t_actor` forged-record aim cases.**
 - L444: [error-handling] `m_aim` is deserialized raw with no range check, unlike the ctor which validates aim values; a corrupt save yields an arbitrary `m_aim` (0-255) that feeds the L288 table index. Add a post-read validity check with `LOGE` (defense in depth for the Critical finding).
 - L561-565: [error-handling] `move(int16_t, int16_t)` silently wrapped out-of-range/negative coordinates (y=-1 → 255, teleporting the actor off-map). **FIXED 2026-11-18 (maintainer ruling: "maps don't wrap; negative positions don't make sense"; throw variant rejected as per-move cost — "simply cap the coordinates"):** coordinates are now capped to the representable cell range [0, 255] via `std::clamp`; in-range behavior unchanged and the redundant `& 0xff` magic mask (the audit's buckets had no magic-number category, it surfaced only via this finding) is gone. CPath callers pass structurally in-grid coordinates, so the cap never engages in production. Pinned by `t_actor::test_actor_move_bounds` (in-range store; negative x/y and oversized coordinates cap to 0 / 255).
-- L527-530: [dead] Free `operator^=(JoyAim&, int)` has no callers anywhere in the repo (only its declaration in joyaim.h and this definition). Delete both.
-- L550-552: [shrink] `std::abs(int)` is used without including `<cstdlib>` (works via transitive includes only); also L537 `const Pos` return-by-value top-level const is noise.
+- L527-530: [dead] Free `operator^=(JoyAim&, int)` has no callers anywhere in the repo (only its declaration in joyaim.h and this definition). Delete both. **RE-VERIFIED DEAD 2026-11-18** (repo-wide `^=` grep: only the `joyaim.h:33` declaration and `actor.cpp:548` definition survive; all other hits are unrelated integer ops). Not deleted: public header surface, and the maintainer has ruled against dead-surface removals elsewhere (helper, LOGF, `setSolidOperator`) — deletion needs an explicit ruling.
+- L550-552: [shrink] `std::abs(int)` is used without including `<cstdlib>` (works via transitive includes only); also L537 `const Pos` return-by-value top-level const is noise. **PARTIALLY FIXED 2026-11-18: `<cstdlib>` included (actor.cpp). `const Pos` item CLOSED-DECLINED: the top-level const matches the `ISprite` base contract (`isprite.h:40 virtual const Pos pos() const = 0`), so it is not actor-local noise — removing it means touching the interface and every implementer, cosmetic-only.**
 
 ## Notes
 - `CGame::getGame()` (game.cpp:1683-1685) is a static singleton, so the `game->scanPos` deref at L175-176 is safe; `CGame::translate` (game.cpp:779) clamps at map edges, so all `map.at` indices from `canMove`/`tileAt`/`move` are in range.
