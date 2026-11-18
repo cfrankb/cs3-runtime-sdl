@@ -240,7 +240,7 @@ void CGame::handleBossHitboxContact(CBoss &boss)
                              playSound(SOUND_SPLASH01);
                              if (r.type != BossData::HitBoxType::SPECIAL1)
                              {
-                                 const bool justDied = boss.subtainDamage(ICE_CUBE_DAMAGE);
+                                 const bool justDied = boss.sustainDamage(ICE_CUBE_DAMAGE);
                                  if (justDied)
                                      addPoints(boss.data()->score);
                              }
@@ -797,7 +797,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
     // test boss hitbox
     // Hidden/Death bosses are deliberately NOT skipped: blast damage applies
     // whether or not the boss is on screen (maintainer ruling 2026-11-18).
-    // Corpse hits are already no-ops in CBoss::subtainDamage's death guard.
+    // Corpse hits are already no-ops in CBoss::sustainDamage's death guard.
     for (auto &boss : m_bosses)
     {
         int bossDamage = 0;
@@ -814,7 +814,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
                              });
         }
         if (bossDamage)
-            boss.subtainDamage(bossDamage);
+            boss.sustainDamage(bossDamage);
     }
 }
 

@@ -170,7 +170,6 @@ protected:
         INTERLINES = 2,
         Y_STATUS = 2,
         PLAYER_FRAMES = 8,
-        PLAYER_STD_FRAMES = 7,
         PLAYER_DOWN_INDEX = 8,
         PLAYER_TOTAL_FRAMES = 45,
         PLAYER_BOAT_FRAME = 44,

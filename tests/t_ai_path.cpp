@@ -209,6 +209,18 @@ bool test_pathfinding()
         return false;
     }
 
+    // maintainer ruling 2026-11-18: start == goal skips the search and
+    // reports NoValidPath (no full-grid re-exploration while touching)
+    {
+        CPath cp;
+        sprite.move(Pos{5, 5});
+        if (cp.followPath(sprite, Pos{5, 5}, aStar) != CPath::NoValidPath)
+        {
+            LOGE("start==goal: expected NoValidPath without search");
+            return false;
+        }
+    }
+
     fillMap(1); // leave a trivial map for any later test
     return true;
 }

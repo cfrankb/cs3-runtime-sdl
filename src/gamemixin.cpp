@@ -1383,7 +1383,7 @@ void CGameMixin::manageGamePlay()
             }
             else if (joyState[0] | joyState[1] | joyState[2] | joyState[3])
             {
-                m_playerFrameOffset = (m_playerFrameOffset + 1) & PLAYER_STD_FRAMES;
+                m_playerFrameOffset = (m_playerFrameOffset + 1) & (PLAYER_FRAMES - 1);
             }
             else
             {
@@ -1396,7 +1396,7 @@ void CGameMixin::manageGamePlay()
         }
         else
         {
-            m_playerFrameOffset = (m_playerFrameOffset + 1) % PLAYER_STD_FRAMES;
+            m_playerFrameOffset = (m_playerFrameOffset + 1) & (PLAYER_FRAMES - 1);
         }
     }
 

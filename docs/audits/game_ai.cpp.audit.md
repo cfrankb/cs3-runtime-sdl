@@ -19,10 +19,10 @@ The file is structurally sound — the deferred-delete (`deletedMonsters` as `st
 **CLOSED 2026-11-18 — DESIGN RULING (maintainer): blast damage applies to
 bosses regardless of state, Hidden included; the loop's lack of a state
 guard is intentional and now commented in `game_ai.cpp`. Corpse
-double-counting was verified impossible (`subtainDamage` fires `justDied`
+double-counting was verified impossible (`sustainDamage` fires `justDied`
 only on the death transition; repeat Death-state hits are no-ops). Pinned
 by `t_game_ai` scenario "hidden boss blast".**
-- L786-L803: [bug] (needs verification) `blastRadius` boss damage loop has no `boss.state()` check (unlike `manageBosses` L282/L292, which skip Hidden/Death). A dead boss can absorb splash and re-enter `subtainDamage`; if `subtainDamage` re-triggers death effects (score/state), killing near a corpse double-counts. Verify `CBoss::subtainDamage` and add a state guard.
+- L786-L803: [bug] (needs verification) `blastRadius` boss damage loop has no `boss.state()` check (unlike `manageBosses` L282/L292, which skip Hidden/Death). A dead boss can absorb splash and re-enter `sustainDamage`; if `sustainDamage` re-triggers death effects (score/state), killing near a corpse double-counts. Verify `CBoss::sustainDamage` and add a state guard.
 **VERIFIED 2026-11-18 — NOT A BUG: `CGame::addHealth` gates god mode
 internally (`!S_GOD_MODE_TIMER && hurtStage == HurtNone`, game.cpp:934-943),
 which is exactly what `isGodMode()` tests. Splash via `addHealth` respects
@@ -55,7 +55,7 @@ advance per gated tick.**
 - L978-L984: [error-handling] `queueRespawn(const int)` returns false silently on out-of-range index; add `LOGW` (the negative-to-`size_t` promotion guard itself is correct).
 
 ## Notes
-- Runtime verification needed for: (1) `CBoss::subtainDamage` re-death behavior against dead bosses (Medium L786 finding) and per-hitbox-tile repeat damage when two hitboxes overlap one icecube tile (L237-L242 applies `ICE_CUBE_DAMAGE` per `HitResult` even when the monster lookup already returned INVALID); (2) whether `testHitbox1` reports the same map position once per overlapping hitbox (drives both the double-damage question above and the L214 repeat player damage — player damage is protected by `std::max` so it is fine); (3) whether `addHealth` internally honors god mode; (4) whether `handleEgg` leaving `frame >= ANIMZ_EGG_HATCH_LEN` on the newly typed actor (L817-L823) causes out-of-range sprite frames downstream.
+- Runtime verification needed for: (1) `CBoss::sustainDamage` re-death behavior against dead bosses (Medium L786 finding) and per-hitbox-tile repeat damage when two hitboxes overlap one icecube tile (L237-L242 applies `ICE_CUBE_DAMAGE` per `HitResult` even when the monster lookup already returned INVALID); (2) whether `testHitbox1` reports the same map position once per overlapping hitbox (drives both the double-damage question above and the L214 repeat player damage — player damage is protected by `std::max` so it is fine); (3) whether `addHealth` internally honors god mode; (4) whether `handleEgg` leaving `frame >= ANIMZ_EGG_HATCH_LEN` on the newly typed actor (L817-L823) causes out-of-range sprite frames downstream.
 - `spawnBullet` (L91-L116) hands out a raw `CActor*` into the `m_monsters` vector; `handleBossBullet` uses it safely today (L188-L197, no intervening push). Any future code between spawn and use that touches `m_monsters` invalidates it — consider returning an index instead if this API spreads.
 - `m_spawns` entries with `active == 0` are never pruned (L54-L89); bounded by level lifetime, acceptable, but a `std::erase_if` at level load would keep the vector tidy.
 - Interplay: `shadowActorMove` (game.cpp:1868) requires the actor to have a live grid entry to move at all; the deferred-delete design leaves dead entries in `m_monsterGrid` until end-of-tick rebuild, which is precisely why the missing `deletedMonsters` guards (High findings) reach "live" indices of already-dead actors.

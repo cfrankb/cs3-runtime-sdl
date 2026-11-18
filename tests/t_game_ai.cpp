@@ -707,7 +707,7 @@ namespace
 
     // Maintainer ruling 2026-11-18: barrel blast damages bosses even while
     // Hidden (off screen); blastRadius deliberately applies no state guard
-    // and CBoss::subtainDamage's death guard keeps corpse hits as no-ops.
+    // and CBoss::sustainDamage's death guard keeps corpse hits as no-ops.
     bool testHiddenBossBlast()
     {
         const bossData_t *all = bossFixture();

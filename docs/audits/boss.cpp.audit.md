@@ -30,7 +30,7 @@ documented inclusive `MAX_*` sanity bounds. Stale as of 2026-11-18 review.**
 - L495: [error-handling] **DECLINED 2026-11-18 (same ruling)** — `LOGI` stays with the branch chain.
 - L323–327: [shrink] **FIXED 2026-11-18** — `maxHp()` is now `hp * (2 + skill) / 2` (integer; identical results for all non-negative inputs, verified against the old fp form's floor).
 - L243: [shrink] **DECLINED 2026-11-18** — `sqrt` truncation left as-is; the audit itself rates it tolerable and callers only compare against `distance_*` thresholds.
-- L329: [dead] **PARTIAL 2026-11-18** — negative-`lostHP` heal fixed (`std::max(lostHP, 0)` guard; no caller passes negatives today). Misspelling `subtainDamage` NOT renamed: 6 sites across 4 files including test comments — separate rename concern, needs maintainer OK on the API name.
+- L329: [dead] **RESOLVED 2026-11-18** — negative-`lostHP` heal fixed (`std::max(lostHP, 0)` guard; no caller passes negatives today). Rename `subtainDamage` → `sustainDamage` landed 2026-11-18 per maintainer ruling (all call sites + test comment updated; name-only, no serialization impact).
 - L387–468: [error-handling] **CLOSED 2026-11-18 — already covered**: the `_R` macro (`filemacros.h:30`) already `LOGE`s the failing field name/size/line and returns false at every site; the half-load-without-rollback half was rated acceptable by the audit itself.
 - L72–74: [shrink] **FIXED 2026-11-18** — `testHitbox1` takes both callbacks by `const &` (boss.h:68 + boss.cpp); call sites unchanged.
 - L365–368: [bug] **FIXED 2026-11-18** — `toPos` clamps to `INT16_MIN/MAX` before the cast instead of wrapping.

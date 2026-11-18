@@ -334,7 +334,7 @@ int CBoss::maxHp() const
     return m_bossData->hp * (2 + skill) / 2; // same values as hp*(skill*0.5+1), no fp (audit 323-327)
 }
 
-bool CBoss::subtainDamage(const int lostHP)
+bool CBoss::sustainDamage(const int lostHP)
 {
     bool justDied = false;
     m_hp = std::max(m_hp - std::max(lostHP, 0), 0); // a negative lostHP must not heal past maxHp (audit 332)

@@ -522,6 +522,11 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
 ////////////////////////////////////////////////
 CPath::Result CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPath &astar)
 {
+    // Maintainer ruling 2026-11-18: standing on the goal needs no search;
+    // skip the (expensive, always-empty) recompute instead of re-running it.
+    if (sprite.pos() == playerPos)
+        return Result::NoValidPath;
+
     // Check if path is invalid or timed out
     if (m_pathIndex >= m_cachedDirections.size() || m_pathTimeout == 0)
     {

@@ -20,6 +20,10 @@ forged-record cases pinned by `t_ai_path::test_path_load_validation`.**
 - L117 / L218 / L442: [perf] No node-expansion cap on any search. An unreachable goal forces a full-grid exploration, and each expansion does 4 × (move + canMove + move-back) sprite mutations (L174–177, L265–268, L469–472) — the most expensive inner loop possible. `MAX_PATH_SIZE` (L40) exists but only gates save loading. Fix: cap expansions (e.g. L40 * factor) and return `{}` with `LOGW`.
 **FIXED 2026-11-18: clamps negatives to 0.**
 - L649–651: [bug] `setTimeout(int)` assigns straight to `size_t m_pathTimeout`; a negative argument wraps to a huge value, disabling path expiry. Guard with `if (timeout >= 0)` / clamp.
+**RESOLVED 2026-11-18 (maintainer ruling: "if start==goal then don't do a path
+search"): `CPath::followPath` early-returns `NoValidPath` when
+`sprite.pos() == playerPos`, skipping the empty re-search. Searcher
+empty-vector semantics unchanged. Pinned in `test_pathfinding`.**
 - L123–155 / L223–255 / L309: [algo] "start == goal" returns an empty vector, indistinguishable from "no path"; `CPath::followPath` (L497) maps empty → `NoValidPath`, so an actor standing on its goal is reported as unpathable. Empty-vector-as-failure overloads `IPath::findPath`; if this matters, give `IPath` a `Result` out-param. (needs verification whether the gameplay symptom matters)
 
 ### Low
