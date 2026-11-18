@@ -84,6 +84,9 @@ CGameMixin::CGameMixin()
 
 CGameMixin::~CGameMixin()
 {
+    // finalize/close an open recording and release m_recorderFile's IFile*
+    // before member teardown (audit 85-87); safe when already stopped
+    stopRecorder();
 }
 
 /**
@@ -106,9 +109,14 @@ void CGameMixin::drawFont(CFrame &frame, int x, int y, const char *text, const C
     const int fontSize = FONT_SIZE;
     const int fontOffset = fontSize;
     const int textSize = strlen(text);
+    if (m_fontData.empty()) // no glyphs preloaded: data() is null (audit 111-116)
+        return;
     for (int i = 0; i < textSize; ++i)
     {
         uint8_t c = static_cast<uint8_t>(text[i]);
+        // control bytes must not negative-index the glyph atlas (audit 111-116)
+        if (c < ' ')
+            c = ' ';
         // const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
         //                                       : m_fontData.data() + (c - ' ') * fontOffset;
 
@@ -146,6 +154,8 @@ void CGameMixin::drawFont6x6(CFrame &bitmap, int x, int y, const char *text, con
     constexpr int fontSize = 6;
     constexpr int fontOffset = FONT_SIZE;
     const int textSize = strlen(text);
+    if (m_fontData.empty()) // no glyphs preloaded: data() is null (audit 111-116)
+        return;
     constexpr int rowIndex[] = {0, 2, 3, 4, 5, 6};
     constexpr int colIndex[] = {0, 2, 3, 4, 5, 6};
     enum
@@ -167,7 +177,10 @@ void CGameMixin::drawFont6x6(CFrame &bitmap, int x, int y, const char *text, con
 
     for (int i = 0; i < textSize; ++i)
     {
-        const uint8_t c = static_cast<uint8_t>(text[i]);
+        uint8_t c = static_cast<uint8_t>(text[i]);
+        // control bytes must not negative-index the glyph atlas (audit 170-175)
+        if (c < ' ')
+            c = ' ';
         //   const uint8_t *font = c >= CHARS_CUSTOM ? getCustomChars() + (c - CHARS_CUSTOM) * fontOffset
         //                                         : m_fontData.data() + (c - ' ') * fontOffset;
 
@@ -524,7 +537,7 @@ void CGameMixin::drawScreen(CFrame &bitmap)
     }
     else if (m_currentEvent == EVENT_SUGAR)
     {
-        const Color rectBG = isFullWidth && m_currentEvent >= MSG0 ? WHITE : DARKGRAY;
+        const Color rectBG = DARKGRAY; // m_currentEvent < MSG0 inside this branch (audit 525-527)
         const Color rectBorder = isPlayerHurt              ? PINK
                                  : visualcues.livesShimmer ? GREEN
                                                            : LIGHTGRAY;
@@ -937,13 +950,6 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         return _wu;
     };
 
-    auto printRect = [](const rect_t &rect, const std::string_view &name)
-    {
-        LOGI("%s (%d, %d) w:%d h: %d", name.data(), rect.x, rect.y, rect.width, rect.height);
-    };
-
-    (void)printRect;
-
     constexpr int MAX_HP_GAUGE = 64;
     constexpr int GRID_SIZE = 8;
     constexpr int HP_BAR_HEIGHT = 8;
@@ -1025,7 +1031,8 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
             continue;
 
         // Hp Rect
-        const float hpRatio = (float)boss.maxHp() / MAX_HP_GAUGE;
+        // data with maxHp == 0 would make the bar width hp()/0.0f (audit 1016)
+        const float hpRatio = boss.maxHp() > 0 ? (float)boss.maxHp() / MAX_HP_GAUGE : 1.0f;
         const rect_t hRect{
             .x = bRect.x,
             .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
@@ -1075,7 +1082,7 @@ void CGameMixin::centerCamera()
     const int my = std::min(lmy, map->height() > rows ? map->height() - rows : 0);
     m_cx = mx * 2;
     m_cy = my * 2;
-    LOGI("centerCamera cx=%d cy=%d", m_cx, m_cy);
+    // (audit 1066: per-re-center LOGI spam removed)
 }
 
 void CGameMixin::drawLevelIntro(CFrame &bitmap)
@@ -1799,7 +1806,8 @@ bool CGameMixin::handleInputString(char *inputDest, const size_t limit)
 
     for (int k = 0; k < Key_Count; ++k)
     {
-        m_keyRepeters[k] ? --m_keyRepeters[k] : 0;
+        if (m_keyRepeters[k])
+            --m_keyRepeters[k];
     }
 
     for (int k = 0; k < Key_Count; ++k)
@@ -2022,7 +2030,12 @@ void CGameMixin::recordGame()
         LOGE("cannot create: %s", path.c_str());
         return;
     }
-    write(m_recorderFile, name);
+    if (!write(m_recorderFile, name)) // audit 2013: don't start on a failed header
+    {
+        LOGE("cannot write recorder header for %s", path.c_str());
+        m_recorderFile.close();
+        return;
+    }
     m_recorder->start(&m_recorderFile, true);
 }
 
@@ -2036,7 +2049,12 @@ void CGameMixin::playbackGame()
         LOGE("cannot read: %s", path.c_str());
         return;
     }
-    read(m_recorderFile, name);
+    if (!read(m_recorderFile, name)) // audit 2027: don't play a headerless file
+    {
+        LOGE("cannot read recorder header for %s", path.c_str());
+        m_recorderFile.close();
+        return;
+    }
     openMusicForLevel(m_game->level());
     m_recorder->start(&m_recorderFile, false);
 }
@@ -2088,7 +2106,7 @@ void CGameMixin::drawEventText(CFrame &bitmap)
         const size_t maxLines = sizeof(message.lines) / sizeof(message.lines[0]);
         for (size_t i = 0; i < maxLines; ++i)
         {
-            const auto &line = std::move(message.lines[i]);
+            const auto &line = message.lines[i];
             if (line.size() == 0)
                 break;
             const int x = (getWidth() - line.size() * FONT_SIZE * message.scaleX) / 2;
@@ -2590,10 +2608,11 @@ void CGameMixin::drawGameStatus(CFrame &bitmap, const visualCues_t &visualcues)
 void CGameMixin::beginLevelIntro(CGame::GameMode mode)
 {
     LOGI("beginLevelIntro: %d", mode);
-    m_mutex.lock();
-    startCountdown(COUNTDOWN_INTRO);
-    m_game->loadLevel(mode);
-    m_mutex.unlock();
+    {
+        std::lock_guard<std::mutex> guard(m_mutex);
+        startCountdown(COUNTDOWN_INTRO);
+        m_game->loadLevel(mode);
+    }
     centerCamera();
     clearVisualStates();
 }

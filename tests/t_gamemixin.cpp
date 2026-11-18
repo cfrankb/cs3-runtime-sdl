@@ -284,7 +284,6 @@ bool test_gamemixin_primitives()
     TestRuntime rt;
     installFixture(rt);
     CFrame bmp(64, 64);
-    constexpr int FS = TestRuntime::FONT_SIZE;
 
     // 0xff glyph bytes => solid 8x8 block per char
     bmp.fill(BLACK);
@@ -1114,7 +1113,7 @@ bool test_gamemixin_input()
     if (rt.keyRepeter_(TestRuntime::Key_A) != TestRuntime::KEY_REPETE_DELAY)
         return fail("input repeter armed");
     // held key only repeats after KEY_REPETE_DELAY further polls
-    for (int i = 0; i < TestRuntime::KEY_REPETE_DELAY - 1; ++i)
+    for (int i = 0; i < static_cast<int>(TestRuntime::KEY_REPETE_DELAY) - 1; ++i)
         rt.handleInputString(buf, sizeof(buf));
     if (strcmp(buf, "A") != 0)
         return fail("input repeter held");
