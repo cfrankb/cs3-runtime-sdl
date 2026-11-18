@@ -77,7 +77,8 @@ protected slots:
         char name[MAX_NAME_LENGTH];
     };
 
-    hiscore_t &getHiScoreAtIndex(int i) { return m_hiscores[i]; }
+    // clamped so a bogus index can never index m_hiscores out of bounds (audit)
+    hiscore_t &getHiScoreAtIndex(int i) { return m_hiscores[i < 0 ? 0 : (i >= static_cast<int>(MAX_SCORES) ? MAX_SCORES - 1 : i)]; }
     int scoreRank() { return m_scoreRank; }
     bool recordScore() { return m_recordScore; }
     std::vector<std::string> &helptext() { return m_helptext; }

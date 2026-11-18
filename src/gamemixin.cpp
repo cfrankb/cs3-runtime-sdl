@@ -481,6 +481,8 @@ void CGameMixin::drawKeys(CFrame &bitmap)
     const CGame::userKeys_t &keys = game.keys();
     for (size_t i = 0; i < CGame::MAX_KEYS; ++i)
     {
+        if (x < 0) // narrow window: remaining keys would draw off-screen (audit)
+            break;
         const uint8_t &k = keys.tiles[i];
         const uint8_t &u = keys.indicators[i];
         if (k)
@@ -1873,6 +1875,8 @@ bool CGameMixin::handleInputString(char *inputDest, const size_t limit)
 bool CGameMixin::inputPlayerName()
 {
     const int j = m_scoreRank;
+    if (j < 0 || j >= static_cast<int>(MAX_SCORES)) // INVALID/out-of-range rank: nothing to edit (audit bounds)
+        return false;
     return handleInputString(m_hiscores[j].name,
                              sizeof(m_hiscores[j].name));
 }
@@ -1986,28 +1990,21 @@ void CGameMixin::clearButtonStates()
 void CGameMixin::fazeScreen(CFrame &bitmap, const int bitShift)
 {
     const uint32_t colorFilter = fazFilter(bitShift);
-    for (int y = 0; y < bitmap.height(); ++y)
-    {
-        for (int x = 0; x < bitmap.width(); ++x)
-        {
-            bitmap.at(x, y) =
-                ((bitmap.at(x, y) >> bitShift) & colorFilter) | ALPHA;
-        }
-    }
+    // flat row-major buffer, same direct access as CFrame::hline; the old
+    // per-pixel at() did two vector calls + bounds checks each way (audit)
+    uint32_t *px = bitmap.getRGB().data();
+    const int n = bitmap.width() * bitmap.height();
+    for (int i = 0; i < n; ++i)
+        px[i] = ((px[i] >> bitShift) & colorFilter) | ALPHA;
 }
 
 void CGameMixin::flashScreen(CFrame &bitmap)
 {
-    for (int y = 0; y < bitmap.height(); ++y)
-    {
-        for (int x = 0; x < bitmap.width(); ++x)
-        {
-            const auto &rgba = bitmap.at(x, y);
-            if (rgba & 0xffffff)
-                bitmap.at(x, y) =
-                    rgba | 0xffffff;
-        }
-    }
+    uint32_t *px = bitmap.getRGB().data();
+    const int n = bitmap.width() * bitmap.height();
+    for (int i = 0; i < n; ++i)
+        if (px[i] & 0xffffff)
+            px[i] |= 0xffffff;
 }
 
 void CGameMixin::stopRecorder()

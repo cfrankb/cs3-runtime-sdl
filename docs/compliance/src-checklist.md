@@ -48,8 +48,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/game_ai.cpp` `6745d964a9651d5d` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `0ea6125b955b22e1` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
-- [x] `src/gamemixin.h` `3ea5272cd8f29e2c` — covered by t_runtime
+- [x] `src/gamemixin.cpp` `6738eb7086567e81` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
+- [x] `src/gamemixin.h` `25c5a47c10a684af` — covered by t_runtime
 - [ ] `src/gamesfx.h` `056988236c70eea0`
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `174638c96b00ba1d` — covered by t_gamestats
