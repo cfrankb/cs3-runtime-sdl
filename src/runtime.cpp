@@ -1255,7 +1255,7 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         }
         file.close();
         if (!m_quiet)
-            LOGI("-> loaded %s: %d bytes", path.c_str(), size);
+            LOGI("-> loaded %s: %ld bytes", path.c_str(), size);
         *dest = data;
         return true;
     }

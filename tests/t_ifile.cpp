@@ -314,7 +314,7 @@ bool test_ifile_vector()
 
     if (out.size() != in.size())
     {
-        LOGE("vector count %u; expecting %u", out.size(), in.size());
+        LOGE("vector count %zu; expecting %zu", out.size(), in.size());
         return false;
     }
     for (size_t i = 0; i < in.size(); ++i)
@@ -322,7 +322,7 @@ bool test_ifile_vector()
         if (out[i].tileID != in[i].tileID || out[i].x != in[i].x ||
             out[i].y != in[i].y || out[i].delay != in[i].delay)
         {
-            LOGE("vector[%u] mismatch", i);
+            LOGE("vector[%zu] mismatch", i);
             return false;
         }
     }
@@ -602,13 +602,13 @@ bool test_ifile_serializer(IFile &file, const char *context)
         auto size = file.getSize();
         if (size != (long)expectedSize)
         {
-            LOGE("[%s][%s] filesize is %ld; expecting %u ", context, now, size, expectedSize);
+            LOGE("[%s][%s] filesize is %ld; expecting %zu ", context, now, size, expectedSize);
             return false;
         }
         auto pos = file.tell();
         if (file.tell() != (long)expectedPos)
         {
-            LOGE("[%s][%s] filepos is %ld; expecting %u ", context, now, pos, expectedPos);
+            LOGE("[%s][%s] filepos is %ld; expecting %zu ", context, now, pos, expectedPos);
             return false;
         }
 
@@ -688,7 +688,7 @@ bool test_ifile_serializer(IFile &file, const char *context)
     size_t leap = 10;
     if (!file.seek(expectedSize + leap))
     {
-        LOGE("seek(expectedSize + %u) failed", leap);
+        LOGE("seek(expectedSize + %zu) failed", leap);
         return false;
     }
     expectedPos = expectedSize + leap;

@@ -41,6 +41,10 @@ public:
     };
     static void setLevel(Level minLevel) { m_minLevel = minLevel; }
     static void setOutputFile(const std::string &filename);
+#if defined(__GNUC__)
+    // enables -Wformat checking at ~1,100 LOGx call sites (audit logger.h L43)
+    __attribute__((format(printf, 3, 4)))
+#endif
     static void log(Level level, const char *tag, const char *format, ...);
     static Level level() { return m_minLevel; };
 

@@ -393,7 +393,7 @@ bool CActor::readPath(IFile &sfile)
     {
         if (sfile.read(ptr, size) != IFILE_OK)
         {
-            LOGE("CActor::readPath: failed to read %d bytes at %ld", size, sfile.tell());
+            LOGE("CActor::readPath: failed to read %zu bytes at %ld", size, sfile.tell());
             return false;
         }
         return true;
@@ -424,7 +424,7 @@ bool CActor::read(IFile &sfile)
     {
         if (sfile.read(ptr, size) != IFILE_OK)
         {
-            LOGE("CActor::read: failed to read %d bytes at %ld", size, sfile.tell());
+            LOGE("CActor::read: failed to read %zu bytes at %ld", size, sfile.tell());
             return false;
         }
         return true;

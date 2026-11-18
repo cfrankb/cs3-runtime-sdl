@@ -86,7 +86,7 @@ bool test_map()
     map.fill(' ');
     if (map.count(' ') != map.size())
     {
-        LOGE("map cound failed. returned %d while expecting %d",
+        LOGE("map cound failed. returned %zu while expecting %zu",
              map.count(' '), map.size());
         return false;
     }
@@ -114,7 +114,7 @@ bool test_map()
     map.set(3, 0, 0x3);
     if (map.count(0x03) != 4)
     {
-        LOGE("map cound failed. returned %d while expecting %d",
+        LOGE("map cound failed. returned %zu while expecting %d",
              map.count(0x03), 4);
         return false;
     }

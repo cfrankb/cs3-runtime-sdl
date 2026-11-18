@@ -147,7 +147,7 @@ void EngineHW::preloadAssets()
 
     if (m_assetFiles.size() < MAX_ASSET)
     {
-        LOGE("not enought assets defined: %d (should be %d)", m_assetFiles.size(), MAX_ASSET);
+        LOGE("not enought assets defined: %zu (should be %d)", m_assetFiles.size(), MAX_ASSET);
         return;
     }
 
