@@ -24,8 +24,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
 - [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f997bfc050e9663d`
-- [x] `src/boss.cpp` `2c42d33bfdd0c576` — covered by t_boss
-- [x] `src/boss.h` `68c87debad7456b0` — covered by t_boss
+- [x] `src/boss.cpp` `ff8fee8736bf94b1` — covered by t_boss
+- [x] `src/boss.h` `c4b8941365ec4562` — covered by t_boss
 - [x] `src/bossdata.cpp` `723ea50a3c49ce8c` — covered by t_bossdata
 - [x] `src/bossdata.h` `0f7efeb1c388d773` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`

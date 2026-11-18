@@ -17,6 +17,9 @@
 */
 
 #include <cmath>
+
+#include <algorithm>
+#include <cstdint>
 #include "boss.h"
 #include "game.h"
 #include "tilesdata.h"
@@ -70,8 +73,8 @@ bool CBoss::isGhostBlocked(const Pos &pos) const
 }
 
 std::vector<HitResult> CBoss::testHitbox1(const CMap &map,
-                                          hitboxTestCallback_t testCallback,
-                                          hitboxActionCallback_t actionCallback) const
+                                          const hitboxTestCallback_t &testCallback,
+                                          const hitboxActionCallback_t &actionCallback) const
 {
     std::vector<HitResult> results;
 
@@ -281,13 +284,15 @@ void CBoss::animate()
         return;
     }
 
-    int maxFrames = seq->lenght;
-    ++m_framePtr;
-    if (maxFrames == 0)
+    const int maxFrames = seq->lenght;
+    if (maxFrames <= 0)
     {
-        // sanity check
+        // zero-length seq: no advance, and no Hurt->Patrol-style transitions
+        // either (the old 0 >= 0 fallthrough ran them; audit 284-301)
         m_framePtr = 0;
+        return;
     }
+    ++m_framePtr;
 
     if (m_framePtr >= maxFrames)
     {
@@ -325,14 +330,14 @@ void CBoss::setState(const BossState state)
 
 int CBoss::maxHp() const
 {
-    auto skill = (int)CGame::getGame()->skill();
-    return (int)m_bossData->hp * ((skill * 0.5) + 1);
+    const auto skill = (int)CGame::getGame()->skill();
+    return m_bossData->hp * (2 + skill) / 2; // same values as hp*(skill*0.5+1), no fp (audit 323-327)
 }
 
 bool CBoss::subtainDamage(const int lostHP)
 {
     bool justDied = false;
-    m_hp = std::max(m_hp - lostHP, 0);
+    m_hp = std::max(m_hp - std::max(lostHP, 0), 0); // a negative lostHP must not heal past maxHp (audit 332)
     if (m_hp == 0)
     {
         if (m_state != Death)
@@ -367,7 +372,9 @@ int CBoss::damage(const BossData::HitBoxType hbType) const
 
 const Pos CBoss::toPos(int x, int y)
 {
-    return Pos{static_cast<int16_t>(x), static_cast<int16_t>(y)};
+    // clamp instead of silently wrapping through int16_t (audit 365-368)
+    return Pos{static_cast<int16_t>(std::clamp<int>(x, INT16_MIN, INT16_MAX)),
+               static_cast<int16_t>(std::clamp<int>(y, INT16_MIN, INT16_MAX))};
 }
 
 bool CBoss::followPath(const Pos &playerPos, const IPath &astar)
