@@ -104,6 +104,7 @@ int main(int argc, char *args[])
         FCT(test_png_4bpp),
         FCT(test_png_filters),
         FCT(test_png_hostile_chunks),
+        FCT(test_png_iend_idat_plte),
         FCT(test_frameset),
         FCT(test_frameset_families),
         FCT(test_frameset_reject),

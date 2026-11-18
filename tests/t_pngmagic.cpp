@@ -843,3 +843,125 @@ bool test_png_hostile_chunks()
     }
     return true;
 }
+
+/**
+ * @brief Medium cluster 2026-11-18: post-IEND chunks are ignored (writer
+ *        emits obLT before IEND), a valid zlib stream that decodes shorter
+ *        than pitch*height is rejected, and a missing PLTE yields the
+ *        zero-initialized palette instead of indeterminate stack colors.
+ */
+bool test_png_iend_idat_plte()
+{
+    const std::vector<uint8_t> base = build4bppPng(false); // 8x8 4-bit, 1 frame
+
+    // copy base chunks in order, omitting one chunk type
+    auto copyChunks = [&base](const char *skip)
+    {
+        std::vector<uint8_t> out(std::begin(PNG_SIG), std::end(PNG_SIG));
+        size_t p = 8;
+        while (p + 12 <= base.size())
+        {
+            const uint32_t len = (uint32_t(base[p]) << 24) | (uint32_t(base[p + 1]) << 16) |
+                                 (uint32_t(base[p + 2]) << 8) | base[p + 3];
+            const std::string type(base.begin() + p + 4, base.begin() + p + 8);
+            if (type != skip)
+                out.insert(out.end(), base.begin() + p, base.begin() + p + 12 + len);
+            p += 12 + len;
+        }
+        return out;
+    };
+
+    // 1) junk bytes after IEND must still parse
+    CFrameSet trailing_fs;
+    std::vector<uint8_t> trailing = copyChunks("");
+    trailing.insert(trailing.end(), 8, 0x5a);
+    if (!parseBytes(trailing_fs, trailing, "tests/out/iend1.png"))
+    {
+        LOGE("iend: trailing garbage after IEND rejected [%s]", trailing_fs.getLastError());
+        return false;
+    }
+
+    // 1b) an obLT smuggled AFTER IEND must be ignored (a processed v2
+    // Count=2 would split the 8x8 image into two 4x8 frames)
+    CFrameSet smuggled_fs;
+    std::vector<uint8_t> smuggled = copyChunks("");
+    std::vector<uint8_t> oblt;
+    const uint32_t fields[3] = {0, 2, 2}; // Reserved, Version 2, Count
+    for (const uint32_t f : fields)
+    {
+        for (int b = 0; b < 4; ++b)
+            oblt.push_back(static_cast<uint8_t>((f >> (8 * b)) & 0xff));
+    }
+    oblt.insert(oblt.end(), 32, 0); // two 4x8 units
+    appendChunk(smuggled, "obLT", oblt);
+    if (!parseBytes(smuggled_fs, smuggled, "tests/out/iend2.png"))
+    {
+        LOGE("iend: post-IEND obLT stream rejected [%s]", smuggled_fs.getLastError());
+        return false;
+    }
+    if (smuggled_fs.size() != 1)
+    {
+        LOGE("iend: post-IEND obLT was processed (frames=%zu)", smuggled_fs.size());
+        return false;
+    }
+    if (smuggled_fs[0]->width() != 8)
+    {
+        LOGE("iend: smuggled obLT resized frame (w=%d)", smuggled_fs[0]->width());
+        return false;
+    }
+
+    // 2) valid zlib stream that decompresses shorter than pitch*height
+    std::vector<uint8_t> shortIdat(std::begin(PNG_SIG), std::end(PNG_SIG));
+    for (size_t p = 8; p + 12 <= base.size();)
+    {
+        const uint32_t len = (uint32_t(base[p]) << 24) | (uint32_t(base[p + 1]) << 16) |
+                             (uint32_t(base[p + 2]) << 8) | base[p + 3];
+        const std::string type(base.begin() + p + 4, base.begin() + p + 8);
+        if (type == "IEND")
+            break;
+        if (type != "IDAT")
+            shortIdat.insert(shortIdat.end(), base.begin() + p, base.begin() + p + 12 + len);
+        p += 12 + len;
+    }
+    const std::vector<uint8_t> tiny(8, 0); // expected pitch*height is 5*8=40
+    std::vector<uint8_t> z(compressBound(tiny.size()));
+    uLongf zlen = z.size();
+    if (compress2(z.data(), &zlen, tiny.data(), tiny.size(), Z_DEFAULT_COMPRESSION) != Z_OK)
+    {
+        LOGE("iend: compress2 failed");
+        return false;
+    }
+    z.resize(zlen);
+    appendChunk(shortIdat, "IDAT", z);
+    appendChunk(shortIdat, "IEND", {});
+    CFrameSet short_fs;
+    if (parseBytes(short_fs, shortIdat, "tests/out/iend3.png") ||
+        std::string(short_fs.getLastError()).find("truncated IDAT") == std::string::npos)
+    {
+        LOGE("iend: short decompression accepted [%s]", short_fs.getLastError());
+        return false;
+    }
+
+    // 3) PLTE omitted: parses with zero palette (index0 alpha 0 via tRNS)
+    std::vector<uint8_t> noplte = copyChunks("PLTE");
+    CFrameSet noplte_fs;
+    if (!parseBytes(noplte_fs, noplte, "tests/out/iend4.png"))
+    {
+        LOGE("iend: no-PLTE parse failed [%s]", noplte_fs.getLastError());
+        return false;
+    }
+    for (int y = 0; y < 8; ++y)
+    {
+        for (int x = 0; x < 8; ++x)
+        {
+            const uint32_t want = (x % 2 == 0) ? 0x00000000u : 0xff000000u;
+            if (noplte_fs[0]->at(x, y) != want)
+            {
+                LOGE("iend: no-PLTE pixel (%d,%d) = %08x; expecting %08x", x, y,
+                     noplte_fs[0]->at(x, y), want);
+                return false;
+            }
+        }
+    }
+    return true;
+}

@@ -123,8 +123,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/shared/FrameSet.h` `c2ad06019dee15a3` — covered by t_frameset
 - [x] `src/shared/IFile.h` `068f59b4769e68a4` — covered by t_ifile
 - [x] `src/shared/ISerial.h` `8bbb96943065cc61` — covered by t_ifile
-- [x] `src/shared/PngMagic.cpp` `2bceaffdd6ef8596` — covered by t_pngmagic
-- [x] `src/shared/PngMagic.h` `5f8dce06554f5f2c` — covered by t_pngmagic
+- [x] `src/shared/PngMagic.cpp` `8c644ec38f8f4962` — covered by t_pngmagic
+- [x] `src/shared/PngMagic.h` `8c9b54494f7128b9` — covered by t_pngmagic
 - [x] `src/shared/dot.h` `7c2b6c1c22085889` — covered by t_frame (Dot POD; CDotArray deleted 2026-11-18)
 - [x] `src/shared/helper.cpp` `17d69de5871db8d5` — covered by t_helper, t_runtime, t_map*
 - [x] `src/shared/helper.h` `75c27618faf532c9` — covered by t_runtime, t_map*

@@ -32,7 +32,7 @@ consumer table (`TILES_TOTAL_COUNT` for `baseID()==0` layers feeding
 and `g_layerdata`) with `TILES_BLANK`/no-sprite; one `LOGW` carries the
 total count; `CMap`/`CLayer` untouched by ruling. Pinned by
 `t_game::testMapTileSanitiser`.
-- L184, L229, L236, L347: [bug] `const uint8_t c = map.at(...)` / `m_pu = map.at(...)` truncate `CMap::at`'s `uint16_t` return (map.h:127). Latent while tile IDs stay < 256 (none found in tilesdefs.h today, needs verification against level archives); fix: use `uint16_t` locals or an explicit checked narrowing. `m_pu` itself is `uint8_t` (actor.h:153), so full fix touches the member type.
+- L184, L229, L236, L347: [bug] `const uint8_t c = map.at(...)` / `m_pu = map.at(...)` truncate `CMap::at`'s `uint16_t` return (map.h:127). **CLOSED 2026-11-18 — superseded by the maintainer uint16_t ruling above: all four receiving locals and `m_pu` are `uint16_t` today (actor.cpp:182, 227, 234, 338 + `tileAt` return), `ENGINE_VERSION` `0x0200_0010`. Line was stale text under that stamp.**
 - L269-273: [bug] `setPos()` teleports without moving the map cell or re-syncing `m_pu`; a subsequent `move()` (L230) then writes the stale `m_pu` from the old cell into the new one.
 **DOCUMENTED 2026-11-18 (maintainer ruling).** Not a bug: `setPos()`
 deliberately moves only the actor and never touches the map — a use
