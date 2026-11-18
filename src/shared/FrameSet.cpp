@@ -223,8 +223,11 @@ bool CFrameSet::writeSolid(IFile &file)
     {
         if (!v.empty() && k.size() <= TAG_KEY_MAX && v.size() <= TAG_VAL_MAX)
         {
-            file << k;
-            file << v;
+            if (!(file << k) || !(file << v)) // disk path can fail mid-tags (audit L216)
+            {
+                m_lastError = "fail to write tag payload";
+                return false;
+            }
         }
         if (k.size() > TAG_KEY_MAX || v.size() > TAG_VAL_MAX)
         {
@@ -521,8 +524,8 @@ bool CFrameSet::read(IFile &file)
         result = false;
     }
 
-    // Warn if extra data remains
-    if (file.tell() < fileSize)
+    // Warn if extra data remains (only when the read itself succeeded, audit L497)
+    if (result && file.tell() < fileSize)
     {
         LOGW("Extra data after OBL5 frame set; possible format mismatch");
     }
@@ -625,7 +628,7 @@ int CFrameSet::operator--()
 int CFrameSet::add(CFrame *pFrame)
 {
     m_frames.emplace_back(pFrame);
-    return m_frames.size() - 1;
+    return static_cast<int>(m_frames.size() - 1);
 }
 
 void CFrameSet::insertAt(int i, CFrame *pFrame)
@@ -1027,7 +1030,9 @@ bool CFrameSet::importOBL5(IFile &file, const long org)
     file.seek(org);
     if (!frameSet.read(file))
     {
-        m_lastError = "unsupported OBL5 version";
+        // carry the real cause (dimensions/zlib/truncation) instead of the generic text
+        const char *inner = frameSet.getLastError();
+        m_lastError = (inner && *inner) ? inner : "unsupported OBL5 version";
         return false;
     }
     auto fileSize = file.getSize();
@@ -1060,7 +1065,11 @@ bool CFrameSet::importOBL4(IFile &file, const long org)
     }
 
     int32_t size = 0;
-    file >> size;
+    if (!(file >> size)) // truncated stream would leave 'size' indeterminate (audit L1028)
+    {
+        m_lastError = "Failed to read OBL4 frame count";
+        return false;
+    }
 
     // Validate number of frames
     if (size <= 0 || size > MAX_IMAGES)
@@ -1073,14 +1082,21 @@ bool CFrameSet::importOBL4(IFile &file, const long org)
     std::vector<std::unique_ptr<CFrame>> tmpFrames;
     tmpFrames.reserve(size);
 
-    int32_t mode;
-    file >> mode;
+    int32_t mode = 0;
+    if (!(file >> mode)) // audit L1028: unchecked >> left mode indeterminate
+    {
+        m_lastError = "Failed to read OBL4 mode";
+        return false;
+    }
     for (int i = 0; i < size; ++i)
     {
-        int32_t len;
-        int32_t hei;
-        file >> len;
-        file >> hei;
+        int32_t len = 0;
+        int32_t hei = 0;
+        if (!(file >> len) || !(file >> hei)) // audit L1028: dimension check read UB
+        {
+            m_lastError = "Failed to read OBL4 frame dimensions";
+            return false;
+        }
 
         // Validate dimensions
         if (len <= 0 || hei <= 0 || len > MAX_IMAGE_SIZE || hei > MAX_IMAGE_SIZE)
@@ -1118,7 +1134,8 @@ bool CFrameSet::importOBL4(IFile &file, const long org)
         {
             // Zlib-compressed mode
             uint32_t nSrcLen = 0;
-            if (file.read(&nSrcLen, sizeof(nSrcLen)) != IFILE_OK || nSrcLen <= 0 || nSrcLen > fileSize - file.tell())
+            if (file.read(&nSrcLen, sizeof(nSrcLen)) != IFILE_OK || nSrcLen <= 0 ||
+                static_cast<long>(nSrcLen) > static_cast<long>(fileSize) - file.tell()) // signed math (audit L1072)
             {
                 m_lastError = "Invalid or truncated compressed size in OBL4";
                 return false;
@@ -1240,6 +1257,16 @@ bool CFrameSet::importOBL3(IFile &file, const long org)
     if (numImages == 0 || numImages > MAX_IMAGES)
     { // Arbitrary max to prevent DoS-like attacks
         m_lastError = "Invalid number of images in OBL3 header";
+        return false;
+    }
+
+    // gate iLen/iHei in uint32 before the *OBL3_GRANULAR multiply can wrap
+    // (audit L1197: iLen = 2^28+k wraps to <=512 and sails the int gate)
+    if (oblHead.iLen == 0 || oblHead.iHei == 0 ||
+        oblHead.iLen > static_cast<uint32_t>(MAX_IMAGE_SIZE / OBL3_GRANULAR) ||
+        oblHead.iHei > static_cast<uint32_t>(MAX_IMAGE_SIZE / OBL3_GRANULAR))
+    {
+        m_lastError = "Invalid frame dimensions in OBL3 header";
         return false;
     }
 
