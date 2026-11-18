@@ -400,6 +400,47 @@ void CGame::manageTrigger(const int x, const int y, const uint8_t attr)
  * @return true - upon success
  * @return false
  */
+/**
+ * @brief Replace tile IDs outside the table each layer feeds
+ *
+ * Maintainer ruling 2026-11-18: run at the engine's map ingest points
+ * (loadLevel, savegame read). CMap/CLayer stay untouched. baseID==0 layers
+ * feed tileDefs (limit TILES_TOTAL_COUNT); the rest feed the animator
+ * tables and g_layerdata (limit TOTAL_TILE_COUNT). Invalid cells become
+ * TILES_BLANK/no-sprite (0); a single warning carries the total count.
+ *
+ * @return number of replaced cells
+ */
+size_t CGame::sanitiseMapTiles()
+{
+    size_t replaced = 0;
+    for (size_t i = 0; i < m_map.layerCount(); ++i)
+    {
+        CLayer *layer = m_map.getLayer(i);
+        if (layer == nullptr)
+            continue;
+        // baseID==0 == main layer on the primary tileset: cells index
+        // tileDefs (TILES_TOTAL_COUNT, tilesdata.h); other layers index
+        // the animator tables and g_layerdata (TOTAL_TILE_COUNT,
+        // layerdata.h). See docs/spec/gamespec/tile-table-limits.md.
+        const uint16_t limit = layer->baseID() == 0 ? TILES_TOTAL_COUNT : TOTAL_TILE_COUNT;
+        for (int y = 0; y < layer->height(); ++y)
+        {
+            for (int x = 0; x < layer->width(); ++x)
+            {
+                if (layer->at(x, y) >= limit)
+                {
+                    layer->set(x, y, 0); // TILES_BLANK / no-sprite
+                    ++replaced;
+                }
+            }
+        }
+    }
+    if (replaced != 0)
+        LOGW("map: %zu invalid tile IDs replaced with TILES_BLANK", replaced);
+    return replaced;
+}
+
 bool CGame::loadLevel(const GameMode mode)
 {
     if (!m_quiet)
@@ -427,6 +468,7 @@ bool CGame::loadLevel(const GameMode mode)
         m_usedItems.clear();
 
     m_map = *levelMap;
+    sanitiseMapTiles();
 
     // remove used item
     for (const auto &pos : m_usedItems)
@@ -1285,6 +1327,7 @@ bool CGame::read(IFile &sfile)
         LOGE("failed to read map");
         return false;
     }
+    sanitiseMapTiles();
 
     // monsters
     uint32_t actorCount = 0;

@@ -110,6 +110,10 @@ public:
 
     ~CGame();
     bool loadLevel(const GameMode mode);
+    // maintainer ruling 2026-11-18: hostile map files must not smuggle cell
+    // values that index out of bounds into getTileDef()/g_layerdata();
+    // CMap/CLayer are untouched, the engine gates its own map after every ingest
+    size_t sanitiseMapTiles();
     bool move(const JoyAim dir);
     void manageMonsters(const uint32_t ticks);
     void manageBosses(const uint32_t ticks);

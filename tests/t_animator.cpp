@@ -362,7 +362,7 @@ fail:
 bool test_animator_read_fail()
 {
     CFileMem empty;
-    if (!empty.open("tests/out/animator_empty.dat", "wb+"))
+    if (!empty.open("tests/out/animator_empty.dat", "rw+"))
     {
         LOGE("cannot create empty scratch");
         return false;
@@ -379,7 +379,7 @@ bool test_animator_read_fail()
 
     // main layer present, tile layer truncated
     CFileMem partial;
-    if (!partial.open("tests/out/animator_part.dat", "wb+"))
+    if (!partial.open("tests/out/animator_part.dat", "rw+"))
     {
         return false;
     }
@@ -395,5 +395,52 @@ bool test_animator_read_fail()
     }
     partial.close();
     std::filesystem::remove("tests/out/animator_part.dat");
+    return true;
+}
+
+// maintainer ruling 2026-11-18 (animator ingest): tileLayer entries at or
+// past TOTAL_TILE_COUNT are cleared to 0 so getLayerTile can never hand a
+// refID outside g_layerdata to getLayerTileDef
+bool test_animator_read_clamp()
+{
+    CFileMem file;
+    if (!file.open("tests/out/animator_clamp.dat", "rw+"))
+    {
+        LOGE("cannot create clamp scratch");
+        return false;
+    }
+    std::vector<uint16_t> main(256, 0xffff); // NO_ANIMZ filler (CAnimator::MAX_TILES)
+    file.write(main.data(), static_cast<int>(main.size() * sizeof(uint16_t)));
+    std::vector<uint16_t> table(TOTAL_TILE_COUNT, 0);
+    table[0] = TOTAL_TILE_COUNT;     // first value outside the table
+    table[1] = 0xffff;               // hostile sentinel
+    table[2] = TOTAL_TILE_COUNT - 1; // last valid entry must survive
+    file.write(table.data(), static_cast<int>(table.size() * sizeof(uint16_t)));
+    const uint32_t noAutomators = 0;
+    file.write(&noAutomators, sizeof(noAutomators));
+    file.seek(0);
+
+    CAnimator anim;
+    if (!anim.read(file))
+    {
+        LOGE("read rejected the forged-but-well-formed stream");
+        file.close();
+        return false;
+    }
+    file.close();
+    std::filesystem::remove("tests/out/animator_clamp.dat");
+
+    // cleared entries behave like never-animated entries (getLayerTile
+    // falls back to the queried tileID)
+    if (anim.getLayerTile(0) != 0 || anim.getLayerTile(1) != 1)
+    {
+        LOGE("read_clamp: hostile entries survived");
+        return false;
+    }
+    if (anim.getLayerTile(2) != TOTAL_TILE_COUNT - 1)
+    {
+        LOGE("read_clamp: valid entry was cleared");
+        return false;
+    }
     return true;
 }

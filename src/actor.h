@@ -70,6 +70,13 @@ public:
     }
     uint16_t getPU() const;
     void setPU(const uint16_t c);
+    /**
+     * @brief Move the actor only -- does NOT touch the map
+     *
+     * Deliberate use case, distinct from move(): reposition where cells
+     * must stay put. Callers needing move()-style map/`m_pu` bookkeeping
+     * perform the cell swap themselves.
+     */
     void setPos(const Pos &pos);
     JoyAim getAim() const override;
     void setAim(const JoyAim aim) override;

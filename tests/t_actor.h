@@ -19,3 +19,4 @@
 
 bool test_actor();
 bool test_path_algos();
+bool test_actor_move_bounds();

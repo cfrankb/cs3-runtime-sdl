@@ -178,6 +178,53 @@ namespace
         return true;
     }
 
+    // maintainer ruling 2026-11-18: engine ingest replaces layer cell values
+    // outside their target table (tileDefs / g_layerdata) with blank;
+    // CMap/CLayer untouched
+    bool testMapTileSanitiser()
+    {
+        CMap &map = g_game->getMap();
+        map.resize(4, 2, TILES_BLANK, true);
+        map.set(1, 1, TILES_ANNIE2);
+        map.set(0, 0, TILES_TOTAL_COUNT); // the count sentinel itself is not a tile
+        map.set(2, 1, 0xffff);
+        if (g_game->sanitiseMapTiles() != 2)
+        {
+            LOGE("sanitiseMapTiles: wrong replacement count");
+            return false;
+        }
+        if (map.at(1, 1) != TILES_ANNIE2 || map.at(0, 0) != TILES_BLANK ||
+            map.at(2, 1) != TILES_BLANK)
+        {
+            LOGE("sanitiseMapTiles: cells wrong after sanitise");
+            return false;
+        }
+        // FG layers: cells index the animator tables and g_layerdata
+        CLayer *fg = map.addLayer(CLayer::LAYER_FLOOR, "fg", 1);
+        fg->set(2, 1, TOTAL_TILE_COUNT); // first value outside the table
+        fg->set(3, 0, 0xffff);
+        fg->set(0, 1, TOTAL_TILE_COUNT - 1); // last valid id stays
+        fg->set(1, 1, 42);
+        const size_t replaced = g_game->sanitiseMapTiles(); // main layer already clean
+        const uint16_t blanked1 = fg->at(2, 1);
+        const uint16_t blanked2 = fg->at(3, 0);
+        const uint16_t kept1 = fg->at(0, 1);
+        const uint16_t kept2 = fg->at(1, 1);
+        map.popLayer(); // before asserts: a leak would poison later suites
+        if (replaced != 2)
+        {
+            LOGE("sanitiseMapTiles: wrong FG replacement count");
+            return false;
+        }
+        if (blanked1 != 0 || blanked2 != 0 ||
+            kept1 != TOTAL_TILE_COUNT - 1 || kept2 != 42)
+        {
+            LOGE("sanitiseMapTiles: FG cells wrong after sanitise");
+            return false;
+        }
+        return true;
+    }
+
     bool testAddKey()
     {
         resetWorld();
@@ -567,6 +614,7 @@ bool test_game()
 {
     return testValidateSignature() &&
            testCountWithinBudget() &&
+           testMapTileSanitiser() &&
            testAddKey() &&
            testPurgeSfx() &&
            testScanPos() &&

@@ -199,3 +199,35 @@ bool test_path_algos()
     std::filesystem::remove("tests/out/actor_path.dat");
     return true;
 }
+
+// maintainer ruling 2026-11-18: actor positions never wrap; out-of-range
+// coordinates are capped to the representable cell range [0, 255]
+bool test_actor_move_bounds()
+{
+    CActor actor(5, 5, 0x20, AIM_DOWN);
+    actor.move(9, 3);
+    if (actor.x() != 9 || actor.y() != 3)
+    {
+        LOGE("move: in-range coordinates not stored");
+        return false;
+    }
+    actor.move(-1, 0);
+    if (actor.x() != 0 || actor.y() != 0)
+    {
+        LOGE("move: negative x not capped to 0");
+        return false;
+    }
+    actor.move(0, -2);
+    if (actor.x() != 0 || actor.y() != 0)
+    {
+        LOGE("move: negative y not capped to 0");
+        return false;
+    }
+    actor.move(300, 100);
+    if (actor.x() != 255 || actor.y() != 100)
+    {
+        LOGE("move: oversized x not capped to 255 (got %d)", actor.x());
+        return false;
+    }
+    return true;
+}

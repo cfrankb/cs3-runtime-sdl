@@ -14,11 +14,11 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `6590459458f288b0` — covered by t_actor
-- [x] `src/actor.h` `491ec3975613f24d` — covered by t_actor
+- [x] `src/actor.cpp` `8ae7cd611a320e46` — covered by t_actor
+- [x] `src/actor.h` `403d9ae3a540e43f` — covered by t_actor
 - [x] `src/ai_path.cpp` `8e83d41e140b1d32` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
-- [x] `src/animator.cpp` `37ca52c2e4447163` — covered by t_animator
+- [x] `src/animator.cpp` `ca70bc804d6dfe9b` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
 - [ ] `src/animzdata.h` `722a3035388bf09b`
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
@@ -43,8 +43,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/events.h` `a25720e0e5b896e4`
 - [ ] `src/filemacros.h` `522f58850c628585`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `1dc6c6b301ca91c5` — covered by t_runtime, t_game
-- [x] `src/game.h` `95347c4b9ec2940a` — covered by t_runtime, t_game
+- [x] `src/game.cpp` `12bf61b2a95e1a10` — covered by t_runtime, t_game
+- [x] `src/game.h` `0e130401bad4df2a` — covered by t_runtime, t_game
 - [x] `src/game_ai.cpp` `6745d964a9651d5d` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile

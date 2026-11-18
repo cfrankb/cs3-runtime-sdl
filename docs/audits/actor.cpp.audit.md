@@ -22,11 +22,31 @@ Status (re-verified against `src/actor.cpp` on 2026-11-18, `cs3-runtime-tests` g
 the `uint16_t` layer tiles). `m_pu`, `getPU`/`setPU`, `tileAt` and the four
 receiving locals widened; wire record widened → `ENGINE_VERSION` +
 `EXPECTED_VERSION` bumped together to `0x0200_0010`. `addKey`/`key_t.tiles`
-key storage left `uint8_t` (not in ruling scope).**
+key storage left `uint8_t` (not in ruling scope).** Follow-up (the widened
+types now pass hostile high cell values through to the unbounded
+`getTileDef(int)`): CLOSED 2026-11-18 by maintainer ruling — engine-level
+`CGame::sanitiseMapTiles()` at both map ingest points (`loadLevel`,
+savegame `read`) scans every layer and replaces cells at or past their
+consumer table (`TILES_TOTAL_COUNT` for `baseID()==0` layers feeding
+`tileDefs`, `TOTAL_TILE_COUNT` for the rest feeding the animator tables
+and `g_layerdata`) with `TILES_BLANK`/no-sprite; one `LOGW` carries the
+total count; `CMap`/`CLayer` untouched by ruling. Pinned by
+`t_game::testMapTileSanitiser`.
 - L184, L229, L236, L347: [bug] `const uint8_t c = map.at(...)` / `m_pu = map.at(...)` truncate `CMap::at`'s `uint16_t` return (map.h:127). Latent while tile IDs stay < 256 (none found in tilesdefs.h today, needs verification against level archives); fix: use `uint16_t` locals or an explicit checked narrowing. `m_pu` itself is `uint8_t` (actor.h:153), so full fix touches the member type.
-- L269-273: [bug] `setPos()` teleports without moving the map cell or re-syncing `m_pu`; a subsequent `move()` (L230) then writes the stale `m_pu` from the old cell into the new one. Callers must maintain the invariant manually — verify all `setPos` callers do, or make `setPos` take over the map bookkeeping like `move()` does.
-- L405-409: [dead] Null check after `std::make_unique` is unreachable — `make_unique` throws `std::bad_alloc`, it never returns null. As written, allocation failure escapes as an exception instead of the function's `false` contract. Delete the check (L402 `if (!m_path)` already guards).
-- L436-459, L417-425: [error-handling] Every failed field read returns `false` with no `LOGE`/`LOGW`, and a mid-record failure leaves the actor half-overwritten (fields mutated before the failure, `m_path` possibly replaced at L404) with no rollback or diagnostic. Add a `LOGE` naming the field/offset on failure, matching the L397 pattern.
+- L269-273: [bug] `setPos()` teleports without moving the map cell or re-syncing `m_pu`; a subsequent `move()` (L230) then writes the stale `m_pu` from the old cell into the new one.
+**DOCUMENTED 2026-11-18 (maintainer ruling).** Not a bug: `setPos()`
+deliberately moves only the actor and never touches the map — a use
+case distinct from `move()` (repositioning where cells must stay put;
+the six `t_gamemixin.cpp` callers depend on exactly that, e.g. placing
+the player outside the main-layer swap path). Actors in production are
+placed by the ctors (`m_pu = TILES_BLANK` spawn-absorb model) and
+restored as a consistent `m_x/m_y/m_pu` triple from saves, so the
+bookkeeping invariant is never routed through this setter. `actor.h`/
+`actor.cpp` now document the contract. (A swap-taking-over variant was
+tried and reverted the same day: it threw out-of_range in the viewport
+tests and contradicted the intended semantics.)
+- L405-409: [dead] Null check after `std::make_unique` is unreachable — `make_unique` throws `std::bad_alloc`, it never returns null. As written, allocation failure escapes as an exception instead of the function's `false` contract. Delete the check (L402 `if (!m_path)` already guards). **FIXED 2026-11-18: dead check deleted, comment notes the never-null contract; `bad_alloc` still escapes as an exception (unchanged, engine-wide convention).**
+- L436-459, L417-425: [error-handling] Every failed field read returns `false` with no `LOGE`/`LOGW`, and a mid-record failure leaves the actor half-overwritten (fields mutated before the failure, `m_path` possibly replaced at L404) with no rollback or diagnostic. **FIXED 2026-11-18 (diagnostics half): both `CActor::read` and `CActor::readPath` read-lambdas now `LOGE` the failed size + stream offset, covering all field reads without per-field boilerplate (offset + fixed field order localizes the field; existing truncated/forged-record tests in `t_actor` exercise the path and stay green).** No rollback added: callers treat a `false` as fatal for the whole savegame load, so a half-read actor never enters play.
 
 ### Low
 - L69+L78, L85+L92: [shrink] `m_path` is set twice — once in the member-init list, again in the ctor body. Remove the body assignments.
@@ -35,7 +55,7 @@ key storage left `uint8_t` (not in ruling scope).**
 AIM_NONE` with LOGE (AIM_NONE stays legal — saved placeholder for inactive
 actors). Pinned in `t_actor` forged-record aim cases.**
 - L444: [error-handling] `m_aim` is deserialized raw with no range check, unlike the ctor which validates aim values; a corrupt save yields an arbitrary `m_aim` (0-255) that feeds the L288 table index. Add a post-read validity check with `LOGE` (defense in depth for the Critical finding).
-- L561-565: [error-handling] `move(int16_t, int16_t)` silently wraps out-of-range/negative coordinates via `& 0xff` (e.g. y=-1 → 255, teleporting the actor off-map). Clamp to map bounds or `LOGW` on out-of-range input.
+- L561-565: [error-handling] `move(int16_t, int16_t)` silently wrapped out-of-range/negative coordinates (y=-1 → 255, teleporting the actor off-map). **FIXED 2026-11-18 (maintainer ruling: "maps don't wrap; negative positions don't make sense"; throw variant rejected as per-move cost — "simply cap the coordinates"):** coordinates are now capped to the representable cell range [0, 255] via `std::clamp`; in-range behavior unchanged and the redundant `& 0xff` magic mask (the audit's buckets had no magic-number category, it surfaced only via this finding) is gone. CPath callers pass structurally in-grid coordinates, so the cap never engages in production. Pinned by `t_actor::test_actor_move_bounds` (in-range store; negative x/y and oversized coordinates cap to 0 / 255).
 - L527-530: [dead] Free `operator^=(JoyAim&, int)` has no callers anywhere in the repo (only its declaration in joyaim.h and this definition). Delete both.
 - L550-552: [shrink] `std::abs(int)` is used without including `<cstdlib>` (works via transitive includes only); also L537 `const Pos` return-by-value top-level const is noise.
 

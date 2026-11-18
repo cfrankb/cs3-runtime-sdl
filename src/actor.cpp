@@ -15,6 +15,8 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <algorithm>
+
 #include "actor.h"
 #include "tilesdata.h"
 #include "tilesdefs.h"
@@ -269,6 +271,12 @@ void CActor::setPU(const uint16_t c)
 /**
  * @brief Set Sprite Position
  *
+ * Moves the actor only: deliberately does NOT touch the map. Distinct
+ * use case from move() -- repositioning (camera placement, actor setup)
+ * where the cells must stay put. If a caller needs move()-style cell
+ * bookkeeping (the occupied cell holds `m_pu`), it performs that swap
+ * itself. Maintainer ruling 2026-11-18.
+ *
  * @param pos
  */
 
@@ -393,7 +401,12 @@ bool CActor::readPath(IFile &sfile)
 {
     auto readfile = [&sfile](auto ptr, auto size) -> bool
     {
-        return sfile.read(ptr, size) == IFILE_OK;
+        if (sfile.read(ptr, size) != IFILE_OK)
+        {
+            LOGE("CActor::readPath: failed to read %d bytes at %ld", size, sfile.tell());
+            return false;
+        }
+        return true;
     };
     // read path
     uint8_t pathDefined = 0;
@@ -408,14 +421,7 @@ bool CActor::readPath(IFile &sfile)
     if (pathDefined == PATH_DEFINED)
     {
         if (!m_path)
-        {
-            m_path = std::make_unique<CPath>();
-            if (!m_path)
-            {
-                LOGE("failed create CPath");
-                return false;
-            }
-        }
+            m_path = std::make_unique<CPath>(); // never null: bad_alloc throws
         if (!m_path->read(sfile))
             return false;
     }
@@ -426,7 +432,12 @@ bool CActor::read(IFile &sfile)
 {
     auto readfile = [&sfile](auto ptr, auto size) -> bool
     {
-        return sfile.read(ptr, size) == IFILE_OK;
+        if (sfile.read(ptr, size) != IFILE_OK)
+        {
+            LOGE("CActor::read: failed to read %d bytes at %ld", size, sfile.tell());
+            return false;
+        }
+        return true;
     };
 
     return readCommon(readfile) && readPath(sfile);
@@ -580,8 +591,10 @@ int CActor::distance(const CActor &actor) const
  */
 void CActor::move(const int16_t x, const int16_t y)
 {
-    m_x = static_cast<uint8_t>(x & 0xff);
-    m_y = static_cast<uint8_t>(y & 0xff);
+    // coordinates are capped to the representable cell range, never
+    // wrapped (maintainer ruling 2026-11-18)
+    m_x = static_cast<uint8_t>(std::clamp<int16_t>(x, 0, UINT8_MAX));
+    m_y = static_cast<uint8_t>(std::clamp<int16_t>(y, 0, UINT8_MAX));
 }
 
 void CActor::move(const Pos pos)
