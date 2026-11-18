@@ -20,9 +20,14 @@
 #include "../src/shared/FrameSet.h"
 #include "../src/shared/FileWrap.h"
 #include "../src/shared/FileMem.h"
+#include "../src/shared/ss_limits.h"
 #include "../src/logger.h"
 #include "thelper.h"
 #include <cstdio>
+#include <cstring>
+#include <string>
+#include <unistd.h>
+#include <zlib.h>
 #include <vector>
 #include <filesystem>
 
@@ -572,5 +577,113 @@ bool test_frameset_hostile_imc1()
         LOGE("imc1: well-formed stream rejected [%s]", fs.getLastError());
         return false;
     }
+    return true;
+}
+/**
+ * @brief readSolid must reject a valid zlib stream that decompresses shorter
+ *        than declared dimensions (zero-padded frames), and writeSolid must
+ *        refuse a tag count readSolid would reject.
+ */
+bool test_frameset_hostile_solid()
+{
+    constexpr const char *PATH = "tests/out/hostile_solid.obl";
+    CFrameSet fs;
+    fs.add(new CFrame(8, 8)); // reader computes totalSize = 8*8*4 = 256
+    if (!write_data_out(fs, PATH, OBL5_SOLID))
+    {
+        LOGE("hostile_solid: write baseline failed");
+        return false;
+    }
+
+    // splice in a valid zlib stream that decodes to 16 bytes (< 256)
+    {
+        FILE *f = fopen(PATH, "rb+");
+        if (!f)
+        {
+            LOGE("hostile_solid: cannot reopen %s", PATH);
+            return false;
+        }
+        fseek(f, 0, SEEK_END);
+        const long fileSize = ftell(f);
+        std::vector<uint8_t> bytes(fileSize);
+        fseek(f, 0, SEEK_SET);
+        if (fread(bytes.data(), 1, fileSize, f) != static_cast<size_t>(fileSize))
+        {
+            LOGE("hostile_solid: short read");
+            fclose(f);
+            return false;
+        }
+        const uint32_t count = bytes[4] | (bytes[5] << 8) | (bytes[6] << 16) |
+                               (static_cast<uint32_t>(bytes[7]) << 24);
+        const size_t blobOff = 16 + 4 * count; // sig+count+format+srcSize, w/h pairs
+
+        const std::vector<uint8_t> tiny(16, 0); // decodes to 16 != totalSize
+        std::vector<uint8_t> z(compressBound(tiny.size()));
+        uLongf zlen = z.size();
+        if (compress2(z.data(), &zlen, tiny.data(), tiny.size(),
+                      Z_DEFAULT_COMPRESSION) != Z_OK)
+        {
+            LOGE("hostile_solid: compress2 failed");
+            fclose(f);
+            return false;
+        }
+        const uint32_t newSrc = static_cast<uint32_t>(zlen);
+        for (int b = 0; b < 4; ++b)
+            bytes[12 + b] = static_cast<uint8_t>((newSrc >> (8 * b)) & 0xff);
+        bytes.resize(blobOff + zlen);
+        memcpy(bytes.data() + blobOff, z.data(), zlen);
+
+        truncate(PATH, static_cast<off_t>(bytes.size()));
+        fseek(f, 0, SEEK_SET);
+        if (fwrite(bytes.data(), 1, bytes.size(), f) != bytes.size())
+        {
+            LOGE("hostile_solid: short write");
+            fclose(f);
+            return false;
+        }
+        fclose(f);
+    }
+
+    CFileWrap file;
+    if (!file.open(PATH, "rb"))
+    {
+        LOGE("hostile_solid: cannot open forged file");
+        return false;
+    }
+    CFrameSet forged;
+    const bool ok = forged.read(file);
+    file.close();
+    if (ok || std::string(forged.getLastError()).find("size mismatch") == std::string::npos)
+    {
+        LOGE("hostile_solid: short decompression accepted [%d: %s]", ok,
+             forged.getLastError());
+        return false;
+    }
+
+    // writeSolid must refuse more serializable tags than readSolid accepts
+    CFrameSet manyTags;
+    manyTags.add(new CFrame(8, 8));
+    for (int i = 0; i <= TAG_COUNT_MAX; ++i)
+    {
+        manyTags.setTag(("key" + std::to_string(i)).c_str(), "v");
+    }
+    CFileWrap out;
+    if (!out.open("tests/out/manytags.obl", "wb"))
+    {
+        LOGE("hostile_solid: cannot create manytags file");
+        return false;
+    }
+    if (manyTags.write(out, CFrameSet::OBL5_SOLID) ||
+        std::string(manyTags.getLastError()).find("too many") == std::string::npos)
+    {
+        LOGE("hostile_solid: %d tags accepted for write [%s]", TAG_COUNT_MAX + 1,
+             manyTags.getLastError());
+        out.close();
+        return false;
+    }
+    out.close();
+
+    std::filesystem::remove(PATH);
+    std::filesystem::remove("tests/out/manytags.obl");
     return true;
 }

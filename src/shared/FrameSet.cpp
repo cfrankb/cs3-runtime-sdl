@@ -206,6 +206,14 @@ bool CFrameSet::writeSolid(IFile &file)
             ++tagCount;
     }
 
+    if (tagCount > TAG_COUNT_MAX)
+    {
+        // readSolid hard-rejects more; writing them would produce a file
+        // the reader refuses (audit: writer/reader cap mismatch)
+        m_lastError = "too many serializable tags: " + std::to_string(tagCount);
+        return false;
+    }
+
     if (file.write(&tagCount, sizeof(uint32_t)) != IFILE_OK)
     {
         m_lastError = "fail to write tagCount";
@@ -295,7 +303,8 @@ bool CFrameSet::readSolid(IFile &file, int size)
     // OBL5 IMAGESET HEADER
     // Read compressed size
     long srcSize = 0;
-    if (file.read(&srcSize, sizeof(uint32_t)) != IFILE_OK || srcSize <= 0)
+    if (file.read(&srcSize, sizeof(uint32_t)) != IFILE_OK || srcSize <= 0 ||
+        srcSize > INT_MAX) // IFile::read takes int; reject unrepresentable sizes
     {
         m_lastError = "Failed to read or invalid compressed size";
         return false;
@@ -369,7 +378,7 @@ bool CFrameSet::readSolid(IFile &file, int size)
         &destLen,
         srcBuffer.data(),
         srcSize);
-    if (err != Z_OK)
+    if (err != Z_OK || destLen != static_cast<uLong>(totalSize))
     {
         char tmp[128];
 #if defined(__EMSCRIPTEN__)
@@ -400,8 +409,8 @@ bool CFrameSet::readSolid(IFile &file, int size)
     }
 
     // Read tags
-    uint32_t tagCount;
-    if (file.read(&tagCount, sizeof(tagCount)) != IFILE_OK || tagCount > 100)
+    uint32_t tagCount = 0;
+    if (file.read(&tagCount, sizeof(tagCount)) != IFILE_OK || tagCount > TAG_COUNT_MAX)
     {
         m_lastError = "Failed to read or invalid tag count: " + std::to_string(tagCount);
         return false;

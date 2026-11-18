@@ -22,3 +22,4 @@ bool test_frameset_families();
 bool test_frameset_reject();
 bool test_frameset_container();
 bool test_frameset_hostile_imc1();
+bool test_frameset_hostile_solid();

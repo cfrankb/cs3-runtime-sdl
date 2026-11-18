@@ -110,6 +110,7 @@ int main(int argc, char *args[])
         FCT(test_frameset_reject),
         FCT(test_frameset_container),
         FCT(test_frameset_hostile_imc1),
+        FCT(test_frameset_hostile_solid),
         FCT(test_actor),
         FCT(test_path_algos),
         FCT(test_actor_move_bounds),
