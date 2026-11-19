@@ -1,0 +1,222 @@
+# Extended FX (`fx_t`) Specification
+
+Status: **DRAFT — proposed, not implemented.** (2026-11-19)
+
+Complements the classic `sfx_t` (16px tile-aligned, `src/gamesfx.h`), which is
+**frozen**. Extended FX adds:
+
+- varying frame sizes (32x32, 32x48, 48x48, ...) taken from the frames themselves,
+- multi-frame animation sequences on a dedicated sprite sheet,
+- up to two layers per sequence: **back** (drawn before actors) and
+  **front** (drawn where classic sfx draw today),
+- pixel-granular world coordinates,
+- state owned by `CGame` so the software (`CGameMixin`) and hardware
+  (`EngineHW`) renderers share one data path and one view query.
+
+## 1. Data structures
+
+### 1.1 `fx_t` — per-instance, fixed 12-byte POD, raw-serialized
+
+| field      | type       | meaning                                   |
+|------------|------------|-------------------------------------------|
+| `x`, `y`   | `int16_t`  | world **pixels**, anchor = frame center   |
+| `ox`, `oy` | `int16_t`  | origin point in **tile coords** (map units); `-1` = not available (pixel-granular spawn) |
+| `effectID` | `int16_t`  | index into the `g_fxData` table           |
+| `timer`    | `uint16_t` | ticks alive, counts up from 0             |
+
+`fx_t` is the wire record itself: serialized with a raw `_W`/`_R` of
+`sizeof(fx_t)`, identical in style to `sfx_t`. No callbacks or non-POD
+members live here — end-of-sequence behavior hangs off `fxData_t` (1.3), so
+save/load carries no runtime state.
+
+Invariants:
+
+- I1. `timer` is incremented by `CGame::tickFx()`, called next to
+  `purgeSfx()` in the same `!timeFrozen` tick block. End-of-life per effect
+  class:
+  - **one-shot** (`FX_ONESHOT`): ends when the animation has played once:
+    `timer >= frames * speed` where `frames = max(back.count, front.count)`.
+  - **repeatable** (`FX_REPEATABLE`): loops; **`ttl` in the table entry
+    determines the end**: ends when `timer >= ttl`.
+  On end: the **table entry's** `onEnd(*this, fx)` fires (if set), then the
+  instance is erased.
+- I2. Frame size is **not** stored per-instance nor per-layer. `CFrame` carries
+  its own w/h; the table's `w`/`h` below are max-frame extents for culling only.
+- I3. No frame index, no layer state is stored per-instance (I4/I5 derive them).
+- I4. Frame index is derived. One-shot:
+  `idx = min(timer / speed, layer.count - 1)`; repeatable:
+  `idx = (timer / speed) % layer.count`. `frameID = layer.base + idx`.
+  Both layers share the one `timer` and `speed`.
+- I5 (sequence index location). The sequence index is **not stored** in
+  `fx_t`, `fxData_t` or any side table: it is computed from `timer` per I4
+  inside `getFxToDraw()` and materialized only as `fxDraw_t.frameID` for the
+  renderer. Save/load needs no extra field because `timer` fully determines
+  it. Storing a per-instance `frame` becomes necessary only if an effect
+  needs per-instance pause or a mid-life speed change (see Skipped).
+
+### 1.2 `fx_layer_t` — one layer's sequence (static)
+
+```cpp
+struct fx_layer_t
+{
+    uint16_t base;  // relative frameID on the fx sheet
+    uint16_t count; // 0 = layer unused
+};
+```
+
+### 1.3 `fxData_t` — static definition table (`g_fxData`)
+
+```cpp
+struct fxData_t
+{
+    uint16_t id;       // Fx enum value
+    uint16_t sheet;    // fx sheet index (single sheet for now)
+    uint8_t  speed;    // ticks per frame (lower = faster, boss speed_anime style)
+    uint8_t  flags;    // FX_ONESHOT / FX_REPEATABLE
+    uint16_t ttl;      // lifetime (ticks) for FX_REPEATABLE entries
+    uint16_t w, h;     // max frame extents, culling only
+    fx_layer_t back;   // drawn before actors
+    fx_layer_t front;  // drawn after actors
+    // --- provisions for hitbox / damage / splash mechanics (later) ---
+    int16_t  damage;         // reserved, unused today
+    uint8_t  splashRadius;   // reserved, unused today
+    const fx_hitbox_t *hitboxes; // per-frame box set (fx_hitbox_t below)
+    uint8_t  hitboxCount;
+    FxEndFn  onEnd;          // fired by tickFx when an instance of THIS
+                             // effect ends; per-effect, table-owned, never
+                             // serialized (the table itself is not state)
+};
+```
+
+`Fx` enum ids are a **new id space**, independent of `Sfx` (`MIN_SFX = 0xf0`);
+fx never travels the `sprite_t`/tileID pipeline.
+
+### 1.4 `fx_hitbox_t` — reserved mechanics provision
+
+```cpp
+struct fx_hitbox_t
+{
+    int16_t  dx, dy; // offset from frame center anchor
+    uint16_t w, h;
+    int      type;   // box role, mirrors BossData::HitBoxType
+                     // (MAIN / ATTACK / SPECIAL1 / SPECIAL2)
+};
+```
+
+Shape mirrors the boss `hitbox_t` precedent. Declared and carried by the
+table, **no consumer yet**: lightning-strike style damage and splash will
+bind these in a later change (tick hit-test against player/actors). Nothing
+in this spec requires them.
+
+### 1.5 `fxDraw_t` — renderer-facing draw entry (never serialized)
+
+```cpp
+struct fxDraw_t
+{
+    int16_t  x, y;    // world px, center anchor (copied from fx_t)
+    uint16_t frameID; // fx-sheet-relative; renderer resolves pixels in its own fx set
+};
+```
+
+`CGame` does not own renderer pixel data, so `fxDraw_t` carries a **frameID,
+not a `CFrame *`** (same split as `g_fxSheet_data` metadata vs per-renderer
+`m_tileset_fx` / `m_fxSheet`).
+
+## 2. Ownership and API (all on `CGame`)
+
+```cpp
+std::vector<fx_t> m_fx;                  // beside m_sfx
+std::vector<fx_t> &getFx();
+int  spawnFx(int effectID, int tileX, int tileY);
+int  spawnFxPx(int effectID, int px, int py);
+void tickFx();
+void getFxToDraw(const fxView_t &view, bool front,
+                 std::vector<fxDraw_t> &out) const;
+```
+
+`FxEndFn` = `std::function<void(CGame &, const fx_t &)>`, a `fxData_t`
+member. Spawns carry no callback: behavior is per-effect, not per-spawn.
+
+- **S1 (spawn helpers).** `spawnFx` is the tile->pixel conversion point and
+  records the **origin point** (`ox/oy` = tile coords):
+  `x = tileX * TILE_SIZE + TILE_SIZE / 2`, same for y. `spawnFxPx` takes world
+  pixels directly and leaves `ox = oy = -1` (origin not available). Both
+  return the instance index, or `-1` for an unknown `effectID`.
+- **S2 (cull).** `fxView_t` is four world-px bounds (left/top/right/bottom).
+  An instance is in view when its center lies inside the view rect inflated by
+  `(w/2, h/2)` of its table entry. Culling needs no pixel data, so it lives in
+  `CGame` and runs once for both renderers.
+- **S3 (emit).** For each live instance, emit one `fxDraw_t` for the requested
+  layer side if that side's `count > 0`.
+- **S4 (clear).** `m_fx` clears wherever `m_sfx.clear()` happens on new game.
+
+## 3. Renderer contract (both renderers, minimal)
+
+Fx frames live on a dedicated fx sprite sheet PNG, but **loading recycles the
+existing boss/sheet code**: the load call belongs in `preloadAssets()` of
+*both* renderers (`EngineHW::preloadAssets`, engine_hw.cpp L123;
+`CRuntime::preloadAssets`, runtime.cpp L1269 — the `CGameMixin` pure-virtual
+filled per environment), next to the existing `sheet0`/`sheet1` loads, using
+the same loaders (`TileSet::load(renderer, filename, vector<tileinfo_t>)` on
+the hardware side, PNG + `tileinfo_t` rects -> `CFrameSet` on the software
+side). **`preloadAssets()` is environment-dependent** (the software
+`m_sheet0/m_sheet1` are not even assigned in `src/`): the fx load call ships
+as **commented-out boilerplate** only — the maintainer finalizes and enables
+it per environment. Until then the set is empty/null and every fx draw pass
+no-ops; `getTile()`/`operator[]` are already null-safe.
+
+- R1. There are **four** scene passes: static and dynamic viewports, in each
+  renderer (`CGameMixin::drawViewPortStatic` / `::drawViewPortDynamic`,
+  `EngineHW::drawViewPortStatic` / `::drawViewPortDynamic`). Every one of them
+  draws fx twice: `getFxToDraw(view, /*front=*/false)` right after the tile
+  layers (where monsters/sfx overlay today), `front=true` at the current sfx
+  draw point — before the foreground layer overlays of the static pass.
+- R2. View origins differ per viewport:
+  - **Dynamic**: parity origin — `viewLeftPx = mx * TILE_SIZE - (ox ? 8 : 0)`
+    with `mx = m_cx / 2`, `ox = m_cx & 1`; fx and tiles must consume the same
+    origin or big frames jitter at odd scroll parity.
+  - **Static**: no parity — `viewLeftPx = mx * TILE_SIZE` (its sprite pass
+    already calls `gatherSprites` with `ox = oy = 0`; `mx/my` are the
+    player-centered clamped values).
+  Screen position in both: `screenX = x - frameW/2 - viewLeftPx` (same for y).
+- R3. Frames may exceed 16px and hang across tiles/map edges: normal clipping,
+  no special casing.
+
+## 4. Serialization
+
+- N1. New save section immediately after the classic sfx section (count
+  `uint16_t`, then raw 12-byte `fx_t` records, same `_W(&fx, sizeof(fx))`
+  convention as the sfx block, see `docs/audits/game.cpp.audit.md` L40).
+  `fx_t` is pure POD, so there is no runtime state to restore.
+- N2. Classic `sfx_t` section and its read path are **untouched**.
+- N3. `ENGINE_VERSION` (`src/game.cpp` L58, currently `(0x0200<<16)+0x0011`)
+  and the mirrored `EXPECTED_VERSION` (`tests/t_game.cpp` L52) are bumped
+  together, per AGENTS.md BUG-H12 rule. Old saves stay rejected by the existing
+  version gate (established behavior, `t_runtime.cpp` L37).
+
+## 5. Frame sheet
+
+- F1. One dedicated fx sheet PNG for now; `fxData_t.sheet` carries the same
+  meaning as `bossData_t.sheet` and keeps room for more sets.
+- F2. Per-frame rects come from a new `g_fxSheet_data` `tileinfo_t` table
+  (`src/sheetdata.h` pattern), loaded through the same boss/sheet loader
+  code (section 3). All fx declarations live in `src/gamesfx.h`, global
+  storage (`g_fxData`, `g_fxSheet_data`) in `src/gamesfx.cpp`.
+- F3. FrameID ranges: `back.base .. back.base+back.count-1` and
+  `front.base .. front.base+front.count-1` are sheet-relative and disjoint per
+  effect.
+
+## 6. Compatibility
+
+- C1. `sfx_t`, the `Sfx`/`SfxTimeout` enums, `CAnimator` special-case path, and
+  the classic draw paths are not modified.
+- C2. `fx_t` is additive state; nothing is removed or retyped from existing
+  serialized structures.
+
+## 7. Open items
+
+- O1. ~~`FX_LOOP` semantics~~ Resolved 2026-11-19: `FX_REPEATABLE` entries
+  loop (modulo wrap) and end on `ttl`; one-shots end on sequence length (I1/I4).
+- O2. Real art: sheet PNG + rect metadata + table entries (private asset tree).
+- O3. Whether any existing classic sfx migrate to fx later (per-effect
+  decision; not required by this spec).
