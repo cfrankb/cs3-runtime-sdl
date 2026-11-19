@@ -1,0 +1,28 @@
+/* Test stub for sounds.h (matches project src/sounds.h) */
+#pragma once
+enum SoundFx
+{
+    SOUND_NONE,
+    SOUND_GRUUP,
+    SOUND_KEY,
+    SOUND_0009,
+    SOUND_COIN1,
+    SOUND_OUCHFAST,
+    SOUND_POUF,
+    SOUND_POW,
+    SOUND_POWERUP,
+    SOUND_POWERUP2,
+    SOUND_POWERUP3,
+    SOUND_BONUS,
+    SOUND_BEEP,
+    SOUND_GOLD3,
+    SOUND_SPRING05,
+    SOUND_EXPLOSION1,
+    SOUND_EXIT,
+    SOUND_DEATH,
+    SOUND_BELLS1,
+    SOUND_HIT2,
+    SOUND_SHOOT3,
+    SOUND_SPLASH01,
+    SOUND_DINOSAUR3,
+};

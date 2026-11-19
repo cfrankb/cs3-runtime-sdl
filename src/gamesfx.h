@@ -21,6 +21,9 @@
 enum Sfx : uint16_t;
 enum SfxTimeout : uint16_t;
 
+// classic sfx_t
+// frame size: 16px
+// coordinates are calculed in 16px tiles
 struct sfx_t
 {
     int16_t x;
