@@ -110,11 +110,13 @@ std::vector<HitResult> CBoss::testHitbox1(const CMap &map,
         const int top = hb.y;                // Half-tile y
         const int bottom = hb.y + hb.height; // Half-tile y+height
 
-        // World tile range (inclusive)
-        const int x_start = left / BOSS_GRANULAR_FACTOR;       // floor(left/2)
-        const int x_end = (right - 1) / BOSS_GRANULAR_FACTOR;  // floor((right-1)/2)
-        const int y_start = top / BOSS_GRANULAR_FACTOR;        // floor(top/2)
-        const int y_end = (bottom - 1) / BOSS_GRANULAR_FACTOR; // floor((bottom-1)/2)
+        // World tile range (inclusive). C++ division truncates toward zero;
+        // hitbox half-tile coordinates are non-negative by data contract
+        // (maintainer ruling 2026-11-18), so trunc == floor here.
+        const int x_start = left / BOSS_GRANULAR_FACTOR;
+        const int x_end = (right - 1) / BOSS_GRANULAR_FACTOR;
+        const int y_start = top / BOSS_GRANULAR_FACTOR;
+        const int y_end = (bottom - 1) / BOSS_GRANULAR_FACTOR;
 
         // Scan all world tiles in range
         for (int wy = y_start; wy <= y_end; ++wy)

@@ -200,7 +200,6 @@ protected:
         PROMPT_RESTART_GAME,
         PROMPT_LOAD,
         PROMPT_SAVE,
-        PROMPT_RESTART_LEVEL,
         PROMPT_HARDCORE,
         PROMPT_TOGGLE_MUSIC,
     };

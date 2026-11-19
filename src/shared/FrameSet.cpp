@@ -765,6 +765,12 @@ bool CFrameSet::importIMA(IFile &file, const long org)
     int fileSize = file.getSize();
     USER_IMAHEADER imaHead;
     int hdrSize = static_cast<int>(sizeof(USER_IMAHEADER));
+    // NOTE (maintainer ruling 2026-11-18): the size gate below compares
+    // against the *whole* stream, so it is exact only for standalone
+    // .ima files at org==0 (all known real-world IMA usage). An IMA
+    // embedded in a container (org>0, as importOBL5/importGE96/
+    // importIMC1/parsePNG support) will fail validation here by
+    // design; consumers needing that must pre-extract the member.
     file.seek(org);
     if (file.read(&imaHead, hdrSize) != IFILE_OK)
     {

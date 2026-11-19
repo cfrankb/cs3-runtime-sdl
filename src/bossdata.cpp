@@ -37,7 +37,6 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
-#include <cstdio>
 #include <string>
 #include <vector>
 #include <map>
@@ -314,6 +313,9 @@ namespace
                         s += '\\';
                         break;
                     default:
+                        // \uXXXX and any other escape the fixed schema never
+                        // uses: keep the raw char (legacy behaviour) but flag it
+                        LOGW("Warning: unknown escape '\\%c' in JSON string; keeping raw\n", e);
                         s += e;
                         break;
                     }
@@ -367,6 +369,8 @@ namespace
             if (p == start)
                 return false;
             out.type = JsonValue::Type::Number;
+            // strtod ignores `end` and needs NUL termination; every caller
+            // parses a std::string buffer, so .data()'s NUL bounds the scan.
             out.num = std::strtod(start, nullptr);
             return true;
         }
@@ -541,7 +545,6 @@ namespace
     struct BossAccum
     {
         std::string name;
-        int sheet = 0;
         std::map<std::string, std::string> fields; // final-name -> raw token
 
         bossData_t build(int sheetIndex) const
@@ -649,7 +652,6 @@ namespace
         std::vector<bossData_t> bosses;
         std::vector<std::string> namePool;
         std::vector<HitboxFrame> hitboxFrames;
-        std::vector<std::string> defines; // for completeness / diagnostics
 
         int sheet = 0;
         int frame = 0;
@@ -682,9 +684,8 @@ namespace
             auto flush = [&]()
             {
                 if (hasSection)
-                    pushBoss(seq);
+                    pushBoss(seq); // pushBoss resets seq
                 hasSection = false;
-                seq = BossAccum{};
             };
 
             for (const std::string &rawLine : splitLines(text))
@@ -714,8 +715,7 @@ namespace
                 {
                     flush();
                     std::string sec = t;
-                    if (sec.front() == '[')
-                        sec.erase(sec.begin());
+                    sec.erase(sec.begin()); // '[' guaranteed by the if above
                     if (!sec.empty() && sec.back() == ']')
                         sec.pop_back();
                     if (sec.empty())
@@ -723,9 +723,11 @@ namespace
                         LOGE("Error: empty section header on line %d.\n", lineNo);
                         return 1;
                     }
+                    if (std::find(namePool.begin(), namePool.end(), sec) != namePool.end())
+                        LOGW("Warning: duplicate boss section '[%s]' on line %d; getBossData will use the first\n",
+                             sec.c_str(), lineNo);
                     section = sec;
                     seq.name = section;
-                    seq.sheet = sheet;
                     hasSection = true;
                     continue;
                 }
@@ -740,18 +742,8 @@ namespace
 
                 if (!hasSection)
                 {
-                    // general config
-                    if (e[0] == "private" && e.size() >= 3)
-                    {
-                        defines.push_back(e[1] + " = " + e[2]);
-                    }
-                    else if (e[0] == "define" && e.size() >= 3)
-                    {
-                        std::string key = e[1];
-                        for (char &c : key)
-                            c = static_cast<char>(std::toupper((unsigned char)c));
-                        defines.push_back(key + " = " + e[2]);
-                    }
+                    // general config (private/define lines): parsed and
+                    // discarded — nothing in the runtime consumed them
                     continue;
                 }
 
@@ -767,6 +759,12 @@ namespace
                         size_t eq = e[i].find('=');
                         if (eq != std::string::npos)
                         {
+                            if (eq == 0)
+                            {
+                                LOGW("Warning: empty composite key in '%s' on line %d: %s\n",
+                                     item.c_str(), lineNo, e[i].c_str());
+                                continue;
+                            }
                             std::string key = item + "_" + e[i].substr(0, eq);
                             std::string val = e[i].substr(eq + 1);
                             seq.fields[key] = val;
@@ -930,11 +928,12 @@ int g_hitboxCount = 0;
 const bossData_t *g_bossData = nullptr;
 const sprite_hitbox_t *g_hitboxes = nullptr;
 
-// Leak-pooled storage kept alive until freeBossData() is called, so the
-// returned pointers (g_bossData, g_hitboxes, and every d.name) stay valid.
-static std::vector<bossData_t> *g_pooledBosses = nullptr;
-static std::vector<std::string> *g_pooledNames = nullptr;
-static std::vector<sprite_hitbox_t> *g_pooledHitboxes = nullptr;
+// Storage kept alive until freeBossData() so the returned pointers
+// (g_bossData, g_hitboxes, and every d.name) stay valid; the statics' own
+// destructors are the last-resort release if freeBossData() is never called.
+static std::vector<bossData_t> g_pooledBosses;
+static std::vector<std::string> g_pooledNames;
+static std::vector<sprite_hitbox_t> g_pooledHitboxes;
 
 int loadBossData(const std::string &iniDir, const std::string &hitboxDir)
 {
@@ -970,32 +969,31 @@ int loadBossData(const std::string &iniDir, const std::string &hitboxDir)
         hb.push_back(s);
     }
 
-    // Adopt the loader's storage into leak-pooled statics.
-    g_pooledBosses = new std::vector<bossData_t>(std::move(loader.bosses));
-    g_pooledNames = new std::vector<std::string>(std::move(loader.namePool));
-    g_pooledHitboxes = new std::vector<sprite_hitbox_t>(std::move(hb));
+    // Adopt the loader's storage into the static pools.
+    g_pooledBosses = std::move(loader.bosses);
+    g_pooledNames = std::move(loader.namePool);
+    g_pooledHitboxes = std::move(hb);
 
     // Re-point each boss's name into the pooled names array (build() pointed
-    // into the transient BossAccum before the move).
-    for (size_t i = 0; i < g_pooledBosses->size(); ++i)
-        (*g_pooledBosses)[i].name = g_pooledNames->at(i).c_str();
+    // into the transient BossAccum before the move). bosses and names are
+    // only ever grown together in pushBoss(), so index i pairs with name i —
+    // keep that invariant if pushBoss ever grows a branch.
+    for (size_t i = 0; i < g_pooledBosses.size(); ++i)
+        g_pooledBosses[i].name = g_pooledNames.at(i).c_str();
 
-    g_bossData = g_pooledBosses->data();
-    g_bossCount = static_cast<int>(g_pooledBosses->size());
-    g_hitboxes = g_pooledHitboxes->data();
-    g_hitboxCount = static_cast<int>(g_pooledHitboxes->size());
+    g_bossData = g_pooledBosses.data();
+    g_bossCount = static_cast<int>(g_pooledBosses.size());
+    g_hitboxes = g_pooledHitboxes.data();
+    g_hitboxCount = static_cast<int>(g_pooledHitboxes.size());
 
     return 0;
 }
 
 void freeBossData()
 {
-    delete g_pooledBosses;
-    delete g_pooledNames;
-    delete g_pooledHitboxes;
-    g_pooledBosses = nullptr;
-    g_pooledNames = nullptr;
-    g_pooledHitboxes = nullptr;
+    g_pooledBosses.clear();
+    g_pooledNames.clear();
+    g_pooledHitboxes.clear();
     g_bossData = nullptr;
     g_hitboxes = nullptr;
     g_bossCount = 0;

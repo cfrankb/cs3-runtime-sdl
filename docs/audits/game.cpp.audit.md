@@ -37,30 +37,30 @@ false. Check pinned by `CGame::countWithinBudget` cases in
 
 ### Low
 
-- L1214 / L1222-1249: [ub] `reinterpret_cast<char *>(&signature)` plus wholesale raw-POD `_R` of `int`s and `sfx_t` makes the save format little-endian/size dependent. Acceptable as a local save format; note it explicitly or use `ISerial` helpers if cross-platform saves ever matter.
+- L1214 / L1222-1249: [ub] **FIXED 2026-11-18** (NOTE comment added above the signature read in `read()`; format stays LE/size-dependent by design, no `ISerial` migration — local save format only). Original: `reinterpret_cast<char *>(&signature)` plus wholesale raw-POD `_R` of `int`s and `sfx_t` makes the save format little-endian/size dependent.
 - L1281 / L1371 / L1383 / L1395: [bug] **FIXED 2026-11-18 (0x0011 cluster):** all save counters now typed `uint32_t` locals on both write and read; the sfx count write keeps its `uint16_t` field but now `LOGW`s before truncating a >65535 list. Original finding: `size_t` counters written/read with an explicit `sizeof(uint32_t)` — works only on little-endian and silently halves the field.
-- L1284-1286: [error-handling] `pos.read(sfile)` return ignored; a failed read appends a garbage `Pos` to `m_usedItems`, later fed to `m_map.set()` (L411). Fix: `_R`-style check or skip on failure.
+- L1284-1286: [error-handling] **FIXED 2026-11-18** (used-items loop now `if (!pos.read(sfile)) { LOGE; return false; }`, matching the established `read()` failure pattern). Original: `pos.read(sfile)` return ignored; a failed read appends a garbage `Pos` to `m_usedItems`, later fed to `m_map.set()` (L411).
 - L570-573: [error-handling] **FIXED 2026-11-18** (maintainer ruling: clamp+LOGW landed; clamps only when an archive is loaded, `loadLevel()` stays authoritative). `t_game::testLevelBounds` re-pinned from "setLevel must leak bad values into loadLevel" to the new clamp contract — the public-API injection path for the BUG-C7 `at()` guard is now sealed upstream by design. Original finding: `setLevel()` accepts any int with no range check against `m_mapArch->size()`; this was the enabler for the L407 crash.
-- L1512-1515: [error-handling] `size()` dereferences `m_mapArch` without a null check (returns 0 or `LOGE` is cheap).
+- L1512-1515: [error-handling] **FIXED 2026-11-18** (`return m_mapArch ? m_mapArch->size() : 0;`). Original: `size()` dereferences `m_mapArch` without a null check.
 - L1167-1170: [bug] **BY DESIGN 2026-11-18** (maintainer ruling: no production callers in `src/`; returning `CActor &` makes a guard signature-changing. Contract documented in `game.h`: caller owns bounds checking against `getMonsters().size()`). Original finding: `getMonster(int i)` does unchecked `m_monsters[i]`.
 - L1522-1525: [bug] **FIXED 2026-11-18** (clamped at use, `m_introHint % m_hints.size()`). Original finding: `getHintText()` indexes `m_hints[m_introHint]` with a value computed in a previous `loadLevel()` (L419); if `parseHints()` is later re-run with fewer lines this is out of bounds (needs verification of call ordering). Fix: clamp at use: `m_introHint % m_hints.size()`.
 - L1532-1535: [error-handling] **FIXED 2026-11-18** (null guard after `clear()`; the sole caller's `data.data()` can be null for an empty file). Original finding: `parseHints(nullptr)` constructs `std::string(nullptr)` — UB; add a null guard or document the contract.
 - L426 / L441 / L954-955: [bug] **BY DESIGN 2026-11-18** (maintainer ruling: "0,0 is not a valid origin or exit"; documented in `map.h` at `toKey` — state key 0 = absent, (0,0) border-reserved). Original finding: `origin != 0` / `exitKey != 0` use key 0 as "absent" sentinel, which collides with the legitimate map position (0,0) (`toKey(0,0) == 0`). Low impact; document or use a separate `hasU()` probe.
-- L837-852: [error-handling] `addKey()` silently drops the key when all `MAX_KEYS` slots are occupied; add a `LOGW`.
+- L837-852: [error-handling] **FIXED 2026-11-18** (`break`s became `return`s; fall-through of the slot scan now emits `LOGW("key inventory full, dropping key ...")`). Original: `addKey()` silently drops the key when all `MAX_KEYS` slots are occupied.
 - L1661-1663: [bug] **FIXED 2026-11-18** (`timeout == 0` purges immediately instead of being decremented; live emplace sites all use nonzero `_TIMEOUT` constants — the reachable path was save-restore records). Original finding: `purgeSfx()` predicate has a side effect (`--sfx.timeout`); any entry with `timeout == 0` at purge time wraps to 65535 and is never removed. Guard with `sfx.timeout ? --sfx.timeout : 0` or `timeout <= 1`-style check (`timeout` is `uint16_t`, gamesfx.h:29).
-- L184 vs L213: [bug] inner `const uint16_t tileID` (L213) shadows the outer `const uint8_t tileID` (L184) inside `move()`; the shadow is currently benign (the switch branch re-reads deliberately) but is a trap — rename to `switchTile`.
-- L1942-1949 vs L1979-1986: [bug] the granular corner-pair mappings in `scanPos()` and `isGranularSolidFromPos()` differ for the same `aim` (e.g. AIM_UP tests {DL,DR} vs {UL,UR}); one is a plausible copy-paste inversion (needs gameplay verification — the difference may be intentional "approach side vs query side").
+- L184 vs L213: [bug] **FIXED 2026-11-18** (switch-branch local renamed to `switchTile`; outer is `uint16_t tileID` in current code). Original: inner `const uint16_t tileID` shadowed the outer `tileID` inside `move()` — benign but a trap.
+- L1942-1949 vs L1979-1986: [bug] **PENDING RULE 2026-11-18** — asymmetry re-verified against current code: `scanPos()` (game.cpp ~:2088) pairs AIM_UP↔{DL,DR}, AIM_DOWN↔{UL,UR}, AIM_LEFT↔{UR,DR}, AIM_RIGHT↔{UL,DL}; `isGranularSolidFromPos()` (~:2125) is the exact mirror. Gameplay-intent question parked for maintainer ("approach side vs query side" vs copy-paste inversion). No code change until ruled.
 
 ### Shrink / Dead / YAGNI
 
-- L597-613: [shrink] `isMonsterType()` rebuilds a `std::array` and hand-rolls a linear scan on every call, once per map tile in `spawnMonsters()`. Make it `static constexpr std::array` + `std::any_of` (or `std::find`).
-- L109: [dead] `m_sound.reset()` in `~CGame()` is redundant — the member destructor runs anyway.
-- L1732-1735: [dead] `destroy()` just calls `getGame()` — a no-op that claims to destroy the singleton (the function-local `unique_ptr` at L1883 only dies at exit). Either reset the unique_ptr or delete `destroy()`.
-- L345-347: [shrink] `manageTrigger()` re-does `m_map.setAttr(x, y, 0)` that caller `consume()` (L341) already performed; drop one.
-- L461: [yagni] `loadLevel()` always returns `true` — the bool is dead flexibility until the L407 path actually validates; once error handling lands it becomes real (keep after fixing Critical).
-- L1548-1557: [shrink] `getEvent()` can be `event = m_events.front();` (`at(0)` + throw-check buys nothing after the `size() > 0` test).
-- L1806-1808: [shrink] `u ? --u : 0;` used as a statement — write `if (u) --u;`.
-- L1470: [shrink] `attach(std::shared_ptr<ISound> &s)` takes a non-const reference for no reason — take by value (or `const &`).
+- L597-613: [shrink] **FIXED 2026-11-18** (array is now `static constexpr`; the plain loop kept — `std::any_of` adds nothing at the same size). Original: `isMonsterType()` rebuilt the `std::array` per call, once per map tile in `spawnMonsters()`.
+- L109: [dead] **ACCEPTED AS-IS 2026-11-18** — the destructor-body `reset()` releases the sound backend *before* the remaining members die; removing it changes release ordering for zero gain. Original: `m_sound.reset()` in `~CGame()` is redundant — the member destructor runs anyway.
+- L1732-1735: [dead] **STALE/CLOSED 2026-11-18** — current `destroy()` does `s_instance.reset()` (real teardown); the audited "calls getGame()" body no longer exists.
+- L345-347: [shrink] **FIXED 2026-11-18** (kept the single clear inside `manageTrigger()`; removed the redundant caller-side `setAttr(x, y, 0)` in both `consume()` and `move()`). Original: `manageTrigger()` re-did `m_map.setAttr(x, y, 0)` that callers already performed.
+- L461: [yagni] **CLOSED 2026-11-18** — moot since BUG-C7: `loadLevel()` now has real failure paths (`m_mapArch`/`at()` null checks, `LOGE` + `return false` for out-of-archive levels). The bool is live.
+- L1548-1557: [shrink] **FIXED 2026-11-18** (`!m_events.empty()` + `front()`). Original: `getEvent()` used `size() > 0` + `at(0)` where the throw-check bought nothing.
+- L1806-1808: [shrink] **FIXED 2026-11-18** (`if (u) --u;`). Original: `u ? --u : 0;` used as a statement.
+- L1470: [shrink] **FIXED 2026-11-18** (`attach(const std::shared_ptr<ISound> &)` in game.h + game.cpp; sole caller runtime.cpp:1511 passes an lvalue — signature-compatible).
 
 ## Notes
 

@@ -58,6 +58,12 @@ public:
 
 #ifdef USE_QFILE
 protected slots:
+#else
+// non-Qt build: without a label these members silently inherit the
+// preceding `public:`. Explicit here — and the divergence from the Qt
+// branch (protected slots) is load-bearing: engine.cpp calls these
+// from outside the class. See gamemixin.audit.md USE_QFILE finding.
+public:
 #endif
     virtual void mainLoop();
     void changeZoom();
@@ -167,7 +173,6 @@ protected:
         PROMPT_RESTART_GAME,
         PROMPT_LOAD,
         PROMPT_SAVE,
-        PROMPT_RESTART_LEVEL,
         PROMPT_HARDCORE,
         PROMPT_TOGGLE_MUSIC,
     };

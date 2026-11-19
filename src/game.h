@@ -156,7 +156,7 @@ public:
     void playSound(const int id) const;
     void playTileSound(const int tileID) const;
     void setLives(const int lives);
-    void attach(std::shared_ptr<ISound> &s);
+    void attach(const std::shared_ptr<ISound> &s);
     void setSkill(const uint8_t v);
     uint8_t skill() const;
     int size() const;

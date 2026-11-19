@@ -32,23 +32,23 @@ The loader is well-structured (recursive-descent JSON, mirrored parse.py INI rul
 
 ### Low
 
-- `L546, L640, L647`: [dead] `defines` is collected "for completeness / diagnostics" and never read anywhere else — delete.
-- `L447, L622`: [dead] `BossAccum::sheet` is assigned but never read (`build()` takes `sheetIndex` as a parameter) — delete the member.
-- `L611-612`: [dead] `if (sec.front() == '[')` re-tests what L607 already guaranteed.
-- `L576-582`: [shrink] `flush()` does `seq = BossAccum{}` after `pushBoss()` already reset it at L560 — drop one of the two resets.
-- `L35, L39`: [dead] `<algorithm>` and `<cstdio>` unused.
-- `L807-809, L840-842, L859-861`: [shrink] three heap-`new`ed static vectors with hand-rolled delete/reset; plain file-static `std::vector`s with `.clear()`/`.swap()` remove the `new`/`delete` and the leak-pool comment.
-- `L766-782`: [shrink] `splitLines` copies the whole file into a `vector<string>`; iterating `text.find('\n')` (or `std::string_view`) in the load loop avoids the copy.
-- `L563-565`: [yagni] `hitboxDir` parameter accepted then `(void)`-discarded; either use it or drop it from the API (header L177 documents it as meaningful).
-- `L422-430`: [shrink] linear scan over `frames` per hitbox is O(n²); fine for 4 bosses' data, revisit only if hitbox counts grow (a `map<int,size_t>` index is the upgrade path).
-- `L607-624`: [error-handling] duplicate section names (same boss twice) are silently both appended; `getBossData` returns the first, the second is dead weight. LOGW on duplicate.
-- `L219-260`: [validation] `parseString` has no `\uXXXX` support and the default escape branch (L248-250) silently maps unknown escapes to the raw char (e.g. `\u` → `u`); acceptable for the fixed schema but should LOGW or reject.
-- `L659-672`: [error-handling] a composite token like `color =red` (empty key before `=`) or a typo'd composite key stores a garbage field name that is never read and never warned about.
+- `L546, L640, L647`: [dead] **FIXED 2026-11-18** (`defines` member and the `private`/`define` push branches deleted; the general-config branch now parses-and-discards with a comment). Original: `defines` collected "for completeness / diagnostics", never read.
+- `L447, L622`: [dead] **FIXED 2026-11-18** (`BossAccum::sheet` member and its section-header assignment deleted; `build()` takes `sheetIndex` from `Loader::sheet`). Original: assigned but never read.
+- `L611-612`: [dead] **FIXED 2026-11-18** (re-test dropped; `sec.erase(sec.begin())` is unconditional under the `[`-guaranteed branch). Original: `if (sec.front() == '[')` re-tested what the section-header condition already guaranteed.
+- `L576-582`: [shrink] **FIXED 2026-11-18** (kept `pushBoss()`'s `seq = BossAccum{}`; removed the second reset in `flush()`). Original: `flush()` reset `seq` after `pushBoss()` had already reset it.
+- `L35, L39`: [dead] **PARTIALLY STALE 2026-11-18** — `<cstdio>` was unused and is deleted; `<algorithm>` is used (the BUG-C5 `std::min` hitbox clamp added after the audit) and stays.
+- `L807-809, L840-842, L859-861`: [shrink] **FIXED 2026-11-18** (the three pools are plain file-static `std::vector`s; `new`/`delete` and the null-reset dance removed — `freeBossData()` clears, static destructors are the last-resort release). Original: heap-`new`ed static vectors with hand-rolled delete/reset.
+- `L766-782`: [shrink] **ACCEPTED AS-IS 2026-11-18** — the copy is one `bosses.ini`-sized allocation per load, never hot. Original: `splitLines` copies the whole file into a `vector<string>`.
+- `L563-565`: [yagni] **BY DESIGN 2026-11-18** — `hitboxDir` kept for API symmetry, already commented at the `(void)` site; header contract unchanged. Original: parameter accepted then discarded.
+- `L422-430`: [shrink] **ACCEPTED AS-IS 2026-11-18** (audit's own ceiling: fine at real data sizes; `map<int,size_t>` index is the upgrade path if hitbox counts grow). Original: linear scan over `frames` per hitbox is O(n²).
+- `L607-624`: [error-handling] **FIXED 2026-11-18** (section headers now `LOGW` when the name already exists in `namePool`; first entry still wins for `getBossData`). Original: duplicate section names silently both appended.
+- `L219-260`: [validation] **FIXED 2026-11-18** (unknown escape branch `LOGW`s while keeping the raw char; `\uXXXX`-unsupported noted in the comment). Original: `parseString` default escape silently mapped `\x` → `x`.
+- `L659-672`: [error-handling] **FIXED (empty-key half) 2026-11-18** — `token` starting with `=` now `LOGW`s + skips. Typo'd *non-empty* composite keys remain silent by design: `build()` reads a fixed key set, and unknown top-level fields already `LOGW` — a per-key whitelist for composites is machinery. Original: garbage composite field names stored, never read, never warned.
 
 ## Notes
 
 - All C string handling is `std::string`-based; no strcpy/sprintf/fixed buffers found, no `reinterpret_cast`, no unchecked `fopen` (FileWrap checked). The leak-pool (L805-809) is deliberate and freed by `freeBossData()`.
-- L844-847 correctly re-points `d.name` into `g_pooledNames` after the move; `namePool` and `bosses` are only mutated together in `pushBoss`, so the `.at(i)` pairing holds — but it is fragile if pushBoss ever grows a branch.
-- L302 `strtod(start, nullptr)` relies on the caller's buffer being NUL-terminated at `end`; true for the only call site (L376, `std::string::data()`), but the parser API is unsafe for arbitrary buffers — worth a comment.
+- L844-847 correctly re-points `d.name` into `g_pooledNames` after the move; `namePool` and `bosses` are only mutated together in `pushBoss`, so the `.at(i)` pairing holds — but it is fragile if pushBoss ever grows a branch. **COMMENTED 2026-11-18**: the invariant is now spelled out at the re-point loop in `loadBossData`.
+- L302 `strtod(start, nullptr)` relies on the caller's buffer being NUL-terminated at `end`; true for the only call site (L376, `std::string::data()`), but the parser API is unsafe for arbitrary buffers — worth a comment. **COMMENTED 2026-11-18**: contract noted in `parseNumber`.
 - Runtime-verify against `techdocs/bosses/parse.py`: (1) **RESOLVED 2026-11-18** — spec (`docs/spec/bosses/parse.py` L483-487) ignores a hitbox file on an `@ref` line; loader now matches; (2) whether a section with a header but zero fields should produce a default `bossData_t` (pushBoss L555 admits it; `type` 0 then collides in `getBossData` scans); (3) whether `>>>sheet` mid-section is legal in real bosses.ini — if so, `build(sheet)` at L557 uses the sheet at flush time while frames/hitboxes were keyed with the old sheet.
 - The `count` overrun (Critical #2) is reachable only if a frame accumulates >4 boxes; check real hitbox JSONs for frames with 5+ same-cell boxes to gauge exposure.

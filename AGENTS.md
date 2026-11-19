@@ -111,5 +111,8 @@ To ensure codebase consistency and minimize unnecessary version control diffs, a
 - Exclude or delete patch artifacts (`*.orig`, `*.rej`).
 - Check github-ci workflows for deprecated typescript modules and deprecated runners.
 
+## Cross Compiler Compatibility
+Consider g++, msvc, mingw, zig, clang. Qt and emscriptem/wasm compatibility when making chanhges to existing files.
+
 ## Edit this file
 - Always ask for explicit user permission before editing AGENTS.md.

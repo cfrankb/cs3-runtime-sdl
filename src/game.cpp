@@ -217,9 +217,8 @@ bool CGame::move(const JoyAim aim)
     {
         LOGI("switch");
         const uint8_t attr = m_map.getAttr(pos.x, pos.y);
-        m_map.setAttr(pos.x, pos.y, 0);
-        const uint16_t tileID = m_map.get(pos.x, pos.y);
-        m_map.set(pos.x, pos.y, tileID + 1);
+        const uint16_t switchTile = m_map.get(pos.x, pos.y);
+        m_map.set(pos.x, pos.y, switchTile + 1);
         manageTrigger(pos.x, pos.y, attr);
     }
     else if (def.type == TYPE_PUSHOVER &&
@@ -346,8 +345,7 @@ void CGame::consume()
     const int x = m_player.x();
     const int y = m_player.y();
     const uint8_t attr = m_map.getAttr(x, y);
-    m_map.setAttr(x, y, 0);
-    manageTrigger(x, y, attr);
+    manageTrigger(x, y, attr); // clears the cell attr
 }
 
 void CGame::manageTrigger(const int x, const int y, const uint8_t attr)
@@ -670,7 +668,7 @@ void CGame::setMapArch(CMapArch *arch)
 
 bool CGame::isMonsterType(const uint8_t typeID) const
 {
-    std::array<uint8_t, 10> monsterTypes = {
+    static constexpr std::array<uint8_t, 10> monsterTypes = {
         TYPE_MONSTER,
         TYPE_VAMPLANT,
         TYPE_DRONE,
@@ -916,15 +914,16 @@ void CGame::addKey(const uint8_t c)
     {
         if (m_keys.tiles[i] == c)
         {
-            break;
+            return;
         }
         if (m_keys.tiles[i] == '\0')
         {
             m_keys.tiles[i] = c;
             m_keys.indicators[i] = MAX_KEY_STATE;
-            break;
+            return;
         }
     }
+    LOGW("key inventory full, dropping key '%c'", c);
 }
 
 /**
@@ -1297,6 +1296,9 @@ bool CGame::read(IFile &sfile)
         return sfile.read(ptr, size) == 1;
     };
 
+    // NOTE (audit 2026-11-18): the _R/_W raw-POD reads below make the save
+    // format little-endian- and sizeof-dependent by design; cross-platform
+    // saves would need the ISerial per-field helpers instead.
     // check signature/version
     uint32_t signature = 0;
     _R(&signature, sizeof(signature));
@@ -1400,7 +1402,11 @@ bool CGame::read(IFile &sfile)
     for (uint32_t i = 0; i < usedItemCount; ++i)
     {
         Pos pos;
-        pos.read(sfile);
+        if (!pos.read(sfile))
+        {
+            LOGE("failed to read used item %u of %u", i, usedItemCount);
+            return false;
+        }
         m_usedItems.emplace_back(pos);
     }
 
@@ -1593,7 +1599,7 @@ void CGame::playTileSound(int tileID) const
  *
  * @param s
  */
-void CGame::attach(std::shared_ptr<ISound> &s)
+void CGame::attach(const std::shared_ptr<ISound> &s)
 {
     m_sound = s;
 }
@@ -1637,7 +1643,7 @@ int CGame::calcScoreLife() const
  */
 int CGame::size() const
 {
-    return m_mapArch->size();
+    return m_mapArch ? m_mapArch->size() : 0;
 }
 
 /**
@@ -1678,9 +1684,9 @@ void CGame::parseHints(const char *data)
 int CGame::getEvent()
 {
     int event = EVENT_NONE;
-    if (m_events.size() > 0)
+    if (!m_events.empty())
     {
-        event = m_events.at(0);
+        event = m_events.front();
         m_events.erase(m_events.begin());
     }
     return event;
@@ -1947,7 +1953,8 @@ void CGame::resetKeys()
 void CGame::decKeyIndicators()
 {
     for (auto &u : m_keys.indicators)
-        u ? --u : 0;
+        if (u)
+            --u;
 }
 
 void CGame::clearKeyIndicators()
