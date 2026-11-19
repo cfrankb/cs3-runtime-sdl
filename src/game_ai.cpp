@@ -213,7 +213,8 @@ void CGame::handleBossHitboxContact(CBoss &boss)
     boss.testHitbox1(m_map, [](const Pos &p, auto type)
                      {
                          (void)type;
-                         return m_map.at(p.x, p.y) == TILES_ANNIE2; // check if player is there
+                         // type-based like every other player-detection site
+                         return getTileDef(m_map.at(p.x, p.y)).type == TYPE_PLAYER;
                      },
                      [&boss, this, &playerDamage](const HitResult &r)
                      {
@@ -747,8 +748,15 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
             const int16_t y = pos.y + ty;
             if (m_map.isValid(x, y))
             {
-                int distance = (std::abs(tx) + std::abs(ty)) / 2;
-                int radiusDamage = distance ? damage / std::abs(distance) : damage;
+                // accepted falloff (2026-11-18 ruling): full damage for
+                // Manhattan <= 3, then damage / (manhattan / 2).
+                // distance is non-negative by construction (tx/ty abs-ed) --
+                // its abs() was dropped. radiusDamage keeps abs(): caller
+                // passes def.health (NEGATIVE health deltas); the stored
+                // splash damage must be positive or sustainDamage's
+                // negative-heal guard (BUG-C round) turns it into healing.
+                const int distance = (std::abs(tx) + std::abs(ty)) / 2;
+                int radiusDamage = distance ? damage / distance : damage;
                 blastPositions.emplace_back(blastPos_t{Pos{x, y}, std::abs(radiusDamage)});
 
                 // check player for splash danage
@@ -780,7 +788,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
                         // kill mob monsters
                         deletedMonsters.emplace(id);
                         m_map.set(x, y, actor.getPU());
-                        m_sfx.emplace_back(sfx_t{x, y, SFX_EXPLOSION0, SFX_EXPLOSION6_TIMEOUT});
+                        m_sfx.emplace_back(sfx_t{x, y, SFX_EXPLOSION0, SFX_EXPLOSION0_TIMEOUT});
                     }
                     else if (actor.type() == TYPE_ICECUBE)
                     {
@@ -932,7 +940,7 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             {
                 queueRespawn(i);
                 deletedMonsters.insert(i);
-                m_sfx.emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION6_TIMEOUT});
+                m_sfx.emplace_back(sfx_t{.x = pos.x, .y = pos.y, .sfxID = SFX_EXPLOSION1, .timeout = SFX_EXPLOSION1_TIMEOUT});
                 m_map.set(pos.x, pos.y, TILES_BLANK);
             }
         }
