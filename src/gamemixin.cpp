@@ -1409,6 +1409,7 @@ void CGameMixin::manageGamePlay()
         game.manageBosses(m_ticks);
         game.manageSpawns(m_ticks);
         game.purgeSfx();
+        game.tickFx();
     }
     const uint16_t exitKey = m_game->getMap().states().getU(POS_EXIT);
     if (game.isClosure())

@@ -19,6 +19,7 @@ add_library(main SHARED
         ../../../src/game_ai.cpp
         ../../../src/game_auto.cpp
         ../../../src/gamemixin.cpp
+        ../../../src/gamesfx.cpp
         ../../../src/gamestats.cpp
         ../../../src/gameui.cpp
         ../../../src/layer.cpp

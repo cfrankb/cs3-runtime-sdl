@@ -5,6 +5,40 @@ Pixel-coordinate, multi-frame, two-layer effects owned by `CGame`.
 **Hardware renderer (`EngineHW`) is implemented first**; software renderer
 follows. Classic `sfx_t` is untouched.
 
+## Asset index — `pixels/sfx.png` + `pixels/sfx.idx`
+
+Art has landed (2026-11-19): `cs3-data-private/pixels/sfx.png` (46-frame
+atlas) + `cs3-data-private/pixels/sfx.idx`.
+
+- **Frame rects:** embedded in `sfx.png` itself as a private `obLT` PNG
+  metadata chunk (one record per imageID, same family as the `.obl` files).
+  The loader extracts the frames; no hand-maintained `tileinfo_t` table —
+  `g_fxSheet_data` is **filled by the loader at sheet load**, vector index =
+  imageID.
+- **Sequences:** `sfx.idx` is one line per imageID,
+  `<imageID>  # <source png path>:<frame size>`. A contiguous run of lines
+  sharing one source png is one fx sequence: `fx_layer_t.base` = first
+  imageID of the run, `count` = run length. Runs explicitly suffixed
+  `EffectBack`/`EffectFront` in the source png name assign to that layer;
+  any sequence not identified as back or front is assumed **front**.
+  The `Fx` enum / `g_fxData`
+  table entries are assigned from these runs — imageIDs come from `sfx.idx`,
+  nowhere else (spec I5).
+
+| imageIDs | frames | size | sequence |
+|---|---|---|---|
+| 0–5   | 6 | 32×48 | Blue Lightning |
+| 6–13  | 8 | 32×48 | Fire Column |
+| 14–21 | 8 | 32×48 | Mushroom Explosion |
+| 22–27 | 6 | 32×48 | Ice Spikes |
+| 28–33 | 6 | 32×32 | Smoke Bomb |
+| 34–39 | 6 | 48×48 | Explosion **back** layer |
+| 40–45 | 6 | 48×48 | Explosion **front** layer |
+
+Explosion is the two-layer case: `back = {34, 6}`, `front = {40, 6}`; the
+other five are single-layer (front). `fxData_t.w/h` = the per-sequence frame
+size above.
+
 ## Phase 1 — data model + `CGame` state + tests
 
 `src/gamesfx.h` (**existing** — add declarations; keep the frozen classic
@@ -16,12 +50,14 @@ follows. Classic `sfx_t` is untouched.
 speed, flags, ttl, w, h, back, front, damage, splashRadius, hitboxes,
 hitboxCount, onEnd}`, pure-POD `fx_t {x, y, ox, oy, effectID, timer}` (12
 bytes, its own wire record), `fxView_t`, `fxDraw_t`, extern `g_fxData` +
-`g_fxSheet_data` (`tileinfo_t` rects), accessors `fxDataAt()`,
+`g_fxSheet_data` (`tileinfo_t` rects, filled at load from the `sfx.png`
+`obLT` metadata — not hardcoded), accessors `fxDataAt()`,
 `fxFrameIndex()`.
 
-`src/gamesfx.cpp` (**new** — global storage): define `g_fxData` (**empty
-until art lands**; tests push synthetic entries into it) and
-`g_fxSheet_data`, plus `fxDataAt()` bounds-checked lookup and
+`src/gamesfx.cpp` (**new** — global storage): define `g_fxData` (**seeded
+from the `sfx.idx` sequence table above**; tests push synthetic entries on
+top) and `g_fxSheet_data` (empty here; the loader fills it from the sheet
+metadata), plus `fxDataAt()` bounds-checked lookup and
 `fxFrameIndex()` (one-shot: clamp; repeatable: modulo per spec I4; spec I5:
 the sequence index exists nowhere else). Picked up by `bin/refresh.py` into
 `src/CMakeLists.txt`.
@@ -92,13 +128,18 @@ Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
   L196-199): **the load call ships as commented-out boilerplate, not the
   final version** — `preloadAssets` is environment-dependent (asset rows
   come from the private manifest `[assets]` section, `runtime.cpp` L1577-1581,
-  one row per enum index). Boilerplate mirrors the boss/sheet0 line:
+  one row per enum index; the fx row is `pixels/sfx.png`). Boilerplate
+  mirrors the boss/sheet0 line:
   `TileSet::load(m_renderer, AssetMan::getPrefix() + "pixels/" +
   m_assetFiles[ASSET_FXSHEET][IDX_FILENAME], g_fxSheet_data)` plus the
   `m_assetFiles.size() > ASSET_FXSHEET` manifest guard and `LOGI/LOGW` —
   commented, with a `ponytail:`-style note that the maintainer enables it per
-  environment. Runtime stays safe: absent sheet => `tileCount() == 0` =>
-  draw passes no-op; `getTile()` and `drawTile()` are already null-safe.
+  environment. The loader extracts the frame rects from the `obLT` metadata
+  chunk inside `sfx.png` and fills `g_fxSheet_data` (index = imageID);
+  `sfx.idx` is the build-time source of the sequence base/count in
+  `g_fxData`, not a runtime load. Runtime stays safe: absent sheet =>
+  `tileCount() == 0` => draw passes no-op; `getTile()` and `drawTile()` are
+  already null-safe.
 - `drawFx(front, viewLeft, viewTop)`: bail if empty set; build `fxView_t`
   `{viewLeft, viewTop, viewLeft + getWidth(), viewTop + getHeight()}`
   (logical px — `drawTile` applies `SCALE 2`); `m_game->getFxToDraw()`;
@@ -121,8 +162,9 @@ Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
   (runtime.cpp L1269) as commented-out boilerplate only** — same rule as the
   hardware side: preload is environment-dependent (in-tree, `m_sheet0/1` are
   never assigned at all; only the `t_gamemixin.cpp` seam populates them).
-  Boilerplate: PNG + `g_fxSheet_data` `tileinfo_t` rects -> `CFrameSet`
-  (boss/sheet loader pattern), skip-not-fail when the asset is absent.
+  Boilerplate: `pixels/sfx.png` (frames extracted from the embedded `obLT`
+  rects, same loader path as Phase 2) -> `CFrameSet` (boss/sheet loader
+  pattern), skip-not-fail when the asset is absent.
   Null `m_fxSheet` => draw passes no-op.
 - **Two viewport passes**, back/front blit loops around each existing sprite/
   sfx overlay loop:
@@ -139,7 +181,8 @@ Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
 ## Phase 4 — docs + compliance
 
 - Flip spec Open Items (O1 resolved by FX_REPEATABLE/ttl ruling 2026-11-19;
-  O2 stays open until art; hitbox/damage/splash provision stays "declared,
+  O2 art landed 2026-11-19 (`sfx.png` + `sfx.idx`) — flip when the sheet is
+  wired; hitbox/damage/splash provision stays "declared,
   no consumer").
 - Update `docs/compliance/` (hash, tally, checkpoint rows) **after** ctest is
   green; never bump a hash before testing.

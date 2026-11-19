@@ -21,6 +21,7 @@
 #include <typeinfo>
 #include <filesystem>
 #include "t_game.h"
+#include "t_fx.h"
 #include "t_gamestats.h"
 #include "t_maparch.h"
 #include "t_map.h"
@@ -89,6 +90,11 @@ int main(int argc, char *args[])
         FCT(test_gamestats),
         FCT(test_runtime),
         FCT(test_game),
+        FCT(test_fx_spawn),
+        FCT(test_fx_lifetime),
+        FCT(test_fx_frame_index),
+        FCT(test_fx_cull),
+        FCT(test_fx_save_roundtrip),
         FCT(test_ifile),
         FCT(test_ifile_create),
         FCT(test_ifile_read_write),

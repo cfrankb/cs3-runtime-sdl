@@ -26,6 +26,7 @@
 #include "map.h"
 #include "events.h"
 #include "game_auto.h"
+#include "gamesfx.h"
 
 class CGameStats;
 class CMapArch;
@@ -37,8 +38,6 @@ class CAnimator;
 
 struct TileDef;
 enum Event;
-enum Sfx : uint16_t;
-struct sfx_t;
 
 struct MapReport
 {
@@ -166,6 +165,12 @@ public:
     int getEvent();
     void clearEvents();
     void purgeSfx();
+    std::vector<fx_t> &getFx();
+    int spawnFx(const int effectID, const int tileX, const int tileY);
+    int spawnFxPx(const int effectID, const int px, const int py);
+    void tickFx();
+    void getFxToDraw(const fxView_t &view, const bool front,
+                     std::vector<fxDraw_t> &out) const;
     static CGame *getGame();
     static void destroy();
     bool isClosure() const;
@@ -232,6 +237,7 @@ private:
     std::vector<CActor> m_monsters;
     std::vector<CBoss> m_bosses;
     std::vector<sfx_t> m_sfx;
+    std::vector<fx_t> m_fx;
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     std::shared_ptr<ISound> m_sound;

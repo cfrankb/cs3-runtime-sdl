@@ -55,7 +55,9 @@ namespace GamePrivate
 {
     // Actor wire format changed (m_frame serialized separately from m_algo
     // after the union split, see actor.h); old saves are rejected.
-    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0011;
+    // extended fx section added (m_fx save block after the sfx block);
+    // old saves are rejected by the version gate (spec N3).
+    constexpr uint32_t ENGINE_VERSION = (0x0200 << 16) + 0x0012;
     constexpr const char GAME_SIGNATURE[]{'C', 'S', '3', 'b'};
     // Minimum on-disk bytes of one saved monster/boss record: the fixed
     // serialized fields plus at least one path-tag byte (CActor common
@@ -63,6 +65,10 @@ namespace GamePrivate
     constexpr uint32_t MIN_ACTOR_RECORD = 12;
     constexpr uint32_t MIN_BOSS_RECORD = 13;
     Random g_randomz(12345, 0);
+
+    // tile size for the spawnFx tile->pixel conversion (spec S1);
+    // engine.h / gamemixin.h own their own copies
+    constexpr int FX_TILE_SIZE = 16;
 
     enum
     {
@@ -519,6 +525,7 @@ bool CGame::loadLevel(const GameMode mode)
     m_health = DEFAULT_HEALTH;
     spawnMonsters();
     m_sfx.clear();
+    m_fx.clear();
     resetStats();
     m_report = currentMapReport();
 
@@ -1421,6 +1428,17 @@ bool CGame::read(IFile &sfile)
         m_sfx.emplace_back(std::move(sfx));
     }
 
+    // load fx
+    m_fx.clear();
+    uint16_t fxCount = 0;
+    _R(&fxCount, sizeof(fxCount));
+    for (uint16_t i = 0; i < fxCount; ++i)
+    {
+        fx_t fx;
+        _R(&fx, sizeof(fx));
+        m_fx.emplace_back(std::move(fx));
+    }
+
     // clear events
     clearEvents();
 
@@ -1534,6 +1552,14 @@ bool CGame::write(IFile &tfile)
     _W(&sfxCount, sizeof(sfxCount));
     for (const auto &sfx : m_sfx)
         _W(&sfx, sizeof(sfx));
+
+    // save fx
+    if (m_fx.size() > UINT16_MAX)
+        LOGW("fx list of %zu exceeds uint16 save field; truncating", m_fx.size());
+    const uint16_t fxCount = static_cast<uint16_t>(m_fx.size());
+    _W(&fxCount, sizeof(fxCount));
+    for (const auto &fx : m_fx)
+        _W(&fx, sizeof(fx));
 
     // save animation state
     if (!m_animator->write(tfile))
@@ -1806,6 +1832,115 @@ void CGame::purgeSfx()
                                    return sfx.timeout == 0;
                                }),
                 m_sfx.end());
+}
+
+/**
+ * @brief Get extended fx list
+ *
+ * @return std::vector<fx_t>&
+ */
+std::vector<fx_t> &CGame::getFx()
+{
+    return m_fx;
+}
+
+/**
+ * @brief Spawn an extended fx at tile coords (spec S1): converts to world
+ * pixels (tile center) and records the origin point ox/oy.
+ *
+ * @return instance index, or -1 for an unknown effectID
+ */
+int CGame::spawnFx(const int effectID, const int tileX, const int tileY)
+{
+    if (!fxDataAt(effectID))
+        return -1;
+    m_fx.emplace_back(fx_t{
+        .x = static_cast<int16_t>(tileX * FX_TILE_SIZE + FX_TILE_SIZE / 2),
+        .y = static_cast<int16_t>(tileY * FX_TILE_SIZE + FX_TILE_SIZE / 2),
+        .ox = static_cast<int16_t>(tileX),
+        .oy = static_cast<int16_t>(tileY),
+        .effectID = static_cast<int16_t>(effectID),
+        .timer = 0});
+    return static_cast<int>(m_fx.size()) - 1;
+}
+
+/**
+ * @brief Spawn an extended fx at world pixels (spec S1): origin not
+ * available, ox = oy = -1.
+ *
+ * @return instance index, or -1 for an unknown effectID
+ */
+int CGame::spawnFxPx(const int effectID, const int px, const int py)
+{
+    if (!fxDataAt(effectID))
+        return -1;
+    m_fx.emplace_back(fx_t{
+        .x = static_cast<int16_t>(px),
+        .y = static_cast<int16_t>(py),
+        .ox = -1,
+        .oy = -1,
+        .effectID = static_cast<int16_t>(effectID),
+        .timer = 0});
+    return static_cast<int>(m_fx.size()) - 1;
+}
+
+/**
+ * @brief Advance fx timers and end expired instances (spec I1), firing the
+ * table entry's onEnd before erase. Called next to purgeSfx().
+ *
+ */
+void CGame::tickFx()
+{
+    for (auto it = m_fx.begin(); it != m_fx.end();)
+    {
+        const fxData_t *def = fxDataAt(it->effectID);
+        if (!def)
+        {
+            // dangling effectID (table shrank since save): end at once
+            it = m_fx.erase(it);
+            continue;
+        }
+        it->timer++;
+        bool ended = false;
+        if (def->flags & FX_REPEATABLE)
+            ended = it->timer >= def->ttl;
+        else
+        {
+            const uint16_t frames = std::max(def->back.count, def->front.count);
+            ended = it->timer >= static_cast<uint32_t>(frames) * def->speed;
+        }
+        if (ended)
+        {
+            if (def->onEnd)
+                def->onEnd(*this, *it);
+            it = m_fx.erase(it);
+        }
+        else
+            ++it;
+    }
+}
+
+/**
+ * @brief Collect visible fx draw entries for one layer side (spec S2/S3):
+ * center inside the view rect inflated by the table w/2, h/2.
+ *
+ */
+void CGame::getFxToDraw(const fxView_t &view, const bool front,
+                        std::vector<fxDraw_t> &out) const
+{
+    for (const auto &fx : m_fx)
+    {
+        const fxData_t *def = fxDataAt(fx.effectID);
+        if (!def)
+            continue;
+        const fx_layer_t &layer = front ? def->front : def->back;
+        if (layer.count == 0)
+            continue;
+        if (!fx.isWithin(view.left - def->w / 2, view.top - def->h / 2,
+                         view.right + def->w / 2, view.bottom + def->h / 2))
+            continue;
+        out.emplace_back(fxDraw_t{fx.x, fx.y, fxFrameIndex(fx, *def, layer)});
+    }
 }
 
 CGameStats &CGame::stats()
