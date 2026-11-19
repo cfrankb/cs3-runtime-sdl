@@ -485,6 +485,7 @@ bool CGame::loadLevel(const GameMode mode)
 
     // clear event list
     clearEvents();
+    m_exitAnnounced = false;
 
     // Use origin pos if available
     CStates &states = m_map.states();
@@ -634,6 +635,16 @@ void CGame::resetStats()
  */
 void CGame::setLevel(int levelId)
 {
+    // maintainer ruling 2026-11-18: clamp out-of-range early with LOGW.
+    // Only clamped when an archive is present; the archive can be set after
+    // setLevel(), and loadLevel() (L453-463) remains the authoritative guard.
+    if (m_mapArch && m_mapArch->size() != 0 && m_mapArch->at(levelId) == nullptr)
+    {
+        const int clamped = std::clamp(levelId, 0, static_cast<int>(m_mapArch->size()) - 1);
+        LOGW("setLevel: %d out of range (archive has %zu maps); using %d",
+             levelId, m_mapArch->size(), clamped);
+        levelId = clamped;
+    }
     m_level = levelId;
 }
 
@@ -1020,8 +1031,13 @@ void CGame::checkClosure()
         const uint16_t exitKey = m_map.states().getU(POS_EXIT);
         if (exitKey != 0)
         {
-            // Exit Notification Message
-            m_events.emplace_back(EVENT_EXIT_OPENED);
+            // Exit Notification Message -- maintainer ruling 2026-11-18:
+            // announce once per level (checkClosure re-runs on every hit)
+            if (!m_exitAnnounced)
+            {
+                m_events.emplace_back(EVENT_EXIT_OPENED);
+                m_exitAnnounced = true;
+            }
             const bool revealExit = m_gameStats->get(S_REVEAL_EXIT) != 0;
             const Pos exitPos = CMap::toPos(exitKey);
             if (!revealExit)
@@ -1631,7 +1647,9 @@ int CGame::size() const
  */
 const char *CGame::getHintText()
 {
-    return m_hints.size() ? m_hints[m_introHint].c_str() : "";
+    // clamp at use: m_introHint is randomized in loadLevel() against the
+    // then-current hint count
+    return m_hints.empty() ? "" : m_hints[m_introHint % m_hints.size()].c_str();
 }
 
 /**
@@ -1642,6 +1660,8 @@ const char *CGame::getHintText()
 void CGame::parseHints(const char *data)
 {
     m_hints.clear();
+    if (!data) // maintainer ruling 2026-11-18: empty file gives data() == nullptr
+        return;
     const auto lines = split(std::string(data), '\n');
     for (const auto &line : lines)
     {
@@ -1768,8 +1788,17 @@ std::vector<sfx_t> &CGame::getSfx()
  */
 void CGame::purgeSfx()
 {
-    m_sfx.erase(std::remove_if(m_sfx.begin(), m_sfx.end(), [](auto &sfx)
-                               { --sfx.timeout; return sfx.timeout == 0; }),
+    // maintainer ruling 2026-11-18: a 0 timeout (e.g. restored from a save
+    // record) purges immediately; decrementing it wrapped to 65535 and the
+    // sfx lived ~18 minutes
+    m_sfx.erase(std::remove_if(m_sfx.begin(), m_sfx.end(),
+                               [](auto &sfx)
+                               {
+                                   if (sfx.timeout == 0)
+                                       return true;
+                                   --sfx.timeout;
+                                   return sfx.timeout == 0;
+                               }),
                 m_sfx.end());
 }
 

@@ -149,7 +149,7 @@ public:
     int playerSpeed() const;
     static userKeys_t &keys();
     std::vector<CActor> &getMonsters();
-    CActor &getMonster(int i);
+    CActor &getMonster(int i); // contract (2026-11-18 ruling): caller owns bounds checking against getMonsters().size()
     std::vector<CBoss> &getBosses(); // public so tests can inject bosses (see t_game_ai)
     void rebuildMonsterGrid(); // public so tests can sync the grid after getMonsters() injection
     std::vector<sfx_t> &getSfx();
@@ -227,6 +227,7 @@ private:
     inline static userKeys_t m_keys;
     GameMode m_mode = MODE_TITLE;
     int m_introHint = 0;
+    bool m_exitAnnounced = false; // EVENT_EXIT_OPENED fires once per level
     std::vector<Event> m_events;
     std::vector<CActor> m_monsters;
     std::vector<CBoss> m_bosses;

@@ -569,9 +569,12 @@ namespace
         }
         return true;
     }
-// BUG-C7: loadLevel must reject a null archive or an out-of-range level
-// instead of dereferencing at()'s nullptr. Mutates and restores the
-// singleton's arch/level/mode; no archive is set anywhere else in cs3-tests.
+// BUG-C7: loadLevel must reject a null archive instead of dereferencing
+// at()'s nullptr. 2026-11-18 ruling: setLevel() clamps against the loaded
+// archive, so an out-of-range m_level is no longer constructible through
+// the public API -- that clamp is pinned here; loadLevel()'s own at()
+// check stays as defense-in-depth. Mutates and restores the singleton's
+// arch/level/mode; no archive is set anywhere else in cs3-tests.
 bool testLevelBounds()
 {
     CGame *game = CGame::getGame();
@@ -591,15 +594,15 @@ bool testLevelBounds()
     arch.add(std::make_unique<CMap>(MAP_SIZE, MAP_SIZE));
     game->setMapArch(&arch);
     game->setLevel(1);
-    if (game->loadLevel(CGame::MODE_IDLE))
+    if (game->level() != 0)
     {
-        LOGE("loadLevel accepted level 1 of a 1-map archive");
+        LOGE("setLevel(1) of a 1-map archive did not clamp to 0");
         ok = false;
     }
     game->setLevel(-1);
-    if (game->loadLevel(CGame::MODE_IDLE))
+    if (game->level() != 0)
     {
-        LOGE("loadLevel accepted negative level");
+        LOGE("setLevel(-1) did not clamp to 0");
         ok = false;
     }
 
