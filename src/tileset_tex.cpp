@@ -17,10 +17,12 @@
 */
 
 #include "tileset_tex.h"
+#include <cstring>
 #include "shared/Frame.h"
 #include "shared/FrameSet.h"
 #include "shared/FileWrap.h"
 #include "shared/PngMagic.h"
+#include "gamesfx.h"
 #include "logger.h"
 
 TileSet::TileSet()
@@ -129,6 +131,64 @@ bool TileSet::load(SDL_Renderer *renderer, const std::string_view &filename, std
     }
 
     return true;
+}
+
+bool TileSet::loadFx(SDL_Renderer *renderer, const std::string_view &filename, std::vector<tileinfo_t> &tiledata)
+{
+    LOGI("extracting fx sheet from %s", filename.data());
+    tiledata.clear(); // this call owns filling it; no accumulate on reload
+    CFileWrap file;
+    if (!file.open(filename, "rb"))
+    {
+        LOGE("can't open %s", filename.data());
+        return false;
+    }
+    constexpr uint8_t pngSig[] = {137, 80, 78, 71, 13, 10, 26, 10};
+    uint8_t sig[8];
+    if (file.read(sig, 8) != IFILE_OK || memcmp(sig, pngSig, sizeof(pngSig)) != 0)
+    {
+        LOGE("not a png: %s", filename.data());
+        return false;
+    }
+
+    // the obLT metadata chunk lives at the end of the file: scan the last
+    // 2KB for the tag, the chunk header (length) is 4 bytes before it.
+    constexpr long tailSize = 2048;
+    const long size = file.getSize();
+    const long base = size > tailSize + 8 ? size - tailSize : 8; // never before the signature
+    const long avail = size - base;
+    if (avail < 16)
+    {
+        LOGW("no obLT tile metadata in %s", filename.data());
+        return false;
+    }
+    if (!file.seek(base))
+        return false;
+    std::vector<uint8_t> tail(static_cast<size_t>(avail));
+    if (file.read(tail.data(), static_cast<int>(avail)) != IFILE_OK)
+    {
+        LOGE("can't read tail of %s", filename.data());
+        return false;
+    }
+    // scan backwards: the chunk tag is the last "obLT" unless the payload
+    // itself contains the byte pattern, so validate each candidate's length
+    for (long i = avail - 4; i >= 4; --i)
+    {
+        if (memcmp(tail.data() + i, "obLT", 4) != 0)
+            continue;
+        const uint8_t *hdr = tail.data() + i - 4;
+        const uint32_t len = (static_cast<uint32_t>(hdr[0]) << 24) |
+                             (static_cast<uint32_t>(hdr[1]) << 16) |
+                             (static_cast<uint32_t>(hdr[2]) << 8) | hdr[3];
+        if (len < 12 || i + 4 + static_cast<long>(len) + 4 > avail)
+            continue; // not a chunk header, payload wouldn't fit
+        if (!parseFxSheetMeta(tail.data() + i + 4, len, tiledata))
+            return false;
+        file.close();
+        return load(renderer, filename, tiledata);
+    }
+    LOGW("no obLT tile metadata in %s", filename.data());
+    return false;
 }
 
 bool TileSet::saveTiles(SDL_Texture *texture, std::vector<Tile> &tiles, CFrame *frame)

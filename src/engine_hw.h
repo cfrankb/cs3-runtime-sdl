@@ -65,6 +65,7 @@ protected:
 
     void drawViewPortStatic();
     void drawViewPortDynamic();
+    void drawFx(const bool front, const int viewLeft, const int viewTop);
     void drawBossses(const int mx, const int my, const int sx, const int sy);
     void drawScroll();
     void drawEventText();
@@ -152,6 +153,7 @@ protected:
         ASSET_LAYERS0,
         ASSET_SPLASH,
         ASSET_TITLESCREEN,
+        ASSET_FXSHEET, // append-only: manifest indices must not shift
         MAX_ASSET,
         IDX_FILENAME = 0,
         MAX_LAYERS = 4
@@ -169,6 +171,7 @@ protected:
     TileSet m_tileset_hearts;
     TileSet m_tileset_sheet0;
     TileSet m_tileset_sheet1;
+    TileSet m_tileset_fx;
     // TileSet m_tileset_layers0;
     TileSet m_tileset_layers[MAX_LAYERS];
     BitmapFont8x8 m_font;

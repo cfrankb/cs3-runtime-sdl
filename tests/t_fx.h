@@ -22,3 +22,5 @@ bool test_fx_lifetime();
 bool test_fx_frame_index();
 bool test_fx_cull();
 bool test_fx_save_roundtrip();
+bool test_fx_sheet_meta();
+bool test_fx_sheet_tail_scan();

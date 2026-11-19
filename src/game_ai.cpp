@@ -861,6 +861,7 @@ void CGame::handleBarrel(CActor &actor, const TileDef &def, const int i, std::se
             .sfxID = SFX_EXPLOSION5,
             .timeout = SFX_EXPLOSION5_TIMEOUT,
         });
+        spawnFx(FX_SMOKE_BOMB, pos.x, pos.y);
         deletedMonsters.emplace(i);
         queueRespawn(actor);
         m_map.set(pos.x, pos.y, TILES_BARREL2EX);

@@ -145,7 +145,9 @@ void EngineHW::preloadAssets()
     }
     m_font.buildAtlas(m_renderer);
 
-    if (m_assetFiles.size() < MAX_ASSET)
+    // ASSET_FXSHEET is optional (older manifests may lack the row and loadFx
+    // guards its own index), so only the original assets are mandatory
+    if (m_assetFiles.size() <= ASSET_FXSHEET)
     {
         LOGE("not enought assets defined: %zu (should be %d)", m_assetFiles.size(), MAX_ASSET);
         return;
@@ -198,6 +200,16 @@ void EngineHW::preloadAssets()
     if (!m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data))
         LOGE("failed to load sheet1 asset");
 
+    // fx sheet (pixels/sfx.png): frame rects come from the obLT metadata chunk
+    // inside the png; the loader fills g_fxSheet_data (index = imageID).
+    // ponytail: environment-dependent (needs the ASSET_FXSHEET manifest row);
+    // maintainer enables per environment. Absent sheet => tileCount() == 0 and
+    // every drawFx pass no-ops.
+    std::string fxSheetName = AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_FXSHEET][IDX_FILENAME];
+    if (m_assetFiles.size() > ASSET_FXSHEET &&
+        !m_tileset_fx.loadFx(m_renderer, fxSheetName, g_fxSheet_data))
+        LOGW("failed to load fx sheet asset: %s", fxSheetName.c_str());
+    LOGI("FX loaded: %lu", m_tileset_fx.tileCount());
     m_textureTitlePix = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLEPIX][IDX_FILENAME]);
     m_textureSplash = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SPLASH][IDX_FILENAME]);
     m_textureTitleScreen = loadTextureAsset(AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_TITLESCREEN][IDX_FILENAME]);
@@ -701,6 +713,9 @@ void EngineHW::drawViewPortStatic()
         }
     }
 
+    // fx back layer: drawn before actors, same origin as the sprite pass
+    drawFx(false, mx * TILE_SIZE, my * TILE_SIZE);
+
     std::vector<sprite_t> sprites;
     gatherSprites(sprites, {.mx = mx, .ox = 0, .my = my, .oy = 0});
 
@@ -713,6 +728,9 @@ void EngineHW::drawViewPortStatic()
         const Tile *tile = calcSpecialFrame(sprite);
         drawTile(tile, x * TILE_SIZE, y * TILE_SIZE); //, colorMask, nullptr);
     }
+
+    // fx front layer: where classic sfx draw today
+    drawFx(true, mx * TILE_SIZE, my * TILE_SIZE);
 
     // draw Bosses
     drawBossses(
@@ -962,6 +980,13 @@ void EngineHW::drawViewPortDynamic()
     /////////////////////////////////////////////////////////////////////////////
     // overlay special case monsters and sfx
 
+    // fx view origin: the world left/top edge on screen, same as the tile
+    // loop (column mx drawn at -halfOffset when odd) and drawBossses
+    // (m_cx * 8) -- review fix: the spec's earlier minus sign was flipped
+    const int fxLeft = mx * TILE_SIZE + (ox ? halfOffset : 0);
+    const int fxTop = my * TILE_SIZE + (oy ? halfOffset : 0);
+    drawFx(false, fxLeft, fxTop);
+
     std::vector<sprite_t> sprites;
     gatherSprites(sprites, {.mx = mx, .ox = ox, .my = my, .oy = oy});
     for (const auto &sprite : sprites)
@@ -979,11 +1004,31 @@ void EngineHW::drawViewPortDynamic()
         drawTile(tile, px, py);
     }
 
+    drawFx(true, fxLeft, fxTop);
+
     for (const auto &overlay : overlays)
         drawTile(overlay.tile, overlay.x, overlay.y);
 
     // draw Bosses
     drawBossses(m_state.m_cx, m_state.m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
+}
+
+void EngineHW::drawFx(const bool front, const int viewLeft, const int viewTop)
+{
+    if (m_tileset_fx.tileCount() == 0)
+        return;
+    const fxView_t view{viewLeft, viewTop, viewLeft + getWidth(), viewTop + getHeight()};
+    std::vector<fxDraw_t> draws;
+    m_game->getFxToDraw(view, front, draws);
+    for (const auto &draw : draws)
+    {
+        const Tile *tile = m_tileset_fx.getTile(draw.frameID);
+        if (!tile)
+            continue;
+        // logical px: drawTile applies SCALE (spec R2)
+        drawTile(tile, draw.x - static_cast<int>(tile->rect.w) / 2 - viewLeft,
+                 draw.y - static_cast<int>(tile->rect.h) / 2 - viewTop);
+    }
 }
 
 void EngineHW::drawBossses(const int mx, const int my, const int sx, const int sy)

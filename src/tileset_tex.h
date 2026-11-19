@@ -54,6 +54,9 @@ public:
     bool load(SDL_Renderer *renderer, const std::string_view &filename, const int sx, const int sy);
     bool load(SDL_Renderer *renderer, CFrame *frame, const int sx, const int sy);
     bool load(SDL_Renderer *renderer, const std::string_view &filename, std::vector<tileinfo_t>);
+    // sheet whose frame rects travel inside the PNG as a private obLT chunk
+    // (fx sheet): decodes the payload into tiledata, then loads the texture
+    bool loadFx(SDL_Renderer *renderer, const std::string_view &filename, std::vector<tileinfo_t> &tiledata);
 
     inline const Tile *getTile(size_t id, const ColorMask colorMask = ColorMask::COLOR_NOCHANGE)
     {

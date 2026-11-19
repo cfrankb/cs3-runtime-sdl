@@ -172,9 +172,12 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
   layers (where monsters/sfx overlay today), `front=true` at the current sfx
   draw point — before the foreground layer overlays of the static pass.
 - R2. View origins differ per viewport:
-  - **Dynamic**: parity origin — `viewLeftPx = mx * TILE_SIZE - (ox ? 8 : 0)`
+  - **Dynamic**: parity origin — `viewLeftPx = mx * TILE_SIZE + (ox ? 8 : 0)`
     with `mx = m_cx / 2`, `ox = m_cx & 1`; fx and tiles must consume the same
-    origin or big frames jitter at odd scroll parity.
+    origin or big frames jitter at odd scroll parity. The origin is the true
+    world left edge: the tile loop draws column `mx` at `-8` when `ox`, and
+    `drawBossses(m_cx, ...)` consumes `m_cx * 8` (review fix: the original
+    minus sign desynced fx from the grid by 16 px at odd parity).
   - **Static**: no parity — `viewLeftPx = mx * TILE_SIZE` (its sprite pass
     already calls `gatherSprites` with `ox = oy = 0`; `mx/my` are the
     player-centered clamped values).

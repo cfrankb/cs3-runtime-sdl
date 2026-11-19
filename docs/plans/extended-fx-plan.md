@@ -7,7 +7,7 @@ follows. Classic `sfx_t` is untouched.
 
 ## Asset index — `pixels/sfx.png` + `pixels/sfx.idx`
 
-Art has landed (2026-11-19): `cs3-data-private/pixels/sfx.png` (46-frame
+Art has landed (2026-11-19): `cs3-data-private/pixels/sfx.png` (65-frame
 atlas) + `cs3-data-private/pixels/sfx.idx`.
 
 - **Frame rects:** embedded in `sfx.png` itself as a private `obLT` PNG
@@ -34,12 +34,16 @@ atlas) + `cs3-data-private/pixels/sfx.idx`.
 | 28–33 | 6 | 32×32 | Smoke Bomb |
 | 34–39 | 6 | 48×48 | Explosion **back** layer |
 | 40–45 | 6 | 48×48 | Explosion **front** layer |
+| 46–56 | 11 | 48×48 | Bomb Fuse Lit (`dungeon_gathering/bomb_fuse_lit.png`) |
+| 57–64 | 8 | 48×48 | Bomb Explosion (`dungeon_gathering/bomb_explosion.png`) |
 
 Explosion is the two-layer case: `back = {34, 6}`, `front = {40, 6}`; the
-other five are single-layer (front). `fxData_t.w/h` = the per-sequence frame
-size above.
+other seven are single-layer (front). `fxData_t.w/h` = the per-sequence frame
+size above. The `sfx.png` sheet has already been repacked with the bomb pair
+(`obLT` count 65); the loader reads the count from the chunk header, so no
+code change was needed for the growth.
 
-## Phase 1 — data model + `CGame` state + tests
+## Phase 1 — data model + `CGame` state + tests — **DONE** (v0x02000012)
 
 `src/gamesfx.h` (**existing** — add declarations; keep the frozen classic
 `sfx_t`/`Sfx`/`SfxTimeout` block byte-identical, extend below it; add the
@@ -118,7 +122,32 @@ renderers.
 
 Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
 
-## Phase 2 — hardware renderer (`EngineHW`) — first renderer
+## Phase 2 — hardware renderer (`EngineHW`) — first renderer — **DONE**
+
+Implemented deviations from the sketch below (both verified green):
+
+- The fx load call shipped as `TileSet::loadFx(renderer, filename, tiledata)`
+  (tileset_tex.h/.cpp), not the `load(..., std::vector<tileinfo_t>)` overload:
+  a non-const-reference `load` overload would silently steal existing
+  by-value call sites. `loadFx` walks the PNG chunk list to the private
+  `obLT` chunk and decodes it via `parseFxSheetMeta()` (gamesfx.h/.cpp:
+  u32 reserved, u32 version==2, u32 count, count * {u16 x, y, w, h} LE —
+  layout confirmed against `sfx.png`'s 46 records), then delegates to the
+  existing tiledata `load`. Unit-covered by `test_fx_sheet_meta`.
+- The mandatory-manifest guard in `preloadAssets()` was relaxed from
+  `size() < MAX_ASSET` to `size() <= ASSET_TITLESCREEN` so 10-row
+  environments keep loading all assets; `ASSET_FXSHEET` is optional and the
+  commented boilerplate carries its own `size() > ASSET_FXSHEET` check.
+- Integration review (2026-11-19): the dynamic view origin sign was flipped
+  to `mx * TILE_SIZE + (ox ? halfOffset : 0)` to match the tile loop and
+  `drawBossses(m_cx, ...)` truth (spec R2 corrected); `loadFx` clears
+  `tiledata` first so re-instantiating `EngineHW` cannot duplicate the
+  46 global records. Note for the maintainer: `EngineHW::drawViewPortStatic`
+  already draws its tile layers with raw tile indices as screen coords
+  (`drawViewPortInner(…, x + mx, y + my)`) and never renders its collected
+  `overlays` — pre-existing, unrelated to fx, fx there align with the
+  sprite pass per R2. Phase 3 (software renderer) must use the corrected
+  dynamic origin.
 
 - `src/engine_hw.h`: `ASSET_FXSHEET` added **before `MAX_ASSET`** (L143-158
   enum; append-only so existing manifest indices don't shift); member

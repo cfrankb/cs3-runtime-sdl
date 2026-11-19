@@ -83,6 +83,8 @@ enum Fx : uint16_t
     FX_ICE_SPIKES,
     FX_SMOKE_BOMB,
     FX_EXPLOSION, // two-layer: back 34..39 + front 40..45
+    FX_BOMB_FUSE_LIT,   // dungeon_gathering: front 46..56
+    FX_BOMB_EXPLOSION,  // dungeon_gathering: front 57..64
     MAX_FX
 };
 
@@ -173,3 +175,8 @@ const fxData_t *fxDataAt(int effectID);
 // derived frame index (spec I4): one-shot clamps at count-1, repeatable
 // wraps modulo; returns layer.base + sequence index
 uint16_t fxFrameIndex(const fx_t &fx, const fxData_t &def, const fx_layer_t &layer);
+
+// decode the private obLT chunk payload carried inside sfx.png:
+// u32 reserved, u32 version (2), u32 count, then count * {u16 x, y, w, h}
+// little-endian; records appended in imageID order
+bool parseFxSheetMeta(const uint8_t *data, size_t size, std::vector<tileinfo_t> &out);

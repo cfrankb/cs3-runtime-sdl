@@ -27,6 +27,9 @@
 #include "../src/tilesdata.h"
 #include "../src/tilesdefs.h"
 #include "../src/shared/FileMem.h"
+#include "../src/shared/FileWrap.h"
+#include "../src/tileset_tex.h"
+#include <filesystem>
 #include "t_fx.h"
 
 // Extended fx tests for the Phase 1 contract (docs/spec/gamespec/
@@ -304,4 +307,127 @@ bool test_fx_save_roundtrip()
     tick(4);
     return checkEq(static_cast<long>(g_game->getFx().size()), 0, "restored fx erased") &&
            checkEq(g_endCount, 2, "restored fx onEnd count");
+}
+
+bool test_fx_sheet_meta()
+{
+    // synthetic obLT payload: u32 reserved, u32 version 2, u32 count,
+    // then count * {u16 x, y, w, h} little-endian
+    std::vector<uint8_t> blob;
+    auto put32 = [&blob](uint32_t v)
+    {
+        for (int i = 0; i < 4; ++i)
+            blob.push_back(static_cast<uint8_t>((v >> (8 * i)) & 0xff));
+    };
+    auto put16 = [&blob](uint16_t v)
+    {
+        for (int i = 0; i < 2; ++i)
+            blob.push_back(static_cast<uint8_t>((v >> (8 * i)) & 0xff));
+    };
+    put32(0);
+    put32(2);
+    put32(2);
+    put16(112); put16(0); put16(32); put16(48);
+    put16(0); put16(144); put16(32); put16(48);
+
+    std::vector<tileinfo_t> out;
+    if (!parseFxSheetMeta(blob.data(), blob.size(), out))
+    {
+        LOGE("valid obLT payload rejected");
+        return false;
+    }
+    if (!checkEq(static_cast<long>(out.size()), 2, "meta record count") ||
+        !checkEq(static_cast<long>(out[0].x), 112, "record0 x") ||
+        !checkEq(static_cast<long>(out[0].y), 0, "record0 y") ||
+        !checkEq(static_cast<long>(out[0].w), 32, "record0 w") ||
+        !checkEq(static_cast<long>(out[1].x), 0, "record1 x") ||
+        !checkEq(static_cast<long>(out[1].y), 144, "record1 y") ||
+        !checkEq(static_cast<long>(out[1].h), 48, "record1 h"))
+        return false;
+
+    // wrong version rejected
+    blob[4] = 3;
+    if (parseFxSheetMeta(blob.data(), blob.size(), out))
+    {
+        LOGE("bad version accepted");
+        return false;
+    }
+    blob[4] = 2;
+
+    // truncated records rejected
+    blob.resize(blob.size() - 4);
+    if (parseFxSheetMeta(blob.data(), blob.size(), out))
+    {
+        LOGE("truncated payload accepted");
+        return false;
+    }
+    return true;
+}
+
+bool test_fx_sheet_tail_scan()
+{
+    // the loader must find an obLT chunk appended at the END of the file,
+    // not one assumed right after the PNG header. The chunk's crc field is
+    // the literal "obLT" as a decoy for the backward tag scan.
+    const char *path = "tests/out/fx_tail_scan.png";
+    std::filesystem::create_directories("tests/out");
+
+    const uint8_t payload[] = {
+        0, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0,
+        112, 0, 0, 0, 32, 0, 48, 0,
+        0, 0, 144, 0, 32, 0, 48, 0};
+    const uint32_t len = sizeof(payload);
+    std::vector<uint8_t> blob = {137, 80, 78, 71, 13, 10, 26, 10};
+    blob.resize(64, 0); // junk ahead of the chunk
+    blob.push_back(static_cast<uint8_t>(len >> 24));
+    blob.push_back(static_cast<uint8_t>(len >> 16));
+    blob.push_back(static_cast<uint8_t>(len >> 8));
+    blob.push_back(static_cast<uint8_t>(len));
+    blob.insert(blob.end(), {'o', 'b', 'L', 'T'});
+    blob.insert(blob.end(), payload, payload + len);
+    blob.insert(blob.end(), {'o', 'b', 'L', 'T'}); // decoy crc
+
+    CFileWrap file;
+    bool ok = file.open(path, "wb") &&
+              file.write(blob.data(), static_cast<int>(blob.size())) == IFILE_OK;
+    file.close();
+    if (!ok)
+    {
+        LOGE("can't write %s", path);
+        return false;
+    }
+
+    // no renderer: loadFx must still locate and parse the tail chunk (it
+    // fills tiledata) before failing later on the texture load.
+    std::vector<tileinfo_t> out;
+    TileSet sheet;
+    if (sheet.loadFx(nullptr, path, out))
+    {
+        LOGE("loadFx succeeded without a renderer");
+        std::filesystem::remove(path);
+        return false;
+    }
+    std::filesystem::remove(path);
+    if (!checkEq(static_cast<long>(out.size()), 2, "tail scan record count") ||
+        !checkEq(static_cast<long>(out[0].x), 112, "tail record0 x") ||
+        !checkEq(static_cast<long>(out[1].y), 144, "tail record1 y"))
+        return false;
+
+    // a file with no obLT chunk must leave tiledata empty
+    blob.resize(16, 0);
+    if (!file.open(path, "wb"))
+    {
+        LOGE("can't write %s", path);
+        return false;
+    }
+    file.write(blob.data(), static_cast<int>(blob.size()));
+    file.close();
+    if (sheet.loadFx(nullptr, path, out) || !out.empty())
+    {
+        LOGE("loadFx found obLT in a file without one");
+        std::filesystem::remove(path);
+        return false;
+    }
+    std::filesystem::remove(path);
+    return true;
 }
