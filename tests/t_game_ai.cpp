@@ -323,6 +323,17 @@ namespace
             LOGE("monsterV3: shooter missing after firing");
             return false;
         }
+
+        // In the real game the player's cell is stamped with their tile
+        // (loadLevel + CActor::move); the search must still reach the goal
+        // instead of returning an empty path (dragon stuck firing).
+        resetWorld();
+        CActor &v3b = spawn(tile, TYPE_MONSTERV3, 5, 5, AIM_DOWN);
+        g_game->player().move(5, 8); // distance 3 < range
+        CGame::getMap().set(5, 8, TILES_ANNIE2);
+        g_game->manageMonsters(16); // in range: startPath follows one step
+        if (!expectPos("monsterV3: paths onto stamped player tile", v3b, 5, 6))
+            return false;
         return true;
     }
 
