@@ -42,6 +42,7 @@
 #include "../src/colormasks.h"
 #include "../src/boss.h"
 #include "../src/bossdata.h"
+#include "../src/gamesfx.h"
 
 namespace fs = std::filesystem;
 
@@ -165,6 +166,7 @@ public:
     std::unique_ptr<CFrameSet> &animz_() { return m_animz; }
     std::unique_ptr<CFrameSet> &users_() { return m_users; }
     std::unique_ptr<CFrameSet> &sheet0_() { return m_sheet0; }
+    std::unique_ptr<CFrameSet> &fxSheet_() { return m_fxSheet; }
     std::unique_ptr<CFrameSet> &sheet1_() { return m_sheet1; }
     std::unique_ptr<CFrameSet> &uisheet_() { return m_uisheet; }
     std::unique_ptr<CFrameSet> &layerTiles_() { return m_layerTiles; }
@@ -1645,4 +1647,85 @@ bool test_gamemixin()
     rt.setWidth(widthBefore);
     rt.setHeight(heightBefore);
     return true;
+}
+
+// --- extended fx: software renderer draw passes (Phase 3) -------------------
+bool test_gamemixin_fx_draw()
+{
+    TestRuntime rt;
+    installFixture(rt);
+    CGame &game = *CGame::getGame();
+    CMap &map = game.getMap();
+    rt.setWidth(64);
+    rt.setHeight(64); // 4x4 tiles
+    map.clear();
+    map.resize(10, 10, TILES_BLANK, true);
+    game.getMonsters().clear();
+    game.getBosses().clear();
+    game.getSfx().clear();
+    game.getFx().clear();
+    game.player().setPos(Pos{0, 0});
+    rt.animator_()->reloadTileData();
+
+    // synthetic single-layer entry appended on top of the seeded table
+    const size_t saved = g_fxData.size();
+    g_fxData.push_back({.id = 0, .sheet = 0, .speed = 1, .flags = FX_ONESHOT,
+                        .ttl = 0, .w = 48, .h = 48, .back = {0, 0}, .front = {0, 4},
+                        .onEnd = nullptr});
+    const int fxId = static_cast<int>(g_fxData.size()) - 1;
+    rt.fxSheet_() = solidSet(8, 48, 48, 8);
+    const uint32_t frameColor = solidColor(0, 8);
+
+    CFrame bmp(64, 64);
+    bool ok = true;
+
+    // static camera at origin: 48x48 frame anchored centered on spawn px
+    rt.setCameraMode(TestRuntime::CAMERA_MODE_STATIC);
+    game.spawnFxPx(fxId, 32, 32);
+    rt.drawViewPortStatic(bmp);
+    if (px(bmp, 8, 8) != frameColor || px(bmp, 55, 55) != frameColor ||
+        px(bmp, 7, 7) != BLACK || px(bmp, 56, 56) != BLACK)
+        ok = fail("fx static bbox centered");
+    game.getFx().clear();
+
+    // off-view spawn paints zero pixels
+    if (ok)
+    {
+        game.spawnFxPx(fxId, 300, 300);
+        rt.drawViewPortStatic(bmp);
+        if (nonBlack(bmp, 0, 0, 64, 64) != 0)
+            ok = fail("fx static off-view paints");
+        game.getFx().clear();
+    }
+
+    // dynamic even parity (cam 12: mx=my=6, ox=oy=0): view origin (96,96)
+    if (ok)
+    {
+        rt.setCameraMode(TestRuntime::CAMERA_MODE_DYNAMIC);
+        rt.camX() = 12;
+        rt.camY() = 12;
+        game.spawnFxPx(fxId, 128, 128); // screen center (32,32)
+        rt.drawViewPortDynamic(bmp);
+        if (px(bmp, 32, 32) != frameColor || px(bmp, 7, 7) != BLACK)
+            ok = fail("fx dynamic even parity");
+        game.getFx().clear();
+    }
+
+    // dynamic odd parity pins the spec R2 origin (5*16 + 8 = 88): a frame
+    // centered on screen x=5 is left-clipped and ends at x=28; a flipped
+    // origin (80) would paint through x=36
+    if (ok)
+    {
+        rt.camX() = 11; // mx = 5, ox = 1
+        game.spawnFxPx(fxId, 93, 128);
+        rt.drawViewPortDynamic(bmp);
+        if (px(bmp, 0, 32) != frameColor || px(bmp, 28, 32) != frameColor ||
+            px(bmp, 33, 32) != BLACK)
+            ok = fail("fx dynamic odd parity origin");
+        game.getFx().clear();
+    }
+
+    g_fxData.resize(saved);
+    rt.fxSheet_().reset();
+    return ok;
 }

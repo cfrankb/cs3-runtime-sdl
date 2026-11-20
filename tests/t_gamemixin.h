@@ -26,3 +26,4 @@ bool test_gamemixin_screens();
 bool test_gamemixin_input();
 bool test_gamemixin_bosses();
 bool test_gamemixin_savegame();
+bool test_gamemixin_fx_draw();

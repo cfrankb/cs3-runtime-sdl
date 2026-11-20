@@ -1291,6 +1291,24 @@ void CRuntime::preloadAssets()
     {
         parseHelp(reinterpret_cast<char *>(data.data()));
     }
+
+    // fx sheet for the software renderer (docs/plans/extended-fx-plan.md):
+    // pixels/sfx.png carries its frame rects inside a private obLT chunk
+    // (parseFxSheetMeta decodes it; same metadata TileSet::loadFx uses on
+    // the GPU side). Frames are cut from the png atlas in imageID order.
+    // ponytail: environment-dependent (asset may be absent) -> skip-not-fail;
+    // maintainer enables per environment. Null m_fxSheet => every drawFx
+    // pass no-ops.
+    // data = AssetMan::read(AssetMan::getPrefix() + "pixels/sfx.png");
+    // if (!data.empty())
+    // {
+    //     std::vector<tileinfo_t> rects;
+    //     CFrameSet *atlas = ...; // png -> frames at the obLT rects
+    //     if (!atlas->size())
+    //         LOGW("failed to extract fx sheet");
+    //     else
+    //         m_fxSheet.reset(atlas);
+    // }
 }
 
 void CRuntime::parseHelp(char *text)

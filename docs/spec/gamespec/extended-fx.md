@@ -1,6 +1,8 @@
 # Extended FX (`fx_t`) Specification
 
-Status: **DRAFT — proposed, not implemented.** (2026-11-19)
+Status: **Implemented** (2026-11-19: data model + `CGame` state v0x02000012,
+hardware and software renderer passes). `fx_hitbox_t` mechanics remain
+declared, no consumer (1.4).
 
 Complements the classic `sfx_t` (16px tile-aligned, `src/gamesfx.h`), which is
 **frozen**. Extended FX adds:
@@ -119,8 +121,8 @@ struct fxDraw_t
 ```
 
 `CGame` does not own renderer pixel data, so `fxDraw_t` carries a **frameID,
-not a `CFrame *`** (same split as `g_fxSheet_data` metadata vs per-renderer
-`m_tileset_fx` / `m_fxSheet`).
+not a `CFrame *`** (same split as the sheet's `obLT` rect metadata vs
+per-renderer `m_tileset_fx` / `m_fxSheet`).
 
 ## 2. Ownership and API (all on `CGame`)
 
@@ -192,8 +194,8 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
   convention as the sfx block, see `docs/audits/game.cpp.audit.md` L40).
   `fx_t` is pure POD, so there is no runtime state to restore.
 - N2. Classic `sfx_t` section and its read path are **untouched**.
-- N3. `ENGINE_VERSION` (`src/game.cpp` L58, currently `(0x0200<<16)+0x0011`)
-  and the mirrored `EXPECTED_VERSION` (`tests/t_game.cpp` L52) are bumped
+- N3. `ENGINE_VERSION` (`src/game.cpp` L58, bumped to `(0x0200<<16)+0x0012`
+  with this implementation) and the mirrored `EXPECTED_VERSION` (`tests/t_game.cpp` L52) are bumped
   together, per AGENTS.md BUG-H12 rule. Old saves stay rejected by the existing
   version gate (established behavior, `t_runtime.cpp` L37).
 
@@ -201,10 +203,14 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
 
 - F1. One dedicated fx sheet PNG for now; `fxData_t.sheet` carries the same
   meaning as `bossData_t.sheet` and keeps room for more sets.
-- F2. Per-frame rects come from a new `g_fxSheet_data` `tileinfo_t` table
-  (`src/sheetdata.h` pattern), loaded through the same boss/sheet loader
-  code (section 3). All fx declarations live in `src/gamesfx.h`, global
-  storage (`g_fxData`, `g_fxSheet_data`) in `src/gamesfx.cpp`.
+- F2. Per-frame rects are **not** a hand-maintained `g_fxSheet_data` table
+  (superseded during implementation): they travel inside the sheet PNG as a
+  private `obLT` metadata chunk (`u32 reserved, u32 version==2, u32 count,
+  count × {u16 x, y, w, h}` LE, record order = imageID order).
+  `parseFxSheetMeta()` (`src/gamesfx.cpp`) decodes it; the loaders
+  (`TileSet::loadFx`, software boilerplate) cut the frames from the atlas.
+  All fx declarations live in `src/gamesfx.h`, global storage (`g_fxData`)
+  in `src/gamesfx.cpp`.
 - F3. FrameID ranges: `back.base .. back.base+back.count-1` and
   `front.base .. front.base+front.count-1` are sheet-relative and disjoint per
   effect.
@@ -220,6 +226,9 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
 
 - O1. ~~`FX_LOOP` semantics~~ Resolved 2026-11-19: `FX_REPEATABLE` entries
   loop (modulo wrap) and end on `ttl`; one-shots end on sequence length (I1/I4).
-- O2. Real art: sheet PNG + rect metadata + table entries (private asset tree).
+- O2. ~~Real art~~ Closed 2026-11-19: sheet + `obLT` rects in the private
+  asset tree (`pixels/sfx.png`, 65 sequences from `pixels/sfx.idx`); table
+  entries seeded from the `sfx.idx` runs; loader `TileSet::loadFx` wired,
+  preload boilerplate ships commented per environment (section 3).
 - O3. Whether any existing classic sfx migrate to fx later (per-effect
   decision; not required by this spec).

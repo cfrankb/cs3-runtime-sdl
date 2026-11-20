@@ -735,6 +735,46 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     }
 }
 
+void CGameMixin::drawFx(CFrame &bitmap, const bool front, const int viewLeft, const int viewTop)
+{
+    if (!m_fxSheet)
+        return;
+    const fxView_t view{viewLeft, viewTop, viewLeft + getWidth(), viewTop + getHeight()};
+    std::vector<fxDraw_t> draws;
+    m_game->getFxToDraw(view, front, draws);
+    for (const auto &draw : draws)
+    {
+        CFrame *frame = (*m_fxSheet)[draw.frameID];
+        if (!frame)
+            continue;
+        // anchor = frame center; frames exceed TILE_SIZE and may hang off
+        // the view (spec R3), so clip here -- the tile blits assume
+        // in-bounds TILE_SIZE sources
+        int x = draw.x - frame->width() / 2 - viewLeft;
+        int y = draw.y - frame->height() / 2 - viewTop;
+        rect_t rect{.x = 0, .y = 0, .width = frame->width(), .height = frame->height()};
+        if (x < 0)
+        {
+            rect.x = -x;
+            rect.width += x;
+            x = 0;
+        }
+        if (y < 0)
+        {
+            rect.y = -y;
+            rect.height += y;
+            y = 0;
+        }
+        if (x + rect.width > getWidth())
+            rect.width = getWidth() - x;
+        if (y + rect.height > getHeight())
+            rect.height = getHeight() - y;
+        if (rect.width <= 0 || rect.height <= 0)
+            continue;
+        drawTile(bitmap, x, y, *frame, rect);
+    }
+}
+
 void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
 {
     const CMap *map = &m_game->getMap();
@@ -796,6 +836,12 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
     /////////////////////////////////////////////////////////////////////////////
     // overlay special case monsters and sfx
 
+    // fx view origin: the world left/top edge on screen, same as the tile
+    // loop (column mx drawn at -halfOffset when odd) -- spec R2
+    const int fxLeft = mx * TILE_SIZE + (ox ? halfOffset : 0);
+    const int fxTop = my * TILE_SIZE + (oy ? halfOffset : 0);
+    drawFx(bitmap, false, fxLeft, fxTop);
+
     std::vector<sprite_t> sprites;
     gatherSprites(sprites, {.mx = mx, .ox = ox, .my = my, .oy = oy});
     for (const auto &sprite : sprites)
@@ -832,6 +878,8 @@ void CGameMixin::drawViewPortDynamic(CFrame &bitmap)
             drawTile(bitmap, px, py, *tile, true);
         }
     }
+
+    drawFx(bitmap, true, fxLeft, fxTop);
 
     // draw Bosses
     drawBossses(bitmap, m_cx, m_cy, maxCols * CBoss::BOSS_GRANULAR_FACTOR, maxRows * CBoss::BOSS_GRANULAR_FACTOR);
@@ -906,6 +954,9 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
         }
     }
 
+    // fx back layer: before actors, player-centered clamped origin (spec R2)
+    drawFx(bitmap, false, mx * TILE_SIZE, my * TILE_SIZE);
+
     std::vector<sprite_t> sprites;
     gatherSprites(sprites, {.mx = mx, .ox = 0, .my = my, .oy = 0});
     for (const auto &sprite : sprites)
@@ -918,6 +969,9 @@ void CGameMixin::drawViewPortStatic(CFrame &bitmap)
             continue; // BUG-C8: bad animz/tile index; skip like base tiles
         drawTile(bitmap, x * TILE_SIZE, y * TILE_SIZE, *tile, true);
     }
+
+    // fx front layer: where classic sfx draw today, before fg overlays
+    drawFx(bitmap, true, mx * TILE_SIZE, my * TILE_SIZE);
 
     for (const auto &overlay : overlays)
         drawTile(bitmap, overlay.x, overlay.y, *overlay.tile, true);

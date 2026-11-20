@@ -33,6 +33,7 @@ COVERED = {
     "src/randomz": "t_randomz",
     "src/statedata": "t_statedata",
     "src/game_auto": "t_ifile",
+    "src/gamesfx": "t_fx",
     "src/game": "t_runtime, t_game",
     "src/game_ai": "t_game_ai",
     "src/gamemixin": "t_runtime, t_gamemixin",

@@ -101,6 +101,7 @@ def sync_data(sync_list):
         "data/pixels/uisheet.png",
         "data/pixels/layer[0-9].png",
         "data/pixels/layer[0-9].json", 
+        "data/pixels/sfx.png",
     ]
     copy_list(patterns=patterns_pixels, dest=DEST_PIXELS, prefix=None)
 

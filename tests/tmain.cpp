@@ -155,6 +155,7 @@ int main(int argc, char *args[])
         FCT(test_gamemixin_input),
         FCT(test_gamemixin_bosses),
         FCT(test_gamemixin_savegame),
+        FCT(test_gamemixin_fx_draw),
         FCT(test_game_ai),
         FCT(test_menu_nav),
         FCT(test_menu_disabled),

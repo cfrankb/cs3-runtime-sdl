@@ -184,7 +184,7 @@ Implemented deviations from the sketch below (both verified green):
 - Test: table-level only (asset-free, reuses Phase 1 `getFxToDraw` cases);
   visual check manually in both viewports incl. odd scroll parity.
 
-## Phase 3 — software renderer (`CGameMixin`)
+## Phase 3 — software renderer (`CGameMixin`) — **DONE**
 
 - Member `std::unique_ptr<CFrameSet> m_fxSheet` beside `m_sheet0/1`
   (gamemixin.h L260-261). **Fill it in `CRuntime::preloadAssets()`
@@ -203,11 +203,30 @@ Implemented deviations from the sketch below (both verified green):
     before fg `overlays` blit L922; origin clamped `mx/my` (L850-853)
     `* TILE_SIZE`, no parity.
 - Resolve `(*m_fxSheet)[frameID]`, blit centered via existing `drawTile`.
+  Deviation: the tile blits are fixed `TILE_SIZE` and unclipped, so
+  `CGameMixin::drawFx` computes the view-intersection `rect_t` itself and
+  uses the rect overload (spec R3 clipping lives there).
 - Test: subclass seam per coverage-round2 ground rules — synthetic
   `CFrameSet`, assert changed-pixel bounding box centered on spawn px and
   off-view fx paint zero pixels, in **both** viewport functions.
 
-## Phase 4 — docs + compliance
+## Phase 4 — docs + compliance — **DONE**
+
+Execution notes (2026-11-19):
+- Spec (`docs/spec/gamespec/extended-fx.md`) flipped to **Implemented**;
+  O1/O2 closed; F2 restated to the shipped `obLT`-in-PNG rect source (the
+  `g_fxSheet_data` table was superseded during implementation); N3 records
+  the v0x02000012 bump.
+- `gen_compliance.py` + `gen_coverage.py` regenerated after a green ctest:
+  checklist 120 files / 82 verified (`gamesfx.h/.cpp` newly verified,
+  `game` notes + `t_fx`); coverage 61.6% of 12547 lines.
+- valgrind is not installed on this machine; the pass ran as an
+  ASan+UBSan+LeakSanitizer build instead. **No memory errors and no leaks
+  from fx code.** The 25 recorded leaks (17.5 KB) are all pre-existing
+  harness suites (`t_frameset`/`thelper`/`t_pngmagic`/`t_frame`/`t_ifile`
+  intentional allocations, `t_map` -> `layer.h`/`map.cpp`), and the UBSan
+  alignment/null notes (`Frame.cpp` png chunk casts, `t_game.cpp`) are
+  pre-existing too — separate cleanup, out of scope here.
 
 - Flip spec Open Items (O1 resolved by FX_REPEATABLE/ttl ruling 2026-11-19;
   O2 art landed 2026-11-19 (`sfx.png` + `sfx.idx`) — flip when the sheet is

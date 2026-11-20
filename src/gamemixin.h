@@ -259,6 +259,7 @@ protected:
     std::unique_ptr<CFrameSet> m_users;
     std::unique_ptr<CFrameSet> m_sheet0;
     std::unique_ptr<CFrameSet> m_sheet1;
+    std::unique_ptr<CFrameSet> m_fxSheet; // extended fx; null => fx draw no-ops
     std::unique_ptr<CFrameSet> m_uisheet;
     std::unique_ptr<CFrameSet> m_layerTiles;
     std::vector<uint8_t> m_fontData;
@@ -304,6 +305,9 @@ protected:
     void flashScreen(CFrame &bitmap);
     void drawViewPortDynamic(CFrame &bitmap);
     void drawViewPortStatic(CFrame &bitmap);
+    // extended fx layer blit (docs/spec/gamespec/extended-fx.md); front/back
+    // pass around the sprite loop, origin = world px at screen 0
+    void drawFx(CFrame &bitmap, const bool front, const int viewLeft, const int viewTop);
     void drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, Color color = WHITE, Color bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);
