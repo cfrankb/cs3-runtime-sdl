@@ -30,14 +30,23 @@ without stamping the map, leaving the goal cell as background.
    steps onto the player's cell (the `move()` swap would displace the player's
    stamped map identity); returns `NoValidPath` instead. Contact damage /
    halt at the player is the existing `AI_STICKY` check in `handleMonsterV3()`.
-3. `tests/t_game_ai.cpp` `testMonsterV3()`: new scenario stamps
-   `TILES_ANNIE2` on the player's cell and asserts the dragon advances.
+3. `src/game.cpp` `CGame::shadowActorMove()`: chokepoint guard — refuses to
+   move any `TYPE_MONSTERV3` actor onto a `TYPE_PLAYER`-stamped cell. Covers
+   both movement routes (path execution and the out-of-range `findNextDir`
+   wander, which matters for the `ai=0` zombie tile that lacks `AI_STICKY`).
+   Crusher/boss overlap semantics are untouched.
+4. `tests/t_game_ai.cpp` `testMonsterV3()`: stamps `TILES_ANNIE2` on the
+   player's cell, asserts the dragon advances to adjacency, halts there,
+   leaves the player's stamp intact, and that `shadowActorMove` itself
+   refuses the cell.
 
 ## Verification
 
 - `cmake --build build && ctest --test-dir build` — 100% passed.
-- Negative control: reverting only the `src/actor.cpp` hunk fails the new check
-  (`monsterV3: paths onto stamped player tile: actor at (5,5); expecting (5,6)`).
+- Negative controls: reverting the `src/actor.cpp` hunk fails the advance
+  check (`actor at (5,5); expecting (5,6)`); reverting the
+  `src/game.cpp` guard fails the chokepoint check (`shadowActorMove stamped
+  over the player`).
 
 No serialized-state change (behavior-only in `CActor` member function), so no
 `ENGINE_VERSION` bump per AGENTS.md.

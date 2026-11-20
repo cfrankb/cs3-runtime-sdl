@@ -334,6 +334,25 @@ namespace
         g_game->manageMonsters(16); // in range: startPath follows one step
         if (!expectPos("monsterV3: paths onto stamped player tile", v3b, 5, 6))
             return false;
+        g_game->manageMonsters(24); // (5,7), adjacent from here on
+        g_game->manageMonsters(32);
+        g_game->manageMonsters(40);
+        // must halt adjacent: never step onto the player's stamped cell
+        if (!expectPos("monsterV3: halts before player cell", v3b, 5, 7) ||
+            CGame::getMap().at(5, 8) != TILES_ANNIE2)
+        {
+            LOGE("monsterV3: overran player cell from (%d,%d)", v3b.x(), v3b.y());
+            return false;
+        }
+        // chokepoint: shadowActorMove itself refuses the stamped player cell
+        // (also covers the out-of-range wander route, findNextDir target)
+        if (g_game->shadowActorMove(v3b, AIM_DOWN) ||
+            !expectPos("monsterV3: shadowActorMove refuses player cell", v3b, 5, 7) ||
+            CGame::getMap().at(5, 8) != TILES_ANNIE2)
+        {
+            LOGE("monsterV3: shadowActorMove stamped over the player");
+            return false;
+        }
         return true;
     }
 
