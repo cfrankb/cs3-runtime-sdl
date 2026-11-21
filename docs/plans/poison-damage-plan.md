@@ -197,6 +197,11 @@ hand-maintained enum — old block in `gamesfx.h` is commented out.
 
 ## Phase 5 — Poison-green health bar (twin edits mandatory)
 
+> **DONE 2026-11-20**: SW chain `GREEN` branch + HW fixed `RED→GREEN`
+> `cacheMask` baked in `preloadHearts`, mask selected in
+> `EngineHW::drawHealthBar`. No tests (color-chain branch mirrors the
+> tested `isPoisoned()`); build + ctest green.
+
 Turn the health bar green while `isPoisoned()`. Same priority chain as
 the Phase 2 player tint: god mode > hurt flash > poison > normal.
 
@@ -207,24 +212,18 @@ the Phase 2 player tint: god mode > hurt flash > poison > normal.
    (`src/color.h:41`), not `LIME` — LIME stays the CLASSIC-bar healthy
    color so the two greens keep distinct meanings.
 2. **HW hearts** — `EngineHW::drawHealthBar`
-   (`src/engine_hw.cpp:864`): hearts are pre-tinted rows in a
-   `TileSet` sheet (`baseID` = RED/PINK/WHITE row) — do **not** add a
-   green asset row. `m_tileset_hearts` is the same `TileSet` class as
-   the player sheet, so reuse the Phase 2 machinery: in
-   `updateColorMaps` add
-   `m_tileset_hearts.cacheMask(m_renderer, COLOR_POISON, poisonLambda)`
-   (same find-and-replace lambda over `colormaps.poison`), and in
-   `drawHealthBar` pass a `ColorMask` to
-   `getTile(hearts + baseID, colorMask)` with
+   (`src/engine_hw.cpp:864`): the heart sheet is **built in code** in
+   `preloadHearts` as solid RED/PINK/WHITE glyphs — so no asset row and
+   no colormap data: `cacheMask(m_renderer, COLOR_POISON, RED→GREEN)`
+   baked right after `m_tileset_hearts.load`, and `drawHealthBar`
+   passes `getTile(hearts + baseID, colorMask)` with
    `colorMask = isPoisoned() && !god && !hurt ? COLOR_POISON : COLOR_NOCHANGE`.
 3. **Scope ruling needed**: CLASSIC bar mode (`HEALTHBAR_CLASSIC`,
    `gamemixin.cpp:2582`) is proposed **unchanged** — its healthy color
    is already LIME; poisoning green would be near-indistinguishable.
    Hearts-mode-only green unless the maintainer overrules.
-4. Data dependency: HW green hearts ride the same `[poison]` colormap
-   section as the player tint — the section must cover the heart-sheet
-   red pixels or the HW mask is a silent no-op (SW hearts are code
-   colors and work without any asset change).
+4. Data dependency: none — SW hearts use code colors and the HW mask is
+   a fixed RED→GREEN bake; both work without any asset change.
 5. Test: none — color-chain branch mirrors the tested `isPoisoned()`
    state; existing draw-path smoke tests must stay green.
 

@@ -859,6 +859,15 @@ void EngineHW::preloadHearts()
     }
 
     m_tileset_hearts.load(m_renderer, bitmap, FONT_SIZE, FONT_SIZE);
+
+    // poison green (docs/plans/poison-damage-plan.md phase 5): the heart
+    // rows are solid color glyphs built above -- bake a fixed RED->GREEN
+    // mask variant; no colormap data involved
+    m_tileset_hearts.cacheMask(m_renderer, COLOR_POISON, [](uint32_t &color)
+                               {
+                                   if (color == RED)
+                                       color = GREEN;
+                               });
 }
 
 void EngineHW::drawHealthBar(const bool isPlayerHurt)
@@ -877,6 +886,13 @@ void EngineHW::drawHealthBar(const bool isPlayerHurt)
         baseID = PINK_HEARTS;
     }
 
+    // poison green (docs/plans/poison-damage-plan.md phase 5): tint the
+    // red-heart row via the baked [poison] colormap variant instead of a
+    // fourth asset row; lowest priority, mirrors the SW chain
+    const ColorMask colorMask = !m_game->isGodMode() && !isPlayerHurt && m_game->isPoisoned()
+                                    ? COLOR_POISON
+                                    : COLOR_NOCHANGE;
+
     // draw health bar
     CGame &game = *m_game;
     int step = FONT_SIZE;
@@ -887,7 +903,7 @@ void EngineHW::drawHealthBar(const bool isPlayerHurt)
     for (int i = 0; i < maxHealth; ++i)
     {
         auto hearts = health > 0 ? std::min(health, static_cast<int>(FONT_SIZE)) : 0;
-        const Tile *tile = m_tileset_hearts.getTile(hearts + baseID);
+        const Tile *tile = m_tileset_hearts.getTile(hearts + baseID, colorMask);
         if (tile)
             drawTile(tile, bx, by);
         bx += FONT_SIZE;
