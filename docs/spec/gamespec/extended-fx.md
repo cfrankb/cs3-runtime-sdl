@@ -1,8 +1,8 @@
 # Extended FX (`fx_t`) Specification
 
 Status: **Implemented** (2026-11-19: data model + `CGame` state v0x02000012,
-hardware and software renderer passes). `fx_hitbox_t` mechanics remain
-declared, no consumer (1.4).
+hardware and software renderer passes; 2026-11-20: S5 derived poison-aura
+draw entries). `fx_hitbox_t` mechanics remain declared, no consumer (1.4).
 
 Complements the classic `sfx_t` (16px tile-aligned, `src/gamesfx.h`), which is
 **frozen**. Extended FX adds:
@@ -151,6 +151,19 @@ member. Spawns carry no callback: behavior is per-effect, not per-spawn.
 - **S3 (emit).** For each live instance, emit one `fxDraw_t` for the requested
   layer side if that side's `count > 0`.
 - **S4 (clear).** `m_fx` clears wherever `m_sfx.clear()` happens on new game.
+- **S5 (derived draw entries — poison aura, 2026-11-20).** `FX_POISON_AURA`
+  spawns **no** `fx_t` instance: `getFxToDraw()` emits one draw entry per
+  layer call iff `S_POISON != 0`, anchored on the player
+  (`pos * TILE_SIZE + w/2`, center anchor like any fx) and culled with the
+  same view inflation as S2. Its frame cycles off a dedicated free-running
+  clock, `CGame::m_fxTick` (incremented in `decTimers()`), not a per-instance
+  `timer`: `frameID = layer.base + (m_fxTick / speed) % layer.count`.
+  Entries are emitted per frame, never instantiated, never serialized —
+  `m_fxTick` is not part of the savegame. Emission is suppressed while
+  `g_fxSheet_data` is too short to cover both layer ranges, so the code
+  merges before the sheet assets grow. Behavior note: the clock advances
+  wherever `decTimers()` runs; pause paths that skip it freeze the aura —
+  cosmetic.
 
 ## 3. Renderer contract (both renderers, minimal)
 

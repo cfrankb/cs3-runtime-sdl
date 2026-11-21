@@ -84,9 +84,10 @@ namespace GamePrivate
         RAGE_TIMER = 150,
         FREEZE_TIMER = 80,
         TRAP_DAMAGE = -16,
-        POISON_DRAIN = 8,
-        POISON_INTERVAL = 12,
+        POISON_DRAIN = 2,
+        POISON_INTERVAL = 6,
         POISON_DEFAULT = 32,
+        POISON_TRAP_DAMAGE = 16,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         MAX_SHIELDS = 2,
@@ -378,6 +379,12 @@ void CGame::manageTrigger(const int x, const int y, const uint8_t attr)
     {
         m_events.emplace_back(EVENT_TRAP);
         addHealth(TRAP_DAMAGE);
+    }
+    else if (attr == ATTR_POISON_TRAP)
+    {
+        // poison trap (docs/plans/archive/poison-damage-plan.md): one-shot
+        // like its neighbours; addPoison queues EVENT_POISON itself
+        addPoison(POISON_TRAP_DAMAGE);
     }
     else if (RANGE(attr, PASSAGE_ATTR_MIN, PASSAGE_ATTR_MAX))
     {

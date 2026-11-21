@@ -2323,6 +2323,16 @@ CGameMixin::message_t CGameMixin::getEventText(const int baseY)
             .lines{"BOAT FOUND"},
         };
     }
+    else if (m_currentEvent == EVENT_POISON)
+    {
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = BLUEVIOLET,
+            .lines{"POISON TRAP"},
+        };
+    }
     else
     {
         LOGW("unhandled event: 0x%.2x", m_currentEvent);
@@ -2547,9 +2557,9 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
     // bar's healthy color, GREEN marks the poisoned state
     const uint32_t color = m_game->isGodMode()
                                ? WHITE
-                               : isPlayerHurt ? PINK
-                               : m_game->isPoisoned() ? GREEN
-                                                      : RED;
+                           : isPlayerHurt         ? PINK
+                           : m_game->isPoisoned() ? GREEN
+                                                  : RED;
     auto drawHearth = [&bitmap, color, this](auto bx, auto by, auto health)
     {
         // const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;

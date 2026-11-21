@@ -543,6 +543,16 @@ Engine::message_t Engine::getEventText(const int baseY)
             .lines{"BOAT FOUND"},
         };
     }
+    else if (m_state.m_currentEvent == EVENT_POISON)
+    {
+        return {
+            .scaleX = 2,
+            .scaleY = 1,
+            .baseY = baseY,
+            .color = BLUEVIOLET,
+            .lines{"POISON TRAP"},
+        };
+    }
     else
     {
         LOGW("unhandled event type: 0x%.2x", m_state.m_currentEvent);
