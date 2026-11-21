@@ -42,6 +42,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <sstream>
 #include <utility>
 
 #include "logger.h"
@@ -569,12 +570,24 @@ namespace
     // -----------------------------------------------------------------------
     // Boss accumulator (mirror parse.py seq dict)
     // -----------------------------------------------------------------------
+    // plan §3: skill token -> index into g_skillDefs, -1 when unknown.
+    // The registry itself is the name table (same style as resolveSound).
+    int resolveSkill(const std::string &token)
+    {
+        for (size_t i = 0; i < g_skillDefs.size(); ++i)
+        {
+            if (g_skillDefs[i].name && token == g_skillDefs[i].name)
+                return static_cast<int>(i);
+        }
+        return -1;
+    }
+
     struct BossAccum
     {
         std::string name;
         std::map<std::string, std::string> fields; // final-name -> raw token
 
-        bossData_t build(int sheetIndex) const
+        bossData_t build(int sheetIndex, int lineNo) const
         {
             bossData_t d{};
             d.sheet = sheetIndex;
@@ -667,6 +680,46 @@ namespace
                 d.hitbox.type = v.size() > 4 ? v[4] : 0;
             }
 
+            // skill NAME rate=N entries in file order (plan §2/§3);
+            // unknown token -> LOGE + skipped, 5th line -> LOGW + ignored
+            const std::string skillStr = get("skill");
+            size_t pos = 0;
+            while (pos <= skillStr.size())
+            {
+                size_t semi = skillStr.find(';', pos);
+                std::string entry = skillStr.substr(
+                    pos, semi == std::string::npos ? std::string::npos : semi - pos);
+                pos = semi == std::string::npos ? skillStr.size() + 1 : semi + 1;
+                std::istringstream is(entry);
+                std::string token;
+                is >> token;
+                if (token.empty())
+                    continue;
+                const int idx = resolveSkill(token);
+                if (idx < 0)
+                {
+                    LOGE("Error: boss '%s' unknown skill '%s' on line %d; entry skipped\n",
+                         name.c_str(), token.c_str(), lineNo);
+                    continue;
+                }
+                if (d.skillCount >= 4)
+                {
+                    LOGW("Warning: boss '%s' exceeds 4 skill slots; '%s' ignored\n",
+                         name.c_str(), token.c_str());
+                    continue;
+                }
+                uint8_t rate = 0;
+                std::string kv;
+                while (is >> kv)
+                {
+                    if (kv.rfind("rate=", 0) == 0)
+                        rate = toU8(kv.substr(5), "skill rate");
+                }
+                d.skills[d.skillCount].skill = static_cast<uint8_t>(idx);
+                d.skills[d.skillCount].rate = rate;
+                ++d.skillCount;
+            }
+
             return d;
         }
     };
@@ -689,7 +742,7 @@ namespace
         {
             if (!seq.fields.empty() || !seq.name.empty())
             {
-                bosses.push_back(seq.build(sheet));
+                bosses.push_back(seq.build(sheet, lineNo));
                 namePool.push_back(seq.name);
             }
             seq = BossAccum{};
@@ -816,6 +869,22 @@ namespace
                 if (item == "flags")
                 {
                     seq.fields["flags"] = joinSpace(e, 1);
+                    continue;
+                }
+
+                // repeated key: the flat fields map would overwrite, so
+                // skill lines accumulate "NAME key=value ..." joined by ';'
+                if (item == "skill")
+                {
+                    if (e.size() < 2)
+                    {
+                        LOGW("Warning: 'skill' on line %d is missing a skill name: %s\n",
+                             lineNo, t.c_str());
+                        continue;
+                    }
+                    std::string entry = joinSpace(e, 1);
+                    auto it = seq.fields.find("skill");
+                    seq.fields["skill"] = it == seq.fields.end() ? entry : it->second + ";" + entry;
                     continue;
                 }
 

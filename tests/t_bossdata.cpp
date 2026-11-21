@@ -16,6 +16,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -322,6 +323,89 @@ bool test_bossdata_fxskills()
     }
 
     g_skillDefs.resize(saved);
+    fs::remove_all(dir);
+    return ok;
+}
+
+// ini `skill NAME rate=N` lines (plan fx-boss-skills §2/§3): accumulation,
+// 4-slot cap, unknown-token skip, legacy bullet fields untouched.
+bool test_bossdata_skill_ini()
+{
+    namespace fs = std::filesystem;
+    const std::string dir = "tests/out/bd_skill_ini";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    {
+        std::ofstream out(dir + "/bosses.ini");
+        out << "[Multi]\ntype 1\nhp 5\nmoving 2\n"
+            << "skill BULLET rate=10\n"
+            << "skill SPECIAL1 rate=30\n"
+            << "skill LIGHTNING_STRIKE rate=30\n"
+            << "skill METEOR rate=45\n"
+            << "skill BULLET rate=99\n" // 5th line: cap, ignored
+            << "[Bad]\ntype 2\nhp 5\nmoving 2\n"
+            << "skill HOGBUF rate=7\n" // unknown: skipped
+            << "skill METEOR rate=45\n"
+            << "[None]\ntype 3\nhp 5\nmoving 2\n"
+            << "bullet TILES_FIREBALL rate=15\n";
+    }
+
+    freeBossData();
+    if (loadBossData(dir, dir) != 0)
+    {
+        LOGE("skill-ini: fixture load failed");
+        return false;
+    }
+
+    auto idxOf = [](const char *name) -> int
+    {
+        for (size_t i = 0; i < g_skillDefs.size(); ++i)
+            if (g_skillDefs[i].name && std::strcmp(g_skillDefs[i].name, name) == 0)
+                return static_cast<int>(i);
+        return -1;
+    };
+
+    bool ok = true;
+    const bossData_t *m = getBossData(1);
+    if (!m || m->skillCount != 4)
+    {
+        LOGE("skill-ini: [Multi] skillCount %d want 4", m ? m->skillCount : -1);
+        ok = false;
+    }
+    else
+    {
+        const char *want[4] = {"BULLET", "SPECIAL1", "LIGHTNING_STRIKE", "METEOR"};
+        const uint8_t rate[4] = {10, 30, 30, 45};
+        for (int i = 0; i < 4; ++i)
+        {
+            if (m->skills[i].skill != idxOf(want[i]) || m->skills[i].rate != rate[i])
+            {
+                LOGE("skill-ini: [Multi] slot %d = (%d, %d) want (%d, %d)", i,
+                     m->skills[i].skill, m->skills[i].rate, idxOf(want[i]), rate[i]);
+                ok = false;
+            }
+        }
+    }
+    const bossData_t *b = getBossData(2);
+    if (!b || b->skillCount != 1 || b->skills[0].skill != idxOf("METEOR"))
+    {
+        LOGE("skill-ini: [Bad] expected only METEOR slot, got count %d",
+             b ? b->skillCount : -1);
+        ok = false;
+    }
+    const bossData_t *n = getBossData(3);
+    if (!n || n->skillCount != 0)
+    {
+        LOGE("skill-ini: [None] skillCount %d want 0", n ? n->skillCount : -1);
+        ok = false;
+    }
+    if (n && (n->bullet_rate != 15 || n->bullet == 0))
+    {
+        LOGE("skill-ini: legacy bullet fields broken (rate %d)", n->bullet_rate);
+        ok = false;
+    }
+
+    freeBossData();
     fs::remove_all(dir);
     return ok;
 }

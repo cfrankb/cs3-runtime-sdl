@@ -145,6 +145,14 @@ const bossSkillDef_t *skillForFx(int effectID);
 // relative to the frame center anchor); missing file warns + keeps empty
 void loadFxSkills(const std::string &fxDir);
 
+// boss skill slot (plan fx-boss-skills §2): repeated `skill NAME rate=N`
+// ini lines fill skills[0..skillCount), max 4 per boss.
+struct bossSkill_t
+{
+    uint8_t skill; // index into g_skillDefs (generic kind entry)
+    uint8_t rate;  // use frequency: rng gate 0..rate (1 = often)
+};
+
 struct bossData_t
 {
     const char *name;     // boss name
@@ -180,6 +188,8 @@ struct bossData_t
     boss_seq_t idle;      // animation seq: idle
     hitbox_t hitbox;      // primary hitbox
     int sheet;            // sprite sheet used
+    bossSkill_t skills[4];  // declared skills (plan §2); 0 slots = legacy behavior
+    uint8_t skillCount = 0; // used-slot counter; skills[0..skillCount)
 };
 
 // --- runtime state (populated by loadBossData) ---
