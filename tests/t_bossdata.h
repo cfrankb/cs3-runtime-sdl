@@ -19,5 +19,6 @@
 
 bool test_bossdata();
 bool test_bossdata_fxskills();
+bool test_bossdata_fx_data();
 bool test_bossdata_skill_ini();
 bool test_bossdata_hostile();

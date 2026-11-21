@@ -19,6 +19,7 @@
 #include <filesystem>
 
 #include "../src/animzdata.h"
+#include "../src/assetman.h"
 #include "../src/attr.h"
 #include "../src/boss.h"
 #include "../src/bossdata.h"
@@ -845,6 +846,276 @@ namespace
         return true;
     }
 
+    // §7 cast trigger: declared slots cast on the rng gate. FX slot spawns
+    // the skill fx at the player tile (+telegraph iff telegraphFx >= 0),
+    // rate 0 never casts; BULLET slot routes through handleBossBullet;
+    // SPECIAL1 slot rate-gates the contact hit-test (no slot = unchanged).
+    bool testBossSkillCast()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all)
+            return true;
+        const bossData_t *base = pickBoss(
+            all, [](const bossData_t &d)
+            {
+                return d.is_goal && d.bullet != TILES_BLANK &&
+                       d.hitbox.height <= 6 && d.distance_pursuit >= 6;
+            });
+        if (!base)
+        {
+            LOGE("skill cast: no goal bossdata in fixture");
+            return false;
+        }
+        int idxBullet = -1;
+        int idxFx = -1;
+        int idxSpecial1 = -1;
+        for (size_t i = 0; i < g_skillDefs.size(); ++i)
+        {
+            if (!g_skillDefs[i].name)
+                continue;
+            const std::string n(g_skillDefs[i].name);
+            if (n == "BULLET")
+                idxBullet = static_cast<int>(i);
+            else if (g_skillDefs[i].kind == SKILL_FX && idxFx < 0)
+                idxFx = static_cast<int>(i); // first fx row (LIGHTNING_STRIKE)
+            else if (g_skillDefs[i].kind == SKILL_SPECIAL1)
+                idxSpecial1 = static_cast<int>(i);
+        }
+        if (idxBullet < 0 || idxFx < 0 || idxSpecial1 < 0)
+        {
+            LOGE("skill cast: registry rows missing");
+            return false;
+        }
+
+        // --- FX slot: rate=1 casts every tick at the player ---
+        bossData_t data = *base;
+        data.skillCount = 1;
+        data.skills[0].skill = static_cast<uint8_t>(idxFx);
+        data.skills[0].rate = 1;
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(8, 8, &data); // world tile (4,4)
+        CBoss &boss = bosses.back();
+        boss.setSpeed(1);
+        boss.setState(CBoss::BossState::Chase);
+        g_game->player().move(4, 7);
+        g_game->getFx().clear(); // resetWorld keeps fx alive
+        g_game->manageBosses(1);
+        const int wantFx = g_skillDefs[idxFx].effectId;
+        int fxCount = 0;
+        for (const fx_t &fx : g_game->getFx())
+            fxCount += fx.effectID == wantFx;
+        if (fxCount != 1)
+        {
+            LOGE("skill cast: fx slot spawned %d instances of %d, want 1", fxCount, wantFx);
+            return false;
+        }
+
+        // telegraphFx >= 0 adds a second instance; reset keeps the table clean
+        const int savedTele = g_skillDefs[idxFx].telegraphFx;
+        g_skillDefs[idxFx].telegraphFx = g_skillDefs[idxFx].effectId; // placeholder art
+        resetWorld();
+        bosses.emplace_back(8, 8, &data);
+        bosses.back().setSpeed(1);
+        bosses.back().setState(CBoss::BossState::Chase);
+        g_game->player().move(4, 7);
+        g_game->getFx().clear(); // resetWorld keeps fx alive
+        g_game->manageBosses(1);
+        g_skillDefs[idxFx].telegraphFx = savedTele;
+        int teleCount = 0;
+        for (const fx_t &fx : g_game->getFx())
+            teleCount += fx.effectID == wantFx;
+        if (teleCount != 2)
+        {
+            LOGE("skill cast: telegraph row produced %d instances, want 2", teleCount);
+            return false;
+        }
+
+        // --- rate 0: declared, never cast ---
+        data.skills[0].rate = 0;
+        resetWorld();
+        bosses.emplace_back(8, 8, &data);
+        bosses.back().setSpeed(1);
+        bosses.back().setState(CBoss::BossState::Chase);
+        g_game->player().move(4, 7);
+        g_game->getFx().clear(); // resetWorld keeps fx alive
+        g_game->manageBosses(1);
+        if (!g_game->getFx().empty())
+        {
+            LOGE("skill cast: rate=0 fx slot cast anyway");
+            return false;
+        }
+        data.skills[0].rate = 1;
+
+        // --- BULLET slot: casts through handleBossBullet. distance_attack=1
+        // keeps the legacy gate out of reach at 3 tiles, so any bullet is the
+        // slot's cast; Chase state is where both gates live. ---
+        bossData_t bdata = *base;
+        bdata.distance_attack = 1;
+        bdata.skillCount = 1;
+        bdata.skills[0].skill = static_cast<uint8_t>(idxBullet);
+        bdata.skills[0].rate = 1;
+        const int by = 6;
+        const int spawnY = by + bdata.hitbox.height; // AIM_DOWN spawn row
+        resetWorld();
+        bosses.emplace_back(12, 12, &bdata); // world tile (6,6)
+        bosses.back().setSpeed(1);
+        bosses.back().setState(CBoss::BossState::Chase);
+        g_game->player().move(6, spawnY + 1);
+        g_game->manageBosses(1);
+        if (g_game->getMonsters().size() != 1)
+        {
+            LOGE("skill cast: BULLET slot fired %zu bullets, want 1",
+                 g_game->getMonsters().size());
+            return false;
+        }
+        // control: no slot, same setup -> legacy gate out of reach, nothing fires
+        bdata.skillCount = 0;
+        resetWorld();
+        bosses.emplace_back(12, 12, &bdata);
+        bosses.back().setSpeed(1);
+        bosses.back().setState(CBoss::BossState::Chase);
+        g_game->player().move(6, spawnY + 1);
+        g_game->manageBosses(1);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("skill cast: slot-less boss fired outside the legacy gate");
+            return false;
+        }
+
+        // --- SPECIAL1 contact gate ---
+        if (idxSpecial1 < 0)
+        {
+            LOGE("skill cast: SPECIAL1 row missing");
+            return false;
+        }
+        const sprite_hitbox_t *savedHb = g_hitboxes;
+        const int savedCount = g_hitboxCount;
+        static sprite_hitbox_t hbTable; // referenced while the boss is alive
+        const int s1Damage = 20;
+
+        struct Case
+        {
+            uint8_t count;
+            uint8_t rate;
+            bool hurt;
+        } cases[] = {
+            {1, 1, true},   // rate=1: lands every tick
+            {1, 0, false},  // rate=0: declared, never lands
+            {0, 0, true},   // no slot: unthrottled legacy contact
+        };
+        for (const Case &c : cases)
+        {
+            bossData_t sdata = *base;
+            sdata.damage = 0; // MAIN contact must not contribute
+            sdata.damage_special1 = s1Damage;
+            sdata.speed_anime = 3; // ticks=1: no animate() -> stable frame
+            sdata.skillCount = c.count;
+            if (c.count)
+            {
+                sdata.skills[0].skill = static_cast<uint8_t>(idxSpecial1);
+                sdata.skills[0].rate = c.rate;
+            }
+            resetWorld();
+            bosses.emplace_back(12, 12, &sdata); // MAIN covers world tile (6,6)
+            CBoss &sboss = bosses.back();
+            sboss.setState(CBoss::BossState::Attack); // nobody moves; frame key below must match this state
+            hbTable.spriteID = sdata.sheet * BossData::SHEET_SPACER + sboss.currentFrame();
+            hbTable.count = 1;
+            hbTable.hitboxes[0] = hitbox_t{sdata.hitbox.x, sdata.hitbox.y,
+                                           sdata.hitbox.width, sdata.hitbox.height,
+                                           BossData::SPECIAL1};
+            g_hitboxes = &hbTable;
+            g_hitboxCount = 1;
+            g_game->addHealth(100);
+            g_game->getMap().set(6, 6, TILES_ANNIE2); // contact is map-tile driven
+            const int before = g_game->health();
+            g_game->manageBosses(1);
+            const int after = g_game->health();
+            if (c.hurt && after != before - s1Damage)
+            {
+                LOGE("skill cast: SPECIAL1 rate=%d dealt %d, want %d",
+                     c.rate, before - after, s1Damage);
+                g_hitboxes = savedHb;
+                g_hitboxCount = savedCount;
+                return false;
+            }
+            if (!c.hurt && after < before)
+            {
+                LOGE("skill cast: SPECIAL1 rate=%d dealt damage anyway", c.rate);
+                g_hitboxes = savedHb;
+                g_hitboxCount = savedCount;
+                return false;
+            }
+        }
+        g_hitboxes = savedHb;
+        g_hitboxCount = savedCount;
+        return true;
+    }
+
+    // end-to-end on real data (plan fx-boss-skills): ini skill lines +
+    // data/fx hitboxes loaded -> cast trigger -> tickFx collision drops the
+    // registry damage. MAIN/contact damage zeroed and per-frame boxes hidden
+    // so the fx skill is the only damage source. Skip-guarded on data/.
+    bool testBossSkillEndToEnd()
+    {
+        const bossData_t *all = bossFixture();
+        if (!all || !std::filesystem::exists(AssetMan::getPrefix() + "fx/LIGHTNING_STRIKE.json"))
+            return true;
+        loadFxSkills(AssetMan::getPrefix() + "fx");
+        const bossData_t *decl = pickBoss(
+            all, [](const bossData_t &d)
+            {
+                for (uint8_t i = 0; i < d.skillCount; ++i)
+                    if (g_skillDefs[d.skills[i].skill].kind == SKILL_FX)
+                        return true;
+                return false;
+            });
+        if (!decl)
+        {
+            LOGE("skill e2e: no boss in bosses.ini declares a SKILL_FX slot");
+            return false;
+        }
+        const sprite_hitbox_t *savedHb = g_hitboxes;
+        const int savedCount = g_hitboxCount;
+        g_hitboxes = nullptr;
+        g_hitboxCount = 0; // no authored per-frame boxes: MAIN contact only
+
+        bossData_t data = *decl;
+        data.damage = 0; // MAIN contact cannot hurt: fx skills are the only source
+        resetWorld();
+        auto &bosses = g_game->getBosses();
+        bosses.emplace_back(8, 8, &data); // world tile (4,4)
+        bosses.back().setState(CBoss::BossState::Chase);
+        g_game->player().move(4, 12); // 8 tiles: chase range, out of contact
+        g_game->addHealth(100);
+        const int base = g_game->health();
+        bool fxSeen = false;
+        int drop = 0;
+        for (uint32_t t = 1; t <= 600; ++t)
+        {
+            g_game->manageBosses(t);
+            for (const fx_t &fx : g_game->getFx())
+                fxSeen = fxSeen || skillForFx(fx.effectID) != nullptr;
+            g_game->tickFx();
+            if (g_game->health() < base)
+            {
+                drop = base - g_game->health();
+                break;
+            }
+        }
+        g_hitboxes = savedHb;
+        g_hitboxCount = savedCount;
+        const int dmgA = g_skillDefs[2].damage; // LIGHTNING_STRIKE
+        const int dmgB = g_skillDefs[3].damage; // METEOR
+        if (!fxSeen || (drop != dmgA && drop != dmgB))
+        {
+            LOGE("skill e2e: fxSeen=%d first drop=%d want %d or %d", fxSeen, drop, dmgA, dmgB);
+            return false;
+        }
+        return true;
+    }
+
     // handleBossHitboxContact: player tile under the MAIN hitbox takes damage
     bool testBossHitboxContact()
     {
@@ -944,6 +1215,8 @@ bool test_game_ai()
         {testBossPath, "boss path"},
         {testBossBullet, "boss bullet"},
         {testBossHitboxContact, "boss hitbox contact"},
+        {testBossSkillCast, "boss skill cast"},
+        {testBossSkillEndToEnd, "boss skill end-to-end"},
         {testBossHalfTileEdge, "boss half-tile edge"},
     };
 

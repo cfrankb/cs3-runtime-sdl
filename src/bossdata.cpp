@@ -1031,10 +1031,8 @@ std::vector<bossSkillDef_t> g_skillDefs = {
     {.name = "BULLET", .kind = SKILL_BULLET},
     {.name = "SPECIAL1", .kind = SKILL_SPECIAL1},
     // ponytail: damage values are design placeholders until per-skill tuning
-    {.name = "LIGHTNING_STRIKE", .kind = SKILL_FX, .effectId = FX_BLUE_LIGHTNING,
-     .telegraphFx = -1, .telegraphTtl = 0, .damage = 16, .baseFrame = FX_BLUE_LIGHTNING_BASEID},
-    {.name = "METEOR", .kind = SKILL_FX, .effectId = FX_FIRE_COLUMN,
-     .telegraphFx = -1, .telegraphTtl = 0, .damage = 24, .baseFrame = FX_FIRE_COLUMN_BASEID},
+    {.name = "LIGHTNING_STRIKE", .kind = SKILL_FX, .effectId = FX_BLUE_LIGHTNING, .telegraphFx = -1, .telegraphTtl = 0, .damage = 16, .baseFrame = FX_BLUE_LIGHTNING_BASEID, .hitboxFile = "LIGHTNING_STRIKE.json"},
+    {.name = "METEOR", .kind = SKILL_FX, .effectId = FX_FIRE_COLUMN, .telegraphFx = -1, .telegraphTtl = 0, .damage = 24, .baseFrame = FX_FIRE_COLUMN_BASEID, .hitboxFile = "METEOR.json"},
 };
 
 const bossSkillDef_t *skillForFx(const int effectID)
@@ -1047,67 +1045,95 @@ const bossSkillDef_t *skillForFx(const int effectID)
     return nullptr;
 }
 
-// Fill the SKILL_FX registry rows' frames from <fxDir>/<name>.json (§0b
-// format). Same grid derivation as the boss loader, but keyed by plain fx
-// sheet frameID (single fx sheet, no SHEET_SPACER) and converted to px
-// relative to the frame center anchor (§1). Missing file: LOGW, the skill
-// keeps no hitboxes and never damages.
+// Fill the SKILL_FX registry rows' frames from their declared hitboxFile
+// under <fxDir>/ (§0b format): same grid derivation as the boss loader, but
+// keyed by plain fx sheet frameID (single fx sheet, no SHEET_SPACER) and
+// converted to px relative to the frame center anchor (§1). Missing file:
+// LOGW, the file boxes are skipped. Rows with default_box also get one
+// synthesized box on the fx's last frame (table extents, bottom rect
+// w x 8 px). Rows declaring neither source are skipped silently.
 void loadFxSkills(const std::string &fxDir)
 {
     for (bossSkillDef_t &skill : g_skillDefs)
     {
-        if (skill.kind != SKILL_FX || !skill.name)
-            continue;
-        const std::string path = fxDir + "/" + skill.name + ".json";
-        int frameWidth = 0;
-        int frameHeight = 0;
-        std::vector<RawHitbox> raw;
-        if (!readHitboxJson(path, frameWidth, frameHeight, raw))
-        {
-            LOGW("fx skill '%s': no hitbox file '%s'; skill never damages\n",
-                 skill.name, path.c_str());
-            continue;
-        }
-
+        if (skill.kind != SKILL_FX || (!skill.hitboxFile && !skill.default_box))
+            continue; // no hitbox source declared: the skill never damages
         skill.frames.clear();
         skill.firstHitFrame = -1;
         skill.lastHitFrame = -1;
-        for (const RawHitbox &box : raw)
+        // find-or-create the per-frame record; updates the window bounds
+        auto frameFor = [&skill](int frameID) -> sprite_hitbox_t &
         {
-            const int frameID = skill.baseFrame + box.rawId;
-            sprite_hitbox_t *target = nullptr;
             for (auto &fr : skill.frames)
             {
                 if (fr.spriteID == frameID)
-                {
-                    target = &fr;
-                    break;
-                }
+                    return fr;
             }
-            if (!target)
-            {
-                skill.frames.push_back(sprite_hitbox_t{frameID, 0, {}});
-                target = &skill.frames.back();
-                skill.firstHitFrame = skill.firstHitFrame < 0
-                                          ? static_cast<int16_t>(frameID)
-                                          : std::min(skill.firstHitFrame, static_cast<int16_t>(frameID));
-                skill.lastHitFrame = skill.lastHitFrame < 0
-                                         ? static_cast<int16_t>(frameID)
-                                         : std::max(skill.lastHitFrame, static_cast<int16_t>(frameID));
-            }
-            if (target->count >= MAX_HITBOX_PER_FRAME)
+            skill.frames.push_back(sprite_hitbox_t{frameID, 0, {}});
+            skill.firstHitFrame = skill.firstHitFrame < 0
+                                      ? static_cast<int16_t>(frameID)
+                                      : std::min(skill.firstHitFrame, static_cast<int16_t>(frameID));
+            skill.lastHitFrame = skill.lastHitFrame < 0
+                                     ? static_cast<int16_t>(frameID)
+                                     : std::max(skill.lastHitFrame, static_cast<int16_t>(frameID));
+            return skill.frames.back();
+        };
+        const auto addBox = [&skill, &frameFor](int frameID, int x, int y, int w, int h, int type)
+        {
+            sprite_hitbox_t &target = frameFor(frameID);
+            if (target.count >= MAX_HITBOX_PER_FRAME)
             {
                 LOGW("fx skill '%s': frame %d exceeds %d hitboxes; box dropped\n",
                      skill.name, frameID, MAX_HITBOX_PER_FRAME);
-                continue;
+                return;
             }
-            // px relative to the frame center anchor; no grid quantization
-            hitbox_t &hb = target->hitboxes[target->count++];
-            hb.x = static_cast<int>(box.offX - frameWidth / 2);
-            hb.y = static_cast<int>(box.offY - frameHeight / 2);
-            hb.width = box.w;
-            hb.height = box.h;
-            hb.type = box.type;
+            hitbox_t &hb = target.hitboxes[target.count++];
+            hb.x = x;
+            hb.y = y;
+            hb.width = w;
+            hb.height = h;
+            hb.type = type;
+        };
+
+        if (skill.hitboxFile)
+        {
+            const std::string path = fxDir + "/" + skill.hitboxFile;
+            int frameWidth = 0;
+            int frameHeight = 0;
+            std::vector<RawHitbox> raw;
+            if (!readHitboxJson(path, frameWidth, frameHeight, raw))
+            {
+                LOGW("fx skill '%s': no hitbox file '%s'; file boxes skipped\n",
+                     skill.name, path.c_str());
+            }
+            for (const RawHitbox &box : raw)
+            {
+                // px relative to the frame center anchor; no grid quantization
+                addBox(skill.baseFrame + box.rawId,
+                       static_cast<int>(box.offX - frameWidth / 2),
+                       static_cast<int>(box.offY - frameHeight / 2),
+                       box.w, box.h, box.type);
+            }
+        }
+
+        if (skill.default_box)
+        {
+            const fxData_t *fx = fxDataAt(skill.effectId);
+            const fx_layer_t *layer = fx && fx->front.count  ? &fx->front
+                                      : fx && fx->back.count ? &fx->back
+                                                             : nullptr;
+            if (!layer)
+            {
+                LOGW("fx skill '%s': default_box has no fx frames (effect %d)\n",
+                     skill.name, skill.effectId);
+            }
+            else
+            {
+                // bottom rect of the table extents, frame-bottom flush
+                addBox(layer->base + layer->count - 1,
+                       -static_cast<int>(fx->w) / 2, static_cast<int>(fx->h) / 2 - 8,
+                       fx->w, 8, 2); // SPECIAL1 vocab; tickFx damages any box
+            }
         }
     }
 }

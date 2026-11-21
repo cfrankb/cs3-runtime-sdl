@@ -130,6 +130,13 @@ struct bossSkillDef_t
     uint8_t telegraphTtl = 0;   // warning lifetime (ticks) = lead-in window
     int16_t damage = 0;         // hp dealt to player per collision registration
     int16_t baseFrame = -1;     // fx-sheet frameID of the hitbox run's first frame
+    // hitbox JSON filename under the fx dir (loadFxSkills); nullptr = this
+    // skill has no hitboxes and never damages (most fx animations)
+    const char *hitboxFile = nullptr;
+    // true: synthesize one hitbox at load on the fx's LAST frame: the bottom
+    // rect of the table entry (w x 8 px, frame-bottom flush), appended to any
+    // file-authored boxes; damaged by tickFx like authored boxes
+    bool default_box = false;
     // sparse per-frame boxes; hitbox_t x/y are px offsets from the fx
     // center anchor; frames absent from the vector never damage
     std::vector<sprite_hitbox_t> frames;

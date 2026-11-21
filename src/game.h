@@ -291,7 +291,7 @@ private:
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
     void handleBossPath(CBoss &boss);
     bool handleBossBullet(CBoss &boss);
-    void handleBossHitboxContact(CBoss &boss);
+    void handleBossHitboxContact(CBoss &boss, uint32_t ticks);
 
     inline static CMap m_map;
     friend class CGameMixin;

@@ -21,8 +21,10 @@
 #include <fstream>
 #include <string>
 #include "../src/logger.h"
+#include "../src/assetman.h"
 #include "../src/bossdata.h"
 #include "../src/gamesfx.h"
+#include "../src/sfx_private.h"
 #include "t_bossdata.h"
 
 // Production boss data lives in data/bosses (a symlink to the private
@@ -271,6 +273,7 @@ bool test_bossdata_fxskills()
     row.kind = SKILL_FX;
     row.effectId = 4044;
     row.baseFrame = 10;
+    row.hitboxFile = "TEST_SKILL.json";
     g_skillDefs.push_back(row);
 
     loadFxSkills("nonexistent/fx/dir"); // missing dir: warnings only
@@ -320,6 +323,42 @@ bool test_bossdata_fxskills()
     {
         LOGE("fxskills: LIGHTNING_STRIKE filled without a JSON");
         ok = false;
+    }
+
+    // default_box: no JSON, box synthesized on the fx's LAST frame: bottom
+    // rect of the table extents (FX_BLUE_LIGHTNING: 32x48 -> -16,16,32x8)
+    {
+        bossSkillDef_t drow;
+        drow.name = "DEFAULT_BOX_TEST";
+        drow.kind = SKILL_FX;
+        drow.effectId = FX_BLUE_LIGHTNING;
+        drow.default_box = true;
+        g_skillDefs.push_back(drow);
+        loadFxSkills(dir); // dir contents irrelevant: no hitboxFile
+        const bossSkillDef_t &d = g_skillDefs.back();
+        const int lastFrame = FX_BLUE_LIGHTNING_BASEID + FX_BLUE_LIGHTNING_FRAMES - 1;
+        if (d.frames.size() != 1 || d.frames[0].spriteID != lastFrame ||
+            d.frames[0].count != 1)
+        {
+            LOGE("fxskills: default_box frames wrong (n=%zu)", d.frames.size());
+            ok = false;
+        }
+        else
+        {
+            const hitbox_t &b = d.frames[0].hitboxes[0];
+            if (b.x != -16 || b.y != 16 || b.width != 32 || b.height != 8)
+            {
+                LOGE("fxskills: default_box rect (%d,%d,%d,%d) want (-16,16,32,8)",
+                     b.x, b.y, b.width, b.height);
+                ok = false;
+            }
+        }
+        if (d.firstHitFrame != lastFrame || d.lastHitFrame != lastFrame)
+        {
+            LOGE("fxskills: default_box window %d..%d want %d..%d",
+                 d.firstHitFrame, d.lastHitFrame, lastFrame, lastFrame);
+            ok = false;
+        }
     }
 
     g_skillDefs.resize(saved);
@@ -407,5 +446,77 @@ bool test_bossdata_skill_ini()
 
     freeBossData();
     fs::remove_all(dir);
+    return ok;
+}
+
+// real data/fx authoring (plan fx-boss-skills §11 step 6): loader fills the
+// two SKILL_FX registry rows with one tile-accurate box per hit frame.
+// Skip-guarded: CI has no private data tree.
+bool test_bossdata_fx_data()
+{
+    namespace fs = std::filesystem;
+    const std::string fxDir = AssetMan::getPrefix() + "fx"; // configurable like startup
+    if (!fs::exists(fxDir + "/LIGHTNING_STRIKE.json"))
+    {
+        LOGI("fx data: data/fx absent, skipping");
+        return true;
+    }
+    // snapshot the rows the loader may touch; restore at exit
+    std::vector<std::pair<size_t, bossSkillDef_t>> saved;
+    for (size_t i = 0; i < g_skillDefs.size(); ++i)
+    {
+        if (g_skillDefs[i].kind == SKILL_FX)
+            saved.emplace_back(i, g_skillDefs[i]);
+    }
+    loadFxSkills(fxDir);
+
+    bool ok = true;
+    struct Expect
+    {
+        const char *name;
+        int firstCol;
+        int frameCount;
+    } wants[] = {
+        {"LIGHTNING_STRIKE", 2, 3}, // frames 2..4 of the 6-frame pillar
+        {"METEOR", 3, 3},           // impact frames 3..5 of the 8-frame column
+    };
+    for (const Expect &w : wants)
+    {
+        const bossSkillDef_t *skill = nullptr;
+        for (const auto &s : g_skillDefs)
+            if (s.kind == SKILL_FX && s.name && std::strcmp(s.name, w.name) == 0)
+                skill = &s;
+        if (!skill)
+        {
+            LOGE("fx data: row %s missing", w.name);
+            ok = false;
+            continue;
+        }
+        if (static_cast<int>(skill->frames.size()) != w.frameCount ||
+            skill->firstHitFrame != skill->baseFrame + w.firstCol ||
+            skill->lastHitFrame != skill->baseFrame + w.firstCol + w.frameCount - 1)
+        {
+            LOGE("fx data: %s window %d..%d over %zu frames, want %d..%d",
+                 w.name, skill->firstHitFrame, skill->lastHitFrame, skill->frames.size(),
+                 skill->baseFrame + w.firstCol, skill->baseFrame + w.firstCol + w.frameCount - 1);
+            ok = false;
+            continue;
+        }
+        for (const sprite_hitbox_t &f : skill->frames)
+        {
+            // one 32x48-frame-centered box covering exactly the target 16px tile
+            if (f.count != 1 || f.hitboxes[0].x != -8 || f.hitboxes[0].y != 8 ||
+                f.hitboxes[0].width != 16 || f.hitboxes[0].height != 16 ||
+                f.hitboxes[0].type != BossData::SPECIAL1)
+            {
+                LOGE("fx data: %s frame %d bad box (n=%d at %d,%d %dx%d t%d)",
+                     w.name, f.spriteID, f.count, f.hitboxes[0].x, f.hitboxes[0].y,
+                     f.hitboxes[0].width, f.hitboxes[0].height, f.hitboxes[0].type);
+                ok = false;
+            }
+        }
+    }
+    for (const auto &s : saved)
+        g_skillDefs[s.first] = s.second;
     return ok;
 }

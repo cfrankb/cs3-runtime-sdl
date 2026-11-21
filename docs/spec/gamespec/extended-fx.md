@@ -2,7 +2,9 @@
 
 Status: **Implemented** (2026-11-19: data model + `CGame` state v0x02000012,
 hardware and software renderer passes; 2026-11-20: S5 derived poison-aura
-draw entries). `fx_hitbox_t` mechanics remain declared, no consumer (1.4).
+draw entries; 2026-11-21: S1 spawn alignment modes, and 1.4 hitbox damage
+mechanics consumed via the boss-skill registry — see
+[`boss-skills.md`](boss-skills.md)).
 
 Complements the classic `sfx_t` (16px tile-aligned, `src/gamesfx.h`), which is
 **frozen**. Extended FX adds:
@@ -77,6 +79,7 @@ struct fxData_t
     uint8_t  flags;    // FX_ONESHOT / FX_REPEATABLE
     uint16_t ttl;      // lifetime (ticks) for FX_REPEATABLE entries
     uint16_t w, h;     // max frame extents, culling only
+    uint8_t  align;    // FX_ALIGN_CENTER / FX_ALIGN_BOTTOM spawn anchor (S1)
     fx_layer_t back;   // drawn before actors
     fx_layer_t front;  // drawn after actors
     // --- provisions for hitbox / damage / splash mechanics (later) ---
@@ -105,10 +108,14 @@ struct fx_hitbox_t
 };
 ```
 
-Shape mirrors the boss `hitbox_t` precedent. Declared and carried by the
-table, **no consumer yet**: lightning-strike style damage and splash will
-bind these in a later change (tick hit-test against player/actors). Nothing
-in this spec requires them.
+Shape mirrors the boss `hitbox_t` precedent. The table fields above
+(`damage`/`splashRadius`/`hitboxes`/`hitboxCount`) remain **declared, no
+consumer** (kept per compatibility rule). The lightning-strike-style damage
+mechanic shipped through a different binding: per-frame boxes live on the
+boss-skill registry (`bossSkillDef_t::frames`, loaded from `data/fx/*.json`)
+and `tickFx()` hit-tests them against the player — see
+[`boss-skills.md`](boss-skills.md) §4. Nothing in this spec requires the
+table fields.
 
 ### 1.5 `fxDraw_t` — renderer-facing draw entry (never serialized)
 
@@ -140,8 +147,12 @@ void getFxToDraw(const fxView_t &view, bool front,
 member. Spawns carry no callback: behavior is per-effect, not per-spawn.
 
 - **S1 (spawn helpers).** `spawnFx` is the tile->pixel conversion point and
-  records the **origin point** (`ox/oy` = tile coords):
-  `x = tileX * TILE_SIZE + TILE_SIZE / 2`, same for y. `spawnFxPx` takes world
+  records the **origin point** (`ox/oy` = tile coords, always the true tile).
+  Anchor per the table entry's `align` mode (2026-11-21): `FX_ALIGN_CENTER`
+  (default) `x = tileX * TILE_SIZE + TILE_SIZE / 2`, same for y;
+  `FX_ALIGN_BOTTOM` (tall ground-flushed effects — pillars, columns) keeps
+  `x` tile-centered and sets `y = (tileY + 1) * TILE_SIZE - h / 2`, flushing
+  the frame bottom with the tile bottom. `spawnFxPx` takes world
   pixels directly and leaves `ox = oy = -1` (origin not available). Both
   return the instance index, or `-1` for an unknown `effectID`.
 - **S2 (cull).** `fxView_t` is four world-px bounds (left/top/right/bottom).
@@ -245,3 +256,7 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
   preload boilerplate ships commented per environment (section 3).
 - O3. Whether any existing classic sfx migrate to fx later (per-effect
   decision; not required by this spec).
+- O4. Telegraph ground-marker art (2026-11-21): every skill registry row
+  carries `telegraphFx = -1`; the cast path spawns the marker iff `>= 0`, but
+  no marker strip exists on the fx sheet. Task:
+  [`docs/plans/telegraph-art-task.md`](../plans/telegraph-art-task.md).

@@ -23,7 +23,8 @@ Hand-authored `std::vector<bossSkillDef_t>`; rows are looked up by ini token
 | `telegraphFx` / `telegraphTtl` | warning Fx id, `-1` = none; marker lifetime |
 | `damage` | hp dealt to player per collision registration |
 | `baseFrame` | fx-sheet frameID of the hitbox run's first frame |
-| `hitboxFile` | hitbox JSON filename under `<fxDir>/`; `nullptr` = skill has no hitboxes and never damages |
+| `hitboxFile` | hitbox JSON filename under `<fxDir>/`; `nullptr` = no file-authored boxes |
+| `default_box` | `true`: synthesize one box at load on the fx's **last** frame (`fxDataAt(effectId)` layer `base + count - 1`): bottom rect of the table extents (`w x 8` px, frame-bottom flush, center-anchor-relative), appended to any file boxes |
 | `frames` | sparse per-frame boxes (`sprite_hitbox_t`, keys `baseFrame + rawId`, box `x/y` px offsets from the fx center anchor); absent frames never damage |
 | `firstHitFrame` / `lastHitFrame` | min/max keys, derived at load |
 
@@ -83,10 +84,11 @@ dropped). Fx differences: keyed by plain fx-sheet frameID `baseFrame + rawId`
 the frame center anchor (`off - frameW/2`), no half-tile quantization.
 Damaging boxes are authored `type: 2` (SPECIAL1) — shared vocabulary, not a
 shared consumer. The JSON filename is declared per row via
-`bossSkillDef_t::hitboxFile` (under `<fxDir>/`); most fx skills have no
-hitboxes and declare `nullptr` — `loadFxSkills` skips them silently. A
-declared file that fails to read is a `LOGW` + row keeps no boxes + never
-damages. `loadFxSkills(fxDir)` runs at startup beside `loadBossData`.
+`bossSkillDef_t::hitboxFile` (under `<fxDir>/`); a skill with no hitboxes
+declares `nullptr` **and** `default_box = false` — `loadFxSkills` skips it
+silently. A declared file that fails to read is a `LOGW` + its boxes are
+skipped. Rows declaring neither source keep no boxes and never damage.
+`loadFxSkills(fxDir)` runs at startup beside `loadBossData`.
 
 ## 6. Compatibility
 

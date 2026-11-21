@@ -142,6 +142,7 @@ int main(int argc, char *args[])
         FCT(test_statedata),
         FCT(test_bossdata),
         FCT(test_bossdata_fxskills),
+        FCT(test_bossdata_fx_data),
         FCT(test_bossdata_skill_ini),
         FCT(test_bossdata_hostile),
         FCT(test_boss),
