@@ -221,6 +221,7 @@ void EngineHW::preloadAssets()
     {
         LOGE("failed to load boss data");
     }
+    loadFxSkills(AssetMan::getPrefix() + "fx");
     preloadHearts();
 }
 

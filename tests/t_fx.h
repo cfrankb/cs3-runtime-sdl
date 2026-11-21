@@ -19,6 +19,7 @@
 
 bool test_fx_spawn();
 bool test_fx_align();
+bool test_fx_skill_hit();
 bool test_fx_lifetime();
 bool test_fx_frame_index();
 bool test_fx_cull();

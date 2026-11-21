@@ -21,6 +21,7 @@
 #include <string>
 #include "../src/logger.h"
 #include "../src/bossdata.h"
+#include "../src/gamesfx.h"
 #include "t_bossdata.h"
 
 // Production boss data lives in data/bosses (a symlink to the private
@@ -244,4 +245,83 @@ bool test_bossdata_hostile()
 
     freeBossData();
     return true;
+}
+
+// data/fx skill hitbox loader (plan fx-boss-skills §3): §0b derivation with
+// center-anchor px conversion, sparse frame records, derived hit-window bounds.
+bool test_bossdata_fxskills()
+{
+    namespace fs = std::filesystem;
+    const std::string dir = "tests/out/fx_skills";
+    fs::remove_all(dir);
+    fs::create_directories(dir);
+    {
+        std::ofstream out(dir + "/TEST_SKILL.json");
+        out << R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[)"
+            << R"({"x":0,"y":0,"w":8,"h":8,"type":0},)"   // marker, dropped
+            << R"({"x":48,"y":32,"w":16,"h":24,"type":2},)" // col2 row1 -> raw 6
+            << R"({"x":60,"y":40,"w":8,"h":8,"type":2},)"   // same frame
+            << R"({"x":72,"y":0,"w":4,"h":4,"type":1}]})";  // col3 row0 -> raw 3
+    }
+
+    const size_t saved = g_skillDefs.size();
+    bossSkillDef_t row;
+    row.name = "TEST_SKILL";
+    row.kind = SKILL_FX;
+    row.effectId = 4044;
+    row.baseFrame = 10;
+    g_skillDefs.push_back(row);
+
+    loadFxSkills("nonexistent/fx/dir"); // missing dir: warnings only
+    if (!g_skillDefs.back().frames.empty())
+    {
+        LOGE("fxskills: missing dir filled %zu frames", g_skillDefs.back().frames.size());
+        g_skillDefs.resize(saved);
+        return false;
+    }
+
+    loadFxSkills(dir);
+    const bossSkillDef_t &skill = g_skillDefs.back();
+    bool ok = true;
+    // sparse: only the two frames with boxes get records, first-seen order
+    if (skill.frames.size() != 2 || skill.frames[0].spriteID != 16 || skill.frames[1].spriteID != 13)
+    {
+        LOGE("fxskills: frame keying wrong (n=%zu)", skill.frames.size());
+        ok = false;
+    }
+    else
+    {
+        const sprite_hitbox_t &f16 = skill.frames[0];
+        if (f16.count != 2 || f16.hitboxes[0].x != -12 || f16.hitboxes[0].y != -16 ||
+            f16.hitboxes[0].width != 16 || f16.hitboxes[0].height != 24 ||
+            f16.hitboxes[0].type != 2 || f16.hitboxes[1].x != 0 || f16.hitboxes[1].y != -8)
+        {
+            LOGE("fxskills: frame 16 boxes wrong (n=%d b0=(%d,%d,%d,%d,%d))", f16.count,
+                 f16.hitboxes[0].x, f16.hitboxes[0].y, f16.hitboxes[0].width,
+                 f16.hitboxes[0].height, f16.hitboxes[0].type);
+            ok = false;
+        }
+        const sprite_hitbox_t &f13 = skill.frames[1];
+        if (f13.count != 1 || f13.hitboxes[0].x != -12 || f13.hitboxes[0].y != -16 ||
+            f13.hitboxes[0].width != 4 || f13.hitboxes[0].type != 1)
+        {
+            LOGE("fxskills: frame 13 box wrong (n=%d)", f13.count);
+            ok = false;
+        }
+    }
+    if (skill.firstHitFrame != 13 || skill.lastHitFrame != 16)
+    {
+        LOGE("fxskills: window %d..%d want 13..16", skill.firstHitFrame, skill.lastHitFrame);
+        ok = false;
+    }
+    // hand-authored rows with no JSON keep empty frames (never damage)
+    if (skillForFx(FX_BLUE_LIGHTNING) && !skillForFx(FX_BLUE_LIGHTNING)->frames.empty())
+    {
+        LOGE("fxskills: LIGHTNING_STRIKE filled without a JSON");
+        ok = false;
+    }
+
+    g_skillDefs.resize(saved);
+    fs::remove_all(dir);
+    return ok;
 }

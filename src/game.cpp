@@ -1961,6 +1961,37 @@ void CGame::tickFx()
             continue;
         }
         it->timer++;
+        // skill hitbox damage (plan fx-boss-skills §4): the current frame's
+        // boxes placed at the fx anchor; overlap registers addHealth, whose
+        // invincibility window throttles repeat hits
+        if (const bossSkillDef_t *skill = skillForFx(it->effectID))
+        {
+            const fx_layer_t &layer = def->front.count ? def->front : def->back;
+            const uint16_t frameID = fxFrameIndex(*it, *def, layer);
+            const Pos ppos = m_player.pos();
+            const int px1 = ppos.x * FX_TILE_SIZE;
+            const int py1 = ppos.y * FX_TILE_SIZE;
+            const int px2 = px1 + FX_TILE_SIZE;
+            const int py2 = py1 + FX_TILE_SIZE;
+            for (const sprite_hitbox_t &frame : skill->frames)
+            {
+                if (frame.spriteID != static_cast<int>(frameID))
+                    continue;
+                for (int b = 0; b < frame.count; ++b)
+                {
+                    const hitbox_t &box = frame.hitboxes[b];
+                    const int bx1 = it->x + box.x;
+                    const int by1 = it->y + box.y;
+                    if (bx1 < px2 && bx1 + box.width > px1 &&
+                        by1 < py2 && by1 + box.height > py1)
+                    {
+                        addHealth(-skill->damage);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
         bool ended = false;
         if (def->flags & FX_REPEATABLE)
             ended = it->timer >= def->ttl;

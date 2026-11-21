@@ -19,6 +19,8 @@
 #include <vector>
 
 #include "../src/boss.h"
+#include "../src/bossdata.h"
+#include "../src/actor.h"
 #include "../src/game.h"
 #include "../src/gamesfx.h"
 #include "../src/gamestats.h"
@@ -67,6 +69,13 @@ namespace
     {
         const size_t m_saved = g_fxData.size();
         ~TableScope() { g_fxData.resize(m_saved); }
+    };
+
+    // append a synthetic skill registry entry; truncated back on scope exit
+    struct SkillScope
+    {
+        const size_t m_saved = g_skillDefs.size();
+        ~SkillScope() { g_skillDefs.resize(m_saved); }
     };
 
     int addFx(const fxData_t &def)
@@ -166,6 +175,63 @@ bool test_fx_align()
         return false;
     const fx_t &pxFx = g_game->getFx()[0];
     return checkEq(pxFx.x, 100, "px spawn x") && checkEq(pxFx.y, 120, "px spawn y");
+}
+
+bool test_fx_skill_hit()
+{
+    resetWorld();
+    TableScope table;
+    SkillScope skills;
+
+    // synthetic damaging fx: 4 frames, speed 1; skill boxes authored only
+    // on frames 2-3 (lead-in frames 0-1 never damage)
+    const int id = addFx({.id = 0, .sheet = 0, .speed = 1, .flags = FX_ONESHOT,
+                          .ttl = 0, .w = 32, .h = 32, .back = {0, 0}, .front = {0, 4},
+                          .onEnd = nullptr});
+    bossSkillDef_t skill;
+    skill.name = "TEST_STRIKE";
+    skill.kind = SKILL_FX;
+    skill.effectId = static_cast<int16_t>(id);
+    skill.damage = 10;
+    for (int frame = 2; frame <= 3; ++frame)
+    {
+        sprite_hitbox_t sf{.spriteID = frame, .count = 1};
+        sf.hitboxes[0] = {.x = -8, .y = -8, .width = 16, .height = 16, .type = 2};
+        skill.frames.push_back(sf);
+    }
+    skill.firstHitFrame = 2;
+    skill.lastHitFrame = 3;
+    g_skillDefs.push_back(skill);
+
+    const int regIdx = static_cast<int>(g_skillDefs.size()) - 1;
+    if (skillForFx(id) != &g_skillDefs[static_cast<size_t>(regIdx)] ||
+        skillForFx(9999) != nullptr)
+    {
+        LOGE("skillForFx lookup mismatch");
+        return false;
+    }
+
+    // strike on the player tile: boxes centered on the anchor cover the tile
+    const Pos ppos = g_game->player().pos();
+    const int hp0 = g_game->health();
+    if (g_game->spawnFx(id, ppos.x, ppos.y) < 0)
+        return false;
+    tick(1); // timer 1 -> frame 1: lead-in
+    if (!checkEq(g_game->health(), hp0, "lead-in no damage"))
+        return false;
+    tick(1); // timer 2 -> frame 2: first box tick registers the hit
+    if (!checkEq(g_game->health(), hp0 - 10, "hit frame damage"))
+        return false;
+
+    // same strike far from the player: boxes never overlap the tile rect
+    g_game->getFx().clear();
+    g_game->resetStats();
+    const int hp1 = g_game->health();
+    const int farX = ppos.x > 3 ? ppos.x - 4 : ppos.x + 4;
+    if (g_game->spawnFx(id, farX, ppos.y) < 0)
+        return false;
+    tick(4); // full run
+    return checkEq(g_game->health(), hp1, "missed strike untouched");
 }
 
 bool test_fx_lifetime()

@@ -31,6 +31,8 @@
 
 #include "sounds.h"
 #include "tilesdata.h"
+#include "gamesfx.h"
+#include "sfx_private.h"
 
 #include <algorithm>
 #include <cctype>
@@ -437,8 +439,22 @@ namespace
         return true;
     }
 
-    bool readHitboxFile(const std::string &path, int grid, int baseFrame,
-                        int sheet, std::vector<HitboxFrame> &frames)
+    // One box as derived from a §0b hitbox JSON: raw_id = row*cols+col
+    // selects the frame strip, offX/offY is the box offset inside its cell.
+    struct RawHitbox
+    {
+        int rawId;
+        int offX;
+        int offY;
+        int w;
+        int h;
+        int type;
+    };
+
+    // Shared §0b core: parse a hitbox JSON, derive frame membership for each
+    // box, drop type 0 markers. Callers apply their own keying/quantization.
+    bool readHitboxJson(const std::string &path, int &frameWidth, int &frameHeight,
+                        std::vector<RawHitbox> &out)
     {
         std::string text;
         if (!readFile(path.c_str(), text))
@@ -459,8 +475,6 @@ namespace
             return false;
         }
 
-        int frameWidth = 0;
-        int frameHeight = 0;
         int cols = 0;
         auto numAt = [](const JsonValue &obj, const char *key, int &out) -> bool
         {
@@ -483,40 +497,53 @@ namespace
         {
             int x = 0;
             int y = 0;
-            int w = 0;
-            int h = 0;
-            int type = 0;
+            RawHitbox box{};
             if (hb.type != JsonValue::Type::Object ||
                 !numAt(hb, "x", x) || !numAt(hb, "y", y) ||
-                !numAt(hb, "w", w) || !numAt(hb, "h", h) ||
-                !numAt(hb, "type", type))
+                !numAt(hb, "w", box.w) || !numAt(hb, "h", box.h) ||
+                !numAt(hb, "type", box.type))
             {
                 LOGE("Error: bad hitbox entry in '%s'.\n", path.c_str());
                 return false;
             }
-            if (x < 0 || y < 0 || w < 0 || h < 0)
+            if (x < 0 || y < 0 || box.w < 0 || box.h < 0)
             { // negative coords would produce negative col/row/frame ids
                 LOGE("Error: negative hitbox coord in '%s'.\n", path.c_str());
                 return false;
             }
-            if (type == 0)
+            if (box.type == 0)
                 continue; // ignored frame marker, same as parse.py
 
-            int col = x / frameWidth;
-            int row = y / frameHeight;
-            int id = row * cols + col;
-            int relX = (x - col * frameWidth) / grid;
-            int relY = (y - row * frameHeight) / grid;
+            const int col = x / frameWidth;
+            const int row = y / frameHeight;
+            box.rawId = row * cols + col;
+            box.offX = x - col * frameWidth;
+            box.offY = y - row * frameHeight;
+            out.push_back(box);
+        }
+        return true;
+    }
 
-            hitbox_t box;
-            box.x = relX;
-            box.y = relY;
-            box.width = w / grid;
-            box.height = h / grid;
-            box.type = type;
+    bool readHitboxFile(const std::string &path, int grid, int baseFrame,
+                        int sheet, std::vector<HitboxFrame> &frames)
+    {
+        int frameWidth = 0;
+        int frameHeight = 0;
+        std::vector<RawHitbox> raw;
+        if (!readHitboxJson(path, frameWidth, frameHeight, raw))
+            return false;
+
+        for (const RawHitbox &box : raw)
+        {
+            hitbox_t hb;
+            hb.x = box.offX / grid;
+            hb.y = box.offY / grid;
+            hb.width = box.w / grid;
+            hb.height = box.h / grid;
+            hb.type = box.type;
 
             // Absolute frame id, keyed exactly like parse.py's all_frames.
-            int frame_id = baseFrame + id + sheet * BossData::SHEET_SPACER;
+            const int frame_id = baseFrame + box.rawId + sheet * BossData::SHEET_SPACER;
 
             // Insert-or-append keyed by absolute frame id (dict preserves
             // first-seen order).
@@ -534,7 +561,7 @@ namespace
                 frames.push_back(HitboxFrame{frame_id, {}});
                 target = &frames.back();
             }
-            target->boxes.push_back(box);
+            target->boxes.push_back(hb);
         }
         return true;
     }
@@ -927,6 +954,94 @@ int g_bossCount = 0;
 int g_hitboxCount = 0;
 const bossData_t *g_bossData = nullptr;
 const sprite_hitbox_t *g_hitboxes = nullptr;
+
+// skill registry (plan fx-boss-skills §1): hand-authored rows; the data/fx
+// JSON fill-in (loadFxSkills) populates the FX frames entries. Never serialized.
+std::vector<bossSkillDef_t> g_skillDefs = {
+    // kind markers only: payload + attack code stay in bossData_t (§1)
+    {.name = "BULLET", .kind = SKILL_BULLET},
+    {.name = "SPECIAL1", .kind = SKILL_SPECIAL1},
+    // ponytail: damage values are design placeholders until per-skill tuning
+    {.name = "LIGHTNING_STRIKE", .kind = SKILL_FX, .effectId = FX_BLUE_LIGHTNING,
+     .telegraphFx = -1, .telegraphTtl = 0, .damage = 16, .baseFrame = FX_BLUE_LIGHTNING_BASEID},
+    {.name = "METEOR", .kind = SKILL_FX, .effectId = FX_FIRE_COLUMN,
+     .telegraphFx = -1, .telegraphTtl = 0, .damage = 24, .baseFrame = FX_FIRE_COLUMN_BASEID},
+};
+
+const bossSkillDef_t *skillForFx(const int effectID)
+{
+    for (const bossSkillDef_t &s : g_skillDefs)
+    {
+        if (s.kind == SKILL_FX && s.effectId == effectID)
+            return &s;
+    }
+    return nullptr;
+}
+
+// Fill the SKILL_FX registry rows' frames from <fxDir>/<name>.json (§0b
+// format). Same grid derivation as the boss loader, but keyed by plain fx
+// sheet frameID (single fx sheet, no SHEET_SPACER) and converted to px
+// relative to the frame center anchor (§1). Missing file: LOGW, the skill
+// keeps no hitboxes and never damages.
+void loadFxSkills(const std::string &fxDir)
+{
+    for (bossSkillDef_t &skill : g_skillDefs)
+    {
+        if (skill.kind != SKILL_FX || !skill.name)
+            continue;
+        const std::string path = fxDir + "/" + skill.name + ".json";
+        int frameWidth = 0;
+        int frameHeight = 0;
+        std::vector<RawHitbox> raw;
+        if (!readHitboxJson(path, frameWidth, frameHeight, raw))
+        {
+            LOGW("fx skill '%s': no hitbox file '%s'; skill never damages\n",
+                 skill.name, path.c_str());
+            continue;
+        }
+
+        skill.frames.clear();
+        skill.firstHitFrame = -1;
+        skill.lastHitFrame = -1;
+        for (const RawHitbox &box : raw)
+        {
+            const int frameID = skill.baseFrame + box.rawId;
+            sprite_hitbox_t *target = nullptr;
+            for (auto &fr : skill.frames)
+            {
+                if (fr.spriteID == frameID)
+                {
+                    target = &fr;
+                    break;
+                }
+            }
+            if (!target)
+            {
+                skill.frames.push_back(sprite_hitbox_t{frameID, 0, {}});
+                target = &skill.frames.back();
+                skill.firstHitFrame = skill.firstHitFrame < 0
+                                          ? static_cast<int16_t>(frameID)
+                                          : std::min(skill.firstHitFrame, static_cast<int16_t>(frameID));
+                skill.lastHitFrame = skill.lastHitFrame < 0
+                                         ? static_cast<int16_t>(frameID)
+                                         : std::max(skill.lastHitFrame, static_cast<int16_t>(frameID));
+            }
+            if (target->count >= MAX_HITBOX_PER_FRAME)
+            {
+                LOGW("fx skill '%s': frame %d exceeds %d hitboxes; box dropped\n",
+                     skill.name, frameID, MAX_HITBOX_PER_FRAME);
+                continue;
+            }
+            // px relative to the frame center anchor; no grid quantization
+            hitbox_t &hb = target->hitboxes[target->count++];
+            hb.x = static_cast<int>(box.offX - frameWidth / 2);
+            hb.y = static_cast<int>(box.offY - frameHeight / 2);
+            hb.width = box.w;
+            hb.height = box.h;
+            hb.type = box.type;
+        }
+    }
+}
 
 // Storage kept alive until freeBossData() so the returned pointers
 // (g_bossData, g_hitboxes, and every d.name) stay valid; the statics' own

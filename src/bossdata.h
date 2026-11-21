@@ -39,6 +39,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <string>
+#include <vector>
 
 #include "rect.h"
 #include "color.h"
@@ -106,6 +107,43 @@ struct sprite_hitbox_t
     int count;
     hitbox_t hitboxes[MAX_HITBOX_PER_FRAME];
 };
+
+// --- skill registry (plan docs/plans/fx-boss-skills-plan.md §1) ---
+// A SKILL links visual + hit resolution + damage for one castable attack.
+// BULLET/SPECIAL1 are kind markers whose data stays in bossData_t; SKILL_FX
+// entries own the fx id + per-frame hitboxes + damage. Static table,
+// never serialized.
+enum SkillKind : uint8_t
+{
+    SKILL_BULLET,
+    SKILL_SPECIAL1,
+    SKILL_FX
+};
+
+struct bossSkillDef_t
+{
+    const char *name = nullptr; // ini token: "BULLET", "LIGHTNING_STRIKE", "METEOR"
+    SkillKind kind = SKILL_FX;
+    // --- SKILL_FX payload ---
+    int16_t effectId = -1;      // damaging Fx id (index into g_fxData)
+    int16_t telegraphFx = -1;   // warning Fx id, -1 = none
+    uint8_t telegraphTtl = 0;   // warning lifetime (ticks) = lead-in window
+    int16_t damage = 0;         // hp dealt to player per collision registration
+    int16_t baseFrame = -1;     // fx-sheet frameID of the hitbox run's first frame
+    // sparse per-frame boxes; hitbox_t x/y are px offsets from the fx
+    // center anchor; frames absent from the vector never damage
+    std::vector<sprite_hitbox_t> frames;
+    int16_t firstHitFrame = -1; // min key, derived at load (lead-in bound)
+    int16_t lastHitFrame = -1;  // max key (damage-window bound)
+};
+
+// hand-authored table, filled at load (JSON hitbox files fill FX frames)
+extern std::vector<bossSkillDef_t> g_skillDefs;
+// registry scan by damaging effectId; nullptr when no skill owns the fx
+const bossSkillDef_t *skillForFx(int effectID);
+// fill SKILL_FX rows' frames from <fxDir>/<name>.json (§0b format, px
+// relative to the frame center anchor); missing file warns + keeps empty
+void loadFxSkills(const std::string &fxDir);
 
 struct bossData_t
 {
