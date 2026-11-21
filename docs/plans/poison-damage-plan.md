@@ -39,6 +39,11 @@ Set `POISON_INTERVAL` ≥ ~12 or accept forfeits by design.
 
 ## Phase 1 — State + entry point + drain
 
+> **DONE 2026-11-20**: shipped in `gamestats.h`, `events.h`, `game.h`,
+> `game.cpp`, `tests/t_game.cpp` (`testPoisonDrain`). Full build + ctest
+> green. Constants: `POISON_DRAIN 8`, `POISON_INTERVAL 12`,
+> `POISON_DEFAULT 32`.
+
 1. `src/gamestats.h:46` — append `S_POISON, S_POISON_NEXT` **last** in
    `enum GameStat` (keys serialize raw; inserting mid-list corrupts saves).
 2. `src/game.h:140` / `src/game.cpp` —

@@ -611,6 +611,94 @@ bool testLevelBounds()
     game->setMode(savedMode);
     return ok;
 }
+
+// Poison drain (docs/plans/poison-damage-plan.md phase 1): pins addPoison/
+// decTimers pool mechanics -- clock re-arms each interval, god mode forfeits
+// (pool shrinks, HP frozen, D1 ruling), pool empties exactly, resetStats
+// clears both keys. Needs the boss fixture so the empty world does not read
+// as level-complete and trip closure; skip-not-fail otherwise.
+bool testPoisonDrain()
+{
+    // mirrors the GamePrivate constants in game.cpp
+    constexpr int POISON_INTERVAL = 12;
+    constexpr int POISON_DRAIN = 8;
+    constexpr int POISON_DEFAULT = 32;
+
+    CBoss *boss = nullptr;
+    if (!setupAlive(&boss))
+        return true; // fixture absent: skip
+    CGame *game = g_game;
+    game->setSkill(0);
+    game->stats().set(S_SHIELD, 0);
+    game->addHealth(1000); // top up; skill 0 restores 1:1
+    const int before = game->health();
+
+    game->clearEvents();
+    game->addPoison(POISON_DEFAULT);
+    bool ok = true;
+    if (game->stats().get(S_POISON) != POISON_DEFAULT ||
+        game->stats().get(S_POISON_NEXT) != POISON_INTERVAL ||
+        !game->isPoisoned() || game->getEvent() != EVENT_POISON)
+    {
+        LOGE("poison/apply: pool %d clock %d",
+             game->stats().get(S_POISON), game->stats().get(S_POISON_NEXT));
+        ok = false;
+    }
+
+    // first drain: 1:1 with no shields at skill 0
+    for (int i = 0; i < POISON_INTERVAL && ok; ++i)
+        game->decTimers();
+    if (game->health() != before - POISON_DRAIN ||
+        game->stats().get(S_POISON) != POISON_DEFAULT - POISON_DRAIN ||
+        game->stats().get(S_POISON_NEXT) != POISON_INTERVAL)
+    {
+        LOGE("poison/drain: hp %d->%d pool %d clock %d",
+             before, game->health(), game->stats().get(S_POISON),
+             game->stats().get(S_POISON_NEXT));
+        ok = false;
+    }
+
+    // god mode: pool drains, damage forfeited (D1)
+    game->stats().set(S_GOD_MODE_TIMER, 1000);
+    const int godHp = game->health();
+    for (int i = 0; i < POISON_INTERVAL; ++i)
+        game->decTimers();
+    if (game->health() != godHp ||
+        game->stats().get(S_POISON) != POISON_DEFAULT - 2 * POISON_DRAIN)
+    {
+        LOGE("poison/forfeit: hp %d->%d pool %d",
+             godHp, game->health(), game->stats().get(S_POISON));
+        ok = false;
+    }
+    game->stats().set(S_GOD_MODE_TIMER, 0);
+
+    // drain the pool to exactly zero (16 HP left = 2 drains)
+    for (int i = 0; i < 2 * POISON_INTERVAL + 1; ++i)
+        game->decTimers();
+    if (game->stats().get(S_POISON) != 0 || game->isPoisoned() ||
+        game->stats().get(S_POISON_NEXT) != 0 ||
+        game->health() != before - 3 * POISON_DRAIN)
+    {
+        LOGE("poison/empty: pool %d clock %d hp %d expected %d",
+             game->stats().get(S_POISON), game->stats().get(S_POISON_NEXT),
+             game->health(), before - 3 * POISON_DRAIN);
+        ok = false;
+    }
+
+    // resetStats clears pool and clock
+    game->addPoison(10);
+    game->resetStats();
+    if (game->stats().get(S_POISON) != 0 || game->stats().get(S_POISON_NEXT) != 0)
+    {
+        LOGE("poison/reset: pool %d clock %d",
+             game->stats().get(S_POISON), game->stats().get(S_POISON_NEXT));
+        ok = false;
+    }
+
+    game->addHealth(3 * POISON_DRAIN); // restore health taken (skill 0)
+    game->clearEvents();
+    return ok;
+}
 } // namespace
 
 bool test_game()
@@ -627,5 +715,6 @@ bool test_game()
            testClosureLevelComplete() &&
            testClosureExitGate() &&
            testClosureChute() &&
-           testLevelBounds();
+           testLevelBounds() &&
+           testPoisonDrain();
 }

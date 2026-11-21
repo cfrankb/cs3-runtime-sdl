@@ -137,7 +137,9 @@ public:
     int score() const;
     int lives() const;
     int health() const;
-    void addHealth(const int hp); // public so tests can observe damage (see t_game_ai)
+    void addHealth(const int hp, const bool silent = false); // public so tests can observe damage (see t_game_ai)
+    void addPoison(const int amount); // adds to the S_POISON drain pool (see docs/plans/poison-damage-plan.md)
+    bool isPoisoned() const;
     int sugar() const;
     bool hasExtraSpeed() const;
     void setMapArch(CMapArch *arch);

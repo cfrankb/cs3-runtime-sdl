@@ -84,6 +84,9 @@ namespace GamePrivate
         RAGE_TIMER = 150,
         FREEZE_TIMER = 80,
         TRAP_DAMAGE = -16,
+        POISON_DRAIN = 8,
+        POISON_INTERVAL = 12,
+        POISON_DEFAULT = 32,
         DEFAULT_PLAYER_SPEED = 3,
         FAST_PLAYER_SPEED = 2,
         MAX_SHIELDS = 2,
@@ -347,6 +350,15 @@ void CGame::consume()
         m_events.emplace_back(EVENT_RAGE);
     }
 
+    // poison flags are not exclusive with the powerup chain above
+    if (def.flags & FLAG_POISON)
+        addPoison(POISON_DEFAULT);
+    if (def.flags & FLAG_ANTIPOISON)
+    {
+        m_gameStats->set(S_POISON, 0);
+        m_gameStats->set(S_POISON_NEXT, 0);
+    }
+
     // trigger key
     const int x = m_player.x();
     const int y = m_player.y();
@@ -604,6 +616,18 @@ void CGame::decTimers()
     {
         m_gameStats->dec(stat);
     }
+
+    // poison drain (docs/plans/poison-damage-plan.md D1): the pool is
+    // always deducted; damage swallowed by god mode / i-frames is forfeited
+    int &poison = m_gameStats->get(S_POISON);
+    if (poison > 0 && !m_gameStats->dec(S_POISON_NEXT))
+    {
+        const int drain = std::min<int>(POISON_DRAIN, poison);
+        poison -= drain;
+        addHealth(-drain, /*silent=*/true);
+        if (poison)
+            m_gameStats->set(S_POISON_NEXT, POISON_INTERVAL);
+    }
 }
 
 /**
@@ -626,7 +650,9 @@ void CGame::resetStats()
         S_FLASH,
         S_TIME_FREEZE_TIMER,
         S_PLAYER_HURT,
-        S_BOAT};
+        S_BOAT,
+        S_POISON,
+        S_POISON_NEXT};
     for (const auto &stat : stats)
     {
         m_gameStats->set(stat, 0);
@@ -984,8 +1010,9 @@ int CGame::clearAttr(const uint8_t attr)
  * @brief Add health to player
  *
  * @param hp negative value will be deducted. total hp will be constrained.
+ * @param silent skip the hurt sound (poison drains, see decTimers)
  */
-void CGame::addHealth(const int hp)
+void CGame::addHealth(const int hp, const bool silent)
 {
     if (isClosure())
         return;
@@ -1005,9 +1032,28 @@ void CGame::addHealth(const int hp)
         // itself to 0 for 1 or 2 shields, which made shields total immunity
         const int hpToken = hp * (MAX_FACTOR - shields) * (1 + skill) / MAX_FACTOR;
         m_health = std::max(m_health + hpToken, 0);
-        playSound(SOUND_OUCHFAST);
+        if (!silent)
+            playSound(SOUND_OUCHFAST);
     }
     checkClosure();
+}
+
+/**
+ * @brief Add poison damage to the player's drain pool
+ *
+ * The pool is drained POISON_DRAIN HP every POISON_INTERVAL ticks
+ * (see decTimers). Re-application stacks onto the remaining pool.
+ *
+ * @param amount HP of poison damage to queue
+ */
+void CGame::addPoison(const int amount)
+{
+    if (amount <= 0)
+        return;
+    m_gameStats->get(S_POISON) += amount;
+    if (!m_gameStats->get(S_POISON_NEXT))
+        m_gameStats->set(S_POISON_NEXT, POISON_INTERVAL);
+    m_events.emplace_back(EVENT_POISON);
 }
 
 bool CGame::isLevelCompleted() const
@@ -1956,6 +2002,11 @@ const CGameStats &CGame::statsConst() const
 bool CGame::isRageMode() const
 {
     return m_gameStats->get(S_RAGE_TIMER) != 0;
+}
+
+bool CGame::isPoisoned() const
+{
+    return m_gameStats->get(S_POISON) != 0;
 }
 
 static std::unique_ptr<CGame> s_instance;
