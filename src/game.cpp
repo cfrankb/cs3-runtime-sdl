@@ -1900,17 +1900,23 @@ std::vector<fx_t> &CGame::getFx()
 
 /**
  * @brief Spawn an extended fx at tile coords (spec S1): converts to world
- * pixels (tile center) and records the origin point ox/oy.
+ * pixels using the table entry's FxAlign anchor mode and records the origin
+ * point ox/oy.
  *
  * @return instance index, or -1 for an unknown effectID
  */
 int CGame::spawnFx(const int effectID, const int tileX, const int tileY)
 {
-    if (!fxDataAt(effectID))
+    const fxData_t *def = fxDataAt(effectID);
+    if (!def)
         return -1;
+    // FX_ALIGN_BOTTOM: centered horizontally, frame bottom flush with the tile bottom
+    const int anchorY = def->align == FX_ALIGN_BOTTOM
+                            ? (tileY + 1) * FX_TILE_SIZE - def->h / 2
+                            : tileY * FX_TILE_SIZE + FX_TILE_SIZE / 2;
     m_fx.emplace_back(fx_t{
         .x = static_cast<int16_t>(tileX * FX_TILE_SIZE + FX_TILE_SIZE / 2),
-        .y = static_cast<int16_t>(tileY * FX_TILE_SIZE + FX_TILE_SIZE / 2),
+        .y = static_cast<int16_t>(anchorY),
         .ox = static_cast<int16_t>(tileX),
         .oy = static_cast<int16_t>(tileY),
         .effectID = static_cast<int16_t>(effectID),

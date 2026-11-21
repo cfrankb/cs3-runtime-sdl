@@ -91,6 +91,7 @@ int main(int argc, char *args[])
         FCT(test_runtime),
         FCT(test_game),
         FCT(test_fx_spawn),
+        FCT(test_fx_align),
         FCT(test_fx_lifetime),
         FCT(test_fx_frame_index),
         FCT(test_fx_cull),

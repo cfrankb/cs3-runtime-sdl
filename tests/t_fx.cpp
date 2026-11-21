@@ -130,6 +130,44 @@ bool test_fx_spawn()
     return g_game->getFx().size() == 2;
 }
 
+bool test_fx_align()
+{
+    resetWorld();
+    TableScope table;
+
+    // plan fx-boss-skills §6: FX_ALIGN_CENTER keeps the tile-center anchor,
+    // FX_ALIGN_BOTTOM centers x and puts the frame bottom on the tile bottom.
+    const int centered = addFx({.id = 0, .sheet = 0, .speed = 2, .flags = FX_ONESHOT,
+                                .ttl = 0, .w = 32, .h = 48, .align = FX_ALIGN_CENTER,
+                                .back = {0, 0}, .front = {0, 4}, .onEnd = nullptr});
+    const int bottom = addFx({.id = 1, .sheet = 0, .speed = 2, .flags = FX_ONESHOT,
+                              .ttl = 0, .w = 32, .h = 48, .align = FX_ALIGN_BOTTOM,
+                              .back = {0, 0}, .front = {0, 4}, .onEnd = nullptr});
+    if (g_game->spawnFx(centered, 5, 7) < 0 || g_game->spawnFx(bottom, 5, 7) < 0)
+        return false;
+    if (g_game->getFx().size() != 2)
+        return false;
+
+    const fx_t &centerFx = g_game->getFx()[0];
+    if (!checkEq(centerFx.x, 5 * 16 + 8, "center x") ||
+        !checkEq(centerFx.y, 7 * 16 + 8, "center y"))
+        return false;
+
+    const fx_t &bottomFx = g_game->getFx()[1];
+    if (!checkEq(bottomFx.x, 5 * 16 + 8, "bottom x") ||
+        !checkEq(bottomFx.y, (7 + 1) * 16 - 48 / 2, "bottom y") ||
+        !checkEq(bottomFx.ox, 5, "bottom ox") ||
+        !checkEq(bottomFx.oy, 7, "bottom oy"))
+        return false;
+
+    // px spawns ignore the align mode entirely
+    g_game->getFx().clear();
+    if (g_game->spawnFxPx(bottom, 100, 120) < 0)
+        return false;
+    const fx_t &pxFx = g_game->getFx()[0];
+    return checkEq(pxFx.x, 100, "px spawn x") && checkEq(pxFx.y, 120, "px spawn y");
+}
+
 bool test_fx_lifetime()
 {
     resetWorld();

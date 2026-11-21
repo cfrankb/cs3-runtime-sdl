@@ -620,9 +620,10 @@ bool testLevelBounds()
 bool testPoisonDrain()
 {
     // mirrors the GamePrivate constants in game.cpp
-    constexpr int POISON_INTERVAL = 12;
-    constexpr int POISON_DRAIN = 8;
-    constexpr int POISON_DEFAULT = 32;
+    constexpr int POISON_INTERVAL = 6;
+    constexpr int POISON_DRAIN = 2;
+    // sized so the scenario below (4 drains) empties the pool exactly
+    constexpr int POISON_DEFAULT = 4 * POISON_DRAIN;
 
     CBoss *boss = nullptr;
     if (!setupAlive(&boss))
@@ -672,7 +673,7 @@ bool testPoisonDrain()
     }
     game->stats().set(S_GOD_MODE_TIMER, 0);
 
-    // drain the pool to exactly zero (16 HP left = 2 drains)
+    // drain the pool to exactly zero (2 * POISON_DRAIN left = 2 drains)
     for (int i = 0; i < 2 * POISON_INTERVAL + 1; ++i)
         game->decTimers();
     if (game->stats().get(S_POISON) != 0 || game->isPoisoned() ||

@@ -97,6 +97,15 @@ enum FxFlags : uint8_t
     FX_REPEATABLE = 0x02, // loops (modulo), ends at ttl (spec I1)
 };
 
+// tile-spawn anchor modes (plan fx-boss-skills §6): how the tile is turned
+// into the frame-center anchor. Drawing/culling/hitboxes always use the
+// center anchor, so only spawnFx's tile->px conversion consults this.
+enum FxAlign : uint8_t
+{
+    FX_ALIGN_CENTER, // anchor at tile center (explosions, auras, smoke)
+    FX_ALIGN_BOTTOM, // tall skyfalls: horizontally centered, frame bottom on the tile bottom
+};
+
 // per-instance wire record: pure POD, raw-serialized, 12 bytes
 struct fx_t
 {
@@ -141,6 +150,7 @@ struct fxData_t
     uint8_t flags;                         // FxFlags
     uint16_t ttl;                          // lifetime (ticks) for FX_REPEATABLE
     uint16_t w, h;                         // max frame extents, culling only
+    uint8_t align = FX_ALIGN_CENTER;       // FxAlign: tile-spawn anchor mode
     fx_layer_t back;                       // drawn before actors
     fx_layer_t front;                      // drawn after actors
     int16_t damage = 0;                    // reserved, unused

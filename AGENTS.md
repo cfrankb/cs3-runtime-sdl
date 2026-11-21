@@ -4,6 +4,10 @@
 
 run `python bin/refresh.py` to refresh stalled CMakieLists.txt in the `src/` and `tests/` folders.
 
+## Tasks and runners
+
+A maximum of only one task/one runner should run at all time.
+
 ## Documentation Architecture
 Documentation is modular under `docs/` (migrated 2026-10-29 from the monolithic root files, which are now stubs).
 - **Specification:** `docs/spec/` — 15 domain modules; `docs/spec/README.md` is the entry point.
