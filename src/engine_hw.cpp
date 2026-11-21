@@ -627,6 +627,11 @@ const Tile *EngineHW::getMainLayerTile(const uint16_t tileID)
             // colorMap = &m_colormaps.rage;
             colorMask = COLOR_RAGE;
         }
+        else if (m_game->isPoisoned())
+        {
+            // colorMap = &m_colormaps.poison;
+            colorMask = COLOR_POISON;
+        }
 
         const uint8_t userID = game.getUserID();
         const uint32_t userBaseFrame = PLAYER_TOTAL_FRAMES * userID;
@@ -1193,6 +1198,13 @@ void EngineHW::updateColorMaps(const ColorMaps &colormaps)
     m_tileset_users.cacheMask(m_renderer, COLOR_RAGE, [&colormaps](uint32_t &color)
                               {
                                   const auto &colorMap = colormaps.rage;
+                                  if (auto it = colorMap.find(color); it != colorMap.end())
+                                      color = it->second; //
+                              });
+
+    m_tileset_users.cacheMask(m_renderer, COLOR_POISON, [&colormaps](uint32_t &color)
+                              {
+                                  const auto &colorMap = colormaps.poison;
                                   if (auto it = colorMap.find(color); it != colorMap.end())
                                       color = it->second; //
                               });

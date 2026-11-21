@@ -89,11 +89,14 @@ namespace
             "[godmode]\n"
             "0x02 0x0B\n"
             "[rage]\n"
-            "0x03 0x0C\n";
+            "0x03 0x0C\n"
+            "[poison]\n"
+            "0x04 0x0D\n";
         if (!parseColorMaps(good, maps) ||
             maps.sugarRush.size() != 1 || maps.godMode.size() != 1 || maps.rage.size() != 1 ||
+            maps.poison.size() != 1 ||
             maps.sugarRush.count(0x01) != 1 || maps.godMode.count(0x02) != 1 ||
-            maps.rage.count(0x03) != 1)
+            maps.rage.count(0x03) != 1 || maps.poison.count(0x04) != 1)
         {
             LOGE("parseColorMaps valid input mismatch");
             return false;
@@ -101,7 +104,7 @@ namespace
         // reparse replaces previous content
         const char *smaller = "[rage]\n0x10 0x20\n";
         if (!parseColorMaps(smaller, maps) || !maps.sugarRush.empty() ||
-            !maps.godMode.empty() || maps.rage.size() != 1)
+            !maps.godMode.empty() || !maps.poison.empty() || maps.rage.size() != 1)
         {
             LOGE("parseColorMaps did not clear previous maps");
             return false;
@@ -112,6 +115,11 @@ namespace
             parseColorMaps("[rage]\n1 2\n", empty)) // missing 0x prefix
         {
             LOGE("parseColorMaps accepted invalid input");
+            return false;
+        }
+        if (!parseColorMaps("[poison]\n0x05 0x06\n", empty) || empty.poison.size() != 1)
+        {
+            LOGE("parseColorMaps rejected a poison-only file");
             return false;
         }
         return true;

@@ -667,6 +667,10 @@ CFrame *CGameMixin::tile2Frame(const uint16_t tileID, ColorMask &colorMask, std:
         {
             colorMap = &m_colormaps.rage;
         }
+        else if (m_game->isPoisoned())
+        {
+            colorMap = &m_colormaps.poison;
+        }
     }
     else
     {

@@ -21,6 +21,7 @@
 #include "../src/boss.h"
 #include "../src/game.h"
 #include "../src/gamesfx.h"
+#include "../src/gamestats.h"
 #include "../src/logger.h"
 #include "../src/map.h"
 #include "../src/sprtypes.h"
@@ -362,6 +363,96 @@ bool test_fx_sheet_meta()
         return false;
     }
     return true;
+}
+
+// Poison aura (docs/plans/poison-damage-plan.md D7): a derived draw entry
+// emitted by getFxToDraw while S_POISON is non-zero -- centred on the
+// player, one entry per layer, frames cycling the sheet range off a
+// free-running m_fxTick, culled like any fx, and suppressed while the fx
+// sheet is too short to hold the aura frames (assets land separately).
+// g_fxSheet_data is forced to a synthetic size for determinism.
+bool test_fx_poison_aura()
+{
+    resetWorld();
+    const fxData_t *def = fxDataAt(FX_POISON_AURA);
+    if (!def)
+    {
+        LOGE("poison aura: table entry missing");
+        return false;
+    }
+    const size_t saved = g_fxSheet_data.size();
+    g_fxSheet_data.resize(static_cast<size_t>(def->back.base) + def->back.count);
+    bool ok = true;
+
+    // pool set directly; clock kept high so decTimers ticks never drain
+    g_game->stats().set(S_POISON, 10);
+    g_game->stats().set(S_POISON_NEXT, 1000);
+    const fxView_t view{0, 0, 320, 320};
+    const int px = (MAP_SIZE - 1) * 16 + def->w / 2;
+    const int py = (MAP_SIZE - 1) * 16 + def->h / 2;
+
+    std::vector<fxDraw_t> front;
+    std::vector<fxDraw_t> back;
+    g_game->getFxToDraw(view, true, front);
+    g_game->getFxToDraw(view, false, back);
+    if (front.size() != 1 || back.size() != 1)
+    {
+        LOGE("poison aura: front %zu back %zu entries", front.size(), back.size());
+        ok = false;
+    }
+    else if (front[0].x != px || front[0].y != py || back[0].x != px || back[0].y != py)
+    {
+        LOGE("poison aura: anchor %d,%d want %d,%d", front[0].x, front[0].y, px, py);
+        ok = false;
+    }
+    else if (front[0].frameID < def->front.base ||
+             front[0].frameID >= def->front.base + def->front.count ||
+             back[0].frameID < def->back.base ||
+             back[0].frameID >= def->back.base + def->back.count)
+    {
+        LOGE("poison aura: frame %u/%u outside sheet range",
+             front[0].frameID, back[0].frameID);
+        ok = false;
+    }
+    else
+    {
+        // clock advance: one speed-period of decTimers shifts the cycle by 1
+        const uint16_t first = front[0].frameID;
+        for (int i = 0; i < def->speed; ++i)
+            g_game->decTimers();
+        front.clear();
+        g_game->getFxToDraw(view, true, front);
+        const uint16_t want =
+            def->front.base +
+            static_cast<uint16_t>(first - def->front.base + 1) % def->front.count;
+        ok = front.size() == 1 && front[0].frameID == want &&
+             g_game->stats().get(S_POISON) == 10; // clock never drained the pool
+        if (!ok)
+            LOGE("poison aura: cycle %u want %u", front.empty() ? 0xFFFF : front[0].frameID, want);
+    }
+
+    // culled when off-view
+    const fxView_t tiny{0, 0, 8, 8};
+    front.clear();
+    g_game->getFxToDraw(tiny, true, front);
+    ok = ok && front.empty();
+
+    // pool cleared -> no entry
+    g_game->stats().set(S_POISON, 0);
+    front.clear();
+    g_game->getFxToDraw(view, true, front);
+    ok = ok && front.empty();
+
+    // short sheet -> suppressed even while poisoned
+    g_fxSheet_data.resize(0);
+    g_game->stats().set(S_POISON, 10);
+    front.clear();
+    g_game->getFxToDraw(view, true, front);
+    ok = ok && front.empty();
+
+    g_fxSheet_data.resize(saved);
+    g_game->resetStats();
+    return ok;
 }
 
 bool test_fx_sheet_tail_scan()

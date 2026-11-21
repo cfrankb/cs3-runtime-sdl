@@ -87,6 +87,12 @@ Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
 
 ## Phase 2 — Poison tint (twin edits mandatory)
 
+> **DONE 2026-11-20**: `COLOR_POISON`, `ColorMaps::poison`, `[poison]`
+> parser section, HW `cacheMask` + SW branch shipped; tint data rides the
+> existing colormap asset file (empty map = no-op until data lands).
+> `tests/t_tables.cpp::testColorMaps` extended (poison section, clear,
+> poison-only file). Build + ctest green.
+
 1. `src/colormasks.h:21-30` — append `COLOR_POISON` to `enum ColorMask`
    (render-only).
 2. `src/colormap.h/.cpp` — `poison` colormap beside `godMode`/`rage`
@@ -99,6 +105,14 @@ Gate: `cmake -B build && cmake --build build && ctest --test-dir build`.
 5. No sprite-sheet change (palette tint, per god-mode/rage precedent).
 
 ## Phase 3 — Poison aura: derived two-layer draw (D6/D7)
+
+> **DONE 2026-11-20**: `FX_POISON_AURA` enum/table/`sfx_private.h` layer
+> constants were already present. Shipped `m_fxTick` (decTimers, not
+> saved) + derived draw entry in `getFxToDraw` (both layers, centred on
+> player, sheet-size guard). `tests/t_fx.cpp::test_fx_poison_aura` pins
+> anchor, range, cycle, cull, pool-clear and short-sheet suppression.
+> Build + ctest green. Enablement still gated on the private sfx sheet
+> growing frames 65..76.
 
 No `fx_t` instance, no `FX_FOLLOW`, no spawn, no wire-format change.
 
@@ -181,12 +195,46 @@ hand-maintained enum — old block in `gamesfx.h` is commented out.
    (AGENTS.md: testing proves, hash detects).
 7. Move this plan to `docs/plans/archive` when implemented.
 
+## Phase 5 — Poison-green health bar (twin edits mandatory)
+
+Turn the health bar green while `isPoisoned()`. Same priority chain as
+the Phase 2 player tint: god mode > hurt flash > poison > normal.
+
+1. **SW hearts** — `CGameMixin::drawHealthBar`
+   (`src/gamemixin.cpp:2543`): the heart color is a hardcoded chain
+   `isGodMode() ? WHITE : isPlayerHurt ? PINK : RED`; insert
+   `game.isPoisoned() ? GREEN : RED` at the tail. `GREEN`
+   (`src/color.h:41`), not `LIME` — LIME stays the CLASSIC-bar healthy
+   color so the two greens keep distinct meanings.
+2. **HW hearts** — `EngineHW::drawHealthBar`
+   (`src/engine_hw.cpp:864`): hearts are pre-tinted rows in a
+   `TileSet` sheet (`baseID` = RED/PINK/WHITE row) — do **not** add a
+   green asset row. `m_tileset_hearts` is the same `TileSet` class as
+   the player sheet, so reuse the Phase 2 machinery: in
+   `updateColorMaps` add
+   `m_tileset_hearts.cacheMask(m_renderer, COLOR_POISON, poisonLambda)`
+   (same find-and-replace lambda over `colormaps.poison`), and in
+   `drawHealthBar` pass a `ColorMask` to
+   `getTile(hearts + baseID, colorMask)` with
+   `colorMask = isPoisoned() && !god && !hurt ? COLOR_POISON : COLOR_NOCHANGE`.
+3. **Scope ruling needed**: CLASSIC bar mode (`HEALTHBAR_CLASSIC`,
+   `gamemixin.cpp:2582`) is proposed **unchanged** — its healthy color
+   is already LIME; poisoning green would be near-indistinguishable.
+   Hearts-mode-only green unless the maintainer overrules.
+4. Data dependency: HW green hearts ride the same `[poison]` colormap
+   section as the player tint — the section must cover the heart-sheet
+   red pixels or the HW mask is a silent no-op (SW hearts are code
+   colors and work without any asset change).
+5. Test: none — color-chain branch mirrors the tested `isPoisoned()`
+   state; existing draw-path smoke tests must stay green.
+
 ## Suggested commits (staged by concern)
 
 1. `feat: S_POISON drain state, addPoison entry point, FLAG_POISON/FLAG_ANTIPOISON consume wiring, silent addHealth` (Phase 1)
 2. `feat: poison palette tint (HW + SW renderers)` (Phase 2)
 3. `feat: player-centered poison aura fx draw` (Phase 3)
-4. `docs: poison spec + compliance hashes` (Phase 4 doc half; tests ride along in 1–3)
+4. `feat: poison-green health hearts (SW color chain + HW hearts COLOR_POISON mask)` (Phase 5)
+5. `docs: poison spec + compliance hashes` (Phase 4 doc half; tests ride along in 1–3)
 
 ## Deferred wiring (explicitly out of scope)
 

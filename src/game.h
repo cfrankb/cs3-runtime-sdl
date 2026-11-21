@@ -240,6 +240,7 @@ private:
     std::vector<CBoss> m_bosses;
     std::vector<sfx_t> m_sfx;
     std::vector<fx_t> m_fx;
+    uint32_t m_fxTick = 0; // free-running fx clock (poison aura); not saved
     CActor m_player;
     CMapArch *m_mapArch = nullptr;
     std::shared_ptr<ISound> m_sound;

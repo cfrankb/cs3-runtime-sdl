@@ -605,6 +605,7 @@ void CGame::resetStatsUponDeath()
  */
 void CGame::decTimers()
 {
+    ++m_fxTick; // free-running clock for derived fx draws (poison aura)
     constexpr const GameStat stats[] = {
         S_GOD_MODE_TIMER,
         S_EXTRA_SPEED_TIMER,
@@ -1986,6 +1987,29 @@ void CGame::getFxToDraw(const fxView_t &view, const bool front,
                          view.right + def->w / 2, view.bottom + def->h / 2))
             continue;
         out.emplace_back(fxDraw_t{fx.x, fx.y, fxFrameIndex(fx, *def, layer)});
+    }
+
+    // poison aura (docs/plans/poison-damage-plan.md D7): a derived draw
+    // entry emitted while the pool is non-zero, centred on the player --
+    // not a fx_t instance. Its frames ride the sfx sheet tail, so suppress
+    // until g_fxSheet_data covers them (private assets land separately).
+    if (isPoisoned())
+    {
+        const fxData_t *def = fxDataAt(FX_POISON_AURA);
+        if (def && static_cast<size_t>(def->front.base) + def->front.count <= g_fxSheet_data.size() &&
+            static_cast<size_t>(def->back.base) + def->back.count <= g_fxSheet_data.size())
+        {
+            const fx_layer_t &layer = front ? def->front : def->back;
+            const int x = m_player.x() * FX_TILE_SIZE + def->w / 2;
+            const int y = m_player.y() * FX_TILE_SIZE + def->h / 2;
+            if (layer.count && x >= view.left - def->w / 2 && x <= view.right + def->w / 2 &&
+                y >= view.top - def->h / 2 && y <= view.bottom + def->h / 2)
+            {
+                const uint16_t frame =
+                    layer.base + static_cast<uint16_t>(m_fxTick / def->speed) % layer.count;
+                out.emplace_back(fxDraw_t{static_cast<int16_t>(x), static_cast<int16_t>(y), frame});
+            }
+        }
     }
 }
 

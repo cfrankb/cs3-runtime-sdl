@@ -96,6 +96,7 @@ int main(int argc, char *args[])
         FCT(test_fx_cull),
         FCT(test_fx_save_roundtrip),
         FCT(test_fx_sheet_meta),
+        FCT(test_fx_poison_aura),
         FCT(test_fx_sheet_tail_scan),
         FCT(test_ifile),
         FCT(test_ifile_create),
