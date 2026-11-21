@@ -258,5 +258,7 @@ no-ops; `getTile()`/`operator[]` are already null-safe.
   decision; not required by this spec).
 - O4. Telegraph ground-marker art (2026-11-21): every skill registry row
   carries `telegraphFx = -1`; the cast path spawns the marker iff `>= 0`, but
-  no marker strip exists on the fx sheet. Task:
-  [`docs/plans/telegraph-art-task.md`](../plans/telegraph-art-task.md).
+  no marker strip exists on the fx sheet. Placeholder shipped: while a
+  skill-owned fx is in its lead-in frames (before `firstHitFrame`), both
+  renderers tint the origin tile 25% red (`fxDraw_t::telegraph`, front pass).
+  Task: [`docs/plans/telegraph-art-task.md`](../plans/telegraph-art-task.md).

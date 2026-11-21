@@ -2030,7 +2030,14 @@ void CGame::getFxToDraw(const fxView_t &view, const bool front,
         if (!fx.isWithin(view.left - def->w / 2, view.top - def->h / 2,
                          view.right + def->w / 2, view.bottom + def->h / 2))
             continue;
-        out.emplace_back(fxDraw_t{fx.x, fx.y, fxFrameIndex(fx, *def, layer)});
+        const uint16_t frameID = fxFrameIndex(fx, *def, layer);
+        // skill fx in its lead-in (no authored box can have landed yet):
+        // hint the target tile with the red rect placeholder (front pass)
+        const bossSkillDef_t *skill = front ? skillForFx(fx.effectID) : nullptr;
+        const bool telegraph = skill && skill->firstHitFrame >= 0 &&
+                               static_cast<int>(frameID) < skill->firstHitFrame &&
+                               fx.ox >= 0;
+        out.emplace_back(fxDraw_t{fx.x, fx.y, frameID, fx.ox, fx.oy, telegraph});
     }
 
     // poison aura (docs/plans/poison-damage-plan.md D7): a derived draw

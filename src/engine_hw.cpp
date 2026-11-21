@@ -1044,6 +1044,20 @@ void EngineHW::drawFx(const bool front, const int viewLeft, const int viewTop)
     m_game->getFxToDraw(view, front, draws);
     for (const auto &draw : draws)
     {
+        if (draw.telegraph)
+        {
+            // telegraph hint placeholder (no marker art yet): 25% red on
+            // the target tile, drawn under the fx frame
+            SDL_BlendMode oldMode;
+            SDL_GetRenderDrawBlendMode(m_renderer, &oldMode);
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            const SDL_FRect rect{static_cast<float>((draw.ox * TILE_SIZE - viewLeft) * SCALE),
+                                 static_cast<float>((draw.oy * TILE_SIZE - viewTop) * SCALE),
+                                 static_cast<float>(TILE_SIZE * SCALE),
+                                 static_cast<float>(TILE_SIZE * SCALE)};
+            drawRect(m_renderer, rect, SDL_Color{255, 0, 0, 64}, true);
+            SDL_SetRenderDrawBlendMode(m_renderer, oldMode);
+        }
         const Tile *tile = m_tileset_fx.getTile(draw.frameID);
         if (!tile)
             continue;

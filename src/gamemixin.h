@@ -308,6 +308,7 @@ protected:
     // extended fx layer blit (docs/spec/gamespec/extended-fx.md); front/back
     // pass around the sprite loop, origin = world px at screen 0
     void drawFx(CFrame &bitmap, const bool front, const int viewLeft, const int viewTop);
+    void tintTelegraphTile(CFrame &bitmap, int tx, int ty, int viewLeft, int viewTop);
     void drawBossses(CFrame &bitmap, const int mx, const int my, const int sx, const int sy);
     void drawLevelIntro(CFrame &bitmap);
     void drawFont(CFrame &frame, int x, int y, const char *text, Color color = WHITE, Color bgcolor = BLACK, const int scaleX = 1, const int scaleY = 1);

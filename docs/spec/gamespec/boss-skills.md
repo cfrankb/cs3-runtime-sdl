@@ -56,7 +56,10 @@ already holds in Chase).
   contact hit-test (§4).
 - `SKILL_FX` -> `spawnFx(effectId, player.x(), player.y())` (strikes where
   the player stands); `telegraphFx >= 0` adds a second instance (same tile,
-  same tick); `playSound(attack_sound)`.
+  same tick); `playSound(attack_sound)`. While the fx runs its lead-in
+  frames (before `firstHitFrame`), both renderers tint the origin tile 25%
+  red as a target hint placeholder (`fxDraw_t::telegraph`, computed in
+  `getFxToDraw`; replaced by `telegraphFx` marker art when assets land).
 
 ## 4. Damage
 

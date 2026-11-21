@@ -175,6 +175,10 @@ struct fxDraw_t
     int16_t x;
     int16_t y;
     uint16_t frameID;
+    int16_t ox; // origin tile (fx_t.ox/oy; -1 = unavailable)
+    int16_t oy;
+    bool telegraph; // front pass only: skill fx in its lead-in frames ->
+                    // renderer paints the red target-tile hint placeholder
 };
 
 extern std::vector<fxData_t> g_fxData;

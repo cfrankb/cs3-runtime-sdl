@@ -18,3 +18,10 @@ To enable, per telegraphed skill (currently `LIGHTNING_STRIKE`, `METEOR`):
 
 No code changes needed beyond the tables; the §7 cast path and §4 collision
 are wired for it (telegraph fx without hitboxes never damages).
+
+Placeholder meanwhile (2026-11-21): while a skill-owned fx runs its lead-in
+frames, both renderers tint the origin tile 25% red (`fxDraw_t::telegraph`
+from `CGame::getFxToDraw`; `CGameMixin::tintTelegraphTile` + the telegraph
+branch in `EngineHW::drawFx`). When the real marker is enabled per row,
+remove that red-tint pass (or gate it on `telegraphFx < 0`) so the two
+hints don't stack.

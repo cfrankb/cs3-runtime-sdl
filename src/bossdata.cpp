@@ -1028,11 +1028,14 @@ const sprite_hitbox_t *g_hitboxes = nullptr;
 // JSON fill-in (loadFxSkills) populates the FX frames entries. Never serialized.
 std::vector<bossSkillDef_t> g_skillDefs = {
     // kind markers only: payload + attack code stay in bossData_t (§1)
-    {.name = "BULLET", .kind = SKILL_BULLET},
-    {.name = "SPECIAL1", .kind = SKILL_SPECIAL1},
+    // trailing members spelled out: silence -Wmissing-field-initializers
+    {.name = "BULLET", .kind = SKILL_BULLET, .frames = {}, .firstHitFrame = -1, .lastHitFrame = -1},
+    {.name = "SPECIAL1", .kind = SKILL_SPECIAL1, .frames = {}, .firstHitFrame = -1, .lastHitFrame = -1},
     // ponytail: damage values are design placeholders until per-skill tuning
-    {.name = "LIGHTNING_STRIKE", .kind = SKILL_FX, .effectId = FX_BLUE_LIGHTNING, .telegraphFx = -1, .telegraphTtl = 0, .damage = 16, .baseFrame = FX_BLUE_LIGHTNING_BASEID, .hitboxFile = "LIGHTNING_STRIKE.json"},
-    {.name = "METEOR", .kind = SKILL_FX, .effectId = FX_FIRE_COLUMN, .telegraphFx = -1, .telegraphTtl = 0, .damage = 24, .baseFrame = FX_FIRE_COLUMN_BASEID, .hitboxFile = "METEOR.json"},
+    {.name = "LIGHTNING_STRIKE", .kind = SKILL_FX, .effectId = FX_BLUE_LIGHTNING, .telegraphFx = -1, .telegraphTtl = 0, .damage = 16, .baseFrame = FX_BLUE_LIGHTNING_BASEID, .hitboxFile = "LIGHTNING_STRIKE.json",
+     .frames = {}, .firstHitFrame = -1, .lastHitFrame = -1},
+    {.name = "METEOR", .kind = SKILL_FX, .effectId = FX_FIRE_COLUMN, .telegraphFx = -1, .telegraphTtl = 0, .damage = 24, .baseFrame = FX_FIRE_COLUMN_BASEID, .hitboxFile = "METEOR.json",
+     .frames = {}, .firstHitFrame = -1, .lastHitFrame = -1},
 };
 
 const bossSkillDef_t *skillForFx(const int effectID)

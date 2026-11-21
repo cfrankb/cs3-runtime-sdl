@@ -177,6 +177,17 @@ bool test_fx_align()
     return checkEq(pxFx.x, 100, "px spawn x") && checkEq(pxFx.y, 120, "px spawn y");
 }
 
+// front-pass draw entries carrying the red telegraph-hint flag
+static int telegraphDraws()
+{
+    std::vector<fxDraw_t> draws;
+    g_game->getFxToDraw(fxView_t{-4096, -4096, 4096, 4096}, true, draws);
+    int n = 0;
+    for (const fxDraw_t &d : draws)
+        n += d.telegraph ? 1 : 0;
+    return n;
+}
+
 bool test_fx_skill_hit()
 {
     resetWorld();
@@ -219,8 +230,12 @@ bool test_fx_skill_hit()
     tick(1); // timer 1 -> frame 1: lead-in
     if (!checkEq(g_game->health(), hp0, "lead-in no damage"))
         return false;
+    if (!checkEq(telegraphDraws(), 1, "lead-in hint"))
+        return false;
     tick(1); // timer 2 -> frame 2: first box tick registers the hit
     if (!checkEq(g_game->health(), hp0 - 10, "hit frame damage"))
+        return false;
+    if (!checkEq(telegraphDraws(), 0, "hit frame no hint"))
         return false;
 
     // same strike far from the player: boxes never overlap the tile rect

@@ -739,6 +739,42 @@ void CGameMixin::gatherSprites(std::vector<sprite_t> &sprites, const cameraConte
     }
 }
 
+// telegraph hint placeholder (no marker art yet): 25% red tint on the
+// target tile, drawn under the fx frame
+void CGameMixin::tintTelegraphTile(CFrame &bitmap, const int tx, const int ty,
+                                   const int viewLeft, const int viewTop)
+{
+    int x = tx * TILE_SIZE - viewLeft;
+    int y = ty * TILE_SIZE - viewTop;
+    int w = TILE_SIZE;
+    int h = TILE_SIZE;
+    if (x < 0)
+    {
+        w += x;
+        x = 0;
+    }
+    if (y < 0)
+    {
+        h += y;
+        y = 0;
+    }
+    w = std::min(w, getWidth() - x);
+    h = std::min(h, getHeight() - y);
+    for (int py = y; py < y + h; ++py)
+    {
+        for (int px = x; px < x + w; ++px)
+        {
+            const uint32_t p = bitmap.at(px, py);
+            if ((p & 0xff000000) == 0)
+                continue; // keep transparent pixels clean
+            const uint32_t r = (((p >> 16) & 0xff) * 3 + 255) / 4;
+            const uint32_t g = (((p >> 8) & 0xff) * 3) / 4;
+            const uint32_t b = ((p & 0xff) * 3) / 4;
+            bitmap.at(px, py) = (p & 0xff000000) | (r << 16) | (g << 8) | b;
+        }
+    }
+}
+
 void CGameMixin::drawFx(CFrame &bitmap, const bool front, const int viewLeft, const int viewTop)
 {
     if (!m_fxSheet)
@@ -748,6 +784,8 @@ void CGameMixin::drawFx(CFrame &bitmap, const bool front, const int viewLeft, co
     m_game->getFxToDraw(view, front, draws);
     for (const auto &draw : draws)
     {
+        if (draw.telegraph)
+            tintTelegraphTile(bitmap, draw.ox, draw.oy, viewLeft, viewTop);
         CFrame *frame = (*m_fxSheet)[draw.frameID];
         if (!frame)
             continue;
