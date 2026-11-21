@@ -1057,6 +1057,7 @@ void EngineHW::drawFx(const bool front, const int viewLeft, const int viewTop)
                                  static_cast<float>(TILE_SIZE * SCALE)};
             drawRect(m_renderer, rect, SDL_Color{255, 0, 0, 64}, true);
             SDL_SetRenderDrawBlendMode(m_renderer, oldMode);
+            continue; // hint-only entry: no fx frame yet
         }
         const Tile *tile = m_tileset_fx.getTile(draw.frameID);
         if (!tile)

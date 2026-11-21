@@ -20,7 +20,7 @@ Hand-authored `std::vector<bossSkillDef_t>`; rows are looked up by ini token
 | `name` | ini token: `BULLET`, `SPECIAL1`, `LIGHTNING_STRIKE`, `METEOR` |
 | `kind` | `SKILL_BULLET` / `SKILL_SPECIAL1` / `SKILL_FX` |
 | `effectId` | `SKILL_FX`: damaging Fx id (index into `g_fxData`) |
-| `telegraphFx` / `telegraphTtl` | warning Fx id, `-1` = none; marker lifetime |
+| `telegraphFx` / `telegraphTtl` | warning Fx id, `-1` = none; warning lead (ticks) before the strike spawns, `0` = cast is instant |
 | `damage` | hp dealt to player per collision registration |
 | `baseFrame` | fx-sheet frameID of the hitbox run's first frame |
 | `hitboxFile` | hitbox JSON filename under `<fxDir>/`; `nullptr` = no file-authored boxes |
@@ -54,12 +54,17 @@ already holds in Chase).
   bosses fire exactly as before.
 - `SKILL_SPECIAL1` -> no cast spawn; the slot instead rate-gates the
   contact hit-test (§4).
-- `SKILL_FX` -> `spawnFx(effectId, player.x(), player.y())` (strikes where
-  the player stands); `telegraphFx >= 0` adds a second instance (same tile,
-  same tick); `playSound(attack_sound)`. While the fx runs its lead-in
-  frames (before `firstHitFrame`), both renderers tint the origin tile 25%
-  red as a target hint placeholder (`fxDraw_t::telegraph`, computed in
-  `getFxToDraw`; replaced by `telegraphFx` marker art when assets land).
+- `SKILL_FX` -> warn-first cast: with `telegraphTtl > 0`,
+  `scheduleFx(effectId, player.x(), player.y(), telegraphTtl)` schedules the
+  strike against the tile the player stands on; it spawns there
+  `telegraphTtl` ticks later in `tickFx` (authored rows: 6 ticks = 1/4 s at
+  the 24 Hz clock). Until then both renderers tint the target tile 25% red —
+  a placeholder for the missing marker art. `telegraphTtl == 0` = no
+  warning, immediate `spawnFx` (legacy behavior). `telegraphFx >= 0`
+  additionally spawns the marker fx immediately (same tile, same tick);
+  `playSound(attack_sound)` fires with the hint. Pending strikes are
+  transient CGame state: **not** serialized; save/load drops them and the
+  boss simply recasts.
 
 ## 4. Damage
 

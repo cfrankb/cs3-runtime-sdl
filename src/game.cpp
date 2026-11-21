@@ -545,6 +545,7 @@ bool CGame::loadLevel(const GameMode mode)
     spawnMonsters();
     m_sfx.clear();
     m_fx.clear();
+    m_pendingFx.clear(); // transient: dropped on level reset, like m_fx
     resetStats();
     m_report = currentMapReport();
 
@@ -1930,6 +1931,16 @@ int CGame::spawnFx(const int effectID, const int tileX, const int tileY)
  *
  * @return instance index, or -1 for an unknown effectID
  */
+void CGame::scheduleFx(const int effectID, const int tileX, const int tileY, const int ticks)
+{
+    if (!fxDataAt(effectID) || ticks <= 0)
+        return;
+    m_pendingFx.push_back(pendingFx_t{static_cast<int16_t>(effectID),
+                                      static_cast<int16_t>(tileX),
+                                      static_cast<int16_t>(tileY),
+                                      static_cast<int16_t>(ticks)});
+}
+
 int CGame::spawnFxPx(const int effectID, const int px, const int py)
 {
     if (!fxDataAt(effectID))
@@ -1951,6 +1962,17 @@ int CGame::spawnFxPx(const int effectID, const int px, const int py)
  */
 void CGame::tickFx()
 {
+    // pending strikes: count down, spawn the fx on expiry (hint ends, fx runs)
+    for (size_t i = 0; i < m_pendingFx.size();)
+    {
+        if (--m_pendingFx[i].ticks > 0)
+            ++i;
+        else
+        {
+            spawnFx(m_pendingFx[i].effectId, m_pendingFx[i].tileX, m_pendingFx[i].tileY);
+            m_pendingFx.erase(m_pendingFx.begin() + static_cast<ptrdiff_t>(i));
+        }
+    }
     for (auto it = m_fx.begin(); it != m_fx.end();)
     {
         const fxData_t *def = fxDataAt(it->effectID);
@@ -2031,13 +2053,24 @@ void CGame::getFxToDraw(const fxView_t &view, const bool front,
                          view.right + def->w / 2, view.bottom + def->h / 2))
             continue;
         const uint16_t frameID = fxFrameIndex(fx, *def, layer);
-        // skill fx in its lead-in (no authored box can have landed yet):
-        // hint the target tile with the red rect placeholder (front pass)
-        const bossSkillDef_t *skill = front ? skillForFx(fx.effectID) : nullptr;
-        const bool telegraph = skill && skill->firstHitFrame >= 0 &&
-                               static_cast<int>(frameID) < skill->firstHitFrame &&
-                               fx.ox >= 0;
-        out.emplace_back(fxDraw_t{fx.x, fx.y, frameID, fx.ox, fx.oy, telegraph});
+        out.emplace_back(fxDraw_t{fx.x, fx.y, frameID, fx.ox, fx.oy, false});
+    }
+
+    // telegraph hints: pending strikes warn their target tile (red rect
+    // placeholder until marker art lands); front pass only, hint-only
+    // entries (the renderers skip the frame blit when telegraph is set)
+    if (front)
+    {
+        for (const pendingFx_t &p : m_pendingFx)
+        {
+            const int x = p.tileX * FX_TILE_SIZE + FX_TILE_SIZE / 2;
+            const int y = p.tileY * FX_TILE_SIZE + FX_TILE_SIZE / 2;
+            if (x < view.left || x > view.right || y < view.top || y > view.bottom)
+                continue;
+            out.emplace_back(
+                fxDraw_t{static_cast<int16_t>(x), static_cast<int16_t>(y), 0,
+                         p.tileX, p.tileY, true});
+        }
     }
 
     // poison aura (docs/plans/poison-damage-plan.md D7): a derived draw

@@ -230,12 +230,28 @@ bool test_fx_skill_hit()
     tick(1); // timer 1 -> frame 1: lead-in
     if (!checkEq(g_game->health(), hp0, "lead-in no damage"))
         return false;
-    if (!checkEq(telegraphDraws(), 1, "lead-in hint"))
+    if (!checkEq(telegraphDraws(), 0, "live fx never hints"))
         return false;
     tick(1); // timer 2 -> frame 2: first box tick registers the hit
     if (!checkEq(g_game->health(), hp0 - 10, "hit frame damage"))
         return false;
-    if (!checkEq(telegraphDraws(), 0, "hit frame no hint"))
+
+    // scheduleFx: red hint on the tile until the countdown spawns the fx
+    g_game->getFx().clear();
+    g_game->resetStats();
+    const int hp2 = g_game->health();
+    const Pos tile = g_game->player().pos();
+    g_game->scheduleFx(id, tile.x, tile.y, 2);
+    if (!checkEq(telegraphDraws(), 1, "scheduled hint visible"))
+        return false;
+    tick(1);
+    if (!checkEq(telegraphDraws(), 1, "hint persists") ||
+        !checkEq(static_cast<int>(g_game->getFx().size()), 0, "fx not spawned yet") ||
+        !checkEq(g_game->health(), hp2, "no damage before spawn"))
+        return false;
+    tick(1); // countdown expires -> fx spawns at frame 0 (boxes start frame 2)
+    if (!checkEq(telegraphDraws(), 0, "hint ends at spawn") ||
+        !checkEq(static_cast<int>(g_game->getFx().size()), 1, "fx spawned on expiry"))
         return false;
 
     // same strike far from the player: boxes never overlap the tile rect

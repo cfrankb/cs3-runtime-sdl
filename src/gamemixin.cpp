@@ -785,7 +785,10 @@ void CGameMixin::drawFx(CFrame &bitmap, const bool front, const int viewLeft, co
     for (const auto &draw : draws)
     {
         if (draw.telegraph)
+        {
             tintTelegraphTile(bitmap, draw.ox, draw.oy, viewLeft, viewTop);
+            continue; // hint-only entry: no fx frame yet
+        }
         CFrame *frame = (*m_fxSheet)[draw.frameID];
         if (!frame)
             continue;

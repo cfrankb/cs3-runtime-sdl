@@ -127,7 +127,8 @@ struct bossSkillDef_t
     // --- SKILL_FX payload ---
     int16_t effectId = -1;      // damaging Fx id (index into g_fxData)
     int16_t telegraphFx = -1;   // warning Fx id, -1 = none
-    uint8_t telegraphTtl = 0;   // warning lifetime (ticks) = lead-in window
+    uint8_t telegraphTtl = 0;   // warning lead (ticks) before the strike spawns;
+                                // 0 = no warning, cast spawns immediately
     int16_t damage = 0;         // hp dealt to player per collision registration
     int16_t baseFrame = -1;     // fx-sheet frameID of the hitbox run's first frame
     // hitbox JSON filename under the fx dir (loadFxSkills); nullptr = this

@@ -384,7 +384,13 @@ void CGame::manageBosses(const uint32_t ticks)
                 case SKILL_SPECIAL1:
                     break; // no cast spawn — rate-gates the contact hit-test instead
                 case SKILL_FX:
-                    spawnFx(sk.effectId, player.x(), player.y()); // strikes where he stands
+                    // warn first: red tile hint for the row's telegraphTtl,
+                    // then the strike lands where he stands (tickFx spawns);
+                    // telegraphTtl 0 = legacy immediate spawn, no warning
+                    if (sk.telegraphTtl > 0)
+                        scheduleFx(sk.effectId, player.x(), player.y(), sk.telegraphTtl);
+                    else
+                        spawnFx(sk.effectId, player.x(), player.y());
                     if (sk.telegraphFx >= 0)
                         spawnFx(sk.telegraphFx, player.x(), player.y());
                     playSound(bd->attack_sound);

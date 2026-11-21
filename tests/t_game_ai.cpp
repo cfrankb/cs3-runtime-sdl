@@ -901,6 +901,13 @@ namespace
         g_game->player().move(4, 7);
         g_game->getFx().clear(); // resetWorld keeps fx alive
         g_game->manageBosses(1);
+        if (g_game->pendingFx().size() != 1)
+        {
+            LOGE("skill cast: fx slot scheduled %zu, want 1", g_game->pendingFx().size());
+            return false;
+        }
+        for (int i = 0; i < g_skillDefs[idxFx].telegraphTtl; ++i)
+            g_game->tickFx(); // hint window elapses -> strike spawns
         const int wantFx = g_skillDefs[idxFx].effectId;
         int fxCount = 0;
         for (const fx_t &fx : g_game->getFx())
@@ -922,6 +929,8 @@ namespace
         g_game->getFx().clear(); // resetWorld keeps fx alive
         g_game->manageBosses(1);
         g_skillDefs[idxFx].telegraphFx = savedTele;
+        for (int i = 0; i < g_skillDefs[idxFx].telegraphTtl; ++i)
+            g_game->tickFx();
         int teleCount = 0;
         for (const fx_t &fx : g_game->getFx())
             teleCount += fx.effectID == wantFx;
@@ -940,7 +949,7 @@ namespace
         g_game->player().move(4, 7);
         g_game->getFx().clear(); // resetWorld keeps fx alive
         g_game->manageBosses(1);
-        if (!g_game->getFx().empty())
+        if (!g_game->getFx().empty() || !g_game->pendingFx().empty())
         {
             LOGE("skill cast: rate=0 fx slot cast anyway");
             return false;
