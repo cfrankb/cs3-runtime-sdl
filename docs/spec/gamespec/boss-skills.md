@@ -57,7 +57,7 @@ already holds in Chase).
 - `SKILL_FX` -> warn-first cast: with `telegraphTtl > 0`,
   `scheduleFx(effectId, player.x(), player.y(), telegraphTtl)` schedules the
   strike against the tile the player stands on; it spawns there
-  `telegraphTtl` ticks later in `tickFx` (authored rows: 6 ticks = 1/4 s at
+  `telegraphTtl` ticks later in `tickFx` (authored rows: 18 ticks = 3/4 s at
   the 24 Hz clock). Until then both renderers tint the target tile 25% red —
   a placeholder for the missing marker art. `telegraphTtl == 0` = no
   warning, immediate `spawnFx` (legacy behavior). `telegraphFx >= 0`
