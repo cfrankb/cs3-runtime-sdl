@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-23 |
-| Git HEAD | cc83399 |
+| Git HEAD | 3a0804a |
 | Files tracked | 122 |
 | Covered by cs3-tests | 72 |
 | Verified items | 83 / 122 |
@@ -26,8 +26,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/attr.h` `f0c08c2f780a05dc`
 - [x] `src/boss.cpp` `05e6d8c2aa7eea77` — covered by t_boss
 - [x] `src/boss.h` `727822c522dfc644` — covered by t_boss
-- [x] `src/bossdata.cpp` `b28017b770f47942` — covered by t_bossdata
-- [x] `src/bossdata.h` `2f6b60b6d279183d` — covered by t_bossdata
+- [x] `src/bossdata.cpp` `92d7d72f4b013414` — covered by t_bossdata
+- [x] `src/bossdata.h` `088bb84a486fdd8c` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
 - [ ] `src/chars.h` `0982da541f3fc76e`
 - [ ] `src/color.h` `b24ca2504f97fa00`
@@ -38,8 +38,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/dirs.h` `0709071e265a3ba5`
 - [x] `src/engine.cpp` `d39ef8b69fd14658` — covered by t_engine
 - [x] `src/engine.h` `f2b563cae9221227` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `a54992efcfd79a0b`
-- [ ] `src/engine_hw.h` `e73373afe0308cca`
+- [ ] `src/engine_hw.cpp` `5c7b51e552456a2f`
+- [ ] `src/engine_hw.h` `448192bd6b62d8d6`
 - [x] `src/events.h` `8e95ab7a8da5846b` — covered by t_game (EVENT_POISON in testPoisonDrain)
 - [ ] `src/filemacros.h` `93c1e202b31182e6`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
@@ -48,8 +48,8 @@ See [README](README.md) for the verification procedure.
 - [x] `src/game_ai.cpp` `43f5eb03ff18e095` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `5759130edb8dfc54` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
-- [x] `src/gamemixin.h` `b56717f7c9abadb7` — covered by t_runtime, t_gamemixin
+- [x] `src/gamemixin.cpp` `9bdeb7cc4b6db567` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
+- [x] `src/gamemixin.h` `6cbb7c5499bcff6d` — covered by t_runtime, t_gamemixin
 - [x] `src/gamesfx.cpp` `11ce9fbe213dd030` — covered by t_fx
 - [x] `src/gamesfx.h` `e00a160530d04075` — covered by t_fx
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats

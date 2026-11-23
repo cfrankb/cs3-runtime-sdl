@@ -190,6 +190,13 @@ bool test_bossdata_hostile()
     write_file("hb_deep.json",
                R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":)"
                + std::string(300, '[') + std::string(300, ']') + "}");
+    // aims-3 sequence 'moving 4' => block of 4*3=12 rawIds; a box in the
+    // phantom 4th physical block (rawId 13 = row 3, col 1) must be dropped
+    // (plan boss-aims3-mirror §8), the rawId 0 box must survive
+    write_file("hb_mirror4.json",
+               R"({"frame":{"width":24,"height":32,"cols":4},"hitboxes":[)"
+               R"({"x":0,"y":0,"w":8,"h":8,"type":1},)"
+               R"({"x":24,"y":96,"w":8,"h":8,"type":2}]})");
     write_file("bosses.ini",
                "[ClampTest]\ntype 3\nhp 5\nmoving 2 hb_five.json\n"
                "[MissingKey]\ntype 4\nhp 5\nmoving 2 hb_missing.json\n"
@@ -198,7 +205,7 @@ bool test_bossdata_hostile()
                "aims\n"
                "[DeepNest]\ntype 7\nhp fast\nmoving 2 hb_deep.json\n"
                "[RefTest]\ntype 8\nhp 5\nattack @nothere hb_five.json\nmoving 2\n"
-               "[MirrorOK]\ntype 9\nhp 5\naims 3\nmirror left\nmoving 4\n"
+               "[MirrorOK]\ntype 9\nhp 5\naims 3\nmirror left\nmoving 4 hb_mirror4.json\n"
                "[MirrorMissing]\ntype 10\nhp 5\naims 3\nmoving 4\n"
                "[MirrorUnused]\ntype 11\nhp 5\naims 4\nmirror right\nmoving 1\n");
 
@@ -231,10 +238,11 @@ bool test_bossdata_hostile()
         return false;
     }
     // malformed/deep-nested JSON files must have contributed nothing, and
-    // the @ref line's hitbox file must be ignored (parse.py parity)
-    if (g_hitboxCount != 1)
+    // the @ref line's hitbox file must be ignored (parse.py parity); the
+    // MirrorOK file contributes its in-block frame only (§8 drops the rest)
+    if (g_hitboxCount != 2)
     {
-        LOGE("bossdata: expected 1 hitbox frame, got %d", g_hitboxCount);
+        LOGE("bossdata: expected 2 hitbox frames, got %d", g_hitboxCount);
         return false;
     }
     // garbage hp ("hp fast") must be flagged and normalized to 0 at load
@@ -321,6 +329,19 @@ bool test_bossdata_hostile()
         {
             LOGE("bossdata: degraded aims-3 block tallied %d frames; expecting 4",
                  unused->moving.base - missing->moving.base);
+            return false;
+        }
+        // §8 out-of-block drop: MirrorOK's rawId 0 box survives in its own
+        // block; its rawId 13 box (= missing->moving.base + 1) must NOT
+        // have bled into MirrorMissing's frame ids
+        if (getHitboxes(0, ok->moving.base) == nullptr)
+        {
+            LOGE("bossdata: MirrorOK in-block hitbox frame was dropped");
+            return false;
+        }
+        if (getHitboxes(0, missing->moving.base + 1) != nullptr)
+        {
+            LOGE("bossdata: out-of-block hitbox bled into the next sequence");
             return false;
         }
     }

@@ -70,10 +70,12 @@ frameW_half - hb.x - hb.width`); warn only, no rejection.
   `m_x + c.x - hbMain.x`). This is the exact mirror of the renderer
   flip transform; no per-box JSON change exists or is needed.
 - Hitbox JSON contract: `frame.cols` must match the sheet strip grid;
-  boxes appear only in the UP / DOWN / provided-horizontal blocks.
-  Phantom-direction entries land in the next boss's frame IDs —
-  loader drop + `LOGE` validation is scheduled in
-  `docs/plans/boss-aims3-mirror-plan.md` §8.
+  boxes appear only in the UP / DOWN / provided-horizontal blocks. A
+  box whose derived `raw_id` falls outside the sequence's
+  `[0, count * aims)` block (phantom direction, misaligned `cols`)
+  would land in the next boss's frame IDs — the loader (`handleSeq` ->
+  `readHitboxFile`) must drop it and report `LOGE`; the surviving
+  entries stay keyed to their own sequence's block.
 
 ## Storage note
 

@@ -1,15 +1,12 @@
 # Plan: `aims 3` + required `mirror left|right`
 
 Date: 2026-11-23
-Status: in progress — M1 (bossdata `mirror` key + validation + tests),
-M2 (CBoss frame mapping + isMirrored + hitbox mirror + t_boss_aims3) and
-M3 (HW `SDL_FlipMode` blit + SW `flipX` blit + mirrored boss rects +
-§7 anchor warning) complete. §5 decision: no live boss switches
-(no 3-direction art ships). §6 done 2026-11-23: spec
-`docs/spec/gamespec/boss-aims.md`, compliance regenerated.
-112/112 ctest green. §9 done: boss sheet 2 (obLT-driven, optional
-manifest row) + Arachine import in `bosses.ini`. Remaining: §8 hitbox
-JSON contract + loader validation (scheduled LAST by maintainer).
+Status: complete 2026-11-23 — §1-§7 (mirror key + validation, CBoss
+frame mapping + hitbox reflection, HW/SW flip draws, no-live-boss
+decision, spec, anchor warning), §8 (hitbox JSON out-of-block drop +
+`LOGE`, `hb_mirror4.json` hostile fixture), §9 (boss sheet 2 via
+obLT png metadata + Arachine import). 112/112 ctest green.
+Archived.
 
 ## Problem
 
@@ -160,7 +157,7 @@ moving          4          # frames per direction: 12 physical in sheet, 16 logi
   know — deferred to a renderer milestone (draw loops have `frame.width()`
   / `tile->rect.w`). Warn only, don't reject.
 
-### 8. Hitbox JSON mirroring — contract + loader validation (LAST milestone)
+### 8. Hitbox JSON mirroring — contract + loader validation (LAST milestone, done 2026-11-23)
 
 Scheduled last: nothing in §1-§7 depends on it — runtime reflection
 already serves the phantom direction — and existing JSONs stay correct

@@ -527,7 +527,7 @@ namespace
     }
 
     bool readHitboxFile(const std::string &path, int grid, int baseFrame,
-                        int sheet, std::vector<HitboxFrame> &frames)
+                        int sheet, std::vector<HitboxFrame> &frames, int blockFrames)
     {
         int frameWidth = 0;
         int frameHeight = 0;
@@ -537,6 +537,17 @@ namespace
 
         for (const RawHitbox &box : raw)
         {
+            // Plan boss-aims3-mirror §8: a box mapping past this sequence's
+            // count*aims block (phantom aims-3 direction, misaligned
+            // frame.cols) would silently bleed into the next boss's frame
+            // ids — sheets are contiguous. Drop it at the source.
+            if (box.rawId >= blockFrames)
+            {
+                LOGE("Error: hitbox in '%s' maps to sequence frame %d, outside "
+                     "block [0,%d); dropped.\n",
+                     path.c_str(), box.rawId, blockFrames);
+                continue;
+            }
             hitbox_t hb;
             hb.x = box.offX / grid;
             hb.y = box.offY / grid;
@@ -982,16 +993,6 @@ namespace
                 return;
             }
 
-            if (!hitboxFile.empty())
-            {
-                std::string full = baseDir + "/" + hitboxFile;
-                // failure must NOT skip base/len below or every later
-                // sequence's frames shift (audit Medium); just lose the boxes
-                if (!readHitboxFile(full, GRID_SIZE, frame, sheet, hitboxFrames))
-                    LOGW("Warning: continuing '%s' on line %d without hitbox file '%s'\n",
-                         seqName.c_str(), lineNo, hitboxFile.c_str());
-            }
-
             int count = toInt(e[1], seqName.c_str());
             if (count < 0)
             {
@@ -1018,6 +1019,19 @@ namespace
                 if (m != "left" && m != "right")
                     aims = 1;
             }
+
+            if (!hitboxFile.empty())
+            {
+                // read AFTER count/aims: out-of-block boxes are rejected
+                // against this sequence's frame block (plan §8)
+                std::string full = baseDir + "/" + hitboxFile;
+                // failure must NOT skip base/len above or every later
+                // sequence's frames shift (audit Medium); just lose the boxes
+                if (!readHitboxFile(full, GRID_SIZE, frame, sheet, hitboxFrames, count * aims))
+                    LOGW("Warning: continuing '%s' on line %d without hitbox file '%s'\n",
+                         seqName.c_str(), lineNo, hitboxFile.c_str());
+            }
+
             frame += count * aims;
         }
 
