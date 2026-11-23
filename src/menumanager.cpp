@@ -53,6 +53,7 @@ MenuManager::~MenuManager()
 
 int MenuManager::menuItemAt(int x, int y)
 {
+    (void)x; // TODO: check menu horizontal bound too
     if (!m_lastMenu || !isMenuActive())
         return -1;
 

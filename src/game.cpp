@@ -447,7 +447,8 @@ size_t CGame::sanitiseMapTiles()
         // tileDefs (TILES_TOTAL_COUNT, tilesdata.h); other layers index
         // the animator tables and g_layerdata (TOTAL_TILE_COUNT,
         // layerdata.h). See docs/spec/gamespec/tile-table-limits.md.
-        const uint16_t limit = layer->baseID() == 0 ? TILES_TOTAL_COUNT : TOTAL_TILE_COUNT;
+        const uint16_t limit = layer->baseID() == 0 ? static_cast<uint16_t>(TILES_TOTAL_COUNT)
+                                                    : static_cast<uint16_t>(TOTAL_TILE_COUNT);
         for (int y = 0; y < layer->height(); ++y)
         {
             for (int x = 0; x < layer->width(); ++x)
@@ -2099,7 +2100,8 @@ void CGame::getFxToDraw(const fxView_t &view, const bool front,
             {
                 const uint16_t frame =
                     layer.base + static_cast<uint16_t>(m_fxTick / def->speed) % layer.count;
-                out.emplace_back(fxDraw_t{static_cast<int16_t>(x), static_cast<int16_t>(y), frame});
+                out.emplace_back(fxDraw_t{static_cast<int16_t>(x), static_cast<int16_t>(y), frame,
+                                          -1, -1, false});
             }
         }
     }
@@ -2377,7 +2379,7 @@ scan_t CGame::scanPos(const Pos &pos, const uint8_t aim) const
     {
         return (gr & g1) && (gr & g2);
     };
-    scan_t result{false, false, false};
+    scan_t result{false, false, false, false};
     const CMap &map = getMap();
     const int layerCount = (int)map.layerCount();
     for (int i = layerCount - 1; i >= 0; --i)

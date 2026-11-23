@@ -25,18 +25,9 @@
 #include "logger.h"
 #include "colormasks.h"
 #include "shared/Frame.h"
+#include "gamesfx.h"
 
 class CFrame;
-
-// frame rect in sheet-pixel space; tables are obsolete, rects now
-// arrive from the sheet png's private obLT chunk (tileset loadFx)
-struct tileinfo_t
-{
-    float x;
-    float y;
-    float w;
-    float h;
-};
 
 struct Tile
 {

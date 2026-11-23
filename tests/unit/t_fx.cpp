@@ -206,7 +206,7 @@ bool test_fx_skill_hit()
     skill.damage = 10;
     for (int frame = 2; frame <= 3; ++frame)
     {
-        sprite_hitbox_t sf{.spriteID = frame, .count = 1};
+        sprite_hitbox_t sf{.spriteID = frame, .count = 1, .hitboxes = {}};
         sf.hitboxes[0] = {.x = -8, .y = -8, .width = 16, .height = 16, .type = 2};
         skill.frames.push_back(sf);
     }

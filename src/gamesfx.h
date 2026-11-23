@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <functional>
 #include <vector>
-#include "tileset_tex.h"
 #include "sfx_public.h"
 
 class CGame;
@@ -66,6 +65,16 @@ enum SfxTimeout : uint16_t
     SFX_EXPLOSION0_TIMEOUT = 10,
     SFX_EXPLOSION5_TIMEOUT = 10,
     SFX_FLAME_TIMEOUT = 20,
+};
+
+// frame rect in sheet-pixel space; tables are obsolete, rects now
+// arrive from the sheet png's private obLT chunk (tileset loadFx)
+struct tileinfo_t
+{
+    float x;
+    float y;
+    float w;
+    float h;
 };
 
 // ---------------------------------------------------------------------------

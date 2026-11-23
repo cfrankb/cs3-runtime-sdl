@@ -95,8 +95,7 @@ def sync_data(sync_list):
 
     patterns_pixels = [
         "data/pixels/animz.obl",
-        "data/pixels/sheet0.obl",
-        "data/pixels/sheet1.obl",
+        "data/pixels/sheet[0-9].obl",
         "data/pixels/tiles.obl",
         "data/pixels/uisheet.png",
         "data/pixels/layer[0-9].png",

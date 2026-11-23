@@ -55,6 +55,10 @@ Any modification to the **data structure** of `CActor`, `CMap`, or `CLayer`
 and requires the `ENGINE_VERSION` bump described above. Behavior-only
 changes to their member functions do not.
 
+## Library internal conventions.
+
+Interface abstract IFile::read() and IFile::write() return IFILE_OK on success (and not byte count). This applies to CFileWrap, CFileMem, and QFileWrap.
+
 ## CFrame / CFrameSet data ownership
 
 The `CFrame` and `CFrameSet` contracts are bound to **active external
@@ -117,6 +121,7 @@ To ensure codebase consistency and minimize unnecessary version control diffs, a
 
 ## Cross Compiler Compatibility
 Consider g++, msvc, mingw, zig, clang. Qt and emscriptem/wasm compatibility when making chanhges to existing files.
+Always fix and avoid pedantic compilation warnings.
 
 ## Edit this file
 - Always ask for explicit user permission before editing AGENTS.md.
