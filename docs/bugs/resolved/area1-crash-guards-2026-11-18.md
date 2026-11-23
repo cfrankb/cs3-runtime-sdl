@@ -15,6 +15,8 @@ hpRatio, ~CRuntime leaks).
   - `getSafeAreaWindow()` — `SDL_Rect safe = {}` zero-init.
   - `loadColorMaps()` — `userID` bounds check vs `m_userNames.size()` → `LOGW` + return.
   - `loadScores()` — `file.read` short read → `LOGE` + `clearScores()`.
+    (Regression fixed 2026-11-22: check must compare `IFILE_OK`, not a byte
+    count — see `docs/bugs/resolved/hiscore-read-check-2026-11-22.md`.)
 - `src/main.cpp` — `maparch.size() == 0` before start-level modulo → `LOGE` +
   `EXIT_FAILURE` (was modulo-by-zero SIGFPE).
 - `src/engine_hw.cpp` + `src/gamemixin.cpp` (`drawSugarMeter` twins) — sugar cube

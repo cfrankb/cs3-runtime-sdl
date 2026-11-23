@@ -76,5 +76,45 @@ bool test_runtime()
     // clean up
     std::filesystem::remove(GEN_FILE);
     std::filesystem::remove(OUT_FILE);
+
+    // hiscore round-trip regression (2026-11-22): the BUG-H19 read check
+    // compared the IFILE_OK flag against sizeof(m_hiscores), so every
+    // successful loadScores() reported "hiscore read failed" and cleared
+    // the scores. loadScores/saveScores are private overrides of the
+    // protected pure-virtuals; the using-decls lift base access.
+    {
+        struct ScoreRT : CRuntime
+        {
+            using CGameMixin::loadScores;
+            using CGameMixin::saveScores;
+            using CGameMixin::clearScores;
+        };
+        constexpr const char HISCORE_DAT[] = "tests/out/hiscores-cs3.dat";
+        ScoreRT scores;
+        scores.setQuiet(true);
+        scores.setWorkspace("tests/out/");
+        CRuntime::hiscore_t &hi = scores.getHiScoreAtIndex(3);
+        hi.score = 12345;
+        hi.level = 7;
+        strncpy(hi.name, "zztop", sizeof(hi.name));
+        if (!scores.saveScores())
+        {
+            LOGE("hiscores: saveScores failed");
+            return false;
+        }
+        scores.clearScores();
+        if (!scores.loadScores())
+        {
+            LOGE("hiscores: loadScores failed");
+            return false;
+        }
+        const CRuntime::hiscore_t &back = scores.getHiScoreAtIndex(3);
+        if (back.score != 12345 || back.level != 7 || strncmp(back.name, "zztop", 5) != 0)
+        {
+            LOGE("hiscores: round-trip lost data");
+            return false;
+        }
+        std::filesystem::remove(HISCORE_DAT);
+    }
     return true;
 }

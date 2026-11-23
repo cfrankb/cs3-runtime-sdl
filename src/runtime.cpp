@@ -1246,7 +1246,7 @@ bool CRuntime::fetchFile(const std::string &path, char **dest, const bool termin
         {
             data[size] = '\0';
         }
-        if (file.read(data, static_cast<int>(size)) != static_cast<int>(size))
+        if (file.read(data, static_cast<int>(size)) != IFILE_OK)
         {
             LOGE("short read for %s", path.c_str());
             delete[] data;
@@ -1415,7 +1415,8 @@ bool CRuntime::loadScores()
     {
         if (file.getSize() == sizeof(m_hiscores))
         {
-            if (file.read(m_hiscores, sizeof(m_hiscores)) != static_cast<int>(sizeof(m_hiscores)))
+            // read() returns IFILE_OK flag, not a bytecount (IFile.h contract)
+            if (file.read(m_hiscores, sizeof(m_hiscores)) != IFILE_OK)
             {
                 LOGE("hiscore read failed. resetting to default.");
                 clearScores();
@@ -1439,7 +1440,12 @@ bool CRuntime::saveScores()
     CFileWrap file;
     if (file.open(path.c_str(), "wb"))
     {
-        file.write(m_hiscores, sizeof(m_hiscores));
+        if (file.write(m_hiscores, sizeof(m_hiscores)) != IFILE_OK)
+        {
+            LOGE("hiscore write failed.");
+            file.close();
+            return false;
+        }
         file.close();
 #ifdef __EMSCRIPTEN__
         EM_ASM(
