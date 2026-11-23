@@ -2603,6 +2603,8 @@ void CGameMixin::drawHealthBar(CFrame &bitmap, const bool isPlayerHurt)
                                                   : RED;
     auto drawHearth = [&bitmap, color, this](auto bx, auto by, auto health)
     {
+        if (m_fontData.empty()) // audit glyph-loop guard: hearts use their own path
+            return;
         // const uint8_t *heart = getCustomChars() + (CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
         const uint8_t *heart = m_fontData.data() + (CHARS_CUSTOM_BASE + CHARS_HEART - CHARS_CUSTOM) * FONT_SIZE;
         for (uint32_t y = 0; y < FONT_SIZE; ++y)

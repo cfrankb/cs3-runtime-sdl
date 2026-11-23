@@ -17,6 +17,10 @@ Frame.cpp / FrameSet.cpp audits):
 `bin/utils/sync.sh -g`). Staged `DotArray.h` now takes the `Dot` POD from
 `src/shared/dot.h` instead of defining it (no redefinition once sync.sh
 delivers dot.h; editor must drop any stale Dot copy from its old header).
+*(Update 2026-11-23: the staged copies in `external/lgck-editor/` were
+subsequently removed by maintainer directive (commit `b115b0a`); that path
+no longer exists and `sync.sh` no longer stages DotArray. The runtime-side
+removals below stand; the editor owns its own copy.)*
 
 Runtime keeps only what `CFrame` needs: new `src/shared/dot.h` with the
 byte-identical `Dot` struct. Removed `DotArray.cpp` from

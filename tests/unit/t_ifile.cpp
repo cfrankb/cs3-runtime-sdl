@@ -493,6 +493,7 @@ bool test_ifile_negative_size()
 bool test_ifile_string_tiers()
 {
     const std::vector<std::string> samples = {
+        std::string(0, 'e'),      // zero length: << must be a success no-op (BUG-H8)
         std::string(5, 'a'),      // byte tier
         std::string(300, 'b'),    // 16-bit tier
         std::string(65535, 'c'),  // 32-bit tier boundary
@@ -506,7 +507,11 @@ bool test_ifile_string_tiers()
         return false;
     }
     for (const auto &s : samples)
-        mem << std::string_view(s);
+        if (!(mem << std::string_view(s)))
+        {
+            LOGE("mem write failed for size %zu", s.size());
+            return false;
+        }
 
     CFileWrap disk;
     if (!disk.open("tests/out/strtiers_disk.dat", "w+b"))
@@ -515,7 +520,11 @@ bool test_ifile_string_tiers()
         return false;
     }
     for (const auto &s : samples)
-        disk << std::string_view(s);
+        if (!(disk << std::string_view(s)))
+        {
+            LOGE("disk write failed for size %zu", s.size());
+            return false;
+        }
 
     // both backends run the same codec: encodings must match byte for byte
     const auto &memBuf = mem.buffer();

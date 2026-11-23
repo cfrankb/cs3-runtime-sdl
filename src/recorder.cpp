@@ -63,7 +63,7 @@ bool CRecorder::start(IFile *file, bool isWrite)
     else if (m_file && m_mode == MODE_READ)
     {
         uint32_t version = 0xffff;
-        char sig[sizeof(SIG) + 1];
+        char sig[sizeof(SIG) + 1] = {}; // zero-init: a truncated header must not leave sig[] indeterminate for memcmp/LOGE
         sig[sizeof(SIG)] = '\0';
         readFile(sig, sizeof(SIG));
         if (memcmp(sig, SIG, sizeof(SIG)) != 0)

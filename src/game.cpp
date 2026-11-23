@@ -677,7 +677,7 @@ void CGame::setLevel(int levelId)
 {
     // maintainer ruling 2026-11-18: clamp out-of-range early with LOGW.
     // Only clamped when an archive is present; the archive can be set after
-    // setLevel(), and loadLevel() (L453-463) remains the authoritative guard.
+    // setLevel(), and loadLevel() (L476-486) remains the authoritative guard.
     if (m_mapArch && m_mapArch->size() != 0 && m_mapArch->at(levelId) == nullptr)
     {
         const int clamped = std::clamp(levelId, 0, static_cast<int>(m_mapArch->size()) - 1);
@@ -1501,6 +1501,9 @@ bool CGame::read(IFile &sfile)
 
     // clear events
     clearEvents();
+    // the exit-announce flag is not serialized; on restore the level state
+    // comes from the savegame, so the once-per-level gate must restart
+    m_exitAnnounced = false;
 
     // read animation state
     if (!m_animator->read(sfile))
