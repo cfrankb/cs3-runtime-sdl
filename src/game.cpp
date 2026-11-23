@@ -874,6 +874,11 @@ uint8_t CGame::managePlayer(const uint8_t *joystate)
         // apply health damage
         addHealth(def.health);
     }
+    else if (result.isSticky)
+    {
+        return AIM_NONE;
+    }
+
     const JoyAim aims[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
     for (const JoyAim &aim : aims)
     {
@@ -2396,6 +2401,8 @@ scan_t CGame::scanPos(const Pos &pos, const uint8_t aim) const
                 result.isSolid = true;
             else if (data.tileType == LayerTileType::Water)
                 result.isWater = true;
+            else if (data.tileType == LayerTileType::Sticky)
+                result.isSticky = true;
             else if (gr)
             {
                 if (aim == JoyAim::AIM_UP && testGranular(gr, GranualarDL, GranualarDR))
