@@ -1077,6 +1077,12 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         {
             frames = &(m_sheet1.get())->frames();
         }
+        else if (boss.data()->sheet == 2)
+        {
+            if (!m_sheet2) // optional asset: manifests without ASSET_SHEET2
+                continue;
+            frames = &(m_sheet2.get())->frames();
+        }
         else
         {
             LOGE("invalid sheet: %d", boss.data()->sheet);

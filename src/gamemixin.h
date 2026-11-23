@@ -259,6 +259,7 @@ protected:
     std::unique_ptr<CFrameSet> m_users;
     std::unique_ptr<CFrameSet> m_sheet0;
     std::unique_ptr<CFrameSet> m_sheet1;
+    std::unique_ptr<CFrameSet> m_sheet2;
     std::unique_ptr<CFrameSet> m_fxSheet; // extended fx; null => fx draw no-ops
     std::unique_ptr<CFrameSet> m_uisheet;
     std::unique_ptr<CFrameSet> m_layerTiles;

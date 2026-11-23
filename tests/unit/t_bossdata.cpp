@@ -64,7 +64,8 @@ bool test_bossdata()
         return false;
     }
 
-    const uint8_t types[] = {BOSS_MR_DEMON, BOSS_GHOST, BOSS_HARPY, BOSS_BEHOLDER};
+    const uint8_t types[] = {BOSS_MR_DEMON, BOSS_GHOST, BOSS_HARPY, BOSS_BEHOLDER,
+                             BOSS_ARACHINE};
     for (const uint8_t type : types)
     {
         const bossData_t *boss = getBossData(type);
@@ -94,6 +95,25 @@ bool test_bossdata()
     if (getBossData(0x01) != nullptr)
     {
         LOGE("bossdata: getBossData(0x01) should be null");
+        return false;
+    }
+
+    // the shipped aims-3 boss: sheet 2, mirror left, and the block bases
+    // pin the ini line order (walk, attack, death, damaged, idle) to the
+    // 60 obLT records of the sheet png: 5/5/5/4/1 frames * 3 aims
+    const bossData_t *arachne = getBossData(BOSS_ARACHINE);
+    if (!arachne || arachne->sheet != 2 || arachne->aims != 3 || arachne->mirror != AIM_LEFT)
+    {
+        LOGE("bossdata: arachine must load as sheet 2, aims 3, mirror left");
+        return false;
+    }
+    if (arachne->moving.base != 0 || arachne->moving.lenght != 5 ||
+        arachne->attack.base != 15 || arachne->death.base != 30 ||
+        arachne->hurt.base != 45 || arachne->idle.base != 57 || arachne->idle.lenght != 1)
+    {
+        LOGE("bossdata: arachine seq bases wrong: %d/%d/%d/%d/%d",
+             arachne->moving.base, arachne->attack.base, arachne->death.base,
+             arachne->hurt.base, arachne->idle.base);
         return false;
     }
 

@@ -7,8 +7,9 @@ M3 (HW `SDL_FlipMode` blit + SW `flipX` blit + mirrored boss rects +
 §7 anchor warning) complete. §5 decision: no live boss switches
 (no 3-direction art ships). §6 done 2026-11-23: spec
 `docs/spec/gamespec/boss-aims.md`, compliance regenerated.
-112/112 ctest green. Remaining: §8 hitbox JSON contract + loader
-validation (scheduled LAST by maintainer).
+112/112 ctest green. §9 done: boss sheet 2 (obLT-driven, optional
+manifest row) + Arachine import in `bosses.ini`. Remaining: §8 hitbox
+JSON contract + loader validation (scheduled LAST by maintainer).
 
 ## Problem
 
@@ -191,6 +192,33 @@ once authored per this contract.
   check `g_hitboxCount` and the surviving entry's `spriteID`.
 - Sync `docs/spec/bosses/bossdata_runtime.cpp` and compliance hashes
   for this change, same rule as §6.
+
+### 9. Boss sheet 2 + Arachine import (2026-11-23, done)
+
+First real aims-3 boss ships as **sheet 2** (art:
+`private_tools/sheet/out/arachine/archine.png`, 3 directions N/S/E =
+UP/DOWN/RIGHT, 104x96 cells, 60 frames = walk 5, attack 5, death 5,
+damaged 4, idle 1 x 3 aims):
+
+- `ASSET_SHEET2` appended after `ASSET_FXSHEET` (append-only manifest
+  indices); load is **optional** like the fx sheet — manifests without
+  the row skip it with `LOGW`.
+- Frame rects travel inside the png's private `obLT` chunk (same v2
+  8-byte records as `sfx.png`), loaded via `TileSet::loadFx` — no
+  `g_sheet2_data` tileinfo table to maintain.
+- `sheet == 2` selection branch in both boss draw loops
+  (`engine_hw.cpp`, `gamemixin.cpp`; SW branch null-guarded for the
+  optional asset). `>>>sheet N` parsing needed no change (resets the
+  per-sheet frame counter, accepts any int).
+- `bosses.ini`: `[Arachine]` under `>>>sheet 2`, `aims 3` +
+  `mirror left`; ini animation order MUST match the png's obLT record
+  order (walk, attack, death, damaged, idle) — pinned in
+  `test_bossdata` via seq bases 0/15/30/45/57 and hitbox JSON `cols`.
+- `BOSS_ARACHINE 0xb4`, `BOSS_COUNT` 4 -> 5 (`src/bossdata.h`, test
+  roster expectation only).
+- Asset side (external): copy `archine.png` into `pixels/` and append
+  the `ASSET_SHEET2` manifest row; hitbox JSONs already in
+  `data/bosses/data/`.
 
 ## Tests (`tests/unit/t_bossdata.cpp`, `t_boss*.cpp`)
 

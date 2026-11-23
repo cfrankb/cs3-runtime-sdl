@@ -159,6 +159,7 @@ protected:
         ASSET_SPLASH,
         ASSET_TITLESCREEN,
         ASSET_FXSHEET, // append-only: manifest indices must not shift
+        ASSET_SHEET2,  // boss sheet 2 (arachine); optional row, append-only
         MAX_ASSET,
         IDX_FILENAME = 0,
         MAX_LAYERS = 4
@@ -176,6 +177,7 @@ protected:
     TileSet m_tileset_hearts;
     TileSet m_tileset_sheet0;
     TileSet m_tileset_sheet1;
+    TileSet m_tileset_sheet2;
     TileSet m_tileset_fx;
     // TileSet m_tileset_layers0;
     TileSet m_tileset_layers[MAX_LAYERS];

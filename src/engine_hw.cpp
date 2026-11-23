@@ -200,6 +200,18 @@ void EngineHW::preloadAssets()
     if (!m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data))
         LOGE("failed to load sheet1 asset");
 
+    // boss sheet 2: optional like ASSET_FXSHEET (older manifests lack the
+    // row); frame rects travel inside the png's private obLT chunk, so
+    // there is no g_sheet2_data table to maintain.
+    if (m_assetFiles.size() > ASSET_SHEET2)
+    {
+        std::vector<tileinfo_t> sheet2Rects;
+        const std::string sheet2Name =
+            AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET2][IDX_FILENAME];
+        if (!m_tileset_sheet2.loadFx(m_renderer, sheet2Name, sheet2Rects))
+            LOGW("failed to load boss sheet2 asset: %s", sheet2Name.c_str());
+    }
+
     // fx sheet (pixels/sfx.png): frame rects come from the obLT metadata chunk
     // inside the png; the loader fills g_fxSheet_data (index = imageID).
     // ponytail: environment-dependent (needs the ASSET_FXSHEET manifest row);
@@ -1108,6 +1120,10 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
         else if (boss.data()->sheet == 1)
         {
             tileset = &m_tileset_sheet1;
+        }
+        else if (boss.data()->sheet == 2)
+        {
+            tileset = &m_tileset_sheet2;
         }
         else
         {
