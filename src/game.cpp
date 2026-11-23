@@ -1488,7 +1488,7 @@ bool CGame::read(IFile &sfile)
         m_sfx.emplace_back(std::move(sfx));
     }
 
-    // load fx
+    // load fx (not duplicated)
     m_fx.clear();
     uint16_t fxCount = 0;
     _R(&fxCount, sizeof(fxCount));
@@ -1616,7 +1616,7 @@ bool CGame::write(IFile &tfile)
     for (const auto &sfx : m_sfx)
         _W(&sfx, sizeof(sfx));
 
-    // save fx
+    // save fx (not duplicated)
     if (m_fx.size() > UINT16_MAX)
         LOGW("fx list of %zu exceeds uint16 save field; truncating", m_fx.size());
     const uint16_t fxCount = static_cast<uint16_t>(m_fx.size());
