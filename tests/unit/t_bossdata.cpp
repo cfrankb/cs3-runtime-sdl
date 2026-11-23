@@ -206,6 +206,7 @@ bool test_bossdata_hostile()
                "[DeepNest]\ntype 7\nhp fast\nmoving 2 hb_deep.json\n"
                "[RefTest]\ntype 8\nhp 5\nattack @nothere hb_five.json\nmoving 2\n"
                "[MirrorOK]\ntype 9\nhp 5\naims 3\nmirror left\nmoving 4 hb_mirror4.json\n"
+               "healthbar_offset 32, -8\n"
                "[MirrorMissing]\ntype 10\nhp 5\naims 3\nmoving 4\n"
                "[MirrorUnused]\ntype 11\nhp 5\naims 4\nmirror right\nmoving 1\n");
 
@@ -301,6 +302,21 @@ bool test_bossdata_hostile()
         {
             LOGE("bossdata: MirrorOK aims=%d mirror=%d; expecting 3/AIM_LEFT",
                  ok->aims, ok->mirror);
+            return false;
+        }
+        // healthbar_offset "32, -8": comma stays glued to token 1 through
+        // tokenize(); negatives must survive (plan boss-healthbar-offset §4)
+        if (ok->hpbar_off_x != 32 || ok->hpbar_off_y != -8)
+        {
+            LOGE("bossdata: MirrorOK healthbar_offset %d,%d; expecting 32,-8",
+                 ok->hpbar_off_x, ok->hpbar_off_y);
+            return false;
+        }
+        // absent key keeps the 0 defaults
+        if (missing->hpbar_off_x != 0 || missing->hpbar_off_y != 0)
+        {
+            LOGE("bossdata: MirrorMissing healthbar_offset %d,%d; expecting 0,0",
+                 missing->hpbar_off_x, missing->hpbar_off_y);
             return false;
         }
         // aims 3 without mirror: error at load, degraded to aims 1

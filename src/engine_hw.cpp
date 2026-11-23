@@ -1179,9 +1179,11 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
 
         // Hp Rect
         const float hpRatio = (float)boss.maxHp() / MAX_HP_GAUGE;
+        // healthbar/name block shifted by the bosses.ini healthbar_offset
+        // (plan docs/plans/boss-healthbar-offset-plan.md §3)
         const rect_t hRect{
-            .x = bRect.x,
-            .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING,
+            .x = bRect.x + boss.data()->hpbar_off_x,
+            .y = bRect.y - HP_BAR_HEIGHT - HP_BAR_SPACING + boss.data()->hpbar_off_y,
             .width = MAX_HP_GAUGE, // boss.maxHp(),
             .height = HP_BAR_HEIGHT,
         };

@@ -98,6 +98,29 @@ namespace
         return static_cast<uint8_t>(v);
     }
 
+    // Extract the integers embedded in a string ("x, y, w", "-3 4", "32, -8"):
+    // anything not a digit or '-' is skipped. Needed because tokenize() splits
+    // on whitespace only, so commas stay attached to their token.
+    std::vector<int> parseNumberList(const std::string &s)
+    {
+        std::vector<int> v;
+        size_t i = 0;
+        while (i < s.size())
+        {
+            while (i < s.size() &&
+                   !std::isdigit((unsigned char)s[i]) &&
+                   s[i] != '-')
+                ++i;
+            size_t start = i;
+            while (i < s.size() &&
+                   (std::isdigit((unsigned char)s[i]) || s[i] == '-'))
+                ++i;
+            if (i > start)
+                v.push_back(std::atoi(s.substr(start, i - start).c_str()));
+        }
+        return v;
+    }
+
     struct JsonValue
     {
         enum class Type : uint8_t
@@ -696,27 +719,24 @@ namespace
             if (fields.count("hitbox"))
             {
                 // "x, y, w, h , 0" (parse.py appends ", 0" for the type slot)
-                const std::string &hbStr = fields.at("hitbox");
-                std::vector<int> v;
-                size_t i = 0;
-                while (i < hbStr.size())
-                {
-                    while (i < hbStr.size() &&
-                           !std::isdigit((unsigned char)hbStr[i]) &&
-                           hbStr[i] != '-')
-                        ++i;
-                    size_t start = i;
-                    while (i < hbStr.size() &&
-                           (std::isdigit((unsigned char)hbStr[i]) || hbStr[i] == '-'))
-                        ++i;
-                    if (i > start)
-                        v.push_back(std::atoi(hbStr.substr(start, i - start).c_str()));
-                }
+                const std::vector<int> v = parseNumberList(fields.at("hitbox"));
                 d.hitbox.x = v.size() > 0 ? v[0] : 0;
                 d.hitbox.y = v.size() > 1 ? v[1] : 0;
                 d.hitbox.width = v.size() > 2 ? v[2] : 0;
                 d.hitbox.height = v.size() > 3 ? v[3] : 0;
                 d.hitbox.type = v.size() > 4 ? v[4] : 0;
+            }
+
+            // "x, y" pixel offsets for the healthbar/name block (plan
+            // docs/plans/boss-healthbar-offset-plan.md §2); negatives allowed
+            if (fields.count("healthbar_offset"))
+            {
+                const std::vector<int> v = parseNumberList(fields.at("healthbar_offset"));
+                if (v.size() < 2)
+                    LOGW("Warning: boss '%s' healthbar_offset needs 2 values; using what is there\n",
+                         name.c_str());
+                d.hpbar_off_x = v.size() > 0 ? v[0] : 0;
+                d.hpbar_off_y = v.size() > 1 ? v[1] : 0;
             }
 
             // skill NAME rate=N entries in file order (plan §2/§3);
@@ -902,6 +922,18 @@ namespace
                         seq.fields["hitbox"] = joinSpace(e, 1) + " , 0";
                     else
                         LOGW("Warning: hitbox on line %d must have 4 dimensions: %s\n", lineNo, t.c_str());
+                    continue;
+                }
+
+                if (item == "healthbar_offset")
+                {
+                    if (e.size() < 2)
+                    {
+                        LOGW("Warning: 'healthbar_offset' on line %d is missing a value: %s\n",
+                             lineNo, t.c_str());
+                        continue;
+                    }
+                    seq.fields["healthbar_offset"] = joinSpace(e, 1);
                     continue;
                 }
 

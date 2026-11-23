@@ -1388,6 +1388,45 @@ bool test_gamemixin_bosses()
     if (px(bmp, pxX, pxY) != frame.getPixelsConst()[0])
         return fail("boss frame pixel");
 
+    // healthbar_offset shifts the gauge block (plan boss-healthbar-offset §4):
+    // bar top outline row moves 8px down, into the gap between name and sprite
+    {
+        bossData_t base = *data;
+        base.show_details = true;
+        base.hpbar_off_x = 0;
+        base.hpbar_off_y = 0;
+        bossData_t shifted = base;
+        shifted.hpbar_off_x = 8;
+        shifted.hpbar_off_y = 8;
+
+        const int barX = pxX;                    // bRect corner
+        const int barY = pxY - 10;               // HP_BAR_HEIGHT + HP_BAR_SPACING
+
+        // baseline: bar outline tops out at its corner (outline drawn last)
+        bosses.clear();
+        bosses.emplace_back(bx, by, &base);
+        bmp.fill(BLACK);
+        rt.drawBossses(bmp, 0, 0, gridW, gridH);
+        if (px(bmp, barX, barY) != WHITE)
+        {
+            bosses.clear();
+            return fail("healthbar baseline corner");
+        }
+
+        // shifted (+8,+8): outline corner moves; old corner stays clear
+        // (name draws at x >= barX+8, sprite at y >= barY+10)
+        bosses.clear();
+        bosses.emplace_back(bx, by, &shifted);
+        bmp.fill(BLACK);
+        rt.drawBossses(bmp, 0, 0, gridW, gridH);
+        if (px(bmp, barX + 8, barY + 8) != WHITE || px(bmp, barX, barY) != BLACK)
+        {
+            bosses.clear();
+            return fail("healthbar offset corner not shifted");
+        }
+        bosses.clear();
+    }
+
     // off-screen bosses are skipped
     bosses.clear();
     bosses.emplace_back(2000, 2000, data);

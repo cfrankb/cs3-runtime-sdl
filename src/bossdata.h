@@ -189,6 +189,8 @@ struct bossData_t
     bool show_details;    // display hp bar/name
     Color color_hp;       // hp bar color
     Color color_name;     // name color
+    int hpbar_off_x = 0;  // healthbar/name x offset in px (may be negative)
+    int hpbar_off_y = 0;  // healthbar/name y offset in px (may be negative)
     int aims;             // aim count (typically 1 or 4)
     int mirror = -1;      // aims 3: derived horizontal JoyAim (AIM_LEFT/
                           // AIM_RIGHT); -1 = no mirroring (plan
