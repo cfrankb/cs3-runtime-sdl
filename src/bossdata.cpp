@@ -29,6 +29,7 @@
 
 #include "bossdata.h"
 
+#include "joyaim.h"
 #include "sounds.h"
 #include "tilesdata.h"
 #include "gamesfx.h"
@@ -639,6 +640,33 @@ namespace
                 d.aims = 1;
             }
 
+            // aims 3 layout: UP/DOWN + ONE horizontal block; `mirror`
+            // declares the derived horizontal aim (plan
+            // docs/plans/boss-aims3-mirror-plan.md §1). aims 3 without a
+            // valid mirror is a data error: fall back to aims 1 (same
+            // garbage convention as above). handleSeq tallies identically.
+            {
+                const std::string m = get("mirror");
+                d.mirror = (m == "left") ? AIM_LEFT : (m == "right") ? AIM_RIGHT : -1;
+                if (!m.empty() && d.mirror < 0)
+                {
+                    LOGW("Warning: boss '%s' has invalid mirror '%s'; ignored\n",
+                         name.c_str(), m.c_str());
+                }
+            }
+            if (d.aims == 3 && d.mirror < 0)
+            {
+                LOGE("Error: boss '%s' has aims 3 without 'mirror left|right'; using aims 1\n",
+                     name.c_str());
+                d.aims = 1;
+            }
+            else if (d.aims != 3 && d.mirror >= 0)
+            {
+                LOGW("Warning: boss '%s' declares mirror with aims %d; mirror ignored\n",
+                     name.c_str(), d.aims);
+                d.mirror = -1;
+            }
+
             auto seqFrom = [&](const char *name) -> boss_seq_t
             {
                 boss_seq_t s{};
@@ -896,7 +924,7 @@ namespace
 
                 if (item == "type" || item == "hp" || item == "score" ||
                     item == "path" || item == "attack_sound" || item == "is_goal" ||
-                    item == "show_details" || item == "aims")
+                    item == "show_details" || item == "aims" || item == "mirror")
                 {
                     if (e.size() < 2)
                     {
@@ -980,6 +1008,15 @@ namespace
                 LOGW("Warning: sequence '%s' of boss '%s' has garbage/missing aims (%d); using 1\n",
                      seqName.c_str(), seq.name.c_str(), aims);
                 aims = 1;
+            }
+            if (aims == 3)
+            {
+                // tally must match BossAccum::build()'s validation: aims 3
+                // without a valid `mirror` degrades to one frame block
+                const std::string m =
+                    seq.fields.count("mirror") ? seq.fields.at("mirror") : std::string();
+                if (m != "left" && m != "right")
+                    aims = 1;
             }
             frame += count * aims;
         }

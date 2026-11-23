@@ -1124,9 +1124,13 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
         // Logical coordonates comverted to screen positions
         // (using GRID_SIZE)
 
-        // Boss Rect
+        // Boss Rect; the aims-3 mirrored aim draws the shared frame
+        // flipped, its anchor mirrored about the boss centre (plan
+        // docs/plans/boss-aims3-mirror-plan.md §3)
+        const bool mirrored = boss.isMirrored();
         const rect_t bRect{
-            GRID_SIZE * (boss.x() - hitbox.x),
+            mirrored ? GRID_SIZE * (boss.x() + hitbox.x) - (int)tile->rect.w
+                     : GRID_SIZE * (boss.x() - hitbox.x),
             GRID_SIZE * (boss.y() - hitbox.y),
             (int)tile->rect.w,
             (int)tile->rect.h};
@@ -1141,10 +1145,12 @@ void EngineHW::drawBossses(const int mx, const int my, const int sx, const int s
 
         if (betweenRect(bRect, sRect))
         {
+            if (mirrored)
+                boss.warnAsymAnchor((int)tile->rect.w, GRID_SIZE);
             const int x = bRect.x - sRect.x;
             const int y = bRect.y - sRect.y;
             // draw boss
-            drawTile(tile, x, y);
+            drawTile(tile, x, y, mirrored ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE);
         }
 
         // skip drawing the healthbar and name

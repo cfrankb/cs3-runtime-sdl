@@ -17,10 +17,12 @@
 */
 
 #include <filesystem>
+#include <vector>
 #include "../../src/shared/FileMem.h"
 #include "../../src/logger.h"
 #include "../../src/boss.h"
 #include "../../src/bossdata.h"
+#include "../../src/map.h"
 #include "t_boss.h"
 
 bool test_boss()
@@ -174,4 +176,145 @@ bool test_boss()
     std::filesystem::remove("tests/out/boss_bad.dat");
     std::filesystem::remove("tests/out/boss_field.dat");
     return true;
+}
+
+/**
+ * @brief aims-3 layouts (plan docs/plans/boss-aims3-mirror-plan.md M2):
+ *        currentFrame() slot mapping, isMirrored(), legacy aims pinned,
+ *        and per-frame hitbox reflection in boss space.
+ */
+bool test_boss_aims3()
+{
+    bossData_t d{};
+    d.name = "aims3";
+    d.type = 0;
+    d.hp = 2;
+    d.speed = 1;
+    d.aims = 3;
+    d.mirror = AIM_LEFT;
+    d.moving.base = 100;
+    d.moving.lenght = 4;
+
+    CBoss boss(12, 12, &d);
+    boss.setState(CBoss::Chase); // moving seq, framePtr reset to 0
+
+    struct AimCase
+    {
+        JoyAim aim;
+        int frame;
+        bool mirrored;
+    };
+    const AimCase cases[] = {
+        {AIM_UP, 100, false},
+        {AIM_DOWN, 104, false},
+        {AIM_LEFT, 108, true},  // derived from the shared horizontal block
+        {AIM_RIGHT, 108, false}, // provided art
+        {AIM_NONE, 100, false}, // never-moved boss normalises to UP
+    };
+    for (const AimCase &c : cases)
+    {
+        boss.setAim(c.aim);
+        if (boss.currentFrame() != c.frame || boss.isMirrored() != c.mirrored)
+        {
+            LOGE("boss aims3: aim %.2x -> frame %d mirrored %d; expecting %d/%d",
+                 c.aim, boss.currentFrame(), boss.isMirrored(), c.frame, c.mirrored);
+            return false;
+        }
+    }
+
+    // legacy layouts pinned (modulo path): no aim is ever mirrored
+    const int legacyAims[] = {1, 2, 4};
+    const int legacyWant[3][4] = {
+        {100, 100, 100, 100}, // aims 1
+        {100, 104, 100, 104}, // aims 2: LEFT->slot0, RIGHT->slot1
+        {100, 104, 108, 112}, // aims 4: enum order
+    };
+    for (int a = 0; a < 3; ++a)
+    {
+        d.aims = legacyAims[a];
+        d.mirror = -1;
+        for (int aim = AIM_UP; aim <= AIM_RIGHT; ++aim)
+        {
+            boss.setAim(static_cast<JoyAim>(aim));
+            const int want = legacyWant[a][aim];
+            if (boss.currentFrame() != want || boss.isMirrored())
+            {
+                LOGE("boss legacy aims %d: aim %d -> frame %d mirrored %d; expecting %d/0",
+                     d.aims, aim, boss.currentFrame(), boss.isMirrored(), want);
+                return false;
+            }
+        }
+    }
+    d.aims = 3;
+
+    // mirror right: LEFT is the physical art, RIGHT the flipped copy
+    d.mirror = AIM_RIGHT;
+    boss.setAim(AIM_RIGHT);
+    if (!boss.isMirrored())
+    {
+        LOGE("boss aims3 mirror right: AIM_RIGHT must be mirrored");
+        return false;
+    }
+    boss.setAim(AIM_LEFT);
+    if (boss.isMirrored() || boss.currentFrame() != 108)
+    {
+        LOGE("boss aims3 mirror right: AIM_LEFT must be the physical block");
+        return false;
+    }
+    d.mirror = AIM_LEFT;
+
+    // --- mirrored per-frame hitbox (testHitbox1) ---
+    // boss at half-tile (12,12); main hitbox 2x2 covers world tile (6,6).
+    // authored box: x=6 w=2 -> world tile 9 on RIGHT, world tile 2 on LEFT
+    d.hitbox = hitbox_t{0, 0, 2, 2, 0};
+    CMap map;
+    if (!map.resize(16, 16, 0, true))
+    {
+        LOGE("boss aims3: map resize failed");
+        return false;
+    }
+
+    static sprite_hitbox_t hbStub;
+    const sprite_hitbox_t *savedHb = g_hitboxes;
+    const int savedCount = g_hitboxCount;
+    boss.setAim(AIM_RIGHT); // LEFT and RIGHT share the physical frame here
+    hbStub.spriteID = d.sheet * BossData::SHEET_SPACER + boss.currentFrame();
+    hbStub.count = 1;
+    hbStub.hitboxes[0] = hitbox_t{6, 0, 2, 2, static_cast<int>(BossData::HitBoxType::SPECIAL1)};
+    g_hitboxes = &hbStub;
+    g_hitboxCount = 1;
+
+    auto specialCols = [&](JoyAim aim)
+    {
+        boss.setAim(aim);
+        std::vector<int> cols;
+        const auto hits = boss.testHitbox1(
+            map,
+            [](const Pos &, BossData::HitBoxType type)
+            { return type == BossData::HitBoxType::SPECIAL1; },
+            nullptr);
+        for (const HitResult &h : hits)
+            cols.push_back(h.pos.x);
+        return cols;
+    };
+
+    bool ok = true;
+    const std::vector<int> right = specialCols(AIM_RIGHT);
+    const std::vector<int> left = specialCols(AIM_LEFT);
+    if (right != std::vector<int>{9})
+    {
+        LOGE("boss aims3: RIGHT special box at tile %d; expecting 9",
+             right.empty() ? -1 : right[0]);
+        ok = false;
+    }
+    if (left != std::vector<int>{2})
+    {
+        LOGE("boss aims3: mirrored LEFT special box at tile %d; expecting 2",
+             left.empty() ? -1 : left[0]);
+        ok = false;
+    }
+
+    g_hitboxes = savedHb;
+    g_hitboxCount = savedCount;
+    return ok;
 }

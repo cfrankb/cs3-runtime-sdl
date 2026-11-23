@@ -274,7 +274,7 @@ void CGameMixin::drawRect(CFrame &frame, const rect_t &rect, const Color color, 
  * @param colorMap
  */
 
-void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const rect_t &rect, const ColorMask colorMask, std::unordered_map<uint32_t, uint32_t> *colorMap)
+void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile, const rect_t &rect, const ColorMask colorMask, std::unordered_map<uint32_t, uint32_t> *colorMap, bool flipX)
 {
     const int width = bitmap.width();
     uint32_t *dest = bitmap.getRGB().data() + x + y * width;
@@ -284,7 +284,11 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
         {
             for (int col = 0; col < rect.width; ++col)
             {
-                auto color = tile.at(col + rect.x, row + rect.y);
+                // flipX mirrors about the FULL tile width (aims-3 boss
+                // blits, plan boss-aims3-mirror §4), so a clipped rect
+                // still samples the mirrored frame pixels
+                const int srcX = flipX ? tile.width() - 1 - (rect.x + col) : rect.x + col;
+                auto color = tile.at(srcX, row + rect.y);
                 if (!(color & ALPHA))
                     continue;
                 dest[col] = color;
@@ -299,7 +303,8 @@ void CGameMixin::drawTile(CFrame &bitmap, const int x, const int y, CFrame &tile
         {
             for (int col = 0; col < rect.width; ++col)
             {
-                uint32_t color = tile.at(col + rect.x, row + rect.y);
+                const int srcX = flipX ? tile.width() - 1 - (rect.x + col) : rect.x + col;
+                uint32_t color = tile.at(srcX, row + rect.y);
                 if (!(color & ALPHA))
                     continue;
                 if (colorMap && colorMap->count(color))
@@ -1093,9 +1098,13 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
         // Logical coordonates comverted to screen positions
         // (using GRID_SIZE)
 
-        // Boss Rect
+        // Boss Rect; an aims-3 mirrored aim draws the shared frame
+        // flipped, its anchor mirrored about the boss centre (plan
+        // docs/plans/boss-aims3-mirror-plan.md §4)
+        const bool mirrored = boss.isMirrored();
         const rect_t bRect{
-            GRID_SIZE * (boss.x() - hitbox.x),
+            mirrored ? GRID_SIZE * (boss.x() + hitbox.x) - frame.width()
+                     : GRID_SIZE * (boss.x() - hitbox.x),
             GRID_SIZE * (boss.y() - hitbox.y),
             frame.width(),
             frame.height(),
@@ -1111,6 +1120,8 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
 
         if (betweenRect(bRect, sRect))
         {
+            if (mirrored)
+                boss.warnAsymAnchor(frame.width(), GRID_SIZE);
             const int x = bRect.x - sRect.x;
             const int y = bRect.y - sRect.y;
             const rect_t rect{
@@ -1124,7 +1135,10 @@ void CGameMixin::drawBossses(CFrame &bitmap, const int mx, const int my, const i
                      x > 0 ? x : 0,
                      y > 0 ? y : 0,
                      frame,
-                     rect);
+                     rect,
+                     COLOR_NOCHANGE,
+                     nullptr,
+                     mirrored);
         }
 
         // skip drawing the healthbar and name

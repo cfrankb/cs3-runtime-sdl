@@ -23,6 +23,7 @@
 #include "../../src/logger.h"
 #include "../../src/assetman.h"
 #include "../../src/bossdata.h"
+#include "../../src/joyaim.h"
 #include "../../src/gamesfx.h"
 #include "../../src/sfx_private.h"
 #include "t_bossdata.h"
@@ -176,7 +177,10 @@ bool test_bossdata_hostile()
                "[BareWords]\nhp\ntype 6\nmoving # consumed by comment\n"
                "aims\n"
                "[DeepNest]\ntype 7\nhp fast\nmoving 2 hb_deep.json\n"
-               "[RefTest]\ntype 8\nhp 5\nattack @nothere hb_five.json\nmoving 2\n");
+               "[RefTest]\ntype 8\nhp 5\nattack @nothere hb_five.json\nmoving 2\n"
+               "[MirrorOK]\ntype 9\nhp 5\naims 3\nmirror left\nmoving 4\n"
+               "[MirrorMissing]\ntype 10\nhp 5\naims 3\nmoving 4\n"
+               "[MirrorUnused]\ntype 11\nhp 5\naims 4\nmirror right\nmoving 1\n");
 
     freeBossData();
     if (loadBossData(dir.c_str(), dir.c_str()) != 0)
@@ -242,6 +246,61 @@ bool test_bossdata_hostile()
         {
             LOGE("bossdata: boss '%s' aims %d not normalized at load",
                  g_bossData[i].name, g_bossData[i].aims);
+            return false;
+        }
+    }
+
+    // aims 3 + mirror validation (plan docs/plans/boss-aims3-mirror-plan.md)
+    {
+        auto byName = [](const char *n) -> const bossData_t *
+        {
+            for (int i = 0; i < g_bossCount; ++i)
+            {
+                if (std::string(g_bossData[i].name) == n)
+                    return &g_bossData[i];
+            }
+            return nullptr;
+        };
+        const bossData_t *ok = byName("MirrorOK");
+        const bossData_t *missing = byName("MirrorMissing");
+        const bossData_t *unused = byName("MirrorUnused");
+        if (!ok || !missing || !unused)
+        {
+            LOGE("bossdata: mirror fixture boss missing after load");
+            return false;
+        }
+        if (ok->aims != 3 || ok->mirror != AIM_LEFT)
+        {
+            LOGE("bossdata: MirrorOK aims=%d mirror=%d; expecting 3/AIM_LEFT",
+                 ok->aims, ok->mirror);
+            return false;
+        }
+        // aims 3 without mirror: error at load, degraded to aims 1
+        if (missing->aims != 1 || missing->mirror != -1)
+        {
+            LOGE("bossdata: MirrorMissing aims=%d mirror=%d; expecting 1/-1",
+                 missing->aims, missing->mirror);
+            return false;
+        }
+        // mirror declared with aims != 3: ignored
+        if (unused->aims != 4 || unused->mirror != -1)
+        {
+            LOGE("bossdata: MirrorUnused aims=%d mirror=%d; expecting 4/-1",
+                 unused->aims, unused->mirror);
+            return false;
+        }
+        // sheet tally: MirrorOK block is 4*3=12 frames, MirrorMissing
+        // (degraded) is 4*1=4; bases must reflect that exactly
+        if (missing->moving.base - ok->moving.base != 12)
+        {
+            LOGE("bossdata: aims-3 block tallied %d frames; expecting 12",
+                 missing->moving.base - ok->moving.base);
+            return false;
+        }
+        if (unused->moving.base - missing->moving.base != 4)
+        {
+            LOGE("bossdata: degraded aims-3 block tallied %d frames; expecting 4",
+                 unused->moving.base - missing->moving.base);
             return false;
         }
     }

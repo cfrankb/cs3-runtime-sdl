@@ -85,7 +85,8 @@ protected:
     void preloadAssets();
     int drawTitlePix(int offsetY) override;
 
-    inline void drawTile(const Tile *tile, const int x, const int y)
+    inline void drawTile(const Tile *tile, const int x, const int y,
+                         const SDL_FlipMode flip = SDL_FLIP_NONE)
     {
         if (!tile) // blank/special tiles: getMainLayerTile legitimately returns nullptr
             return;
@@ -96,7 +97,11 @@ protected:
             tile->sw, //  tile->rect.w * SCALE,
             tile->sh, // tile->rect.h * SCALE
         };
-        SDL_RenderTexture(m_renderer, tile->texture, &tile->rect, &dst);
+        if (flip == SDL_FLIP_NONE)
+            SDL_RenderTexture(m_renderer, tile->texture, &tile->rect, &dst);
+        else
+            SDL_RenderTextureRotated(m_renderer, tile->texture, &tile->rect, &dst,
+                                     0.0, nullptr, flip);
     }
 
     struct overlay_t

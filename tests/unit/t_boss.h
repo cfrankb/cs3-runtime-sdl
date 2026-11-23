@@ -18,3 +18,4 @@
 #pragma once
 
 bool test_boss();
+bool test_boss_aims3();

@@ -1,7 +1,14 @@
 # Plan: `aims 3` + required `mirror left|right`
 
 Date: 2026-11-23
-Status: proposed
+Status: in progress — M1 (bossdata `mirror` key + validation + tests),
+M2 (CBoss frame mapping + isMirrored + hitbox mirror + t_boss_aims3) and
+M3 (HW `SDL_FlipMode` blit + SW `flipX` blit + mirrored boss rects +
+§7 anchor warning) complete. §5 decision: no live boss switches
+(no 3-direction art ships). §6 done 2026-11-23: spec
+`docs/spec/gamespec/boss-aims.md`, compliance regenerated.
+112/112 ctest green. Remaining: §8 hitbox JSON contract + loader
+validation (scheduled LAST by maintainer).
 
 ## Problem
 
@@ -94,9 +101,9 @@ moving          4          # frames per direction: 12 physical in sheet, 16 logi
   `hb.x = m_x - (c.x - hbMain.x) - c.width` (normal path keeps
   `m_x + c.x - hbMain.x`). y/width/height unchanged.
 - `getHitboxes(sheet, currentFrame())` needs no change: the mirrored
-  aim resolves to the provided aim's physical spriteID, so the authored
-  JSON boxes are found. Hitbox JSON files carry entries for
-  UP/DOWN/provided-horizontal frame IDs only.
+  aim resolves to the provided aim's physical spriteID, so the boxes
+  authored for the provided direction serve both horizontal aims.
+  JSON authoring contract + loader validation: §8 (scheduled LAST).
 
 ### 3. HW renderer — `src/engine_hw.{h,cpp}`
 
@@ -121,29 +128,69 @@ moving          4          # frames per direction: 12 physical in sheet, 16 logi
 
 ### 5. Data — `data/bosses/bosses.ini`
 
-- Set `aims 3` + `mirror left` (or `mirror right`) on the boss(es) with
-  3-direction art; sheet blocks become `count * 3` frames. Bosses
-  behind keep their current `aims`.
-- Hitbox JSON: author UP/DOWN/provided-horizontal frame IDs only.
+- `data/bosses` is a symlink to the external asset repo (not in git
+  here). No shipped boss (Mr. Demon/Ghost/Harpy `aims 1`, Beholder
+  `aims 4`) provides 3-direction art, and flipping a live boss would
+  shift every following sheet block against art that physically has
+  four blocks. **Decision: switch no live boss**; the commented
+  `aims 3` / `mirror left` template block already sits in the ini for
+  when 3-direction art ships.
 
 ### 6. Docs
 
-- `docs/spec/bosses/`: document mode 3 (required `mirror`, slot order,
-  hitbox mirror in boss space) + update compliance hash/tally rows
-  **after** tests pass. `docs/spec/bosses/bossdata_runtime.cpp` mirror
-  copy stays in sync per its own rules.
+- DONE 2026-11-23: spec is `docs/spec/gamespec/boss-aims.md`
+  (layouts table, slot table, mirror contract, renderer flip, hitbox
+  mirror + JSON contract pointer). `docs/spec/bosses/` is declared
+  historical/superseded by its own README; its `bossdata_runtime.cpp`
+  mirror copy had already diverged before this feature and was left
+  untouched. Compliance regenerated with
+  `itools/gen_compliance.py` + `gen_coverage.py` (hashes refreshed,
+  `engine_hw` rows stay unchecked — headless-unsafe, no direct suite).
 - AGENTS.md version rules: no `ENGINE_VERSION` bump — ini is not
   serialized save/recorder state, `bossData_t` is not persisted, and no
-  `CActor`/`CMap`/`CLayer` member changes. State this explicitly in the
-  compliance update.
+  `CActor`/`CMap`/`CLayer` member changes. Stated in the spec file.
 
 ### 7. Data contract / warnings
 
 - Main hitbox doubles as sprite anchor (`bRect.x`); for mode 3 the
   sprite anchor must sit so the mirrored rect still covers the sprite.
-  Load-time `LOGW` in `bossdata` build when `aims == 3` and the main
-  hitbox's horizontal margins in the frame are asymmetric
-  (`hb.x != frameW_half - hb.x - hb.width`) — warn only, don't reject.
+  The `LOGW` for an asymmetric anchor (`hb.x != frameW_half - hb.x -
+  hb.width`) needs the frame width, which `bossdata` parsing does not
+  know — deferred to a renderer milestone (draw loops have `frame.width()`
+  / `tile->rect.w`). Warn only, don't reject.
+
+### 8. Hitbox JSON mirroring — contract + loader validation (LAST milestone)
+
+Scheduled last: nothing in §1-§7 depends on it — runtime reflection
+already serves the phantom direction — and existing JSONs stay correct
+once authored per this contract.
+
+- Membership mechanics (`readHitboxJson`/`readHitboxFile`,
+  `bossdata.cpp:444-567`): boxes are placed in sheet-strip pixel space;
+  `col = x / frameWidth`, `rawId = row * cols + col`,
+  `frame_id = baseFrame + rawId`; the stored `x = offX / grid` is
+  **cell-relative** half-tiles. The runtime boss-space reflection (§2)
+  is the exact mirror of the renderer flip transform (body point `p`
+  renders at `m_x + hb.x - p`; reflected box `[m_x - (p - hbMain.x) -
+  c.width, ...)`), so provided-direction boxes mirror correctly with
+  **no per-box JSON change** — the JSON never authors the phantom
+  direction.
+- Authoring contract for `aims 3`: `frame.cols` must match the sheet
+  strip grid, and boxes appear only in the UP / DOWN /
+  provided-horizontal blocks. A `cols 4`-style JSON (or a box placed in
+  the phantom block) maps `rawId`s past the sequence's
+  `count * 3`-frame block; sheet blocks are contiguous, so those boxes
+  would silently land in the **next boss's** frame IDs (hitbox bleed).
+- Loader validation (`handleSeq`): move the `readHitboxFile` call after
+  the `count`/`aims` parse, then drop + `LOGE` every entry whose
+  `frame_id` falls outside `[base, base + count * aims)` — catches
+  phantom-direction boxes and misaligned `cols` at the source.
+- Test (`t_bossdata_hostile`): MirrorOK gains
+  `moving 4 hb_mirror4.json` with `cols 4` and a box in the 4th
+  physical block (`rawId 13` ≥ block size 12) → dropped + warning;
+  check `g_hitboxCount` and the surviving entry's `spriteID`.
+- Sync `docs/spec/bosses/bossdata_runtime.cpp` and compliance hashes
+  for this change, same rule as §6.
 
 ## Tests (`tests/unit/t_bossdata.cpp`, `t_boss*.cpp`)
 

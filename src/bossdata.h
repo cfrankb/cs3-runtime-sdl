@@ -189,6 +189,9 @@ struct bossData_t
     Color color_hp;       // hp bar color
     Color color_name;     // name color
     int aims;             // aim count (typically 1 or 4)
+    int mirror = -1;      // aims 3: derived horizontal JoyAim (AIM_LEFT/
+                          // AIM_RIGHT); -1 = no mirroring (plan
+                          // docs/plans/boss-aims3-mirror-plan.md §1)
     boss_seq_t moving;    // animation seq: moving
     boss_seq_t attack;    // animation seq: attack
     boss_seq_t hurt;      // animation seq: hurt

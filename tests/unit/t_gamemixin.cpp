@@ -374,6 +374,23 @@ bool test_gamemixin_primitives()
         px(bmp, 16, 8) != BLACK)
         return fail("drawTile rect offset");
 
+    // flipX (aims-3 boss blit, plan boss-aims3-mirror §4): mirrors about
+    // the FULL tile width, so a clipped rect samples the mirrored frame
+    // pixels, not a within-rect reversal
+    CFrame flipSrc(4, 1);
+    std::vector<uint32_t> flipRgb{RED, WHITE, WHITE, WHITE};
+    flipSrc.setRGB(flipRgb);
+    bmp.fill(BLACK);
+    rt.drawTile(bmp, 8, 8, flipSrc, rect_t{.x = 0, .y = 0, .width = 4, .height = 1},
+                COLOR_NOCHANGE, nullptr, true);
+    if (px(bmp, 8, 8) != WHITE || px(bmp, 10, 8) != WHITE || px(bmp, 11, 8) != RED)
+        return fail("drawTile rect flipX");
+    bmp.fill(BLACK);
+    rt.drawTile(bmp, 8, 8, flipSrc, rect_t{.x = 0, .y = 0, .width = 2, .height = 1},
+                COLOR_NOCHANGE, nullptr, true);
+    if (px(bmp, 8, 8) != WHITE || px(bmp, 9, 8) != WHITE || px(bmp, 10, 8) != BLACK)
+        return fail("drawTile rect flipX clipped");
+
     struct
     {
         ColorMask mask;
