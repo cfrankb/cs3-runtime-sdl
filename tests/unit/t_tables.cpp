@@ -28,7 +28,6 @@
 #include "../../src/tilesdefs.h"
 #include "../../src/colormap.h"
 #include "../../src/layerdata.h"
-#include "../../src/sheetdata.h"
 #include "t_tables.h"
 
 namespace
@@ -191,11 +190,6 @@ namespace
 
     bool testSheetTiles()
     {
-        if (g_sheet0_data.empty() || g_sheet1_data.empty() || g_scroll_data.empty())
-        {
-            LOGE("sheet data tables are empty");
-            return false;
-        }
         // chMap has 128 entries; getChTile wraps
         for (int i = 0; i < 128; ++i)
         {

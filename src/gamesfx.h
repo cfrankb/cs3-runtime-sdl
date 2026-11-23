@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <functional>
 #include <vector>
-#include "sheetdata.h"
+#include "tileset_tex.h"
 #include "sfx_public.h"
 
 class CGame;

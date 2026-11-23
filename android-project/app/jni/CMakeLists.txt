@@ -45,7 +45,6 @@ add_library(main SHARED
         ../../../src/shared/helper.cpp
         ../../../src/shared/implementers/mu_sdl.cpp
         ../../../src/shared/implementers/sn_sdl.cpp
-        ../../../src/sheetdata.cpp
         ../../../src/statedata.cpp
         ../../../src/states.cpp
         ../../../src/steam_helper.cpp

@@ -195,9 +195,13 @@ void EngineHW::preloadAssets()
                                   //
                               });
 
-    if (!m_tileset_sheet0.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0][IDX_FILENAME], g_sheet0_data))
+    // boss sheets carry their frame rects inside the png's private obLT
+    // chunk (plan docs/plans/archive/sheetdata-oblt-removal-plan.md).
+    std::vector<tileinfo_t> sheet0Rects;
+    if (!m_tileset_sheet0.loadFx(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET0][IDX_FILENAME], sheet0Rects))
         LOGE("failed to load sheet0 asset");
-    if (!m_tileset_sheet1.load(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], g_sheet1_data))
+    std::vector<tileinfo_t> sheet1Rects;
+    if (!m_tileset_sheet1.loadFx(m_renderer, AssetMan::getPrefix() + "pixels/" + m_assetFiles[ASSET_SHEET1][IDX_FILENAME], sheet1Rects))
         LOGE("failed to load sheet1 asset");
 
     // boss sheet 2: optional like ASSET_FXSHEET (older manifests lack the

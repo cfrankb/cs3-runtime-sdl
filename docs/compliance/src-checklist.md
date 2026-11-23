@@ -5,10 +5,10 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-23 |
-| Git HEAD | 3a0804a |
-| Files tracked | 122 |
-| Covered by cs3-tests | 72 |
-| Verified items | 83 / 122 |
+| Git HEAD | 5944f34 |
+| Files tracked | 120 |
+| Covered by cs3-tests | 70 |
+| Verified items | 81 / 120 |
 
 See [README](README.md) for the verification procedure.
 
@@ -38,7 +38,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/dirs.h` `0709071e265a3ba5`
 - [x] `src/engine.cpp` `d39ef8b69fd14658` — covered by t_engine
 - [x] `src/engine.h` `f2b563cae9221227` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `5c7b51e552456a2f`
+- [ ] `src/engine_hw.cpp` `df1a6bd85ee8a0fe`
 - [ ] `src/engine_hw.h` `448192bd6b62d8d6`
 - [x] `src/events.h` `8e95ab7a8da5846b` — covered by t_game (EVENT_POISON in testPoisonDrain)
 - [ ] `src/filemacros.h` `93c1e202b31182e6`
@@ -51,7 +51,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/gamemixin.cpp` `9bdeb7cc4b6db567` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
 - [x] `src/gamemixin.h` `6cbb7c5499bcff6d` — covered by t_runtime, t_gamemixin
 - [x] `src/gamesfx.cpp` `11ce9fbe213dd030` — covered by t_fx
-- [x] `src/gamesfx.h` `e00a160530d04075` — covered by t_fx
+- [x] `src/gamesfx.h` `f5884a0fd32b41ee` — covered by t_fx
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `db36a8378baf9128` — covered by t_gamestats
 - [x] `src/gameui.cpp` `00334bc49c514026` — covered by t_gameui
@@ -91,8 +91,6 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/scopeguard.h` `e63e098021991a44`
 - [ ] `src/sfx_private.h` `48082bdcfba1fb6e`
 - [ ] `src/sfx_public.h` `e4f24fc78880f557`
-- [x] `src/sheetdata.cpp` `7c9aab9bf61babd0` — covered by t_tables
-- [x] `src/sheetdata.h` `51047aeaee728977` — covered by t_tables
 - [x] `src/skills.h` `a8005be0043d59a7` — covered by t_gamestats, t_runtime
 - [ ] `src/sounds.h` `ac00a2436762f36c`
 - [ ] `src/sprtypes.h` `7fffee572ea4557f`
@@ -112,7 +110,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/tilesdebug.h` `3c82e45296d77958`
 - [ ] `src/tilesdefs.h` `56cf1fccc1e5663e`
 - [ ] `src/tileset_tex.cpp` `477ca1a3f2b9a400`
-- [ ] `src/tileset_tex.h` `1aa1c907a40446bc`
+- [ ] `src/tileset_tex.h` `903352359299831f`
 
 ## src/shared/
 
