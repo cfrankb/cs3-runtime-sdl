@@ -960,6 +960,14 @@ namespace
                  bullet.type(), bullet.x(), bullet.y(), wantType, spawnY);
             return false;
         }
+        // firing the slot must park the boss in Attack state — that state is
+        // what plays the attack animation sequence (bug report 2026-11-25:
+        // "monster attack animation not triggering")
+        if (boss.state() != CBoss::BossState::Attack)
+        {
+            LOGE("boss bullet: state %d after firing, want Attack", (int)boss.state());
+            return false;
+        }
         return true;
     }
 
@@ -1212,6 +1220,39 @@ namespace
         }
         g_hitboxes = savedHb;
         g_hitboxCount = savedCount;
+
+        // proximity lunge gate (bugfix 2026-11-25 "attack animation not
+        // triggering"): a SPECIAL1 slot alone — no legacy
+        // BOSS_FLAG_PROXIMITY_ATTACK — must drive the lunge that parks the
+        // boss in Attack state (Arachine's only attack-animation trigger).
+        {
+            bossData_t ldata = *base;
+            ldata.flags = 0; // the slot itself must carry the lunge
+            ldata.damage = 0;
+            ldata.damage_attack = 0;
+            ldata.damage_special1 = 0;
+            ldata.damage_special2 = 0;
+            ldata.skillCount = 1;
+            ldata.skills[0].skill = static_cast<uint8_t>(idxSpecial1);
+            ldata.skills[0].rate = 1; // rng gate hits every manage tick
+            resetWorld();
+            bosses.emplace_back(8, 8, &ldata); // half-tile coords: world tile (4,4)
+            CBoss &lboss = bosses.back();
+            lboss.setSpeed(1);
+            g_game->player().move(4, 6);
+            bool lunged = false;
+            for (uint32_t t = 1; t <= 20 && !lunged; ++t)
+            {
+                lboss.setState(CBoss::BossState::Chase);
+                g_game->manageBosses(t);
+                lunged = lboss.state() == CBoss::BossState::Attack;
+            }
+            if (!lunged)
+            {
+                LOGE("skill cast: SPECIAL1 slot without proximity flag never lunged");
+                return false;
+            }
+        }
         return true;
     }
 

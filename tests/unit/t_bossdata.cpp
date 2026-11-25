@@ -101,9 +101,9 @@ bool test_bossdata()
     }
 
     // the shipped aims-3 boss: sheet 2, mirror left, and the block bases
-    // pin the ini line order (walk, attack, death, damaged) to the
-    // obLT records of the sheet png: 5/5/5/4 frames * 3 aims;
-    // idle aliases moving via @moving
+    // pin the ini line order (walk, attack, death, damaged, idle) to the
+    // obLT records of the sheet png: 5/5/5/4 frames * 3 aims; idle is its
+    // own 1-frame record after hurt (ini updated after the aims-3 plan)
     const bossData_t *arachne = getBossData(BOSS_ARACHINE);
     if (!arachne || arachne->sheet != 2 || arachne->aims != 3 || arachne->mirror != AIM_LEFT)
     {
@@ -113,8 +113,7 @@ bool test_bossdata()
     if (arachne->moving.base != 0 || arachne->moving.lenght != 5 ||
         arachne->attack.base != 15 || arachne->death.base != 30 ||
         arachne->hurt.base != 45 ||
-        arachne->idle.base != arachne->moving.base ||
-        arachne->idle.lenght != arachne->moving.lenght)
+        arachne->idle.base != 57 || arachne->idle.lenght != 1)
     {
         LOGE("bossdata: arachine seq bases wrong: %d/%d/%d/%d/%d",
              arachne->moving.base, arachne->attack.base, arachne->death.base,

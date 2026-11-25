@@ -321,7 +321,6 @@ void CGame::manageBosses(const uint32_t ticks)
 
         // customize animation speed
         const int speed_anime = boss.data()->speed_anime;
-        const uint32_t boss_flags = boss.data()->flags;
         if (speed_anime == 0 || (ticks % speed_anime) == 0)
             boss.animate();
 
@@ -387,11 +386,14 @@ void CGame::manageBosses(const uint32_t ticks)
             handleBossPath(boss);
 
             // Proximity lunge (maintainer ruling, plan skill-bullet-payload
-            // retire): the flag is about the SPECIAL1 attack sequence, so
-            // the SPECIAL1 slot's rate gates it — the retired `bullet` line
-            // never fed it. No SPECIAL1 slot (or rate=0) = never lunges.
+            // retire): a declared SPECIAL1 slot implies the proximity attack
+            // (the legacy flag's role); the slot's rate gates the cadence.
+            // The retired `bullet` line fed that rate to the old flag-gated
+            // lunge (Arachine's `bullet TILES_BLANK rate=5`), so gating on
+            // the slot alone keeps Arachine/Beholder lunging. No SPECIAL1
+            // slot (or rate=0) = never lunges.
             const bossSkill_t *s1 = special1Slot(bd);
-            if ((boss_flags & BOSS_FLAG_PROXIMITY_ATTACK) && s1 && s1->rate > 0 &&
+            if (s1 && s1->rate > 0 &&
                 boss.state() != CBoss::BossState::Attack &&
                 (boss.distance(player) <= boss.data()->distance_attack) &&
                 rng.range(0, s1->rate) == 0)
