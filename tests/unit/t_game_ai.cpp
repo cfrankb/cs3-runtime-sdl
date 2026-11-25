@@ -24,6 +24,7 @@
 #include "../../src/boss.h"
 #include "../../src/bossdata.h"
 #include "../../src/game.h"
+#include "../../src/gamestats.h"
 #include "../../src/gamesfx.h"
 #include "../../src/logger.h"
 #include "../../src/map.h"
@@ -469,6 +470,65 @@ namespace
         if (!g_game->getMonsters().empty() || CGame::getMap().at(6, 5) != TILES_BLANK)
         {
             LOGE("bullet ttl: not cleaned up");
+            return false;
+        }
+        return true;
+    }
+
+    bool testBulletLOSTrack()
+    {
+        // harpy-style bullet: LOS algo, must home in on the player's cell.
+        // The player's tile is stamped on the map at their cell; like the
+        // MONSTERV3 goal fix, canMove must admit it or LineOfSight rejects
+        // the whole path and the bolt stands still until its TTL expires.
+        // On contact it must detonate (damage the player), not idle.
+        resetWorld();
+        g_game->addHealth(100); // health boots at 0; make the hit observable
+        // blank test map has no diamonds/goal boss -> level "completed" ->
+        // the addHealth above latched S_CLOSURE, which no-ops damage
+        g_game->stats().set(S_CLOSURE, 0);
+        const int base = g_game->health();
+        g_game->player().move(8, 5);
+        CGame::getMap().set(8, 5, TILES_ANNIE2); // player stamp
+        const uint16_t boltTile = tileOf(TYPE_LIGHTNING_BOLT);
+        CActor &bolt = spawn(boltTile, TYPE_LIGHTNING_BOLT, 5, 5, AIM_RIGHT);
+        bolt.startPath(g_game->player().pos(), BossData::LOS, 20);
+
+        g_game->manageMonsters(4); // speed-4 gate: 1st active tick -> (7,5)
+        if (!expectPos("bullet LOS: homes in, stops at player edge", bolt, 7, 5))
+            return false;
+
+        // next active tick: contact detonation, while TTL is still 18
+        g_game->manageMonsters(8);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("bullet LOS: not detonated on player contact (ttl still running)");
+            return false;
+        }
+        if (g_game->health() >= base)
+        {
+            LOGE("bullet LOS: player health %d unchanged from %d", g_game->health(), base);
+            return false;
+        }
+        if (CGame::getMap().at(8, 5) != TILES_ANNIE2)
+        {
+            LOGE("bullet LOS: stamped over the player tile (0x%.2x)", CGame::getMap().at(8, 5));
+            return false;
+        }
+
+        // straight-shot bolt (no path algo) must likewise burst against the
+        // player instead of stamping over the cell or idling
+        spawn(boltTile, TYPE_LIGHTNING_BOLT, 5, 5, AIM_RIGHT);
+        for (uint32_t t = 1; t <= 5; ++t)
+            g_game->manageMonsters(t * 4);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("bullet straight: not detonated on player contact");
+            return false;
+        }
+        if (CGame::getMap().at(8, 5) != TILES_ANNIE2)
+        {
+            LOGE("bullet straight: stamped over the player tile (0x%.2x)", CGame::getMap().at(8, 5));
             return false;
         }
         return true;
@@ -1215,6 +1275,7 @@ bool test_game_ai()
         {testVamPlant, "vamplant"},
         {testEggHatch, "egg hatch"},
         {testBullet, "bullet"},
+        {testBulletLOSTrack, "bullet LOS track"},
         {testBarrelBlast, "barrel blast"},
         {testBarrelFuse, "barrel fuse"},
         {testSpawns, "spawns"},

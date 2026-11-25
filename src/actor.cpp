@@ -222,6 +222,13 @@ bool CActor::canMove(const JoyAim aim) const
     {
         if (def.type == TYPE_STOP)
             return true;
+        // Same goal-reachability rule as TYPE_MONSTERV3 above: the player's
+        // stamped tile must admit LOS/A* pathing or a tracking bullet (harpy
+        // LOS bolt) rejects its whole path and stands still. CPath::followPath
+        // still refuses the final step; handleBullet's expiry branch deals the
+        // player hit from the adjacent cell.
+        if (CGame::isBulletType(m_type) && def.type == TYPE_PLAYER)
+            return true;
     }
     return false;
 }

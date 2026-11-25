@@ -954,6 +954,15 @@ void CGame::handleBullet(CActor &actor, const TileDef &def, const int i, const b
             shadowActorMove(actor, aim);
     }
 
+    // A bullet facing the player detonates on contact instead of idling
+    // until its TTL runs out: CPath::followPath refuses the LOS bolt's
+    // final step onto the player's stamped cell (NoValidPath) and
+    // shadowActorMove refuses the straight-shot one; either way the aim
+    // carries the player direction, and the delete branch below deals
+    // the hit through the isPlayerThere case.
+    if (actor.isPlayerThere(aim))
+        isMoving = false;
+
     if (!isMoving || (actor.getTTL() == 0 && actor.algo() != BossData::Path::NONE))
     {
         playSound(bullet.sound);

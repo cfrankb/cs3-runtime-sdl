@@ -2321,11 +2321,12 @@ bool CGame::isOneTimeItem(const uint8_t tileID)
 
 bool CGame::shadowActorMove(CActor &actor, const JoyAim aim)
 {
-    // MONSTERV3 may target the player's stamped cell for pathfinding goal
-    // reachability (CActor::canMove), but must never stamp over the player's
-    // map identity: CActor::move() would carry the player's tile away with
-    // the monster.
-    if (actor.type() == TYPE_MONSTERV3)
+    // MONSTERV3 and bullets may target the player's stamped cell for
+    // pathfinding goal reachability (CActor::canMove), but must never stamp
+    // over the player's map identity: CActor::move() would carry the
+    // player's tile away with the actor. handleBullet detonates the bullet
+    // against the refused cell.
+    if (actor.type() == TYPE_MONSTERV3 || isBulletType(actor.type()))
     {
         const Pos dest = CGame::translate(actor.pos(), aim);
         if (m_map.isValid(dest.x, dest.y) &&
