@@ -704,7 +704,7 @@ namespace
         {
             if (!seq.fields.empty() || !seq.name.empty())
             {
-                bosses.push_back(seq.build(sheet));
+                bosses.push_back(seq.build(seq.sheet));
                 namePool.push_back(seq.name);
             }
             seq = BossAccum{};

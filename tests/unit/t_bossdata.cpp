@@ -99,8 +99,9 @@ bool test_bossdata()
     }
 
     // the shipped aims-3 boss: sheet 2, mirror left, and the block bases
-    // pin the ini line order (walk, attack, death, damaged, idle) to the
-    // 60 obLT records of the sheet png: 5/5/5/4/1 frames * 3 aims
+    // pin the ini line order (walk, attack, death, damaged) to the
+    // obLT records of the sheet png: 5/5/5/4 frames * 3 aims;
+    // idle aliases moving via @moving
     const bossData_t *arachne = getBossData(BOSS_ARACHINE);
     if (!arachne || arachne->sheet != 2 || arachne->aims != 3 || arachne->mirror != AIM_LEFT)
     {
@@ -109,11 +110,30 @@ bool test_bossdata()
     }
     if (arachne->moving.base != 0 || arachne->moving.lenght != 5 ||
         arachne->attack.base != 15 || arachne->death.base != 30 ||
-        arachne->hurt.base != 45 || arachne->idle.base != 57 || arachne->idle.lenght != 1)
+        arachne->hurt.base != 45 ||
+        arachne->idle.base != arachne->moving.base ||
+        arachne->idle.lenght != arachne->moving.lenght)
     {
         LOGE("bossdata: arachine seq bases wrong: %d/%d/%d/%d/%d",
              arachne->moving.base, arachne->attack.base, arachne->death.base,
              arachne->hurt.base, arachne->idle.base);
+        return false;
+    }
+
+    // sheet pin (bossdata.cpp.audit open item 3): a `>>>sheet N` line
+    // between sections must NOT leak onto the previous boss -- Harpy is
+    // flushed when `>>>sheet 1` + [Beholder] are seen, Beholder when
+    // `>>>sheet 2` + [Arachine] are seen
+    const bossData_t *harpy = getBossData(BOSS_HARPY);
+    const bossData_t *beholder = getBossData(BOSS_BEHOLDER);
+    if (!harpy || harpy->sheet != 0)
+    {
+        LOGE("bossdata: harpy must load on sheet 0, got %d", harpy ? harpy->sheet : -1);
+        return false;
+    }
+    if (!beholder || beholder->sheet != 1)
+    {
+        LOGE("bossdata: beholder must load on sheet 1, got %d", beholder ? beholder->sheet : -1);
         return false;
     }
 

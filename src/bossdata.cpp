@@ -620,6 +620,10 @@ namespace
     struct BossAccum
     {
         std::string name;
+        int sheet = 0; // snapshotted at the section header (parse.py
+                       // seq["sheet"]); NOT the flush-time loader sheet --
+                       // a `>>>sheet N` line between sections would
+                       // otherwise leak onto the previous boss
         std::map<std::string, std::string> fields; // final-name -> raw token
 
         bossData_t build(int sheetIndex, int lineNo) const
@@ -801,7 +805,7 @@ namespace
         {
             if (!seq.fields.empty() || !seq.name.empty())
             {
-                bosses.push_back(seq.build(sheet, lineNo));
+                bosses.push_back(seq.build(seq.sheet, lineNo));
                 namePool.push_back(seq.name);
             }
             seq = BossAccum{};
@@ -867,6 +871,7 @@ namespace
                              sec.c_str(), lineNo);
                     section = sec;
                     seq.name = section;
+                    seq.sheet = sheet; // parse.py: seq["sheet"] = sheet at the header
                     hasSection = true;
                     continue;
                 }
