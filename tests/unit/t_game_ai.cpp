@@ -48,7 +48,7 @@ namespace
 
     // mirrors GamePrivate::RESPAWN_DELAY in game_ai.cpp; 840 also passes the
     // (ticks & RESPAWN_SLICE) spawn gate
-    constexpr int RESPAWN_DELAY = 20;
+    constexpr int RESPAWN_DELAY = 30;
 
     CGame *g_game = nullptr;
 
@@ -655,7 +655,9 @@ namespace
         }
 
         // pretend the monster wandered off so the cell frees up again
+        // (a departing actor restores the tile under it to its PU)
         g_game->getMonsters().clear();
+        CGame::getMap().set(6, 5, TILES_BLANK);
         g_game->rebuildMonsterGrid();
         for (int i = 0; i < RESPAWN_DELAY; ++i)
             g_game->manageSpawns(TICKS_ALL);
@@ -673,6 +675,7 @@ namespace
 
         // attr's active count is spent: never respawns again
         g_game->getMonsters().clear();
+        CGame::getMap().set(6, 5, TILES_BLANK);
         g_game->rebuildMonsterGrid();
         for (int i = 0; i < RESPAWN_DELAY * 2 + 1; ++i)
             g_game->manageSpawns(TICKS_ALL);
@@ -699,13 +702,53 @@ namespace
             return false;
         }
 
-        // free cell: delay is already 0, so the next slice tick spawns
+        // free cell: the delay held during the block still has to elapse
         g_game->getMonsters().clear();
         g_game->rebuildMonsterGrid();
+        for (int i = 0; i < RESPAWN_DELAY; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawns: respawn came too quickly after the block cleared");
+            return false;
+        }
         g_game->manageSpawns(TICKS_ALL);
         if (g_game->getMonsters().size() != 1 || g_game->findMonsterAt(6, 5) == CGame::INVALID)
         {
             LOGE("spawns: no respawn after the cell unblocked");
+            return false;
+        }
+        return true;
+    }
+
+    bool testSpawnsPlayerBlocked()
+    {
+        if (!queueRespawnViaMelt(ATTR_RESPAWN_MIN))
+            return false;
+
+        // a player standing on the spawn point defers the spawn indefinitely
+        g_game->player().move(6, 5);
+        for (int i = 0; i < RESPAWN_DELAY * 2; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawns: spawned on top of the player (count %zu)", g_game->getMonsters().size());
+            return false;
+        }
+
+        // player leaves: the delay held during the block still has to elapse
+        g_game->player().move(8, 8);
+        for (int i = 0; i < RESPAWN_DELAY; ++i)
+            g_game->manageSpawns(TICKS_ALL);
+        if (!g_game->getMonsters().empty())
+        {
+            LOGE("spawns: respawn came too quickly after the player left");
+            return false;
+        }
+        g_game->manageSpawns(TICKS_ALL);
+        if (g_game->findMonsterAt(6, 5) == CGame::INVALID)
+        {
+            LOGE("spawns: no respawn after the player left");
             return false;
         }
         return true;
@@ -1280,6 +1323,7 @@ bool test_game_ai()
         {testBarrelFuse, "barrel fuse"},
         {testSpawns, "spawns"},
         {testSpawnsBlocked, "spawns blocked"},
+        {testSpawnsPlayerBlocked, "spawns blocked by player"},
         {testBossStates, "boss states"},
         {testHiddenBossBlast, "hidden boss blast"},
         {testBossPath, "boss path"},

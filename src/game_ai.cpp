@@ -42,7 +42,7 @@ namespace GamePrivate
         ICE_CUBE_DAMAGE = 16,
         CRUSHER_SPEED_MASK = 3,
         AUTOKILL = -1024,
-        RESPAWN_DELAY = 20,
+        RESPAWN_DELAY = 30,
         RESPAWN_SLICE = 7,
     };
 }
@@ -60,16 +60,21 @@ void CGame::manageSpawns(const uint32_t ticks)
             if (!spawn.active)
                 continue;
 
-            // spawn.debug();
+            // the original cell must be free before it re-spawns: no monster
+            // on it and the player is not standing there (the player is not
+            // in the monster grid). Hold the delay countdown while the cell
+            // is occupied, otherwise it burns to zero during the wait and the
+            // object pops out instantly -- a too-quick secondary respawn --
+            // the moment the cell frees.
+            if (findMonsterAt(spawn.x, spawn.y) != INVALID ||
+                m_player.pos() == Pos{spawn.x, spawn.y})
+                continue;
+
             if (spawn.delay)
             {
                 --spawn.delay;
                 continue;
             }
-
-            int i = findMonsterAt(spawn.x, spawn.y);
-            if (i != INVALID)
-                continue;
 
             --spawn.active;
             spawn.delay = RESPAWN_DELAY;
@@ -238,12 +243,10 @@ void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
                      {
                          (void)type;
                          // type-based like every other player-detection site
-                         return getTileDef(m_map.at(p.x, p.y)).type == TYPE_PLAYER;
-                     },
-                     [&boss, this, &playerDamage, special1Ok](const HitResult &r)
+                         return getTileDef(m_map.at(p.x, p.y)).type == TYPE_PLAYER; }, [&boss, this, &playerDamage, special1Ok](const HitResult &r)
                      {
                          if (r.type == BossData::SPECIAL1 && !special1Ok)
-                             return; // rate-gated: this tick whiffs
+                             return;                                                 // rate-gated: this tick whiffs
                          playerDamage = std::max(boss.damage(r.type), playerDamage); // find player damage
                      });
 
