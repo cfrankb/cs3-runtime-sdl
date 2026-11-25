@@ -27,6 +27,7 @@
 #include "events.h"
 #include "game_auto.h"
 #include "gamesfx.h"
+#include "bossdata.h"
 
 class CGameStats;
 class CMapArch;
@@ -306,7 +307,7 @@ private:
     // boss
     CActor *spawnBullet(int x, int y, JoyAim aim, uint8_t tile);
     void handleBossPath(CBoss &boss);
-    bool handleBossBullet(CBoss &boss);
+    bool handleBossBullet(CBoss &boss, const bulletSpec_t &spec);
     void handleBossHitboxContact(CBoss &boss, uint32_t ticks);
 
     inline static CMap m_map;

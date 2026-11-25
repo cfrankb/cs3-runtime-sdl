@@ -781,6 +781,17 @@ namespace
         return nullptr;
     }
 
+    // first declared BULLET slot with a usable payload (plan
+    // skill-bullet-payload: bullets are skill slots now), nullptr if none
+    static const bossSkill_t *bulletSlot(const bossData_t &d)
+    {
+        for (uint8_t i = 0; i < d.skillCount; ++i)
+            if (g_skillDefs[d.skills[i].skill].kind == SKILL_BULLET &&
+                d.skills[i].bullet.tile != TILES_BLANK && d.skills[i].rate)
+                return &d.skills[i];
+        return nullptr;
+    }
+
     // manageBosses dispatch: Hidden/Death skip, speed gate, patrol->chase
     // (the plan's TTL-removal item does not exist: CBoss::getTTL is a
     // constant NoTTL and manageBosses never erases bosses)
@@ -901,7 +912,8 @@ namespace
         return true;
     }
 
-    // handleBossBullet: chasing boss fires its bullet tile on the rng cadence
+    // handleBossBullet: chasing boss fires its BULLET slot payload on the rng
+    // cadence (plan skill-bullet-payload retire: no legacy `bullet` gate)
     bool testBossBullet()
     {
         const bossData_t *all = bossFixture();
@@ -910,15 +922,17 @@ namespace
         const bossData_t *data =
             pickBoss(all, [](const bossData_t &d)
                      {
-                         return d.bullet != TILES_BLANK && d.bullet_rate > 0 && d.hitbox.height <= 6 &&
+                         return bulletSlot(d) != nullptr && d.hitbox.height <= 6 &&
                                 d.distance_attack >= d.hitbox.height + 1 &&
                                 d.distance_pursuit >= d.distance_attack;
                      });
         if (!data)
         {
-            LOGE("boss bullet: no bossdata fires a bullet within reach of the map centre");
+            LOGE("boss bullet: no bossdata declares a BULLET slot within reach of the map "
+                 "centre (migrate data/bosses/bosses.ini to `skill BULLET` lines?)");
             return false;
         }
+        const uint8_t wantType = getTileDef(bulletSlot(*data)->bullet.tile).type;
         resetWorld();
         auto &bosses = g_game->getBosses();
         bosses.emplace_back(8, 8, data); // half-tile coords: world tile (4,4)
@@ -940,10 +954,10 @@ namespace
             return false;
         }
         const CActor &bullet = g_game->getMonsters().front();
-        if (bullet.type() != getTileDef(data->bullet).type || bullet.x() != 4 || bullet.y() != spawnY)
+        if (bullet.type() != wantType || bullet.x() != 4 || bullet.y() != spawnY)
         {
             LOGE("boss bullet: wrong actor (type 0x%.2x at (%d,%d), want 0x%.2x at (4,%d))",
-                 bullet.type(), bullet.x(), bullet.y(), getTileDef(data->bullet).type, spawnY);
+                 bullet.type(), bullet.x(), bullet.y(), wantType, spawnY);
             return false;
         }
         return true;
@@ -961,7 +975,7 @@ namespace
         const bossData_t *base = pickBoss(
             all, [](const bossData_t &d)
             {
-                return d.is_goal && d.bullet != TILES_BLANK &&
+                return d.is_goal && bulletSlot(d) != nullptr &&
                        d.hitbox.height <= 6 && d.distance_pursuit >= 6;
             });
         if (!base)
@@ -1059,12 +1073,13 @@ namespace
         }
         data.skills[0].rate = 1;
 
-        // --- BULLET slot: casts through handleBossBullet. distance_attack=1
-        // keeps the legacy gate out of reach at 3 tiles, so any bullet is the
-        // slot's cast; Chase state is where both gates live. ---
+        // --- BULLET slot: casts through handleBossBullet. ---
         bossData_t bdata = *base;
         bdata.distance_attack = 1;
         bdata.skillCount = 1;
+        // slots carry their own payload (plan skill-bullet-payload §3);
+        // reuse the fixture boss's own BULLET slot payload
+        bdata.skills[0] = *bulletSlot(*base);
         bdata.skills[0].skill = static_cast<uint8_t>(idxBullet);
         bdata.skills[0].rate = 1;
         const int by = 6;
@@ -1081,7 +1096,7 @@ namespace
                  g_game->getMonsters().size());
             return false;
         }
-        // control: no slot, same setup -> legacy gate out of reach, nothing fires
+        // control: no slot, same setup -> no firing path, nothing fires
         bdata.skillCount = 0;
         resetWorld();
         bosses.emplace_back(12, 12, &bdata);
@@ -1092,6 +1107,41 @@ namespace
         if (!g_game->getMonsters().empty())
         {
             LOGE("skill cast: slot-less boss fired outside the legacy gate");
+            return false;
+        }
+
+        // --- §5 pin (plan skill-bullet-payload): two BULLET slots cast
+        // INDEPENDENT payloads. Both slots aim at the same tile, and
+        // spawnBullet collides on the shared spawn tile, so a tick yields at
+        // most one bullet; the pin is that BOTH payload tiles appear. ---
+        bdata.skillCount = 2;
+        bdata.skills[1] = bdata.skills[0];
+        bdata.skills[1].bullet.tile = TILES_FIREBALL_SM;
+        const uint8_t typeA = getTileDef(bdata.skills[0].bullet.tile).type;
+        const uint8_t typeB = getTileDef(TILES_FIREBALL_SM).type;
+        resetWorld();
+        bosses.emplace_back(12, 12, &bdata);
+        bosses.back().setSpeed(1);
+        g_game->player().move(6, spawnY + 1);
+        bool seenA = false;
+        bool seenB = false;
+        for (uint32_t t = 1; t <= 200 && !(seenA && seenB); ++t)
+        {
+            bosses.back().move(Pos{12, 12});
+            bosses.back().setState(CBoss::BossState::Chase);
+            g_game->manageBosses(t);
+            for (const CActor &m : g_game->getMonsters())
+            {
+                seenA = seenA || m.type() == typeA;
+                seenB = seenB || m.type() == typeB;
+            }
+            g_game->getMonsters().clear();
+            g_game->rebuildMonsterGrid(); // resetWorld's seam: flush cleared actors
+        }
+        if (!seenA || !seenB)
+        {
+            LOGE("skill cast: BULLET slot payloads seen A=%d B=%d within 200 ticks",
+                 seenA, seenB);
             return false;
         }
 

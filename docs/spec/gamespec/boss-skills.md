@@ -28,32 +28,38 @@ Hand-authored `std::vector<bossSkillDef_t>`; rows are looked up by ini token
 | `frames` | sparse per-frame boxes (`sprite_hitbox_t`, keys `baseFrame + rawId`, box `x/y` px offsets from the fx center anchor); absent frames never damage |
 | `firstHitFrame` / `lastHitFrame` | min/max keys, derived at load |
 
-`BULLET` and `SPECIAL1` rows are kind markers only: their payload and attack
-code stay in `bossData_t` (the existing `bullet*` fields and
-`damage_special1`). The registry is a static ini/JSON-loaded table, **not**
-serialized state: no `ENGINE_VERSION` coupling.
+`BULLET` slots carry their full attack payload per slot (`bulletSpec_t
+{ tile, algo, sound, ttl }` inside `bossSkill_t`, plan
+skill-bullet-payload); `SPECIAL1` rows stay kind markers whose damage lives
+in `bossData_t::damage_special1`. The registry is a static ini/JSON-loaded
+table, **not** serialized state: no `ENGINE_VERSION` coupling.
 
 ## 2. Boss slots — `bossData_t::skills` (`src/bossdata.h`)
 
-`bossSkill_t { uint8_t skill /* g_skillDefs index */; uint8_t rate; }`,
-filled from repeated ini lines `skill NAME rate=N` into `skills[0..skillCount)`
-in file order. Cap 4: a 5th line `LOGW` + ignored. Unknown token: `LOGE` +
-entry skipped, counter not advanced. `rate` is the rng gate bound
-(`rng.range(0, rate) == 0` casts; `rate = 0` = declared, never fires —
-`rng.range` degenerates at 0). Bosses without `skill` lines keep
-`skillCount = 0` and legacy behavior byte-identically.
+`bossSkill_t { uint8_t skill /* g_skillDefs index */; uint8_t rate;
+bulletSpec_t bullet; }`, filled from repeated ini lines `skill NAME rate=N`
+(BULLET additionally `skill BULLET rate=N tile=T [algo=A] [sound=S]
+[ttl=T]`) into `skills[0..skillCount)` in file order. Cap 4: a 5th line
+`LOGW` + ignored. Unknown token: `LOGE` + entry skipped, counter not
+advanced. BULLET validity (maintainer ruling 2026-11-25): `tile=` is
+mandatory and non-blank and `rate > 0`, else `LOGE` + entry skipped.
+`rate` is the rng gate bound (`rng.range(0, rate) == 0` casts; `rate = 0` =
+declared, never fires — `rng.range` degenerates at 0; for BULLET, rate 0 is
+rejected at load instead). Bosses without `skill` lines keep
+`skillCount = 0` and cast nothing.
 
 ## 3. Cast trigger (`CGame::manageBosses`, Chase branch)
 
 Per slot: `rng.range(0, rate) != 0` skips (rng seeded `setTick(ticks)` per
-tick, same determinism as the legacy `bullet_rate` gate; `distance_pursuit`
-already holds in Chase).
+tick; `distance_pursuit` already holds in Chase).
 
-- `SKILL_BULLET` -> `handleBossBullet(boss)` unchanged. While a `SKILL_BULLET`
-  slot is declared the legacy fire gate **yields** (no double-fire); slot-less
-  bosses fire exactly as before.
+- `SKILL_BULLET` -> `handleBossBullet(boss, slot.bullet)`: the slot's
+  `tile/algo/sound/ttl` payload spawns edge-aimed from the boss hitbox.
 - `SKILL_SPECIAL1` -> no cast spawn; the slot instead rate-gates the
-  contact hit-test (§4).
+  contact hit-test (§4) and the `BOSS_FLAG_PROXIMITY_ATTACK` lunge: the
+  lunge fires only when a SPECIAL1 slot declares `rate > 0` (maintainer
+  ruling: the flag is about the SPECIAL1 attack sequence, never the
+  retired `bullet` line; slot-less flagged bosses never lunge).
 - `SKILL_FX` -> warn-first cast: with `telegraphTtl > 0`,
   `scheduleFx(effectId, player.x(), player.y(), telegraphTtl)` schedules the
   strike against the tile the player stands on; it spawns there
@@ -103,8 +109,12 @@ skipped. Rows declaring neither source keep no boxes and never damage.
 - The reserved `fxData_t::damage/splashRadius/hitboxes/hitboxCount` fields
   (extended-fx 1.4) stay declared/unused; the consumer above binds the
   registry's `frames`, not the table's.
-- Legacy `bullet*` ini fields and the legacy fire gate are untouched for
-  slot-less bosses.
+- Retired 2026-11-25 (maintainer ruling): the `bullet` ini keyword, the
+  `bossData_t::bullet*` fields and the legacy fire gate are gone — bullet
+  attacks exist only as `skill BULLET` slots. Data trees migrate as
+  `bullet T rate=N algo=A sound=S ttl=T` ->
+  `skill BULLET rate=N tile=T algo=A sound=S ttl=T`; blank-tile rate lines
+  are dropped entirely (proximity cadence comes from the SPECIAL1 slot).
 
 ## 7. Tests
 

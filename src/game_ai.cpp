@@ -170,14 +170,14 @@ void CGame::handleBossPath(CBoss &boss)
     }
 }
 
-bool CGame::handleBossBullet(CBoss &boss)
+bool CGame::handleBossBullet(CBoss &boss, const bulletSpec_t &spec)
 {
     const Pos bw = boss.worldPos(); // Full-tile position (m_x/2, m_y/2)
     const int bx = bw.x;
     const int by = bw.y;
     const CActor &player = m_player;
     CActor *bullet = nullptr;
-    const auto tileID = boss.data()->bullet;
+    const auto tileID = spec.tile;
     const auto &hitbox = boss.hitbox();
 
     if (player.y() < by - hitbox.height)
@@ -198,17 +198,28 @@ bool CGame::handleBossBullet(CBoss &boss)
     }
     if (bullet != nullptr)
     {
-        playSound(boss.data()->bullet_sound);
+        playSound(spec.sound);
         boss.setState(CBoss::BossState::Attack);
         playSound(boss.data()->attack_sound);
-        if (boss.data()->bullet_algo != BossData::Path::NONE)
+        if (spec.algo != BossData::Path::NONE)
         {
-            bullet->startPath(m_player.pos(), boss.data()->bullet_algo, boss.data()->bullet_ttl);
+            bullet->startPath(m_player.pos(), spec.algo, spec.ttl);
         }
 
         return true;
     }
     return false;
+}
+
+// first declared SKILL_SPECIAL1 slot (it parameterizes the contact hit-test
+// and gates the proximity lunge, plan skill-bullet-payload retire);
+// nullptr if none
+static const bossSkill_t *special1Slot(const bossData_t *bd)
+{
+    for (uint8_t i = 0; i < bd->skillCount; ++i)
+        if (g_skillDefs[bd->skills[i].skill].kind == SKILL_SPECIAL1)
+            return &bd->skills[i];
+    return nullptr;
 }
 
 void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
@@ -219,16 +230,8 @@ void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
     // SPECIAL1 contact hits only land on ticks passing rng.range(0, rate),
     // rng re-seeded to the tick like manageBosses. Slot-less bosses, and
     // MAIN/ATTACK/SPECIAL2 hits, are untouched.
-    int special1Rate = -1;
-    for (uint8_t i = 0; i < boss.data()->skillCount; ++i)
-    {
-        const bossSkill_t &slot = boss.data()->skills[i];
-        if (g_skillDefs[slot.skill].kind == SKILL_SPECIAL1)
-        {
-            special1Rate = slot.rate;
-            break;
-        }
-    }
+    const bossSkill_t *s1 = special1Slot(boss.data());
+    const int special1Rate = s1 ? s1->rate : -1;
     bool special1Ok = true;
     if (special1Rate >= 0)
     {
@@ -326,10 +329,6 @@ void CGame::manageBosses(const uint32_t ticks)
         if (boss.state() == CBoss::BossState::Death)
             continue;
 
-        const Pos bw = boss.worldPos(); // Full-tile position (m_x/2, m_y/2)
-        const int bx = bw.x;
-        const int by = bw.y;
-
         // hitbox attack (a SPECIAL1 slot rate-gates the contact hits, §7)
         handleBossHitboxContact(boss, ticks);
 
@@ -354,25 +353,10 @@ void CGame::manageBosses(const uint32_t ticks)
 
             const bossData_t *bd = boss.data();
 
-            // §7: a declared SKILL_BULLET slot takes over firing — the legacy
-            // rate gate yields so a migrated boss cannot double-fire.
-            bool hasBulletSlot = false;
-            for (uint8_t i = 0; i < bd->skillCount; ++i)
-                hasBulletSlot = hasBulletSlot || g_skillDefs[bd->skills[i].skill].kind == SKILL_BULLET;
-
-            if (!hasBulletSlot &&
-                boss.distance(player) <= bd->distance_attack &&
-                bd->bullet != TILES_BLANK)
-            {
-                // Fireball spawning
-                if (rng.range(0, bd->bullet_rate) == 0 && bx > 2 && by > 0)
-                {
-                    handleBossBullet(boss);
-                }
-            }
-
-            // Skill casting: per-slot rng gate, same tick-determinism as the
-            // legacy bullet gate above. distance_pursuit already holds here.
+            // Skill casting (plan §7 + skill-bullet-payload retire): per-slot
+            // rng gate; the old legacy `bullet` rate gate is gone — bullet
+            // attacks are SKILL_BULLET slots now. distance_pursuit already
+            // holds here.
             for (uint8_t i = 0; i < bd->skillCount; ++i)
             {
                 const bossSkill_t &slot = bd->skills[i];
@@ -382,7 +366,7 @@ void CGame::manageBosses(const uint32_t ticks)
                 switch (sk.kind)
                 {
                 case SKILL_BULLET:
-                    handleBossBullet(boss); // reads the boss's own bullet* fields
+                    handleBossBullet(boss, slot.bullet); // per-slot payload (plan §3)
                     break;
                 case SKILL_SPECIAL1:
                     break; // no cast spawn — rate-gates the contact hit-test instead
@@ -402,10 +386,15 @@ void CGame::manageBosses(const uint32_t ticks)
             }
             handleBossPath(boss);
 
-            if ((boss_flags & BOSS_FLAG_PROXIMITY_ATTACK) &&
+            // Proximity lunge (maintainer ruling, plan skill-bullet-payload
+            // retire): the flag is about the SPECIAL1 attack sequence, so
+            // the SPECIAL1 slot's rate gates it — the retired `bullet` line
+            // never fed it. No SPECIAL1 slot (or rate=0) = never lunges.
+            const bossSkill_t *s1 = special1Slot(bd);
+            if ((boss_flags & BOSS_FLAG_PROXIMITY_ATTACK) && s1 && s1->rate > 0 &&
                 boss.state() != CBoss::BossState::Attack &&
                 (boss.distance(player) <= boss.data()->distance_attack) &&
-                rng.range(0, boss.data()->bullet_rate) == 0)
+                rng.range(0, s1->rate) == 0)
             {
                 // NEW: Compute direction to player
                 const Pos boss_pos = boss.worldPos(); // Full-tile position (m_x/2, m_y/2)

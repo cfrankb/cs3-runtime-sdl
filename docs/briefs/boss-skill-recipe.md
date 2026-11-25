@@ -10,7 +10,7 @@ lines. Three kinds:
 
 | kind | when to pick |
 |------|--------------|
-| `SKILL_BULLET` | re-timing an existing bullet attack; payload stays in `bossData_t::bullet*` |
+| `SKILL_BULLET` | boss projectile attack; slot is self-contained (`tile=` mandatory + optional `algo=`/`sound=`/`ttl=`) |
 | `SKILL_SPECIAL1` | rate-gating boss contact damage only |
 | `SKILL_FX` | new tile-targeted animated attack (this recipe) |
 
@@ -111,8 +111,9 @@ Effective dodge window ≈ `telegraphTtl` ticks + hitbox lead-in frames.
 
 Repeated `skill` lines, max 4 per boss, file order = slot order.
 `rate` is the rng gate: each tick in Chase, `rng.range(0, rate) == 0` casts
-(lower = more often; `rate 0` = declared, never fires). Unknown token:
-`LOGE` + skipped. 5th line: `LOGW` + ignored.
+(lower = more often; `rate 0` = declared, never fires — except `BULLET`,
+where rate 0 is rejected at load). Unknown token: `LOGE` + skipped. 5th
+line: `LOGW` + ignored.
 
 ```ini
 [Mr. Demon]
@@ -121,17 +122,22 @@ type            0xb0
 ...
 attack_sound    SOUND_DINOSAUR3
 ...
-skill           BULLET rate=15
+skill           BULLET rate=15 tile=TILES_FIREBALL algo=Path::NONE sound=SOUND_SHOOT3 ttl=NoTTL
 skill           ICE_SPIKES rate=30
 ```
 
 Notes:
 
-- A declared `BULLET` slot takes over firing; the legacy `bullet` rate gate
-  yields (no double-fire). Keep the old `bullet ... rate=` fields filled —
-  the slot reuses them.
-- Bosses with no `skill` lines keep byte-identical legacy behavior; do not
-  "migrate" them as a side effect.
+- `BULLET` slots are self-contained: `tile=` is mandatory and non-blank and
+  `rate > 0`, else the line is skipped with `LOGE`. `algo=`, `sound=`,
+  `ttl=` are optional payload keys. The old standalone `bullet` ini keyword
+  is retired (2026-11-25) — migrate
+  `bullet T rate=N algo=A sound=S ttl=T` ->
+  `skill BULLET rate=N tile=T algo=A sound=S ttl=T`; a blank-tile
+  `bullet TILES_BLANK rate=N` line is dropped entirely (the
+  `BOSS_FLAG_PROXIMITY_ATTACK` lunge is gated by the `SPECIAL1` slot rate,
+  never by bullet data).
+- Bosses with no `skill` lines have no cast attacks.
 
 ## 5. Verify
 

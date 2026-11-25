@@ -111,9 +111,10 @@ struct sprite_hitbox_t
 
 // --- skill registry (plan docs/plans/fx-boss-skills-plan.md §1) ---
 // A SKILL links visual + hit resolution + damage for one castable attack.
-// BULLET/SPECIAL1 are kind markers whose data stays in bossData_t; SKILL_FX
-// entries own the fx id + per-frame hitboxes + damage. Static table,
-// never serialized.
+// SPECIAL1 is a kind marker whose damage stays in bossData_t; SKILL_FX
+// entries own the fx id + per-frame hitboxes + damage; SKILL_BULLET carries
+// its payload per slot (bossSkill_t::bullet, plan skill-bullet-payload).
+// Static table, never serialized.
 enum SkillKind : uint8_t
 {
     SKILL_BULLET,
@@ -154,12 +155,26 @@ const bossSkillDef_t *skillForFx(int effectID);
 // relative to the frame center anchor); missing file warns + keeps empty
 void loadFxSkills(const std::string &fxDir);
 
+// bullet attack payload (plan docs/plans/skill-bullet-payload-plan.md §1),
+// owned by a SKILL_BULLET slot. Built at load, read-only at runtime.
+// Defaults = TILES_BLANK / Path::NONE / SOUND_NONE / NoTTL.
+struct bulletSpec_t
+{
+    uint8_t tile = 0;              // fired tile (TILES_BLANK = slot inert)
+    uint8_t algo = 0;              // BossData::Path value
+    uint8_t sound = 0;             // firing sound
+    int ttl = BossData::NoTTL;     // BossData::NoTTL or tick count
+};
+
 // boss skill slot (plan fx-boss-skills §2): repeated `skill NAME rate=N`
-// ini lines fill skills[0..skillCount), max 4 per boss.
+// ini lines fill skills[0..skillCount), max 4 per boss. SKILL_BULLET slots
+// carry their own payload (plan skill-bullet-payload §1); other kinds keep
+// the zero-default spec.
 struct bossSkill_t
 {
-    uint8_t skill; // index into g_skillDefs (generic kind entry)
-    uint8_t rate;  // use frequency: rng gate 0..rate (1 = often)
+    uint8_t skill = 0; // index into g_skillDefs (generic kind entry)
+    uint8_t rate = 0;  // use frequency: rng gate 0..rate (1 = often)
+    bulletSpec_t bullet; // SKILL_BULLET payload (plan §1)
 };
 
 struct bossData_t
@@ -176,11 +191,6 @@ struct bossData_t
     int damage_special2;  // damage given (special2)
     uint32_t flags;       // custom flags
     uint32_t path;        // path finding algo
-    uint8_t bullet;       // boss bullet
-    uint8_t bullet_rate;  // boss bullet rate (lower = faster)
-    uint8_t bullet_algo;  // bullet algo
-    uint8_t bullet_sound; // bullet firing sound
-    int bullet_ttl;       // bullet timeout (# of moves)
     uint8_t attack_sound; // sound during an attack
     int distance_chase;   // distance to engage chase
     int distance_pursuit; // continue pursuit within distance (chase)

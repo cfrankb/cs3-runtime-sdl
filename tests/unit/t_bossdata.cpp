@@ -24,6 +24,8 @@
 #include "../../src/assetman.h"
 #include "../../src/bossdata.h"
 #include "../../src/joyaim.h"
+#include "../../src/sounds.h"
+#include "../../src/tilesdata.h"
 #include "../../src/gamesfx.h"
 #include "../../src/sfx_private.h"
 #include "t_bossdata.h"
@@ -502,8 +504,9 @@ bool test_bossdata_fxskills()
     return ok;
 }
 
-// ini `skill NAME rate=N` lines (plan fx-boss-skills §2/§3): accumulation,
-// 4-slot cap, unknown-token skip, legacy bullet fields untouched.
+// ini `skill NAME rate=N [tile= algo= sound= ttl=]` lines (plan fx-boss-skills
+// §2/§3 + skill-bullet-payload §2/§4): accumulation, 4-slot cap, unknown-token
+// skip, per-slot bullet payloads, tile/rate/blank-tile validity rules.
 bool test_bossdata_skill_ini()
 {
     namespace fs = std::filesystem;
@@ -513,7 +516,7 @@ bool test_bossdata_skill_ini()
     {
         std::ofstream out(dir + "/bosses.ini");
         out << "[Multi]\ntype 1\nhp 5\nmoving 2\n"
-            << "skill BULLET rate=10\n"
+            << "skill BULLET rate=10 tile=TILES_FIREBALL algo=Path::ASTAR sound=SOUND_SHOOT3 ttl=20\n"
             << "skill SPECIAL1 rate=30\n"
             << "skill LIGHTNING_STRIKE rate=30\n"
             << "skill METEOR rate=45\n"
@@ -522,7 +525,14 @@ bool test_bossdata_skill_ini()
             << "skill HOGBUF rate=7\n" // unknown: skipped
             << "skill METEOR rate=45\n"
             << "[None]\ntype 3\nhp 5\nmoving 2\n"
-            << "bullet TILES_FIREBALL rate=15\n";
+            << "bullet TILES_FIREBALL rate=15\n"
+            << "[Two]\ntype 4\nhp 5\nmoving 2\n"
+            << "skill BULLET rate=40 tile=TILES_BULLETY1 sound=SOUND_NONE ttl=NoTTL\n"
+            << "skill BULLET rate=7 tile=TILES_FIREBALL algo=Path::LOS\n"
+            << "[Inval]\ntype 5\nhp 5\nmoving 2\n"
+            << "skill BULLET rate=12\n"                       // ruling: no tile=, skipped
+            << "skill BULLET rate=5 tile=TILES_BLANK\n"       // ruling: blank tile, skipped
+            << "skill BULLET rate=0 tile=TILES_FIREBALL\n";   // ruling: rate=0, skipped
     }
 
     freeBossData();
@@ -571,12 +581,51 @@ bool test_bossdata_skill_ini()
     const bossData_t *n = getBossData(3);
     if (!n || n->skillCount != 0)
     {
-        LOGE("skill-ini: [None] skillCount %d want 0", n ? n->skillCount : -1);
+        // retired `bullet` keyword: a legacy line must create no slots
+        LOGE("skill-ini: retired bullet keyword applied (count %d)",
+             n ? n->skillCount : -1);
         ok = false;
     }
-    if (n && (n->bullet_rate != 15 || n->bullet == 0))
+
+    // plan skill-bullet-payload §4: merged keys round-trip into the slot
+    if (m && m->skillCount == 4)
     {
-        LOGE("skill-ini: legacy bullet fields broken (rate %d)", n->bullet_rate);
+        const bulletSpec_t &s = m->skills[0].bullet;
+        if (s.tile != TILES_FIREBALL || s.algo != BossData::ASTAR ||
+            s.sound != SOUND_SHOOT3 || s.ttl != 20)
+        {
+            LOGE("skill-ini: [Multi] slot0 payload (tile %d algo %d sound %d ttl %d) wrong",
+                 s.tile, s.algo, s.sound, s.ttl);
+            ok = false;
+        }
+    }
+
+    // two BULLET slots carry independent payloads; legacy gate stays inert
+    const bossData_t *t = getBossData(4);
+    if (!t || t->skillCount != 2)
+    {
+        LOGE("skill-ini: [Two] skillCount %d want 2", t ? t->skillCount : -1);
+        ok = false;
+    }
+    else
+    {
+        const bulletSpec_t &a = t->skills[0].bullet;
+        const bulletSpec_t &b = t->skills[1].bullet;
+        if (a.tile != TILES_BULLETY1 || a.ttl != BossData::NoTTL || a.algo != BossData::NONE ||
+            b.tile != TILES_FIREBALL || b.algo != BossData::LOS || b.ttl != BossData::NoTTL)
+        {
+            LOGE("skill-ini: [Two] payloads not independent");
+            ok = false;
+        }
+    }
+
+    // ruling 2026-11-25: BULLET requires a non-blank tile= and rate>0;
+    // invalid entries are skipped entirely
+    const bossData_t *i = getBossData(5);
+    if (!i || i->skillCount != 0)
+    {
+        LOGE("skill-ini: [Inval] expected invalid BULLET lines skipped, got count %d",
+             i ? i->skillCount : -1);
         ok = false;
     }
 

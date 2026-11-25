@@ -649,14 +649,8 @@ namespace
             d.damage_special2 = toInt(get("damage_special2"), "damage_special2");
             d.flags = resolveFlags(get("flags"));
             d.path = resolvePath(get("path"));
-            d.bullet = resolveTile(get("bullet"));
-            d.bullet_rate = toU8(get("bullet_rate"), "bullet_rate");
-            d.bullet_algo = resolvePath(get("bullet_algo"));
-            d.bullet_sound = resolveSound(get("bullet_sound"));
-            {
-                std::string ttl = get("bullet_ttl");
-                d.bullet_ttl = (ttl == "NoTTL") ? BossData::NoTTL : toInt(ttl, "bullet_ttl");
-            }
+            // retired `bullet` line (plan skill-bullet-payload): payload
+            // and cadence live in the SKILL_BULLET slot spec now
             d.attack_sound = resolveSound(get("attack_sound"));
             d.distance_chase = toInt(get("distance_chase"), "distance_chase");
             d.distance_pursuit = toInt(get("distance_pursuit"), "distance_pursuit");
@@ -771,17 +765,62 @@ namespace
                          name.c_str(), token.c_str());
                     continue;
                 }
+                // skill-bullet-payload plan §2: SKILL_BULLET lines absorb the
+                // legacy bullet keys; tile/algo/sound/ttl fill the slot spec.
+                const bool isBullet =
+                    g_skillDefs[static_cast<size_t>(idx)].kind == SKILL_BULLET;
                 uint8_t rate = 0;
+                bulletSpec_t spec;
+                bool hasTile = false;
                 std::string kv;
                 while (is >> kv)
                 {
                     if (kv.rfind("rate=", 0) == 0)
                         rate = toU8(kv.substr(5), "skill rate");
+                    else if (!isBullet && (kv.rfind("tile=", 0) == 0 || kv.rfind("algo=", 0) == 0 ||
+                                           kv.rfind("sound=", 0) == 0 || kv.rfind("ttl=", 0) == 0))
+                        LOGW("Warning: boss '%s' bullet key '%s' on non-BULLET skill '%s'; ignored\n",
+                             name.c_str(), kv.c_str(), token.c_str());
+                    else if (kv.rfind("tile=", 0) == 0)
+                    {
+                        spec.tile = resolveTile(kv.substr(5));
+                        hasTile = true;
+                    }
+                    else if (kv.rfind("algo=", 0) == 0)
+                        spec.algo = static_cast<uint8_t>(resolvePath(kv.substr(5)));
+                    else if (kv.rfind("sound=", 0) == 0)
+                        spec.sound = resolveSound(kv.substr(6));
+                    else if (kv.rfind("ttl=", 0) == 0)
+                    {
+                        const std::string ttl = kv.substr(4);
+                        spec.ttl = (ttl == "NoTTL") ? BossData::NoTTL : toInt(ttl, "skill ttl");
+                    }
+                    else
+                        LOGW("Warning: boss '%s' unknown key '%s' on skill '%s'; ignored\n",
+                             name.c_str(), kv.c_str(), token.c_str());
+                }
+                // Maintainer ruling 2026-11-25: tile= is mandatory for
+                // SKILL_BULLET, a blank tile is not a valid bullet (blank
+                // legacy lines are eliminated in migration), and rate=0 is
+                // invalid for this kind (other kinds keep "0 = declared,
+                // never cast"). Entry skipped with LOGE, same convention as
+                // unknown skill tokens.
+                if (isBullet && (!hasTile || spec.tile == TILES_BLANK || rate == 0))
+                {
+                    LOGE("Error: boss '%s' skill BULLET on line %d needs non-blank tile= "
+                         "and rate>0; entry skipped\n",
+                         name.c_str(), lineNo);
+                    continue;
                 }
                 d.skills[d.skillCount].skill = static_cast<uint8_t>(idx);
                 d.skills[d.skillCount].rate = rate;
+                if (isBullet)
+                    d.skills[d.skillCount].bullet = spec;
                 ++d.skillCount;
             }
+
+            // retired `bullet` line (plan skill-bullet-payload): payload and
+            // cadence live in the skill slots; no bossData_t bullet fields
 
             return d;
         }
@@ -894,9 +933,11 @@ namespace
                 // boss config
                 const std::string &item = e[0];
 
-                // composite fields: speed, damage, damage_*, distance_*, color_*, bullet_*
+                // composite fields: speed, damage, damage_*, distance_*,
+                // color_* (`bullet` retired into `skill BULLET`, plan
+                // skill-bullet-payload: old lines warn as unknown)
                 if (item == "speed" || item == "damage" || item == "distance" ||
-                    item == "color" || item == "bullet")
+                    item == "color")
                 {
                     for (size_t i = 1; i < e.size(); ++i)
                     {
