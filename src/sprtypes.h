@@ -32,6 +32,7 @@ enum TileAI:uint16_t
     AI_REVERSE                = 0x08,
     AI_SMART                  = 0x10,
     AI_POISON                 = 0x20,
+    AI_GHOST                  = 0x40,
 };
 
 

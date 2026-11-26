@@ -135,7 +135,7 @@ enum Tiles
     TILES_VAMPLANT            = 0x6d,
     TILES_YAHOO               = 0x6e,
     TILES_YIGA                = 0x6f,
-    TILES_YELKILLER           = 0x70,
+    TILES_GHOST               = 0x70,
     TILES_WHTEWORM            = 0x71,
     TILES_ETURTLE             = 0x72,
     TILES_ZOMBIE              = 0x73,

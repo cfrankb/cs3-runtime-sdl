@@ -247,8 +247,8 @@ constexpr const TileDef tileDefs[] = {
     {.flags=0x00, .type=TYPE_MONSTER, .score=0, .health=-6, .speed=4, .ai=7, .hidden=false, .basename="yahoo.obl", .bullet=0, .rate=0, .path=0, .range=0},
     // 6f TILES_YIGA
     {.flags=0x00, .type=TYPE_MONSTER, .score=0, .health=-6, .speed=4, .ai=3, .hidden=false, .basename="yiga.obl", .bullet=0, .rate=0, .path=0, .range=0},
-    // 70 TILES_YELKILLER
-    {.flags=0x00, .type=TYPE_MONSTER, .score=0, .health=-10, .speed=4, .ai=3, .hidden=false, .basename="yelkiller.obl", .bullet=0, .rate=0, .path=0, .range=0},
+    // 70 TILES_GHOST
+    {.flags=0x00, .type=TYPE_MONSTERV3, .score=0, .health=-9, .speed=6, .ai=64, .hidden=false, .basename="ghost.png", .bullet=0, .rate=0, .path=PATH_ASTAR, .range=7},
     // 71 TILES_WHTEWORM
     {.flags=0x8000, .type=TYPE_DRONE, .score=0, .health=-5, .speed=4, .ai=0, .hidden=false, .basename="whteworm.obl", .bullet=0, .rate=0, .path=0, .range=0},
     // 72 TILES_ETURTLE

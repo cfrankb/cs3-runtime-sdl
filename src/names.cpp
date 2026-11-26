@@ -207,7 +207,7 @@ const NameValue kTiles[] = {
     _N(TILES_VAMPLANT),
     _N(TILES_YAHOO),
     _N(TILES_YIGA),
-    _N(TILES_YELKILLER),
+    _N(TILES_GHOST),
     _N(TILES_WHTEWORM),
     _N(TILES_ETURTLE),
     _N(TILES_ZOMBIE),

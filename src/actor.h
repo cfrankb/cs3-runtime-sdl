@@ -160,6 +160,11 @@ private:
     JoyAim m_aim = AIM_NONE;
     // tileID widened to uint16_t (matches uint16_t layer tiles; maintainer
     // ruling 2026-11-18). Wire record widened; ENGINE_VERSION bumped.
+    // m_pu is the tile UNDER the actor (cell content that move() restores
+    // to the vacated cell) -- NOT the actor's own tile. The actor's tile
+    // is the map tile at map.at(m_x, m_y) while it stands (tile-swap
+    // model, see move()). Never derive actor identity (TileDef, AI flags)
+    // from m_pu.
     uint16_t m_pu = 0;
     uint8_t m_attr = 0;
     int32_t m_ttl = 0;
