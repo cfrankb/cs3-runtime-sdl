@@ -21,7 +21,9 @@
 #include <cmath>
 #include <algorithm>
 #include <array>
+#include <functional>
 #include <iterator>
+#include <utility>
 #include "map.h"
 #include "logger.h"
 #include "ai_path.h"
@@ -81,14 +83,14 @@ struct Node
     int fCost() const { return gCost + hCost; }
 };
 
-// Comparator for priority queue (min heap based on fCost)
-struct CompareNode
-{
-    bool operator()(const Node *a, const Node *b) const
-    {
-        return a->fCost() > b->fCost(); // Lower fCost has higher priority
-    }
-};
+// BUG-H17: open-list entries are immutable (fCost, node) snapshots. The
+// openList used to hold live Node* whose key CompareNode read at
+// comparison time; g-cost relaxations then mutated a Node still parked
+// mid-heap, breaching the min-heap invariant so pop() was no longer
+// min-fCost. Snapshot keys + the stale-entry skip on pop keep the heap
+// untouched. Min-heap via std::greater on the pair (fCost first).
+using OpenEntry = std::pair<int, Node *>;
+using OpenList = std::priority_queue<OpenEntry, std::vector<OpenEntry>, std::greater<OpenEntry>>;
 
 int AStar::manhattanDistance(const Pos &a, const Pos &b) const
 {
@@ -114,18 +116,23 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
     }
 
     // Priority queue for open list
-    std::priority_queue<Node *, std::vector<Node *>, CompareNode> openList;
+    OpenList openList;
     std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
     std::unordered_map<Pos, bool> closedList;
 
     // Create start node
     nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
-    openList.push(nodes[startPos].get());
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
 
     while (!openList.empty())
     {
-        Node *current = openList.top();
+        const OpenEntry entry = openList.top();
         openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
 
         // BUG-C9: relaxation re-pushes the same node; skip stale copies
         if (closedList.find(current->pos) != closedList.end())
@@ -197,17 +204,18 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
             if (it == nodes.end())
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
-                openList.push(nodes[newPos].get());
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
             }
             else if (newGCost < it->second->gCost)
             {
                 // BUG-C9: relax in place. Reassigning the unique_ptr here
                 // freed the Node while openList still held its raw pointer.
-                // Re-push the same pointer so the heap sees the improved
-                // fCost; the stale copy is skipped on pop via closedList.
+                // BUG-H17: the heap only holds fCost snapshots now, so the
+                // in-place update cannot corrupt it; push the improved
+                // snapshot and let the stale one be skipped on pop.
                 it->second->gCost = newGCost;
                 it->second->parent = current;
-                openList.push(it->second.get());
+                openList.emplace(it->second->fCost(), it->second.get());
             }
         }
     }
@@ -457,17 +465,22 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
         return {};
     }
 
-    std::priority_queue<Node *, std::vector<Node *>, CompareNode> openList;
+    OpenList openList;
     std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
     std::unordered_map<Pos, bool> closedList;
 
     nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
-    openList.push(nodes[startPos].get());
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
 
     while (!openList.empty())
     {
-        Node *current = openList.top();
+        const OpenEntry entry = openList.top();
         openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
 
         // BUG-C9: relaxation re-pushes the same node; skip stale copies
         if (closedList.find(current->pos) != closedList.end())
@@ -512,15 +525,16 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
             if (it == nodes.end())
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, manhattanDistance(newPos, goalPos), current);
-                openList.push(nodes[newPos].get());
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
             }
             else if (newGCost < it->second->gCost)
             {
                 // BUG-C9: relax in place (see AStar); replacing the unique_ptr
-                // would free the Node still referenced by openList
+                // would free the Node still referenced by openList.
+                // BUG-H17: snapshot keys make the in-place update safe.
                 it->second->gCost = newGCost;
                 it->second->parent = current;
-                openList.push(it->second.get());
+                openList.emplace(it->second->fCost(), it->second.get());
             }
         }
     }

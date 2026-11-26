@@ -24,6 +24,7 @@
 #include "../../src/actor.h"
 #include "../../src/bossdata.h"
 #include "../../src/shared/FileMem.h"
+#include <random>
 #include "t_ai_path.h"
 
 namespace
@@ -183,6 +184,35 @@ bool test_pathfinding()
         if (!checkPath("AStar", sprite, aStar, Pos{2, 5}, Pos{7, 0}, 10) ||
             !checkPath("BFS", sprite, bfs, Pos{2, 5}, Pos{7, 0}, 10))
             return false;
+    }
+
+    // BUG-H17: with snapshot heap keys, A* pop order stays min-fCost, so
+    // its path length must always equal the FIFO (order-immune) BFS one.
+    // Seeded random maps keep the check deterministic.
+    {
+        std::mt19937 rng(20261126);
+        CMap &map = CGame::getMap();
+        for (int trial = 0; trial < 20; ++trial)
+        {
+            map.clear();
+            map.resize(12, 12, 0, true);
+            for (int w = 0; w < 20; ++w)
+                map.set(static_cast<int>(rng() % 12), static_cast<int>(rng() % 12), BLOCKED);
+            const Pos s{static_cast<int16_t>(rng() % 12), static_cast<int16_t>(rng() % 12)};
+            const Pos g{static_cast<int16_t>(rng() % 12), static_cast<int16_t>(rng() % 12)};
+            if (map.at(s.x, s.y) == BLOCKED || map.at(g.x, g.y) == BLOCKED)
+                continue; // start/goal on a wall: both searches agree trivially
+            sprite.move(s);
+            const auto a = aStar.findPath(sprite, g);
+            sprite.move(s);
+            const auto b = bfs.findPath(sprite, g);
+            if (a.size() != b.size())
+            {
+                LOGE("BUG-H17 trial %d: A* %zu steps vs BFS %zu ((%d,%d)->(%d,%d))",
+                     trial, a.size(), b.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+        }
     }
 
     // restore the gap-wall map for the sealed-wall cases below
