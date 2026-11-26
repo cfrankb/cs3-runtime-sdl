@@ -259,6 +259,7 @@ static const std::unordered_map<uint16_t, std::string> g_typesNames = {
     _S(TYPE_BELL),
     _S(TYPE_SWITCH),
     _S(TYPE_PUSHOVER),
+    _S(TYPE_GHOST),
 };
 
 std::string get_tileNames(const uint16_t i)

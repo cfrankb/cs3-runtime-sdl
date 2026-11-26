@@ -4,8 +4,8 @@
 
 | Checkpoint | Value |
 |---|---|
-| Date | 2026-11-23 |
-| Git HEAD | 5944f34 |
+| Date | 2026-11-26 |
+| Git HEAD | 452b7fb |
 | Files tracked | 120 |
 | Covered by cs3-tests | 70 |
 | Verified items | 81 / 120 |
@@ -14,20 +14,20 @@ See [README](README.md) for the verification procedure.
 
 ## src/
 
-- [x] `src/actor.cpp` `59a33422cb233707` — covered by t_actor
-- [x] `src/actor.h` `403d9ae3a540e43f` — covered by t_actor
+- [x] `src/actor.cpp` `b1b1dcdccbf4ecc8` — covered by t_actor, t_game_ai (testGhost)
+- [x] `src/actor.h` `1e32db74757f8a65` — covered by t_actor
 - [x] `src/ai_path.cpp` `11bbea9988b7a104` — covered by t_ai_path, t_actor
 - [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
-- [x] `src/animator.cpp` `ca70bc804d6dfe9b` — covered by t_animator
+- [x] `src/animator.cpp` `4a3e3b0a5c7e1980` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
-- [ ] `src/animzdata.h` `722a3035388bf09b`
+- [ ] `src/animzdata.h` `69dd22ca3d973aad`
 - [x] `src/assetman.cpp` `fd156396d2a83648` — covered by t_assetman
 - [x] `src/assetman.h` `7d4bc0e19fe999a5` — covered by t_assetman
 - [ ] `src/attr.h` `f0c08c2f780a05dc`
 - [x] `src/boss.cpp` `05e6d8c2aa7eea77` — covered by t_boss
 - [x] `src/boss.h` `727822c522dfc644` — covered by t_boss
-- [x] `src/bossdata.cpp` `92d7d72f4b013414` — covered by t_bossdata
-- [x] `src/bossdata.h` `088bb84a486fdd8c` — covered by t_bossdata
+- [x] `src/bossdata.cpp` `c673a0723b32bcde` — covered by t_bossdata
+- [x] `src/bossdata.h` `baf4e9482e618ba9` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
 - [ ] `src/chars.h` `0982da541f3fc76e`
 - [ ] `src/color.h` `b24ca2504f97fa00`
@@ -38,20 +38,20 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/dirs.h` `0709071e265a3ba5`
 - [x] `src/engine.cpp` `d39ef8b69fd14658` — covered by t_engine
 - [x] `src/engine.h` `f2b563cae9221227` — covered by t_engine
-- [ ] `src/engine_hw.cpp` `df1a6bd85ee8a0fe`
+- [ ] `src/engine_hw.cpp` `37e7ff52e065a8d1`
 - [ ] `src/engine_hw.h` `448192bd6b62d8d6`
 - [x] `src/events.h` `8e95ab7a8da5846b` — covered by t_game (EVENT_POISON in testPoisonDrain)
 - [ ] `src/filemacros.h` `93c1e202b31182e6`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
-- [x] `src/game.cpp` `03028c93401d8e0c` — covered by t_runtime, t_game, t_fx
-- [x] `src/game.h` `28bfd6dfadf8dc32` — covered by t_runtime, t_game, t_fx
-- [x] `src/game_ai.cpp` `43f5eb03ff18e095` — covered by t_game_ai
+- [x] `src/game.cpp` `81800167137d6260` — covered by t_runtime, t_game, t_fx
+- [x] `src/game.h` `0228210c5d8dd2ab` — covered by t_runtime, t_game, t_fx
+- [x] `src/game_ai.cpp` `1cd01c27a307bd60` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
-- [x] `src/gamemixin.cpp` `9bdeb7cc4b6db567` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
+- [x] `src/gamemixin.cpp` `01690501ba031e56` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
 - [x] `src/gamemixin.h` `6cbb7c5499bcff6d` — covered by t_runtime, t_gamemixin
 - [x] `src/gamesfx.cpp` `11ce9fbe213dd030` — covered by t_fx
-- [x] `src/gamesfx.h` `f5884a0fd32b41ee` — covered by t_fx
+- [x] `src/gamesfx.h` `298d207f0a87577a` — covered by t_fx
 - [x] `src/gamestats.cpp` `4db1f2aa2f3f3c4b` — covered by t_gamestats
 - [x] `src/gamestats.h` `db36a8378baf9128` — covered by t_gamestats
 - [x] `src/gameui.cpp` `00334bc49c514026` — covered by t_gameui
@@ -75,9 +75,9 @@ See [README](README.md) for the verification procedure.
 - [x] `src/menu.h` `f4cf9a46341c10c7` — covered by t_menu
 - [x] `src/menuitem.cpp` `58a52b5b43909d52` — covered by t_menu
 - [x] `src/menuitem.h` `55e29074aba864ae` — covered by t_menu
-- [x] `src/menumanager.cpp` `db629a80792eaa07` — covered by t_menu
+- [x] `src/menumanager.cpp` `ee098d968c967064` — covered by t_menu
 - [x] `src/menumanager.h` `2dc722c339a62c28` — covered by t_menu
-- [x] `src/names.cpp` `5a20574b700bf9b8` — covered by t_tables
+- [x] `src/names.cpp` `4f3f555bc18d29b3` — covered by t_tables
 - [x] `src/names.h` `4abc4fbcaaecaa2a` — covered by t_tables
 - [x] `src/parseargs.cpp` `d4fa1a4d9aa0f9cf` — covered by t_parseargs
 - [x] `src/parseargs.h` `3f41edcb703df911` — covered by t_parseargs
@@ -93,7 +93,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/sfx_public.h` `e4f24fc78880f557`
 - [x] `src/skills.h` `a8005be0043d59a7` — covered by t_gamestats, t_runtime
 - [ ] `src/sounds.h` `ac00a2436762f36c`
-- [ ] `src/sprtypes.h` `7fffee572ea4557f`
+- [ ] `src/sprtypes.h` `e375128c41b3ea93`
 - [x] `src/statedata.cpp` `406688e893ab4afa` — covered by t_statedata
 - [x] `src/statedata.h` `6bc791e225d46ed0` — covered by t_statedata
 - [x] `src/states.cpp` `e224af3f495c6aa0` — covered by t_states, t_stateparser
@@ -104,13 +104,13 @@ See [README](README.md) for the verification procedure.
 - [x] `src/strhelper.h` `faa42b2398e7575a` — covered by t_strhelper
 - [ ] `src/summary.h` `1ffe8d997dfe07f3`
 - [ ] `src/theme.h` `cac18f341241b32f`
-- [x] `src/tilesdata.cpp` `c34c94acd89f2389` — covered by t_tables
-- [x] `src/tilesdata.h` `addedd5707c8cbb4` — covered by t_tables
-- [ ] `src/tilesdebug.cpp` `05d22ed194f1410f`
+- [x] `src/tilesdata.cpp` `2549059f807c812f` — covered by t_tables
+- [x] `src/tilesdata.h` `8028d705bf4df5bb` — covered by t_tables
+- [ ] `src/tilesdebug.cpp` `14edeca99df67c67`
 - [ ] `src/tilesdebug.h` `3c82e45296d77958`
 - [ ] `src/tilesdefs.h` `56cf1fccc1e5663e`
 - [ ] `src/tileset_tex.cpp` `477ca1a3f2b9a400`
-- [ ] `src/tileset_tex.h` `903352359299831f`
+- [ ] `src/tileset_tex.h` `bd3fbed9186d7742`
 
 ## src/shared/
 

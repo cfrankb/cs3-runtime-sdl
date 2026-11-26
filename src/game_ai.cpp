@@ -471,7 +471,7 @@ void CGame::manageMonsters(const uint32_t ticks)
         {
             handleMonster(actor, def);
         }
-        else if (actor.type() == TYPE_MONSTERV3)
+        else if (actor.type() == TYPE_MONSTERV3 || actor.type() == TYPE_GHOST)
         {
             handleMonsterV3(actor, def, ticks);
         }
@@ -587,7 +587,7 @@ void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ti
         }
     }
 
-    if (actor.type() == TYPE_MONSTERV3)
+    if (actor.type() == TYPE_MONSTERV3 || actor.type() == TYPE_GHOST)
     {
         int distance = actor.distance(m_player);
         if (distance < def.range)
@@ -843,6 +843,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
                              actor.type() == TYPE_DRONE ||
                              actor.type() == TYPE_VAMPLANT ||
                              actor.type() == TYPE_MONSTERV3 ||
+                             actor.type() == TYPE_GHOST ||
                              actor.type() == TYPE_EGG)
                     {
                         // kill mob monsters

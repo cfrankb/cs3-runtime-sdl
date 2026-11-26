@@ -1,7 +1,10 @@
 # Plan: wire TILES_GHOST — AI_GHOST wall-phasing TYPE_MONSTERV3
 
 Date: 2026-11-26
-Status: proposed
+Status: **Implemented** 2026-11-26 — ghost gate in `CActor::canMove`
+(`src/actor.cpp`), `testGhost` pins (`tests/unit/t_game_ai.cpp`), spec
+`docs/spec/gamespec/ghost-ai.md`, compliance checkpoint 2026-11-26
+(`src-checklist.md`, 112/112 ctest).
 Goal: a mob placed as `TILES_GHOST` path-finds to the player with
 `AI_GHOST` and, when that flag is set, `TYPE_MONSTERV3` movement ignores
 solid walls.

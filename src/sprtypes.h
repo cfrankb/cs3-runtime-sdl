@@ -100,5 +100,6 @@ enum TileType:uint8_t
     TYPE_BELL                 = 0x15,
     TYPE_SWITCH               = 0x16,
     TYPE_PUSHOVER             = 0x17,
+    TYPE_GHOST                = 0x18,
 };
 

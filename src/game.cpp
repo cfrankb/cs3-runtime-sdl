@@ -711,7 +711,7 @@ void CGame::setMapArch(CMapArch *arch)
 
 bool CGame::isMonsterType(const uint8_t typeID) const
 {
-    static constexpr std::array<uint8_t, 10> monsterTypes = {
+    static constexpr std::array<uint8_t, 11> monsterTypes = {
         TYPE_MONSTER,
         TYPE_VAMPLANT,
         TYPE_DRONE,
@@ -722,6 +722,7 @@ bool CGame::isMonsterType(const uint8_t typeID) const
         TYPE_BARREL,
         TYPE_EGG,
         TYPE_MONSTERV3,
+        TYPE_GHOST,
     };
 
     for (size_t i = 0; i < monsterTypes.size(); ++i)

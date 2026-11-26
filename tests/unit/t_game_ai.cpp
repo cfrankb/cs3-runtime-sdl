@@ -358,6 +358,78 @@ namespace
         return true;
     }
 
+    bool testGhost()
+    {
+        // Ghost gate (TYPE_GHOST): the ghost may enter the solid cell, a
+        // MONSTERV3 with the AI_GHOST flag but not the type may not.
+        resetWorld();
+        CActor &ghost = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 6, TILES_STOP);
+        if (!ghost.canMove(AIM_DOWN))
+        {
+            LOGE("ghost: refuses entry into solid cell");
+            return false;
+        }
+
+        resetWorld();
+        const uint16_t plainV3 = tileOf(TYPE_MONSTERV3, 0, AI_GHOST);
+        CActor &dragon = spawn(plainV3, TYPE_MONSTERV3, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 6, TILES_STOP);
+        if (dragon.canMove(AIM_DOWN))
+        {
+            LOGE("ghost: MONSTERV3 with only the AI_GHOST flag entered solid cell");
+            return false;
+        }
+
+        // water and deadly stay refused for the ghost
+        resetWorld();
+        CActor &ghost2 = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 6, tileOf(TYPE_SWAMP));
+        if (ghost2.canMove(AIM_DOWN))
+        {
+            LOGE("ghost: crosses water");
+            return false;
+        }
+
+        // never steps onto a monster-occupied cell (occupancy is the
+        // stamped tile under the swap model)
+        resetWorld();
+        CActor &ghost3 = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 6, TILES_ZOMBIE);
+        if (ghost3.canMove(AIM_DOWN))
+        {
+            LOGE("ghost: steps onto monster-occupied tile");
+            return false;
+        }
+
+        // never steps onto an attr-stamped cell (its tile would be
+        // overwritten by the logic owning the attr)
+        resetWorld();
+        CActor &ghost4 = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_DOWN);
+        CGame::getMap().setAttr(5, 6, ATTR_IDLE_MIN + 1);
+        if (ghost4.canMove(AIM_DOWN))
+        {
+            LOGE("ghost: steps onto attr-stamped cell");
+            return false;
+        }
+
+        // end-to-end: A* path leads the ghost straight through a
+        // 1-tile-thick wall toward the player (TICKS_ALL passes speed 6)
+        resetWorld();
+        CActor &ghost5 = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_DOWN);
+        CGame::getMap().set(5, 6, TILES_STOP);
+        g_game->player().move(5, 7); // distance 2 < range 7
+        g_game->manageMonsters(TICKS_ALL);
+        if (!expectPos("ghost: paths through wall", ghost5, 5, 6) ||
+            CGame::getMap().at(5, 6) != TILES_GHOST)
+        {
+            LOGE("ghost: did not phase into wall cell from (5,5) (tile 0x%.2x)",
+                 CGame::getMap().at(5, 6));
+            return false;
+        }
+        return true;
+    }
+
     bool testVamPlant()
     {
         // propagates into adjacent swamp tile
@@ -1406,6 +1478,7 @@ bool test_game_ai()
         {testCrusher, "crusher"},
         {testIceCube, "icecube"},
         {testMonsterV3, "monsterV3"},
+        {testGhost, "ghost"},
         {testVamPlant, "vamplant"},
         {testEggHatch, "egg hatch"},
         {testBullet, "bullet"},

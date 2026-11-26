@@ -172,17 +172,36 @@ bool CActor::canMove(const JoyAim aim) const
     }
 
     const CGame *game = CGame::getGame();
+    // Ghost (TILES_GHOST, TileDef type TYPE_GHOST): phases through solid
+    // and granular cells only. Identity is the actor's own type, which
+    // pathfinding probes keep (they teleport the sprite without a map
+    // swap, so map.at(m_x, m_y) would not). Water/deadly, attr-stamped
+    // cells (idles/crushers/spawners (re-)stamp those cells and would
+    // clobber the ghost's own tile) and monster-occupied cells stay
+    // refused.
+    const bool ghost = m_type == TYPE_GHOST;
     scan_t result = game->scanPos(newPos, aim);
-    if (result.isSolid)
+    if (result.isSolid && !ghost)
         return false;
     else if ((result.isWater || result.isDeadly) && m_type != TYPE_PLAYER)
         return false;
-    if (game->isGranularSolidFromPos(pos, aim))
+    if (!ghost && game->isGranularSolidFromPos(pos, aim))
+        return false;
+    if (ghost && map.getAttr(newPos.x, newPos.y) != 0)
         return false;
 
     const uint16_t c = map.at(newPos.x, newPos.y);
     const TileDef &def = getTileDef(c);
-    if (def.type == TYPE_BACKGROUND)
+    // Never over another monster: the swap model stamps each occupant's
+    // tile into its cell, so isMonsterType() is the occupancy test.
+    if (ghost &&
+        def.type != TYPE_SWAMP &&
+        def.type != TYPE_PLAYER &&
+        !game->isMonsterType(def.type))
+    {
+        return true;
+    }
+    else if (def.type == TYPE_BACKGROUND)
     {
         return true;
     }
@@ -208,13 +227,14 @@ bool CActor::canMove(const JoyAim aim) const
         if (def.type == TYPE_PLAYER)
             return true;
     }
-    else if (m_type == TYPE_MONSTERV3)
+    else if (m_type == TYPE_MONSTERV3 || m_type == TYPE_GHOST)
     {
         // The player's tile is stamped on the map at their cell, so without
-        // this the A* goal is unreachable and MONSTERV3 never paths to the
-        // player (it stood still firing forever). CPath::followPath refuses
-        // the actual final step; the AI_STICKY contact damage in
-        // handleMonsterV3 is what halts the monster at the player.
+        // this the A* goal is unreachable and the monster never paths to
+        // the player (it stood still firing forever). CPath::followPath
+        // refuses the actual final step and shadowActorMove guards the same
+        // cell; the contact damage in handleMonsterV3 is what halts the
+        // monster at the player.
         if (def.type == TYPE_PLAYER)
             return true;
     }

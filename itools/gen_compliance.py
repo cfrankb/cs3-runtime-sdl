@@ -20,7 +20,7 @@ OUT = ROOT / "docs" / "compliance" / "src-checklist.md"
 COVERED = {
     "src/boss": "t_boss",
     "src/bossdata": "t_bossdata",
-    "src/actor": "t_actor",
+    "src/actor": "t_actor, t_game_ai",
     "src/ai_path": "t_ai_path, t_actor",
     "src/assetman": "t_assetman",
     "src/names": "t_tables",
