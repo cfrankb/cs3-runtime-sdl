@@ -39,6 +39,8 @@ namespace
             resolvePath("BFS") != BossData::BFS ||
             resolvePath("LOS") != BossData::LOS ||
             resolvePath("ASTAR_SMOOTH") != BossData::ASTAR_SMOOTH ||
+            resolvePath("DIJKSTRA") != BossData::DIJKSTRA ||
+            resolvePath("Path::DIJKSTRA") != BossData::DIJKSTRA ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");

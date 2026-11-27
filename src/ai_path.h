@@ -58,6 +58,13 @@ private:
                       std::vector<JoyAim> &steps) const;
 };
 
+// Dijkstra (uniform-cost) Pathfinding class: A* with h = 0
+class Dijkstra : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
 // BFS Pathfinding class
 class BFS : public IPath
 {

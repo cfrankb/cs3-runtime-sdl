@@ -158,6 +158,7 @@ bool test_pathfinding()
     TestSprite sprite;
     const AStar aStar;
     const AStarSmooth aStarSmooth;
+    const Dijkstra dijkstra;
     const BFS bfs;
     const LineOfSight los;
 
@@ -166,6 +167,7 @@ bool test_pathfinding()
     const Pos goal{4, 1};
     if (!checkPath("AStar", sprite, aStar, start, goal, 3) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, start, goal, 3) ||
+        !checkPath("Dijkstra", sprite, dijkstra, start, goal, 3) ||
         !checkPath("BFS", sprite, bfs, start, goal, 3))
         return false;
 
@@ -177,6 +179,7 @@ bool test_pathfinding()
     wallColumn(1, 0, 2);
     if (!checkPath("AStar", sprite, aStar, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10) ||
+        !checkPath("Dijkstra", sprite, dijkstra, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, Pos{0, 0}, Pos{4, 0}, 10))
         return false;
 
@@ -233,6 +236,16 @@ bool test_pathfinding()
             {
                 LOGE("BUG-H17 trial %d: A* %zu steps vs BFS %zu ((%d,%d)->(%d,%d))",
                      trial, a.size(), b.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // Dijkstra equivalence: the h=0 copy must agree with A* on
+            // reachability and optimal length on every map
+            sprite.move(s);
+            const auto d = dijkstra.findPath(sprite, g);
+            if (d.size() != a.size() || d.empty() != a.empty())
+            {
+                LOGE("Dijkstra fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                     trial, d.size(), a.size(), s.x, s.y, g.x, g.y);
                 return false;
             }
         }
@@ -332,7 +345,8 @@ bool test_pathfinding()
     wallColumn(1, 3, 9);
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{4, 0}).empty() ||
-        !bfs.findPath(sprite, Pos{4, 0}).empty())
+        !bfs.findPath(sprite, Pos{4, 0}).empty() ||
+        !dijkstra.findPath(sprite, Pos{4, 0}).empty())
     {
         LOGE("sealed wall: expected no path");
         return false;
@@ -342,9 +356,17 @@ bool test_pathfinding()
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
         !bfs.findPath(sprite, Pos{-1, 0}).empty() ||
+        !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
         !los.findPath(sprite, Pos{0, 99}).empty())
     {
         LOGE("out-of-bounds goal returned a path");
+        return false;
+    }
+
+    // registry: DIJKSTRA must resolve to the const instance
+    if (CPath::getPathAlgo(BossData::DIJKSTRA) == nullptr)
+    {
+        LOGE("getPathAlgo(DIJKSTRA) returned null");
         return false;
     }
 

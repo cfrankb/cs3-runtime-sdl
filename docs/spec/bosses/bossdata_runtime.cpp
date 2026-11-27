@@ -382,6 +382,7 @@ namespace
         {"BFS", BossData::BFS},
         {"LOS", BossData::LOS},
         {"ASTAR_SMOOTH", BossData::ASTAR_SMOOTH},
+        {"DIJKSTRA", BossData::DIJKSTRA},
     };
 
     const NameValue kTiles[] = {

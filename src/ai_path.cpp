@@ -36,6 +36,7 @@ namespace PathData
 {
     const AStar aStar;
     const AStarSmooth aStarSmooth;
+    const Dijkstra dijkstra;
     const BFS bFS;
     const LineOfSight lineOfSight;
 
@@ -204,6 +205,134 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
             if (it == nodes.end())
             {
                 nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // BUG-C9: relax in place. Reassigning the unique_ptr here
+                // freed the Node while openList still held its raw pointer.
+                // BUG-H17: the heap only holds fCost snapshots now, so the
+                // in-place update cannot corrupt it; push the improved
+                // snapshot and let the stale one be skipped on pop.
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.emplace(it->second->fCost(), it->second.get());
+            }
+        }
+    }
+    // No path found
+    return directions; // Empty if no path found
+}
+
+// ponytail: byte-identical to AStar::findPath with h = 0 (the reference
+// searcher). If a second heuristic-free searcher is ever needed, share one
+// impl via an hCost lambda instead of adding a third copy.
+std::vector<JoyAim> Dijkstra::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    std::vector<JoyAim> directions;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Priority queue for open list
+    OpenList openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+
+    // Create start node (hCost = 0: uniform-cost search)
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, 0, nullptr);
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
+
+    while (!openList.empty())
+    {
+        const OpenEntry entry = openList.top();
+        openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
+
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
+        // Reached goal
+        if (current->pos == goalPos)
+        {
+            // Convert path to directions
+            Node *node = current;
+            std::vector<Pos> path;
+            while (node != nullptr)
+            {
+                path.push_back(node->pos);
+                node = node->parent;
+            }
+            std::reverse(path.begin(), path.end());
+
+            // Convert positions to directions
+            for (size_t i = 1; i < path.size(); ++i)
+            {
+                int dx = path[i].x - path[i - 1].x;
+                int dy = path[i].y - path[i - 1].y;
+                if (dx == 1 && dy == 0)
+                    directions.push_back(JoyAim::AIM_RIGHT);
+                else if (dx == -1 && dy == 0)
+                    directions.push_back(JoyAim::AIM_LEFT);
+                else if (dx == 0 && dy == 1)
+                    directions.push_back(JoyAim::AIM_DOWN);
+                else if (dx == 0 && dy == -1)
+                    directions.push_back(JoyAim::AIM_UP);
+                else
+                {
+                    LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                         path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                    return {};
+                }
+            }
+            return directions;
+        }
+
+        closedList[current->pos] = true;
+
+        // Explore neighbors
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current->pos.y + g_steps[i].delta.y)};
+
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (!canStep)
+                continue;
+
+            int newGCost = current->gCost + 1;
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, 0, current);
                 openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
             }
             else if (newGCost < it->second->gCost)
@@ -758,6 +887,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::ASTAR_SMOOTH)
     {
         return &PathData::aStarSmooth;
+    }
+    else if (algo == BossData::DIJKSTRA)
+    {
+        return &PathData::dijkstra;
     }
     else
     {

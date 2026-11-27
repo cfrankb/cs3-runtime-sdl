@@ -1,6 +1,6 @@
 # Implementation Plan: Dijkstra path algorithm (Path::DIJKSTRA)
 
-Status: proposed
+Status: implemented (2026-11-26)
 Date: 2026-11-26
 Model: existing `AStar` in `src/ai_path.cpp` (lines 98–216)
 

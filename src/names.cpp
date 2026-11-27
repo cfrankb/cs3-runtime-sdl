@@ -92,6 +92,7 @@ const NameValue kPaths[] = {
     _N(BFS),
     _N(LOS),
     _N(ASTAR_SMOOTH),
+    _N(DIJKSTRA),
 };
 
 const NameValue kTiles[] = {
