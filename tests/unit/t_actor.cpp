@@ -120,6 +120,7 @@ bool test_path_algos()
         {BossData::FLOWFIELD, "FLOWFIELD"},
         {BossData::THETASTAR, "THETASTAR"},
         {BossData::RAYCAST, "RAYCAST"},
+        {BossData::RAYCAST_BULLET, "RAYCAST_BULLET"},
     };
     for (const auto &v : valid)
     {

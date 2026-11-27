@@ -162,6 +162,7 @@ bool test_pathfinding()
     const BFS bfs;
     const LineOfSight los;
     const Raycast raycast;
+    const RaycastBullet raycastBullet;
     const FlowField flowField;
     const ThetaStar thetaStar;
 
@@ -192,6 +193,52 @@ bool test_pathfinding()
         if (raycast.findPath(sprite, Pos{4, 4}) != want)
         {
             LOGE("Raycast diagonal: unexpected aim sequence");
+            return false;
+        }
+    }
+
+    // RaycastBullet (Amanatides & Woo DDA): exact 45-degree rays and axis
+    // runs match Raycast; steeper slopes differ from the Bresenham
+    // staircase in step ORDER (the bullet's collision-cell sequence).
+    // Discriminator (0,0)->(1,3): the center-to-center line is still in
+    // column 0 at row 1, so DDA gives D D R D while Raycast's balanced
+    // staircase detours through the never-touched cell (1,1) with D R D D.
+    if (!checkPath("RaycastBullet", sprite, raycastBullet, Pos{2, 2}, Pos{6, 2}, 4) ||
+        !checkPath("RaycastBullet", sprite, raycastBullet, Pos{1, 1}, Pos{4, 4}, 6))
+        return false;
+    {
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> want{AIM_DOWN, AIM_DOWN, AIM_RIGHT, AIM_DOWN};
+        if (raycastBullet.findPath(sprite, Pos{1, 3}) != want)
+        {
+            LOGE("RaycastBullet discriminator: (0,0)->(1,3) is not the DDA order D D R D");
+            return false;
+        }
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> stair{AIM_DOWN, AIM_RIGHT, AIM_DOWN, AIM_DOWN};
+        if (raycast.findPath(sprite, Pos{1, 3}) != stair)
+        {
+            LOGE("Raycast discriminator: (0,0)->(1,3) lost its Bresenham staircase order");
+            return false;
+        }
+        // exact-corner ties take x first (supercover: both corner-adjacent
+        // cells visited, a bullet never leaks through a diagonal wall seam)
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> diag{AIM_RIGHT, AIM_DOWN, AIM_RIGHT,
+                                       AIM_DOWN, AIM_RIGHT, AIM_DOWN};
+        if (raycastBullet.findPath(sprite, Pos{3, 3}) != diag)
+        {
+            LOGE("RaycastBullet corner diagonal: unexpected aim sequence");
+            return false;
+        }
+        // sign coverage: dx=3 dy=2 up-left slope (0x55 ladder), mirror of
+        // the down-right (3,2) case
+        sprite.move(Pos{3, 3});
+        const std::vector<JoyAim> upLeft{AIM_LEFT, AIM_DOWN, AIM_LEFT,
+                                         AIM_LEFT, AIM_DOWN};
+        if (raycastBullet.findPath(sprite, Pos{0, 5}) != upLeft)
+        {
+            LOGE("RaycastBullet (3,3)->(0,5): unexpected aim sequence");
             return false;
         }
     }
@@ -289,6 +336,18 @@ bool test_pathfinding()
             {
                 LOGE("ThetaStar fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
                      trial, ts.size(), a.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // RaycastBullet parity: the DDA ray has no wall semantics, so
+            // it must always emit exactly the Raycast step count (dx+dy)
+            sprite.move(s);
+            const auto rb = raycastBullet.findPath(sprite, g);
+            sprite.move(s);
+            const auto rc = raycast.findPath(sprite, g);
+            if (rb.size() != rc.size() || rb.empty() != rc.empty())
+            {
+                LOGE("RaycastBullet fuzz trial %d: %zu steps vs Raycast %zu ((%d,%d)->(%d,%d))",
+                     trial, rb.size(), rc.size(), s.x, s.y, g.x, g.y);
                 return false;
             }
         }
@@ -429,6 +488,14 @@ bool test_pathfinding()
                  ray.size());
             return false;
         }
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> diag{AIM_RIGHT, AIM_DOWN, AIM_RIGHT,
+                                       AIM_DOWN, AIM_RIGHT, AIM_DOWN};
+        if (raycastBullet.findPath(sprite, Pos{3, 3}) != diag)
+        {
+            LOGE("sealed wall: raycastBullet must stay geometric (full 6-step diagonal)");
+            return false;
+        }
     }
 
     // out-of-bounds goal must return empty, not crash
@@ -439,7 +506,8 @@ bool test_pathfinding()
         !thetaStar.findPath(sprite, Pos{99, 99}).empty() ||
         !flowField.findPath(sprite, Pos{99, 99}).empty() ||
         !los.findPath(sprite, Pos{0, 99}).empty() ||
-        !raycast.findPath(sprite, Pos{99, 99}).empty())
+        !raycast.findPath(sprite, Pos{99, 99}).empty() ||
+        !raycastBullet.findPath(sprite, Pos{99, 99}).empty())
     {
         LOGE("out-of-bounds goal returned a path");
         return false;
@@ -447,7 +515,8 @@ bool test_pathfinding()
 
     // Raycast start == goal: empty aim list (nothing to fly)
     sprite.move(Pos{5, 5});
-    if (!raycast.findPath(sprite, Pos{5, 5}).empty())
+    if (!raycast.findPath(sprite, Pos{5, 5}).empty() ||
+        !raycastBullet.findPath(sprite, Pos{5, 5}).empty())
     {
         LOGE("Raycast start==goal returned a path");
         return false;
@@ -472,6 +541,11 @@ bool test_pathfinding()
     if (CPath::getPathAlgo(BossData::RAYCAST) == nullptr)
     {
         LOGE("getPathAlgo(RAYCAST) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::RAYCAST_BULLET) == nullptr)
+    {
+        LOGE("getPathAlgo(RAYCAST_BULLET) returned null");
         return false;
     }
 

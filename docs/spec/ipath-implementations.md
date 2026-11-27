@@ -21,7 +21,8 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 [ai_path.cpp audit](../audits/finalized/ai_path.cpp.audit.md),
 [AStarSmooth fix plan](../plans/archive/fix-astar-smooth-plan.md),
 [Dijkstra plan](../plans/archive/dijkstra-plan.md),
-[FlowField plan](../plans/archive/flow-fields-plan.md).
+[FlowField plan](../plans/archive/flow-fields-plan.md),
+[RaycastBullet plan](../plans/archive/raycast-bullet-plan.md).
 
 ## 1. Inventory (2026-11-27)
 
@@ -35,6 +36,7 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 | `FlowField` | `FLOWFIELD` | `Path::FLOWFIELD` | reverse BFS from the goal over the whole reachable region, then gradient descent | optimal (fewest steps) | none (available; payoff is many-agents-one-goal) |
 | `ThetaStar` | `THETASTAR` | `Path::THETASTAR` | A* with line-of-sight-grandparent relaxation, Manhattan costs | optimal length, straighter shape | none yet |
 | `Raycast` | `RAYCAST` | `Path::RAYCAST` | Bresenham ray toward the goal; no walkability probe, no fallback | straight sight ray; ends at the first wall at runtime | bullet attacks (`skill BULLET ... algo=RAYCAST`) |
+| `RaycastBullet` | `RAYCAST_BULLET` | `Path::RAYCAST_BULLET` | Amanatides & Woo DDA traversal of the segment; no walkability probe, no fallback | exact supercover sight ray (cells the line actually enters); ends at the first wall at runtime | none yet (available for bullets) |
 
 All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 `kPaths[]` / `resolvePath()`.
@@ -136,6 +138,35 @@ would instead exhaust into `NoValidPath` and park a `NoTTL` bullet at the
 wall forever. Use for fire-and-forget straight-shot bullets; `LOS` stays
 the choice for bolts that route around cover.
 
+**Staircase order = collision order (Bresenham vs. true-ray traversal).**
+The Bresenham error term spreads the `dx` horizontal and `dy` vertical
+steps *evenly*, which is line-drawing geometry, not the sequence of cells
+the segment actually passes through: on slopes whose ratio is neither 1:1
+nor axis-aligned, the staircase enters the minor axis early and visits
+cells the true line never touches. Example, start `(0,0)` goal `(1,3)`:
+`DOWN RIGHT DOWN DOWN` visits `(1,1)`, but the center-to-center segment is
+still in column 0 at row 1. Since `followPath` probes per step, the aim
+order *is* the bullet's collision sequence — a wall in a disagreement cell
+detonates the bullet on a wall its sight line never crossed. `RaycastBullet`
+(§3) implements the Amanatides & Woo DDA ray, which emits grid crossings in
+line-parameter order and visits only cells the line enters; axis and exact
+45° rays are identical between the two algorithms. `RAYCAST` keeps the
+even-staircase behavior so existing content's hit cells do not shift.
+
+### RaycastBullet — `RaycastBullet::findPath`
+The bullet ray with true sight-line geometry: an Amanatides & Woo fast grid
+traversal (integer-rational DDA — no floats) of the segment from sprite to
+goal. Steps are emitted in line-parameter order, so the visited cell
+sequence is exactly the segment's supercover; exact-corner ties take the x
+step first (x-first convention shared with AStarSmooth's staircase oracle),
+visiting both corner-adjacent cells so a bullet never leaks through a
+diagonal wall seam. Same deliberate §2 deviation as `Raycast`: not
+probe-checked, full geometric length through walls, runtime `followPath`
+detonates at the first blocked cell. Exactly `dx + dy` steps, identical to
+`Raycast` on axis-aligned and exact 45° rays; differs only in step order
+(the collision-cell sequence) on other slopes — see the `(0,0)→(1,3)`
+discriminator in `t_ai_path`. No `Node`/`OpenList`.
+
 ## 4. How a choice reaches the algo
 
 `bosses.ini path=` / skill `algo=` → `resolvePath()` (`kPaths[]`) →
@@ -154,16 +185,19 @@ though searchers may path into it.
 ## 5. Test map (`tests/unit/t_ai_path.cpp` unless noted)
 
 - `test_pathfinding`: open grid, LOS row, Raycast row/diagonal exact-staircase
-  + un-probed wall ray + start==goal, gap-wall detour (AStar, BFS,
-  AStarSmooth + turn-count parity), S-bend (21-step optimum), exact
+  + un-probed wall ray + start==goal, RaycastBullet DDA-vs-Bresenham
+  discriminator `(0,0)→(1,3)` + corner-diagonal + slope sign pins + Raycast
+  length-parity fuzz + sealed-wall geometric ray + start==goal, gap-wall
+  detour (AStar, BFS, AStarSmooth + turn-count parity), S-bend (21-step
+  optimum), exact
   staircase-shape oracle case, BUG-C9 relaxation map, BUG-H17 A*/BFS
   length-parity fuzz (20 seeded maps), AStarSmooth fuzz (50 seeded maps,
   length parity + no blocked cell entered), ThetaStar exact length parity
   in the seeded fuzz + LOS-row turn check, sealed wall, out-of-bounds,
   start==goal ruling.
-- `t_tables.cpp`: selector name resolution incl. all eight names.
+- `t_tables.cpp`: selector name resolution incl. all nine algo names.
 - `t_actor.cpp` `test_path_algos`: `getPathAlgo` non-null per enum value.
-- `t_bossdata.cpp`: loaded `path <= RAYCAST` validity bound.
+- `t_bossdata.cpp`: loaded `path <= RAYCAST_BULLET` validity bound.
 
 ## 6. Adding or changing an algorithm
 

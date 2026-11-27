@@ -89,6 +89,17 @@ public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 };
 
+// Raycast-bullet Pathfinding class: Amanatides & Woo DDA traversal of the
+// segment sprite to goal (the exact cells the line passes through, x-first
+// corner ties), no walkability probe and no axis fallback (same runtime-
+// resolved-ray contract as Raycast, see cpp comment). Differs from
+// Raycast only in step order on non-1:1/non-axis slopes.
+class RaycastBullet : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
 // Flow Field Pathfinding class: reverse BFS from the goal, then gradient descent
 class FlowField : public IPath
 {

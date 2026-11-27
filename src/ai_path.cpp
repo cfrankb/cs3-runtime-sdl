@@ -40,6 +40,7 @@ namespace PathData
     const BFS bFS;
     const LineOfSight lineOfSight;
     const Raycast raycast;
+    const RaycastBullet raycastBullet;
     const FlowField flowField;
     const ThetaStar thetaStar;
 
@@ -564,6 +565,67 @@ std::vector<JoyAim> Raycast::findPath(ISprite &sprite, const Pos &playerPos) con
         {
             err += dx;
             y += stepY;
+            directions.push_back(stepY > 0 ? AIM_DOWN : AIM_UP);
+        }
+    }
+    return directions;
+}
+
+// ponytail: RaycastBullet is Raycast's twin with a different step order;
+// the two coincide for axis-aligned and exact 45-degree rays. If the
+// geometric-ray family grows a third member, share one loop via a
+// tie-order strategy instead of a third copy.
+std::vector<JoyAim> RaycastBullet::findPath(ISprite &sprite, const Pos &playerPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor; // Half-tile bounds
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos(); // Half-tile coordinates
+
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        playerPos.x < 0 || playerPos.x >= mapLen || playerPos.y < 0 || playerPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, playerPos.x, playerPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Amanatides & Woo grid traversal (fast voxel DDA) in integer
+    // rationals: the next vertical grid crossing sits at line-parameter
+    // (i+1)/dx and the next horizontal one at (j+1)/dy; compare them by
+    // cross-multiplication, no floats. Unlike Raycast's balanced
+    // staircase this emits axis crossings in line-parameter order, so the
+    // visited cell sequence is exactly the supercover of the segment (the
+    // cells the line actually passes through) -- the physically-correct
+    // collision sequence for a bullet flying the sight ray. Exact-corner
+    // ties emit the x step first (the canonical x-first convention shared
+    // with AStarSmooth's staircase oracle), so both corner-adjacent cells
+    // are visited and a bullet never leaks through a diagonal wall seam.
+    // Products are bounded by (half-tile extent)^2; int64_t removes any
+    // overflow doubt.
+    // No walkability probe on purpose, same contract as Raycast: the ray
+    // keeps its final step into a blocking cell so CPath::followPath
+    // reports Blocked and handleBullet detonates the bullet at the wall;
+    // a probe-trimmed partial ray would exhaust to NoValidPath and leave a
+    // NoTTL bullet parked forever.
+    std::vector<JoyAim> directions;
+    const int dx = std::abs(playerPos.x - startPos.x);
+    const int dy = std::abs(playerPos.y - startPos.y);
+    const int stepX = playerPos.x >= startPos.x ? 1 : -1;
+    const int stepY = playerPos.y >= startPos.y ? 1 : -1;
+    int i = 0; // vertical crossings consumed
+    int j = 0; // horizontal crossings consumed
+    while (i < dx || j < dy)
+    {
+        if (j >= dy || (i < dx && static_cast<int64_t>(i + 1) * dy <= static_cast<int64_t>(j + 1) * dx))
+        {
+            ++i;
+            directions.push_back(stepX > 0 ? AIM_RIGHT : AIM_LEFT);
+        }
+        else
+        {
+            ++j;
             directions.push_back(stepY > 0 ? AIM_DOWN : AIM_UP);
         }
     }
@@ -1212,6 +1274,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::RAYCAST)
     {
         return &PathData::raycast;
+    }
+    else if (algo == BossData::RAYCAST_BULLET)
+    {
+        return &PathData::raycastBullet;
     }
     else
     {

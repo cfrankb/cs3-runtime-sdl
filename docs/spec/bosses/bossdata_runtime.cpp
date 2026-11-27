@@ -386,6 +386,7 @@ namespace
         {"FLOWFIELD", BossData::FLOWFIELD},
         {"THETASTAR", BossData::THETASTAR},
         {"RAYCAST", BossData::RAYCAST},
+        {"RAYCAST_BULLET", BossData::RAYCAST_BULLET},
     };
 
     const NameValue kTiles[] = {

@@ -61,7 +61,8 @@ namespace BossData
         DIJKSTRA,
         FLOWFIELD,
         THETASTAR,
-        RAYCAST
+        RAYCAST,
+        RAYCAST_BULLET
     };
 
     enum HitBoxType : uint8_t

@@ -96,6 +96,7 @@ const NameValue kPaths[] = {
     _N(FLOWFIELD),
     _N(THETASTAR),
     _N(RAYCAST),
+    _N(RAYCAST_BULLET),
 };
 
 const NameValue kTiles[] = {

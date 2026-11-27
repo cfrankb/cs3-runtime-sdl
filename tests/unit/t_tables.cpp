@@ -47,6 +47,8 @@ namespace
             resolvePath("Path::THETASTAR") != BossData::THETASTAR ||
             resolvePath("RAYCAST") != BossData::RAYCAST ||
             resolvePath("Path::RAYCAST") != BossData::RAYCAST ||
+            resolvePath("RAYCAST_BULLET") != BossData::RAYCAST_BULLET ||
+            resolvePath("Path::RAYCAST_BULLET") != BossData::RAYCAST_BULLET ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");
