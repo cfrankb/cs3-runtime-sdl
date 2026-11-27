@@ -201,17 +201,19 @@ static const std::unordered_map<uint16_t, std::string> g_aiNames = {
     _S(AI_NEO),
     _S(AI_FOCUS),
     _S(AI_REVERSE),
-    _S(AI_SMART),
+    _S(AI_PATROL),
     _S(AI_POISON),
     _S(AI_GHOST),
 };
 
 static const std::unordered_map<uint16_t, std::string> g_speedsNames = {
+    _S(SPEED_EXTRAFAST),
     _S(SPEED_VERYFAST),
     _S(SPEED_FAST),
     _S(SPEED_NORMAL),
     _S(SPEED_SLOW),
     _S(SPEED_VERYSLOW),
+    _S(SPEED_EXTRASLOW),
 };
 
 static const std::unordered_map<uint16_t, std::string> g_pathNames = {
@@ -219,6 +221,16 @@ static const std::unordered_map<uint16_t, std::string> g_pathNames = {
     _S(PATH_ASTAR),
     _S(PATH_BFS),
     _S(PATH_LOS),
+    _S(PATH_ASTAR_SMOOTH),
+    _S(PATH_DIJKSTRA),
+    _S(PATH_FLOWFIELD),
+    _S(PATH_THETASTAR),
+    _S(PATH_RAYCAST),
+    _S(PATH_RAYCAST_BULLET),
+    _S(PATH_ASTAR_BUDGET),
+    _S(PATH_GBFS),
+    _S(PATH_FLEE),
+    _S(PATH_ASTAR_SAFE),
 };
 
 static const std::unordered_map<uint16_t, std::string> g_flagsNames = {

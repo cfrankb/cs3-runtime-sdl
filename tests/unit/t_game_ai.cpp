@@ -16,7 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
 #include <filesystem>
+#include <vector>
 
 #include "../../src/animzdata.h"
 #include "../../src/assetman.h"
@@ -49,6 +51,11 @@ namespace
     // mirrors GamePrivate::RESPAWN_DELAY in game_ai.cpp; 840 also passes the
     // (ticks & RESPAWN_SLICE) spawn gate
     constexpr int RESPAWN_DELAY = 30;
+
+    // mirrors PATROL_RADIUS/PATROL_LEG_TICKS in game_ai.cpp; the patrol
+    // scenarios below fail if the constants drift (same pattern as BARREL_TTL)
+    constexpr int PATROL_RADIUS = 6;
+    constexpr int PATROL_LEG_TICKS = 10;
 
     CGame *g_game = nullptr;
 
@@ -427,6 +434,215 @@ namespace
                  CGame::getMap().at(5, 6));
             return false;
         }
+        return true;
+    }
+
+    // ---------------- AI_PATROL (docs/plans/ai-patrol-plan.md) ----------------
+
+    // boxed fixture: walls on all four sides of (3,3). No patrol leg can
+    // ever step and the wall-hug tail is boxed in too; the player sits at
+    // (11,11), Euclidean-int distance 11 >= range 7 for both fixtures.
+    void buildBoxedWorld()
+    {
+        resetWorld();
+        CMap &map = CGame::getMap();
+        const uint16_t wall = tileOf(TYPE_WALLS);
+        map.set(3, 2, wall);
+        map.set(3, 4, wall);
+        map.set(2, 3, wall);
+        map.set(4, 3, wall);
+    }
+
+    // the boxed fixture must park every monster on its spawn cell (all
+    // four neighbours unwalkable: no patrol leg and no hug can ever step)
+    const std::vector<std::pair<int, int>> &boxedGolden()
+    {
+        static const std::vector<std::pair<int, int>> golden(16, {3, 3});
+        return golden;
+    }
+
+    // wall-hug fixture for the unflagged comparator: a wall moat on
+    // column x=7 plus the wall pair (5,4)/(6,4) keep the walker inside
+    // x <= 6, y >= 5. Every cell of that region sits at truncated-
+    // Euclidean distance >= 7 from the player parked at (11, 0), so the
+    // chase branch (AI_ASTAR bit, range 7) never hijacks the hug.
+    void buildCorridorWorld()
+    {
+        resetWorld();
+        CMap &map = CGame::getMap();
+        const uint16_t wall = tileOf(TYPE_WALLS);
+        map.set(5, 4, wall);
+        map.set(6, 4, wall);
+        for (int y = 0; y < MAP_SIZE; ++y)
+            map.set(7, y, wall);
+        g_game->player().move(11, 0);
+    }
+
+    // 16-entry hard-coded golden for the bbdragon walker in the corridor
+    // fixture, recorded from the pre-change code (plan §5.1: the table IS
+    // the pre-change behaviour, never produced by the new code).
+    const std::vector<std::pair<int, int>> &corridorGolden()
+    {
+        // recorded from the pre-change code (supplement is inert for an
+        // unflagged tile): a live 4-cycle wall-hug, not a pinned walker
+        static const std::vector<std::pair<int, int>> golden = {
+            {5, 7}, {4, 7}, {4, 8}, {5, 8}, {5, 7}, {4, 7}, {4, 8}, {5, 8}, {5, 7}, {4, 7}, {4, 8}, {5, 8}, {5, 7}, {4, 7}, {4, 8}, {5, 8}};
+        return golden;
+    }
+
+    // drive `calls` active ticks (12*i passes the speed-4 bbdragon and
+    // speed-6 zombie/ghost gates alike); record the position after each
+    std::vector<std::pair<int, int>> recordWalk(CActor &actor, const int calls)
+    {
+        std::vector<std::pair<int, int>> seq;
+        for (int i = 1; i <= calls; ++i)
+        {
+            g_game->manageMonsters(12 * i);
+            seq.emplace_back(actor.x(), actor.y());
+        }
+        return seq;
+    }
+
+    bool logSeq(const char *what, const std::vector<std::pair<int, int>> &seq)
+    {
+        LOGE("%s: ", what);
+        for (const auto &p : seq)
+            LOGE("(%d,%d)", p.first, p.second);
+        return false;
+    }
+
+    // §5.1 golden: unflagged MONSTERV3 on the corridor wall-hug fixture.
+    // Hard-coded from the pre-change code; the supplement must not move
+    // unflagged monsters. Fails loudly if the walker ever enters chase
+    // range (that would mean the hug, not the fixture, broke the invariant).
+    bool testPatrolFlaglessGolden()
+    {
+        buildCorridorWorld();
+        const uint16_t tile = tileOf(TYPE_MONSTERV3, 0, AI_PATROL);
+        if (getTileDef(tile).ai & AI_PATROL)
+        {
+            LOGE("patrol golden: tile 0x%.2x carries AI_PATROL", tile);
+            return false;
+        }
+        CActor &monster = spawn(tile, TYPE_MONSTERV3, 5, 8, AIM_RIGHT);
+        std::vector<std::pair<int, int>> seq;
+        for (int i = 1; i <= 16; ++i)
+        {
+            g_game->manageMonsters(12 * i);
+            if (monster.distance(g_game->player()) < 7)
+            {
+                LOGE("patrol golden: walker entered chase range at (%d,%d)",
+                     monster.x(), monster.y());
+                return false;
+            }
+            seq.emplace_back(monster.x(), monster.y());
+        }
+        if (seq != corridorGolden())
+            return logSeq("patrol golden: unflagged monster drifted", seq);
+        return true;
+    }
+
+    // §5.2 supplement-not-replace: on the boxed fixture every patrol leg
+    // provably fails on its first step, so the AI_PATROL monster must
+    // trace the flag-off sequence exactly (leg failure mutates nothing
+    // observable; the wall-hug tail still runs as the fallback).
+    bool testPatrolLegFailFallsBack()
+    {
+        buildBoxedWorld();
+        CActor &zombie = spawn(TILES_ZOMBIE, TYPE_MONSTERV3, 3, 3, AIM_UP);
+        const std::vector<std::pair<int, int>> seq = recordWalk(zombie, 16);
+        if (seq != boxedGolden())
+            return logSeq("patrol fallback: boxed AI_PATROL monster drifted", seq);
+        return true;
+    }
+
+    // §5.3 patrol engages: open field, origin center; the patrol leg (not
+    // the hug) drives movement, bounds hold, sequence differs from an
+    // unflagged walker
+    bool testPatrolEngages()
+    {
+        resetWorld();
+        CActor &zombie = spawn(TILES_ZOMBIE, TYPE_MONSTERV3, 5, 5, AIM_UP);
+        const std::vector<std::pair<int, int>> seq =
+            recordWalk(zombie, 4 * PATROL_LEG_TICKS);
+
+        std::vector<std::pair<int, int>> distinct;
+        for (const auto &p : seq)
+        {
+            if (std::max(std::abs(p.first - 5), std::abs(p.second - 5)) > PATROL_RADIUS + 2)
+            {
+                LOGE("patrol engages: (%d,%d) beyond radius %d from origin",
+                     p.first, p.second, PATROL_RADIUS + 2);
+                return false;
+            }
+            if (std::find(distinct.begin(), distinct.end(), p) == distinct.end())
+                distinct.push_back(p);
+        }
+        if (distinct.size() <= 3)
+        {
+            LOGE("patrol engages: only %zu distinct positions", distinct.size());
+            return false;
+        }
+
+        resetWorld();
+        CActor &ghost = spawn(TILES_GHOST, TYPE_GHOST, 5, 5, AIM_UP);
+        if (getTileDef(TILES_GHOST).ai & AI_PATROL)
+        {
+            LOGE("patrol engages: TILES_GHOST unexpectedly carries AI_PATROL");
+            return false;
+        }
+        const std::vector<std::pair<int, int>> hug =
+            recordWalk(ghost, 4 * PATROL_LEG_TICKS);
+        if (seq == hug)
+            return logSeq("patrol engages: patrol sequence equals the wall-hug", seq);
+        return true;
+    }
+
+    // §5.4 edge origin / bounds safety: origin (0,0) boxed in a corner,
+    // posts clamp; 300 active ticks: no crash, always in bounds, the
+    // player's stamped tile is never entered
+    bool testPatrolEdgeOrigin()
+    {
+        resetWorld();
+        CMap &map = CGame::getMap();
+        const uint16_t wall = tileOf(TYPE_WALLS);
+        map.set(1, 0, wall);
+        map.set(0, 1, wall);
+        map.set(1, 1, wall);
+        map.set(11, 11, TILES_ANNIE2); // player stamp
+        CActor &zombie = spawn(TILES_ZOMBIE, TYPE_MONSTERV3, 0, 0, AIM_RIGHT);
+        for (int i = 1; i <= 300; ++i)
+        {
+            g_game->manageMonsters(12 * i);
+            if (zombie.x() < 0 || zombie.x() >= MAP_SIZE ||
+                zombie.y() < 0 || zombie.y() >= MAP_SIZE)
+            {
+                LOGE("patrol edge: monster left the map at (%d,%d)",
+                     zombie.x(), zombie.y());
+                return false;
+            }
+        }
+        if (map.at(11, 11) != TILES_ANNIE2)
+        {
+            LOGE("patrol edge: stamped player tile overwritten (0x%.2x)", map.at(11, 11));
+            return false;
+        }
+        return true;
+    }
+
+    // §5.5 determinism: pure function of tick + origin, no RNG to seed
+    bool testPatrolDeterminism()
+    {
+        resetWorld();
+        CActor &zombie = spawn(TILES_ZOMBIE, TYPE_MONSTERV3, 5, 5, AIM_UP);
+        const std::vector<std::pair<int, int>> first = recordWalk(zombie, 24);
+
+        resetWorld();
+        CActor &zombie2 = spawn(TILES_ZOMBIE, TYPE_MONSTERV3, 5, 5, AIM_UP);
+        const std::vector<std::pair<int, int>> second = recordWalk(zombie2, 24);
+
+        if (first != second)
+            return logSeq("patrol determinism: sequences differ", second);
         return true;
     }
 
@@ -1479,6 +1695,11 @@ bool test_game_ai()
         {testIceCube, "icecube"},
         {testMonsterV3, "monsterV3"},
         {testGhost, "ghost"},
+        {testPatrolFlaglessGolden, "patrol flagless golden"},
+        {testPatrolLegFailFallsBack, "patrol leg-fail fallback"},
+        {testPatrolEngages, "patrol engages"},
+        {testPatrolEdgeOrigin, "patrol edge origin"},
+        {testPatrolDeterminism, "patrol determinism"},
         {testVamPlant, "vamplant"},
         {testEggHatch, "egg hatch"},
         {testBullet, "bullet"},

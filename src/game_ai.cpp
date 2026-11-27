@@ -17,6 +17,7 @@
 */
 
 #include "game.h"
+#include <algorithm>
 #include <cstdlib>
 #include <iterator>
 #include <vector>
@@ -527,6 +528,34 @@ void CGame::manageMonsters(const uint32_t ticks)
         rebuildMonsterGrid();
 }
 
+// AI_PATROL supplement (docs/plans/ai-patrol-plan.md): idle patrol toward
+// cardinal posts anchored on CActor::origin(). Pure function of tick +
+// origin: no RNG, no state, deterministic by construction.
+static constexpr int PATROL_RADIUS = 6;     // cells from m_origin
+static constexpr int PATROL_LEG_TICKS = 10; // post rotation cadence;
+                                            // mirrors CPath's
+                                            // PATH_TIMEOUT_MAX (10)
+
+// Cardinal posts only (4-direction world), clamped to map bounds so
+// LineOfSight::findPath never reaches its out-of-bounds LOGE path (it
+// bounds-validates the goal, ai_path.cpp bounds contract). The
+// origin-derived phase desynchronizes neighboring patrollers without
+// state or RNG.
+static Pos patrolPost(const Pos &origin, const uint32_t ticks,
+                      const int w, const int h)
+{
+    static constexpr JoyAim g_posts[4] = {AIM_UP, AIM_RIGHT,
+                                          AIM_DOWN, AIM_LEFT};
+    const size_t phase = static_cast<size_t>(
+        (ticks / PATROL_LEG_TICKS + origin.x * 3 + origin.y * 7) & 3);
+    const Pos step = CGame::translate(origin, g_posts[phase]);
+    Pos post{static_cast<int16_t>(origin.x + (step.x - origin.x) * PATROL_RADIUS),
+             static_cast<int16_t>(origin.y + (step.y - origin.y) * PATROL_RADIUS)};
+    post.x = static_cast<int16_t>(std::clamp<int>(post.x, 0, w - 1));
+    post.y = static_cast<int16_t>(std::clamp<int>(post.y, 0, h - 1));
+    return post;
+}
+
 void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ticks)
 {
     static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
@@ -576,6 +605,12 @@ void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ti
         actor.clearPath();
     }
 
+    if (def.ai & AI_PATROL &&
+        actor.startPath(patrolPost(actor.origin(), ticks,
+                                   m_map.width(), m_map.height()),
+                        BossData::Path::LOS, -1))
+        return; // patrol stepped this tick; otherwise the wall-hug
+                // tail below runs today's code, unchanged
     bool reverse = def.ai & AI_REVERSE;
     JoyAim aim = actor.findNextDir(reverse);
     if (aim != AIM_NONE)

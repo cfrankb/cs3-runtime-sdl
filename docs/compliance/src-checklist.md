@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-27 |
-| Git HEAD | 5a1cabb |
+| Git HEAD | 282da44 |
 | Files tracked | 120 |
 | Covered by cs3-tests | 70 |
 | Verified items | 81 / 120 |
@@ -45,7 +45,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
 - [x] `src/game.cpp` `81800167137d6260` — covered by t_runtime, t_game, t_fx
 - [x] `src/game.h` `e68fe4922ac75cd6` — covered by t_runtime, t_game, t_fx
-- [x] `src/game_ai.cpp` `86d8bbeef44e5cdd` — covered by t_game_ai
+- [x] `src/game_ai.cpp` `31aa7b2f8075df5f` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
 - [x] `src/gamemixin.cpp` `01690501ba031e56` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
@@ -93,7 +93,7 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/sfx_public.h` `e4f24fc78880f557`
 - [x] `src/skills.h` `a8005be0043d59a7` — covered by t_gamestats, t_runtime
 - [ ] `src/sounds.h` `ac00a2436762f36c`
-- [ ] `src/sprtypes.h` `e375128c41b3ea93`
+- [ ] `src/sprtypes.h` `3bc9923633583b30`
 - [x] `src/statedata.cpp` `406688e893ab4afa` — covered by t_statedata
 - [x] `src/statedata.h` `6bc791e225d46ed0` — covered by t_statedata
 - [x] `src/states.cpp` `e224af3f495c6aa0` — covered by t_states, t_stateparser
@@ -104,9 +104,9 @@ See [README](README.md) for the verification procedure.
 - [x] `src/strhelper.h` `faa42b2398e7575a` — covered by t_strhelper
 - [ ] `src/summary.h` `1ffe8d997dfe07f3`
 - [ ] `src/theme.h` `cac18f341241b32f`
-- [x] `src/tilesdata.cpp` `2549059f807c812f` — covered by t_tables
+- [x] `src/tilesdata.cpp` `6da61cc63267b22b` — covered by t_tables
 - [x] `src/tilesdata.h` `8028d705bf4df5bb` — covered by t_tables
-- [ ] `src/tilesdebug.cpp` `14edeca99df67c67`
+- [ ] `src/tilesdebug.cpp` `cd78b74d91a780b1`
 - [ ] `src/tilesdebug.h` `3c82e45296d77958`
 - [ ] `src/tilesdefs.h` `56cf1fccc1e5663e`
 - [ ] `src/tileset_tex.cpp` `477ca1a3f2b9a400`

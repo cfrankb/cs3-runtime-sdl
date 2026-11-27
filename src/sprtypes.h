@@ -30,7 +30,7 @@ enum TileAI:uint16_t
     AI_NEO                    = 0x03,
     AI_FOCUS                  = 0x04,
     AI_REVERSE                = 0x08,
-    AI_SMART                  = 0x10,
+    AI_PATROL                 = 0x10,
     AI_POISON                 = 0x20,
     AI_GHOST                  = 0x40,
 };
@@ -59,17 +59,29 @@ enum TilePath:uint8_t
     PATH_ASTAR                = 0x01,
     PATH_BFS                  = 0x02,
     PATH_LOS                  = 0x03,
+    PATH_ASTAR_SMOOTH         = 0x04,
+    PATH_DIJKSTRA             = 0x05,
+    PATH_FLOWFIELD            = 0x06,
+    PATH_THETASTAR            = 0x07,
+    PATH_RAYCAST              = 0x08,
+    PATH_RAYCAST_BULLET       = 0x09,
+    PATH_ASTAR_BUDGET         = 0x0a,
+    PATH_GBFS                 = 0x0b,
+    PATH_FLEE                 = 0x0c,
+    PATH_ASTAR_SAFE           = 0x0d,
 };
 
 
 // @enum
 enum TileSpeed:uint16_t
 {
+    SPEED_EXTRAFAST           = 0x01,
     SPEED_VERYFAST            = 0x02,
     SPEED_FAST                = 0x03,
     SPEED_NORMAL              = 0x04,
     SPEED_SLOW                = 0x05,
     SPEED_VERYSLOW            = 0x06,
+    SPEED_EXTRASLOW           = 0x07,
 };
 
 
