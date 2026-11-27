@@ -58,7 +58,8 @@ namespace BossData
         BFS,
         LOS,
         ASTAR_SMOOTH,
-        DIJKSTRA
+        DIJKSTRA,
+        FLOWFIELD
     };
 
     enum HitBoxType : uint8_t

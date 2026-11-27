@@ -93,6 +93,7 @@ const NameValue kPaths[] = {
     _N(LOS),
     _N(ASTAR_SMOOTH),
     _N(DIJKSTRA),
+    _N(FLOWFIELD),
 };
 
 const NameValue kTiles[] = {

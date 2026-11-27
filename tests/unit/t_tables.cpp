@@ -41,6 +41,8 @@ namespace
             resolvePath("ASTAR_SMOOTH") != BossData::ASTAR_SMOOTH ||
             resolvePath("DIJKSTRA") != BossData::DIJKSTRA ||
             resolvePath("Path::DIJKSTRA") != BossData::DIJKSTRA ||
+            resolvePath("FLOWFIELD") != BossData::FLOWFIELD ||
+            resolvePath("Path::FLOWFIELD") != BossData::FLOWFIELD ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");

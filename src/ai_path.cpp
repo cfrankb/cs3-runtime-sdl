@@ -39,6 +39,7 @@ namespace PathData
     const Dijkstra dijkstra;
     const BFS bFS;
     const LineOfSight lineOfSight;
+    const FlowField flowField;
 
     constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
     constexpr size_t MAX_PATH_SIZE = 4096;
@@ -516,6 +517,86 @@ std::vector<JoyAim> LineOfSight::findPath(ISprite &sprite, const Pos &playerPos)
     return directions;
 }
 
+// ponytail: the field is rebuilt per call; findPath is const on a shared
+// PathData singleton, so there is no legitimate place to cache it. If a
+// swarm feature ever needs one field for N agents with the same goal, give
+// that feature an explicit FlowFieldBuilder keyed on (goal, footprint, map
+// epoch) -- do not bolt mutable state onto this instance.
+std::vector<JoyAim> FlowField::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Integration field, indexed y * mapLen + x: g_steps index of the
+    // downhill step per cell, -1 unreached, TOTAL_AIMS sentinel at the goal
+    std::vector<int8_t> flow(static_cast<size_t>(mapLen) * mapHei, -1);
+    flow[static_cast<size_t>(goalPos.y) * mapLen + goalPos.x] = static_cast<int8_t>(TOTAL_AIMS);
+    std::queue<Pos> queue;
+    queue.push(goalPos);
+
+    // Reverse BFS: admit the forward edge prev -> cur with the same
+    // predicate the forward searches apply when expanding prev, so reverse
+    // reachability from the goal is exactly forward reachability to it.
+    // First-touch wins (BFS order => dist(prev) = dist(cur) + 1 is
+    // minimal), so there is no relaxation pass and no Node/OpenList to
+    // corrupt (BUG-C9/BUG-H17 machinery is structurally absent).
+    const Pos originalPos{sprite.pos()};
+    while (!queue.empty())
+    {
+        const Pos cur = queue.front();
+        queue.pop();
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos prev{static_cast<int16_t>(cur.x - g_steps[i].delta.x),
+                           static_cast<int16_t>(cur.y - g_steps[i].delta.y)};
+            if (prev.x < 0 || prev.x >= mapLen || prev.y < 0 || prev.y >= mapHei)
+                continue;
+            int8_t &cell = flow[static_cast<size_t>(prev.y) * mapLen + prev.x];
+            if (cell != -1)
+                continue;
+            // probe canMove from the predecessor so the entered cell is checked
+            sprite.move(prev);
+            if (sprite.canMove(g_steps[i].dir))
+            {
+                cell = static_cast<int8_t>(i);
+                queue.push(prev);
+            }
+        }
+    }
+    sprite.move(originalPos);
+
+    // Gradient descent from the start. Every stored step strictly decreases
+    // the BFS distance, so the descent terminates without a step cap.
+    std::vector<JoyAim> directions;
+    Pos cellPos = startPos;
+    while (!(cellPos == goalPos))
+    {
+        const int8_t i = flow[static_cast<size_t>(cellPos.y) * mapLen + cellPos.x];
+        if (i < 0)
+        {
+            LOGE("FlowField: no path from (%d,%d) to (%d,%d) on line %d",
+                 startPos.x, startPos.y, goalPos.x, goalPos.y, __LINE__);
+            return {};
+        }
+        directions.push_back(g_steps[i].dir);
+        cellPos = {static_cast<int16_t>(cellPos.x + g_steps[i].delta.x),
+                   static_cast<int16_t>(cellPos.y + g_steps[i].delta.y)};
+    }
+    return directions;
+}
+
 /////////////////////////////////////////////////////////////////////
 
 int AStarSmooth::manhattanDistance(const Pos &a, const Pos &b) const
@@ -891,6 +972,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::DIJKSTRA)
     {
         return &PathData::dijkstra;
+    }
+    else if (algo == BossData::FLOWFIELD)
+    {
+        return &PathData::flowField;
     }
     else
     {

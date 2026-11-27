@@ -3,6 +3,9 @@
 Procedure for adding a path algorithm to the `IPath` system
 (`src/ai_path.h` / `src/ai_path.cpp`), distilled from the Dijkstra
 implementation (`docs/plans/archive/dijkstra-plan.md`, 2026-11-26).
+The current state of the algorithm family is summarized in
+[docs/spec/ipath-implementations.md](../spec/ipath-implementations.md) —
+update that summary in the same change as any new/changed algorithm.
 
 ## 0. Scope check first
 

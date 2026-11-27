@@ -1,5 +1,10 @@
 # Specifications
 
+- [ipath-implementations.md](ipath-implementations.md) — current `IPath`
+  pathfinding algorithms (inventory, guarantees, wiring); keep it current
+  when adding an algorithm (procedure:
+  [../briefs/ipath.md](../briefs/ipath.md)).
+
 ## tests
 
 rules

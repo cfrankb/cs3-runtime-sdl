@@ -161,6 +161,7 @@ bool test_pathfinding()
     const Dijkstra dijkstra;
     const BFS bfs;
     const LineOfSight los;
+    const FlowField flowField;
 
     // open grid: optimal = manhattan (3)
     const Pos start{1, 1};
@@ -168,6 +169,7 @@ bool test_pathfinding()
     if (!checkPath("AStar", sprite, aStar, start, goal, 3) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, start, goal, 3) ||
         !checkPath("Dijkstra", sprite, dijkstra, start, goal, 3) ||
+        !checkPath("FlowField", sprite, flowField, start, goal, 3) ||
         !checkPath("BFS", sprite, bfs, start, goal, 3))
         return false;
 
@@ -180,6 +182,7 @@ bool test_pathfinding()
     if (!checkPath("AStar", sprite, aStar, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("Dijkstra", sprite, dijkstra, Pos{0, 0}, Pos{4, 0}, 10) ||
+        !checkPath("FlowField", sprite, flowField, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, Pos{0, 0}, Pos{4, 0}, 10))
         return false;
 
@@ -246,6 +249,16 @@ bool test_pathfinding()
             {
                 LOGE("Dijkstra fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
                      trial, d.size(), a.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // FlowField equivalence: the reverse traversal keeps the same
+            // edge predicate, so it must agree on reachability and length
+            sprite.move(s);
+            const auto ff = flowField.findPath(sprite, g);
+            if (ff.size() != a.size() || ff.empty() != a.empty())
+            {
+                LOGE("FlowField fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                     trial, ff.size(), a.size(), s.x, s.y, g.x, g.y);
                 return false;
             }
         }
@@ -346,7 +359,8 @@ bool test_pathfinding()
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{4, 0}).empty() ||
         !bfs.findPath(sprite, Pos{4, 0}).empty() ||
-        !dijkstra.findPath(sprite, Pos{4, 0}).empty())
+        !dijkstra.findPath(sprite, Pos{4, 0}).empty() ||
+        !flowField.findPath(sprite, Pos{4, 0}).empty())
     {
         LOGE("sealed wall: expected no path");
         return false;
@@ -357,16 +371,22 @@ bool test_pathfinding()
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
         !bfs.findPath(sprite, Pos{-1, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
+        !flowField.findPath(sprite, Pos{99, 99}).empty() ||
         !los.findPath(sprite, Pos{0, 99}).empty())
     {
         LOGE("out-of-bounds goal returned a path");
         return false;
     }
 
-    // registry: DIJKSTRA must resolve to the const instance
+    // registry: DIJKSTRA and FLOWFIELD must resolve to the const instances
     if (CPath::getPathAlgo(BossData::DIJKSTRA) == nullptr)
     {
         LOGE("getPathAlgo(DIJKSTRA) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::FLOWFIELD) == nullptr)
+    {
+        LOGE("getPathAlgo(FLOWFIELD) returned null");
         return false;
     }
 

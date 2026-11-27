@@ -79,6 +79,13 @@ public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 };
 
+// Flow Field Pathfinding class: reverse BFS from the goal, then gradient descent
+class FlowField : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
 class CPath
 {
 public:
