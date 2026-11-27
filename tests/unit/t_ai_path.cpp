@@ -161,6 +161,7 @@ bool test_pathfinding()
     const Dijkstra dijkstra;
     const BFS bfs;
     const LineOfSight los;
+    const Raycast raycast;
     const FlowField flowField;
     const ThetaStar thetaStar;
 
@@ -178,6 +179,22 @@ bool test_pathfinding()
     // line of sight along a row: 4 straight steps
     if (!checkPath("LOS", sprite, los, Pos{2, 2}, Pos{6, 2}, 4))
         return false;
+
+    // raycast: pure Bresenham geometry. Row run is straight, the perfect
+    // diagonal is the exact R/D staircase (aim-sequence pin)
+    if (!checkPath("Raycast", sprite, raycast, Pos{2, 2}, Pos{6, 2}, 4) ||
+        !checkPath("Raycast", sprite, raycast, Pos{1, 1}, Pos{4, 4}, 6))
+        return false;
+    sprite.move(Pos{1, 1});
+    {
+        const std::vector<JoyAim> want{AIM_RIGHT, AIM_DOWN, AIM_RIGHT,
+                                       AIM_DOWN, AIM_RIGHT, AIM_DOWN};
+        if (raycast.findPath(sprite, Pos{4, 4}) != want)
+        {
+            LOGE("Raycast diagonal: unexpected aim sequence");
+            return false;
+        }
+    }
 
     // wall with a gap: AStar/BFS must route around it (10 steps optimal)
     wallColumn(1, 0, 2);
@@ -397,6 +414,23 @@ bool test_pathfinding()
         return false;
     }
 
+    // Raycast design pin (bullet semantics): the ray is NOT probe-trimmed,
+    // it keeps its full geometric length through walls; CPath::followPath's
+    // runtime canMove() then reports Blocked and handleBullet detonates the
+    // bullet at the wall. A future "fix" adding a probe here parks NoTTL
+    // bullets at walls instead (see Raycast::findPath comment).
+    {
+        sprite.move(Pos{0, 0});
+        const auto ray = raycast.findPath(sprite, Pos{4, 0});
+        const std::vector<JoyAim> want{AIM_RIGHT, AIM_RIGHT, AIM_RIGHT, AIM_RIGHT};
+        if (ray != want)
+        {
+            LOGE("sealed wall: raycast must stay geometric (4 RIGHT steps), got %zu steps",
+                 ray.size());
+            return false;
+        }
+    }
+
     // out-of-bounds goal must return empty, not crash
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
@@ -404,9 +438,18 @@ bool test_pathfinding()
         !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
         !thetaStar.findPath(sprite, Pos{99, 99}).empty() ||
         !flowField.findPath(sprite, Pos{99, 99}).empty() ||
-        !los.findPath(sprite, Pos{0, 99}).empty())
+        !los.findPath(sprite, Pos{0, 99}).empty() ||
+        !raycast.findPath(sprite, Pos{99, 99}).empty())
     {
         LOGE("out-of-bounds goal returned a path");
+        return false;
+    }
+
+    // Raycast start == goal: empty aim list (nothing to fly)
+    sprite.move(Pos{5, 5});
+    if (!raycast.findPath(sprite, Pos{5, 5}).empty())
+    {
+        LOGE("Raycast start==goal returned a path");
         return false;
     }
 
@@ -424,6 +467,11 @@ bool test_pathfinding()
     if (CPath::getPathAlgo(BossData::THETASTAR) == nullptr)
     {
         LOGE("getPathAlgo(THETASTAR) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::RAYCAST) == nullptr)
+    {
+        LOGE("getPathAlgo(RAYCAST) returned null");
         return false;
     }
 

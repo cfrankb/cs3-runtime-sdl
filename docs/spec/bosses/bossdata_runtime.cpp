@@ -385,6 +385,7 @@ namespace
         {"DIJKSTRA", BossData::DIJKSTRA},
         {"FLOWFIELD", BossData::FLOWFIELD},
         {"THETASTAR", BossData::THETASTAR},
+        {"RAYCAST", BossData::RAYCAST},
     };
 
     const NameValue kTiles[] = {

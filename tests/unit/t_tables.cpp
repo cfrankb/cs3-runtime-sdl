@@ -45,6 +45,8 @@ namespace
             resolvePath("Path::FLOWFIELD") != BossData::FLOWFIELD ||
             resolvePath("THETASTAR") != BossData::THETASTAR ||
             resolvePath("Path::THETASTAR") != BossData::THETASTAR ||
+            resolvePath("RAYCAST") != BossData::RAYCAST ||
+            resolvePath("Path::RAYCAST") != BossData::RAYCAST ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");

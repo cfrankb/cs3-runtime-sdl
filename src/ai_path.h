@@ -79,6 +79,16 @@ public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 };
 
+// Raycast "pathfinding" class: Bresenham straight-line ray from sprite to
+// goal (4-dir staircase), no walkability probe and no axis fallback: the
+// bullet attack that flies the sight ray and detonates at the first wall
+// (CPath::followPath's canMove() probe reports Blocked there).
+class Raycast : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+};
+
 // Flow Field Pathfinding class: reverse BFS from the goal, then gradient descent
 class FlowField : public IPath
 {

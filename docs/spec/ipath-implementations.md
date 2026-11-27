@@ -23,7 +23,7 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 [Dijkstra plan](../plans/archive/dijkstra-plan.md),
 [FlowField plan](../plans/archive/flow-fields-plan.md).
 
-## 1. Inventory (2026-11-26)
+## 1. Inventory (2026-11-27)
 
 | Class | Enum (`BossData::Path`) | ini selector | Search strategy | Path quality | In-use content |
 |---|---|---|---|---|---|
@@ -34,6 +34,7 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 | `LineOfSight` | `LOS` | `Path::LOS` | greedy: step toward goal, prefer larger remaining axis, fall back to the other axis | **not optimal, often no path**; never backtracks | tracking bullets (LOS bolt pattern) |
 | `FlowField` | `FLOWFIELD` | `Path::FLOWFIELD` | reverse BFS from the goal over the whole reachable region, then gradient descent | optimal (fewest steps) | none (available; payoff is many-agents-one-goal) |
 | `ThetaStar` | `THETASTAR` | `Path::THETASTAR` | A* with line-of-sight-grandparent relaxation, Manhattan costs | optimal length, straighter shape | none yet |
+| `Raycast` | `RAYCAST` | `Path::RAYCAST` | Bresenham ray toward the goal; no walkability probe, no fallback | straight sight ray; ends at the first wall at runtime | bullet attacks (`skill BULLET ... algo=RAYCAST`) |
 
 All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 `kPaths[]` / `resolvePath()`.
@@ -123,6 +124,18 @@ remaining distance, falls back to the other axis when blocked), returns
 the aims or empty if boxed in. Cheap and straight; use for bullets or
 open-arena chasers only — it gives up at walls instead of routing.
 
+### Raycast — `Raycast::findPath`
+Not a search and deliberately **not** probe-checked (the one deviation
+from the §2 walkability contract, by design): a generalized-Bresenham ray
+from the sprite to the goal, emitted as the exact staircase of 4-dir unit
+steps, full geometric length even through walls. The bullet's runtime
+driving is what resolves the ray: `CPath::followPath` probes `canMove()`
+per step, and its `Blocked` at the first wall cell is what detonates the
+bullet there (`handleBullet` expiry branch). A probe-trimmed partial ray
+would instead exhaust into `NoValidPath` and park a `NoTTL` bullet at the
+wall forever. Use for fire-and-forget straight-shot bullets; `LOS` stays
+the choice for bolts that route around cover.
+
 ## 4. How a choice reaches the algo
 
 `bosses.ini path=` / skill `algo=` → `resolvePath()` (`kPaths[]`) →
@@ -140,16 +153,17 @@ though searchers may path into it.
 
 ## 5. Test map (`tests/unit/t_ai_path.cpp` unless noted)
 
-- `test_pathfinding`: open grid, LOS row, gap-wall detour (AStar, BFS,
+- `test_pathfinding`: open grid, LOS row, Raycast row/diagonal exact-staircase
+  + un-probed wall ray + start==goal, gap-wall detour (AStar, BFS,
   AStarSmooth + turn-count parity), S-bend (21-step optimum), exact
   staircase-shape oracle case, BUG-C9 relaxation map, BUG-H17 A*/BFS
   length-parity fuzz (20 seeded maps), AStarSmooth fuzz (50 seeded maps,
   length parity + no blocked cell entered), ThetaStar exact length parity
   in the seeded fuzz + LOS-row turn check, sealed wall, out-of-bounds,
   start==goal ruling.
-- `t_tables.cpp`: selector name resolution incl. all seven names.
+- `t_tables.cpp`: selector name resolution incl. all eight names.
 - `t_actor.cpp` `test_path_algos`: `getPathAlgo` non-null per enum value.
-- `t_bossdata.cpp`: loaded `path <= THETASTAR` validity bound.
+- `t_bossdata.cpp`: loaded `path <= RAYCAST` validity bound.
 
 ## 6. Adding or changing an algorithm
 

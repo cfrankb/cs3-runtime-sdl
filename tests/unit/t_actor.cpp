@@ -119,6 +119,7 @@ bool test_path_algos()
         {BossData::DIJKSTRA, "DIJKSTRA"},
         {BossData::FLOWFIELD, "FLOWFIELD"},
         {BossData::THETASTAR, "THETASTAR"},
+        {BossData::RAYCAST, "RAYCAST"},
     };
     for (const auto &v : valid)
     {

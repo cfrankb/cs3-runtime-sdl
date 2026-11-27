@@ -39,6 +39,7 @@ namespace PathData
     const Dijkstra dijkstra;
     const BFS bFS;
     const LineOfSight lineOfSight;
+    const Raycast raycast;
     const FlowField flowField;
     const ThetaStar thetaStar;
 
@@ -515,6 +516,57 @@ std::vector<JoyAim> LineOfSight::findPath(ISprite &sprite, const Pos &playerPos)
             return {};
     }
 
+    return directions;
+}
+
+std::vector<JoyAim> Raycast::findPath(ISprite &sprite, const Pos &playerPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor; // Half-tile bounds
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos(); // Half-tile coordinates
+
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        playerPos.x < 0 || playerPos.x >= mapLen || playerPos.y < 0 || playerPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, playerPos.x, playerPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Generalized Bresenham ray: exactly dx + dy unit steps, staircase
+    // interleaved. Both endpoints are in bounds and every step moves one
+    // coordinate toward its goal value, so all cells stay inside the
+    // start/goal bounding box (no per-step bounds check needed). No
+    // walkability probe on purpose: the ray keeps its final step into a
+    // blocking cell so CPath::followPath reports Blocked and handleBullet
+    // detonates the bullet at the wall; a probe-trimmed partial ray would
+    // exhaust to NoValidPath and leave a NoTTL bullet parked forever.
+    std::vector<JoyAim> directions;
+    const int dx = std::abs(playerPos.x - startPos.x);
+    const int dy = std::abs(playerPos.y - startPos.y);
+    const int stepX = playerPos.x >= startPos.x ? 1 : -1;
+    const int stepY = playerPos.y >= startPos.y ? 1 : -1;
+    int x = startPos.x;
+    int y = startPos.y;
+    int err = dx - dy;
+    while (x != playerPos.x || y != playerPos.y)
+    {
+        const int e2 = 2 * err;
+        if (e2 > -dy) // x advance (never taken when dx == 0)
+        {
+            err -= dy;
+            x += stepX;
+            directions.push_back(stepX > 0 ? AIM_RIGHT : AIM_LEFT);
+        }
+        if (e2 < dx) // y advance (never taken when dy == 0)
+        {
+            err += dx;
+            y += stepY;
+            directions.push_back(stepY > 0 ? AIM_DOWN : AIM_UP);
+        }
+    }
     return directions;
 }
 
@@ -1156,6 +1208,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::THETASTAR)
     {
         return &PathData::thetaStar;
+    }
+    else if (algo == BossData::RAYCAST)
+    {
+        return &PathData::raycast;
     }
     else
     {

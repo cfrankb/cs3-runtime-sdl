@@ -60,7 +60,8 @@ namespace BossData
         ASTAR_SMOOTH,
         DIJKSTRA,
         FLOWFIELD,
-        THETASTAR
+        THETASTAR,
+        RAYCAST
     };
 
     enum HitBoxType : uint8_t

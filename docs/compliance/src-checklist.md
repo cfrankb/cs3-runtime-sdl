@@ -4,8 +4,8 @@
 
 | Checkpoint | Value |
 |---|---|
-| Date | 2026-11-26 |
-| Git HEAD | 0030c4f |
+| Date | 2026-11-27 |
+| Git HEAD | 6ef01a1 |
 | Files tracked | 120 |
 | Covered by cs3-tests | 70 |
 | Verified items | 81 / 120 |
@@ -16,8 +16,8 @@ See [README](README.md) for the verification procedure.
 
 - [x] `src/actor.cpp` `3674f1802a8059c2` — covered by t_actor, t_game_ai (testGhost)
 - [x] `src/actor.h` `1e32db74757f8a65` — covered by t_actor
-- [x] `src/ai_path.cpp` `a7ac1fb6c6b60eb5` — covered by t_ai_path, t_actor
-- [x] `src/ai_path.h` `442d23c25fafedc2` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.cpp` `8b82350e786b18c0` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.h` `88d5755b38ecd100` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `4a3e3b0a5c7e1980` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
 - [ ] `src/animzdata.h` `69dd22ca3d973aad`
@@ -27,7 +27,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/boss.cpp` `05e6d8c2aa7eea77` — covered by t_boss
 - [x] `src/boss.h` `727822c522dfc644` — covered by t_boss
 - [x] `src/bossdata.cpp` `c673a0723b32bcde` — covered by t_bossdata
-- [x] `src/bossdata.h` `8f13c174abf52134` — covered by t_bossdata
+- [x] `src/bossdata.h` `e35a3bb7fc1a39a9` — covered by t_bossdata
 - [ ] `src/build.h` `76583a503a9cada0`
 - [ ] `src/chars.h` `0982da541f3fc76e`
 - [ ] `src/color.h` `b24ca2504f97fa00`
@@ -44,8 +44,8 @@ See [README](README.md) for the verification procedure.
 - [ ] `src/filemacros.h` `93c1e202b31182e6`
 - [ ] `src/font8x8.h` `85dacccc36d3a7af`
 - [x] `src/game.cpp` `81800167137d6260` — covered by t_runtime, t_game, t_fx
-- [x] `src/game.h` `0228210c5d8dd2ab` — covered by t_runtime, t_game, t_fx
-- [x] `src/game_ai.cpp` `1cd01c27a307bd60` — covered by t_game_ai
+- [x] `src/game.h` `e68fe4922ac75cd6` — covered by t_runtime, t_game, t_fx
+- [x] `src/game_ai.cpp` `86d8bbeef44e5cdd` — covered by t_game_ai
 - [x] `src/game_auto.cpp` `3d223a40547264da` — covered by t_ifile
 - [x] `src/game_auto.h` `f3e2c4fe11b5d603` — covered by t_ifile
 - [x] `src/gamemixin.cpp` `01690501ba031e56` — covered by t_runtime, t_gamemixin (Phase E: draw/viewports/input/screens/bosses/savegame; mainLoop/manageGamePlay deferred, headless-unsafe)
@@ -77,7 +77,7 @@ See [README](README.md) for the verification procedure.
 - [x] `src/menuitem.h` `55e29074aba864ae` — covered by t_menu
 - [x] `src/menumanager.cpp` `ee098d968c967064` — covered by t_menu
 - [x] `src/menumanager.h` `2dc722c339a62c28` — covered by t_menu
-- [x] `src/names.cpp` `311888cb7fa62200` — covered by t_tables
+- [x] `src/names.cpp` `f822fc489bfc27ad` — covered by t_tables
 - [x] `src/names.h` `4abc4fbcaaecaa2a` — covered by t_tables
 - [x] `src/parseargs.cpp` `d4fa1a4d9aa0f9cf` — covered by t_parseargs
 - [x] `src/parseargs.h` `3f41edcb703df911` — covered by t_parseargs

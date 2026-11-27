@@ -73,7 +73,8 @@ namespace BossData
         ASTAR_SMOOTH,
         DIJKSTRA,
         FLOWFIELD,
-        THETASTAR
+        THETASTAR,
+        RAYCAST // append-only: values serialize in CActor::m_algo
     };
 
     enum HitBoxType : uint8_t
