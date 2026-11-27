@@ -86,6 +86,17 @@ public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
 };
 
+// Theta* Pathfinding class: A* whose relaxation prefers line-of-sight
+// grandparents (Manhattan costs; unit-step 4-dir output, see cpp comment)
+class ThetaStar : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+};
+
 class CPath
 {
 public:

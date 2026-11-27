@@ -1,0 +1,16 @@
+# Microsoft (Visual Studio / Allman) base, fitted empirically to the
+# existing sources: includes keep their author order, namespace bodies are
+# indented, and there is no hard column limit because the codebase wraps by
+# hand (longest existing line ~218 columns).
+BasedOnStyle: Microsoft
+SortIncludes: Never
+NamespaceIndentation: All
+ColumnLimit: 0
+IndentAccessModifiers: false
+AccessModifierOffset: -4
+PointerAlignment: Right
+DerivePointerAlignment: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortLambdasOnASingleLine: All
+FixNamespaceComments: false

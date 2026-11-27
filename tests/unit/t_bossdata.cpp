@@ -86,7 +86,7 @@ bool test_bossdata()
             LOGE("bossdata: boss 0x%.2x reports type 0x%.2x", type, boss->type);
             return false;
         }
-        if (boss->path > BossData::FLOWFIELD)
+        if (boss->path > BossData::THETASTAR)
         {
             LOGE("bossdata: boss 0x%.2x has invalid path algo %u", type, boss->path);
             return false;

@@ -315,7 +315,7 @@ void CActor::setPos(const Pos &pos)
 }
 
 /**
- * @brief Find Next Director (monsters)
+ * @brief Find Next Director (monsters) ; Wall-Hugging / Wall-Following AI
  *
  * @param reverse, flip search order
  * @return JoyAim

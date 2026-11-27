@@ -118,6 +118,7 @@ bool test_path_algos()
         {BossData::ASTAR_SMOOTH, "ASTAR_SMOOTH"},
         {BossData::DIJKSTRA, "DIJKSTRA"},
         {BossData::FLOWFIELD, "FLOWFIELD"},
+        {BossData::THETASTAR, "THETASTAR"},
     };
     for (const auto &v : valid)
     {

@@ -40,6 +40,7 @@ namespace PathData
     const BFS bFS;
     const LineOfSight lineOfSight;
     const FlowField flowField;
+    const ThetaStar thetaStar;
 
     constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
     constexpr size_t MAX_PATH_SIZE = 4096;
@@ -619,56 +620,64 @@ namespace
         }
         return AIM_NONE;
     }
+
+    // deterministic x-first staircase probe; fills `steps` and returns true
+    // only if every step's canMove probe succeeds (shared AStarSmooth/ThetaStar)
+    bool staircaseSteps(ISprite &sprite, const Pos &from, const Pos &to,
+                        std::vector<JoyAim> &steps)
+    {
+        steps.clear();
+        const int granularFactor = sprite.getGranularFactor();
+        const CMap &map = CGame::getMap();
+        const int mapLen = map.width() * granularFactor; // Half-tile bounds
+        const int mapHei = map.height() * granularFactor;
+        const Pos originalPos = sprite.pos();
+        Pos cur = from;
+        bool ok = true;
+        // deterministic x-first staircase: full horizontal leg, then vertical;
+        // unlike the greedy LineOfSight router there is no axis fallback, so a
+        // clear walk means the segment genuinely sees through the wall gaps of
+        // this exact route, not some detour
+        for (int leg = 0; leg < 2 && ok; ++leg)
+        {
+            while ((leg == 0) ? (cur.x != to.x) : (cur.y != to.y))
+            {
+                const int16_t step = (leg == 0)
+                                         ? static_cast<int16_t>(to.x > cur.x ? 1 : -1)
+                                         : static_cast<int16_t>(to.y > cur.y ? 1 : -1);
+                const JoyAim aim = (leg == 0)
+                                       ? (step > 0 ? AIM_RIGHT : AIM_LEFT)
+                                       : (step > 0 ? AIM_DOWN : AIM_UP);
+                const Pos next{static_cast<int16_t>(cur.x + (leg == 0 ? step : 0)),
+                               static_cast<int16_t>(cur.y + (leg == 1 ? step : 0))};
+                if (next.x < 0 || next.x >= mapLen || next.y < 0 || next.y >= mapHei)
+                {
+                    ok = false;
+                    break;
+                }
+                // probe canMove from the cell being left so the entered cell is checked
+                sprite.move(cur);
+                const bool canStep = sprite.canMove(aim);
+                if (!canStep)
+                {
+                    ok = false;
+                    break;
+                }
+                steps.push_back(aim);
+                cur = next;
+            }
+        }
+        sprite.move(originalPos);
+        if (!ok)
+            steps.clear();
+        return ok;
+    }
 }
 
 bool AStarSmooth::segmentSteps(ISprite &sprite, const Pos &from, const Pos &to,
                                std::vector<JoyAim> &steps) const
 {
-    steps.clear();
-    const int granularFactor = sprite.getGranularFactor();
-    const CMap &map = CGame::getMap();
-    const int mapLen = map.width() * granularFactor; // Half-tile bounds
-    const int mapHei = map.height() * granularFactor;
-    const Pos originalPos = sprite.pos();
-    Pos cur = from;
-    bool ok = true;
-    // deterministic x-first staircase: full horizontal leg, then vertical;
-    // unlike the greedy LineOfSight router there is no axis fallback, so a
-    // clear walk means the segment genuinely sees through the wall gaps of
-    // this exact route, not some detour
-    for (int leg = 0; leg < 2 && ok; ++leg)
-    {
-        while ((leg == 0) ? (cur.x != to.x) : (cur.y != to.y))
-        {
-            const int16_t step = (leg == 0)
-                                     ? static_cast<int16_t>(to.x > cur.x ? 1 : -1)
-                                     : static_cast<int16_t>(to.y > cur.y ? 1 : -1);
-            const JoyAim aim = (leg == 0)
-                                   ? (step > 0 ? AIM_RIGHT : AIM_LEFT)
-                                   : (step > 0 ? AIM_DOWN : AIM_UP);
-            const Pos next{static_cast<int16_t>(cur.x + (leg == 0 ? step : 0)),
-                           static_cast<int16_t>(cur.y + (leg == 1 ? step : 0))};
-            if (next.x < 0 || next.x >= mapLen || next.y < 0 || next.y >= mapHei)
-            {
-                ok = false;
-                break;
-            }
-            // probe canMove from the cell being left so the entered cell is checked
-            sprite.move(cur);
-            const bool canStep = sprite.canMove(aim);
-            if (!canStep)
-            {
-                ok = false;
-                break;
-            }
-            steps.push_back(aim);
-            cur = next;
-        }
-    }
-    sprite.move(originalPos);
-    if (!ok)
-        steps.clear();
-    return ok;
+    return staircaseSteps(sprite, from, to, steps);
 }
 
 std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprite &sprite) const
@@ -807,6 +816,173 @@ std::vector<JoyAim> AStarSmooth::findPath(ISprite &sprite, const Pos &playerPos)
         }
     }
     return {};
+}
+
+int ThetaStar::manhattanDistance(const Pos &a, const Pos &b) const
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// ponytail: Manhattan-metric Theta*, not Euclidean any-angle Theta*: the
+// JoyAim wire format only expresses unit cardinal steps, so dist() here is
+// Manhattan and gCost stays equal to the emitted step count. That keeps the
+// length exactly A*-optimal (unit edges are always relaxed too) while the
+// grandparent relaxation merges collinear runs during the search instead of
+// in AStarSmooth's after-pass. Upgrade path: Euclidean any-angle Theta*,
+// blocked until JoyAim can express diagonals.
+// ponytail: node loop is the fourth copy (AStar, AStarSmooth, Dijkstra,
+// here); a shared loop needs a relaxation callback since the successor
+// block here differs by design. Extract when a fifth searcher or a common
+// change forces it.
+std::vector<JoyAim> ThetaStar::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    std::vector<JoyAim> directions;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Priority queue for open list
+    OpenList openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+
+    // Create start node
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
+
+    while (!openList.empty())
+    {
+        const OpenEntry entry = openList.top();
+        openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
+
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
+        // Reached goal
+        if (current->pos == goalPos)
+        {
+            // Reconstruct: parent-chain points may be several cells apart
+            std::vector<Pos> path;
+            Node *node = current;
+            while (node != nullptr)
+            {
+                path.push_back(node->pos);
+                node = node->parent;
+            }
+            std::reverse(path.begin(), path.end());
+
+            // Replay each segment; the map is static and the oracle is
+            // deterministic, so it must accept what the relaxation probed
+            std::vector<JoyAim> seg;
+            for (size_t i = 1; i < path.size(); ++i)
+            {
+                const int dx = path[i].x - path[i - 1].x;
+                const int dy = path[i].y - path[i - 1].y;
+                if (abs(dx) + abs(dy) == 1)
+                {
+                    const JoyAim aim = unitAim(path[i - 1], path[i]);
+                    if (aim == AIM_NONE)
+                    {
+                        LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                             path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                        return {};
+                    }
+                    directions.push_back(aim);
+                    continue;
+                }
+                // unlike AStarSmooth the points are not adjacent, so no
+                // fail-soft single step here: a refusal means the search
+                // validated an inconsistent segment
+                if (!staircaseSteps(sprite, path[i - 1], path[i], seg))
+                {
+                    LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                         path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                    return {};
+                }
+                directions.insert(directions.end(), seg.begin(), seg.end());
+            }
+            return directions;
+        }
+
+        closedList[current->pos] = true;
+
+        // Explore neighbors
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current->pos.y + g_steps[i].delta.y)};
+
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (!canStep)
+                continue;
+
+            // Theta* relaxation: prefer the grandparent (anchor) when a
+            // clear staircase segment reaches newPos through it
+            int newGCost = current->gCost + 1;
+            Node *newParent = current;
+            Node *anchor = current->parent; // may be null (start expansion)
+            if (anchor != nullptr)
+            {
+                const int viaAnchor = anchor->gCost + manhattanDistance(anchor->pos, newPos);
+                std::vector<JoyAim> seg;
+                // cheap bound first: only probe the oracle when the grandparent could
+                // tie or beat the unit edge (tie goes to the straighter parent)
+                if (viaAnchor <= newGCost && staircaseSteps(sprite, anchor->pos, newPos, seg))
+                {
+                    newGCost = viaAnchor;
+                    newParent = anchor;
+                }
+            }
+
+            int newHCost = manhattanDistance(newPos, goalPos);
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, newParent);
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // BUG-C9: relax in place (see AStar); replacing the unique_ptr
+                // would free the Node still referenced by openList.
+                // BUG-H17: snapshot keys make the in-place update safe.
+                it->second->gCost = newGCost;
+                it->second->parent = newParent;
+                openList.emplace(it->second->fCost(), it->second.get());
+            }
+        }
+    }
+    // No path found
+    return directions; // Empty if no path found
 }
 
 ////////////////////////////////////////////////
@@ -976,6 +1152,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::FLOWFIELD)
     {
         return &PathData::flowField;
+    }
+    else if (algo == BossData::THETASTAR)
+    {
+        return &PathData::thetaStar;
     }
     else
     {

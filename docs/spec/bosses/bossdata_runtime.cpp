@@ -384,6 +384,7 @@ namespace
         {"ASTAR_SMOOTH", BossData::ASTAR_SMOOTH},
         {"DIJKSTRA", BossData::DIJKSTRA},
         {"FLOWFIELD", BossData::FLOWFIELD},
+        {"THETASTAR", BossData::THETASTAR},
     };
 
     const NameValue kTiles[] = {

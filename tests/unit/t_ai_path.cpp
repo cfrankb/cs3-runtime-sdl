@@ -162,6 +162,7 @@ bool test_pathfinding()
     const BFS bfs;
     const LineOfSight los;
     const FlowField flowField;
+    const ThetaStar thetaStar;
 
     // open grid: optimal = manhattan (3)
     const Pos start{1, 1};
@@ -170,6 +171,7 @@ bool test_pathfinding()
         !checkPath("AStarSmooth", sprite, aStarSmooth, start, goal, 3) ||
         !checkPath("Dijkstra", sprite, dijkstra, start, goal, 3) ||
         !checkPath("FlowField", sprite, flowField, start, goal, 3) ||
+        !checkPath("ThetaStar", sprite, thetaStar, start, goal, 3) ||
         !checkPath("BFS", sprite, bfs, start, goal, 3))
         return false;
 
@@ -183,6 +185,7 @@ bool test_pathfinding()
         !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("Dijkstra", sprite, dijkstra, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("FlowField", sprite, flowField, Pos{0, 0}, Pos{4, 0}, 10) ||
+        !checkPath("ThetaStar", sprite, thetaStar, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, Pos{0, 0}, Pos{4, 0}, 10))
         return false;
 
@@ -259,6 +262,16 @@ bool test_pathfinding()
             {
                 LOGE("FlowField fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
                      trial, ff.size(), a.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // ThetaStar equivalence: Manhattan gCosts stay equal to the
+            // emitted step count, so length parity with A* is exact
+            sprite.move(s);
+            const auto ts = thetaStar.findPath(sprite, g);
+            if (ts.size() != a.size() || ts.empty() != a.empty())
+            {
+                LOGE("ThetaStar fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                     trial, ts.size(), a.size(), s.x, s.y, g.x, g.y);
                 return false;
             }
         }
@@ -350,6 +363,23 @@ bool test_pathfinding()
         }
     }
 
+    // ThetaStar straightness: the in-loop grandparent relaxation merges
+    // collinear runs, so on a clear LOS row it must not turn more often
+    // than AStarSmooth's after-pass (shape check, not an exact aim pin)
+    {
+        fillMap(10);
+        sprite.move(Pos{2, 2});
+        const auto tsRow = thetaStar.findPath(sprite, Pos{6, 2});
+        sprite.move(Pos{2, 2});
+        const auto smoothRow = aStarSmooth.findPath(sprite, Pos{6, 2});
+        if (turnCount(tsRow) > turnCount(smoothRow))
+        {
+            LOGE("ThetaStar LOS row shape: %zu turns vs AStarSmooth %zu",
+                 turnCount(tsRow), turnCount(smoothRow));
+            return false;
+        }
+    }
+
     // restore the gap-wall map for the sealed-wall cases below
     fillMap(10);
     wallColumn(1, 0, 2);
@@ -360,6 +390,7 @@ bool test_pathfinding()
     if (!aStar.findPath(sprite, Pos{4, 0}).empty() ||
         !bfs.findPath(sprite, Pos{4, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{4, 0}).empty() ||
+        !thetaStar.findPath(sprite, Pos{4, 0}).empty() ||
         !flowField.findPath(sprite, Pos{4, 0}).empty())
     {
         LOGE("sealed wall: expected no path");
@@ -371,6 +402,7 @@ bool test_pathfinding()
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
         !bfs.findPath(sprite, Pos{-1, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
+        !thetaStar.findPath(sprite, Pos{99, 99}).empty() ||
         !flowField.findPath(sprite, Pos{99, 99}).empty() ||
         !los.findPath(sprite, Pos{0, 99}).empty())
     {
@@ -387,6 +419,11 @@ bool test_pathfinding()
     if (CPath::getPathAlgo(BossData::FLOWFIELD) == nullptr)
     {
         LOGE("getPathAlgo(FLOWFIELD) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::THETASTAR) == nullptr)
+    {
+        LOGE("getPathAlgo(THETASTAR) returned null");
         return false;
     }
 

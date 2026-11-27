@@ -33,6 +33,7 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 | `BFS` | `BFS` | `Path::BFS` | FIFO breadth-first | optimal (fewest steps) | available for content |
 | `LineOfSight` | `LOS` | `Path::LOS` | greedy: step toward goal, prefer larger remaining axis, fall back to the other axis | **not optimal, often no path**; never backtracks | tracking bullets (LOS bolt pattern) |
 | `FlowField` | `FLOWFIELD` | `Path::FLOWFIELD` | reverse BFS from the goal over the whole reachable region, then gradient descent | optimal (fewest steps) | none (available; payoff is many-agents-one-goal) |
+| `ThetaStar` | `THETASTAR` | `Path::THETASTAR` | A* with line-of-sight-grandparent relaxation, Manhattan costs | optimal length, straighter shape | none yet |
 
 All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 `kPaths[]` / `resolvePath()`.
@@ -92,6 +93,20 @@ refuses is walked as a single unit step with a `LOGW` (fail-soft) instead
 of bailing. Length always equals A* (4-dir unit output cannot go below
 optimal); the gain is turn reduction.
 
+### ThetaStar — `ThetaStar::findPath`
+The same A* node loop, but successor relaxation also considers the node's
+**grandparent** (anchor): when expanding `s` into successor `s'`, if the
+shared x-first staircase oracle (lifted `segmentSteps` body) is clear from
+`parent(s)` to `s'`, then `parent(s') = parent(s)` and `g(s') =
+g(parent(s')) + Manhattan`. Collinear runs merge *during* the search
+instead of in AStarSmooth's after-pass; the oracle is gated by a
+`viaAnchor <= g(s) + 1` bound. Costs are Manhattan, so `gCost` stays equal
+to the emitted step count and length is exactly A*-optimal (verified by
+the exact-parity fuzz); the gain is turn reduction. Reconstruction
+re-runs the oracle per parent-chain segment (deterministic, map-static —
+must replay what the relaxation probed); a refused segment is a
+sprite-model inconsistency → `LOGE` + empty.
+
 ### FlowField — `FlowField::findPath`
 One reverse BFS seeded at the goal fills a flat per-cell field (1 byte:
 downhill `g_steps` index, `-1` unreached); the answer is the descent from
@@ -129,11 +144,12 @@ though searchers may path into it.
   AStarSmooth + turn-count parity), S-bend (21-step optimum), exact
   staircase-shape oracle case, BUG-C9 relaxation map, BUG-H17 A*/BFS
   length-parity fuzz (20 seeded maps), AStarSmooth fuzz (50 seeded maps,
-  length parity + no blocked cell entered), sealed wall, out-of-bounds,
+  length parity + no blocked cell entered), ThetaStar exact length parity
+  in the seeded fuzz + LOS-row turn check, sealed wall, out-of-bounds,
   start==goal ruling.
-- `t_tables.cpp`: selector name resolution incl. all six names.
+- `t_tables.cpp`: selector name resolution incl. all seven names.
 - `t_actor.cpp` `test_path_algos`: `getPathAlgo` non-null per enum value.
-- `t_bossdata.cpp`: loaded `path <= FLOWFIELD` validity bound.
+- `t_bossdata.cpp`: loaded `path <= THETASTAR` validity bound.
 
 ## 6. Adding or changing an algorithm
 

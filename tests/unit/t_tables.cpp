@@ -43,6 +43,8 @@ namespace
             resolvePath("Path::DIJKSTRA") != BossData::DIJKSTRA ||
             resolvePath("FLOWFIELD") != BossData::FLOWFIELD ||
             resolvePath("Path::FLOWFIELD") != BossData::FLOWFIELD ||
+            resolvePath("THETASTAR") != BossData::THETASTAR ||
+            resolvePath("Path::THETASTAR") != BossData::THETASTAR ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");
