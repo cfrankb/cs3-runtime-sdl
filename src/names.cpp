@@ -100,6 +100,7 @@ const NameValue kPaths[] = {
     _N(ASTAR_BUDGET),
     _N(GBFS),
     _N(FLEE),
+    _N(ASTAR_SAFE),
 };
 
 const NameValue kTiles[] = {

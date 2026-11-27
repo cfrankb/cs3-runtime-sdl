@@ -40,6 +40,7 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 | `AStarBudget` | `ASTAR_BUDGET` | `Path::ASTAR_BUDGET` | A* node loop with a capped expansion budget (256); on exhaustion returns the path to the popped node closest to the goal | optimal when the budget suffices; bounded-cost partial path otherwise | none yet (de-risk option for long-range chasers) |
 | `Greedy` | `GBFS` | `Path::GBFS` | AStarBudget's loop keyed on (hCost, gCost) only — dives at the goal, no distance cost paid | NON-optimal (can exceed A*'s length); bounded per call; partial path on exhaustion | none yet (crowd/cheap-chaser slots) |
 | `Flee` | `FLEE` | `Path::FLEE` | bounded BFS (radius 10) around the start; answer = reachable cell maximizing Manhattan distance from the "goal" (treated as a threat) | NON-approach by design; farthest-reachable cell within radius, deterministic tie-break | none yet (retreat/reposition behavior) |
+| `AStarSafe` | `ASTAR_SAFE` | `Path::ASTAR_SAFE` | `AStarBudget` loop plus an entry cost of 1 per refused probe edge out of the entered cell (cramped cells and dead-ends penalised, never forbidden) | optimal step count when a zero-penalty optimal route exists; may trade a step for open space otherwise; same budget + partial-path fallback | none yet (open-space-preferring chasers) |
 
 All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 `kPaths[]` / `resolvePath()`.
@@ -48,7 +49,7 @@ All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 
 | Use case | Pick | Also consider | Avoid | Why |
 |---|---|---|---|---|
-| Mob monster (independent chaser, `CActor`, gf=1) | `ASTAR` | `LOS` (open-arena chasers that may give up at walls), `ASTAR_BUDGET` (bounded per-recompute cost on large/gf=2 maps), `GBFS` (crowds where a slightly longer walk is invisible), `FLEE` (retreat/reposition; group-flee policy knobs deferred until content uses it) | `BFS`, `DIJKSTRA` | Shipped default (`zombie`, `ghost`, `bbdragondn` in `tilesdata.cpp`): optimal unit steps, stops at the goal, cheapest per-recompute on the small gf=1 grid. `BFS`/`DIJKSTRA` expand strictly more for the same length — they are test references, not content choices. `FLOWFIELD` is the structural fit for many-mobs-one-player but currently rebuilds the whole field per call (see §3), so it wins nothing until a shared-field builder lands. |
+| Mob monster (independent chaser, `CActor`, gf=1) | `ASTAR` | `LOS` (open-arena chasers that may give up at walls), `ASTAR_BUDGET` (bounded per-recompute cost on large/gf=2 maps), `GBFS` (crowds where a slightly longer walk is invisible), `FLEE` (retreat/reposition; group-flee policy knobs deferred until content uses it), `ASTAR_SAFE` (prefers open cells, avoids dead-ends; ≤4 probes per distinct cell) | `BFS`, `DIJKSTRA` | Shipped default (`zombie`, `ghost`, `bbdragondn` in `tilesdata.cpp`): optimal unit steps, stops at the goal, cheapest per-recompute on the small gf=1 grid. `BFS`/`DIJKSTRA` expand strictly more for the same length — they are test references, not content choices. `FLOWFIELD` is the structural fit for many-mobs-one-player but currently rebuilds the whole field per call (see §3), so it wins nothing until a shared-field builder lands. |
 | Boss (`CBoss`, gf=2, one on screen, movement is the spectacle) | `ASTAR` | `AStarSmooth` or `THETASTAR` for straighter walks, `ASTAR_BUDGET` (the gf=2 grid is where the unbounded sealed-goal cost hurts) | `BFS`, `DIJKSTRA` | Same optimal length everywhere; bosses move on the 4x larger gf=2 half-tile grid, so minimize expansions but maximize perceived quality: the two smoothers merge collinear runs (fewer turns) at zero length cost — nicer to watch for a big walking sprite. In use: demon (`bosses.ini`). |
 | Bullet (`skill BULLET algo=`, flies until `Blocked`/TTL/goal) | straight shot: `RAYCAST_BULLET` (new content) / `RAYCAST` (existing content) | routing bolt: `LOS` | search algos (`ASTAR`…) | Bullets are fire-and-forget rays resolved by `followPath`'s per-step probe, not searchers: no routing, no re-plans. New straight-shot content should use `RAYCAST_BULLET` (true sight-line collision cells, §3); keep `RAYCAST` in existing content so its hit cells don't shift. `LOS` stays for bolts that step around cover (greedy, never backtracks). |
 
@@ -226,6 +227,23 @@ radius cap keeps one flee plan consumable within `PATH_TIMEOUT_MAX`. No
 shipped content selects it; the candidate doc's group-engage policy
 (knockback-adjacent ini knobs) is deferred until first content uses it.
 
+### AStarSafe — `AStarSafe::findPath`
+The `AStarBudget` loop plus a probe-derived entry cost: entering a cell
+costs `1 + kOpenSpaceWeight * (refused canMove probes out of it)`, the
+penalty (0..3) scored once per cell per call through a file-local cache
+(`openPenalty`, ≤ 4 probes per distinct expanded cell, ≤ budget cells).
+Corridors and map edges pay, dead-ends pay 3 — cramped cells are
+**discouraged, never forbidden**, so reachability and the empty-means-no
+path contract are exactly `AStarBudget`'s (same budget knob, same
+best-node partial path, same boxed-in rule). Edge cost min is still 1,
+so the Manhattan heuristic stays admissible + consistent: goal-test-on-pop
+and the BUG-H17 snapshot machinery are untouched. Optimal *step count*
+equals A*'s whenever a zero-penalty optimal route exists (free-map fuzz
+parity); otherwise the search may pay a step to stay in open space —
+that is the point. Terrain-hazard soft costs (lava/traps) stay vetoed on
+the missing hazard-tile data source (candidate doc §5); when that lands
+it is one more `+ cost(...)` term here. No shipped content selects it.
+
 ## 4. How a choice reaches the algo
 
 `bosses.ini path=` / skill `algo=` → `resolvePath()` (`kPaths[]`) →
@@ -262,10 +280,13 @@ even though searchers may path into it.
    start==goal ruling, Flee open-map farthest-corner endpoint pin +
    wall-sealed-pocket corridor + boxed-in empty + flees() flag + driver
    adjacency concession (sprite on threat → MoveSuccesful via a boss
-   sprite).
-- `t_tables.cpp`: selector name resolution incl. all twelve algo names.
+   sprite), AStarSafe wall-hug choice pin (open descent beats the wall
+   crossing) + corridor forced/budget-3 cut (penalty biases, never
+   refuses; hCost-keyed fallback) + wall-free interior fuzz length
+   parity vs A* (aim identity not assertable — Node* heap ties).
+- `t_tables.cpp`: selector name resolution incl. all thirteen algo names.
 - `t_actor.cpp` `test_path_algos`: `getPathAlgo` non-null per enum value.
-- `t_bossdata.cpp`: loaded `path <= FLEE` validity bound.
+- `t_bossdata.cpp`: loaded `path <= ASTAR_SAFE` validity bound.
 
 ## 6. Adding or changing an algorithm
 

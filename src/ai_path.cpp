@@ -47,6 +47,7 @@ namespace PathData
     const AStarBudget aStarBudget;
     const Greedy greedy;
     const Flee flee;
+    const AStarSafe aStarSafe;
 
     constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
     constexpr int FLEE_RADIUS = 10;      // bounded flee search (<= timeout:
@@ -282,6 +283,31 @@ namespace
         return std::tie(a.hCost, a.gCost, a.pos.x, a.pos.y) <
                std::tie(b.hCost, b.gCost, b.pos.x, b.pos.y);
     }
+
+    // refused probes out of p among the four g_steps edges (0..3): how
+    // cramped the cell is (AStarSafe entry-cost term). Cached per cell per
+    // call -- the probe budget is structural (<= 4 probes per distinct
+    // expanded cell). Teleport + restore like every other probe site.
+    int openPenalty(ISprite &sprite, const Pos &p, std::unordered_map<Pos, int> &cache)
+    {
+        const auto it = cache.find(p);
+        if (it != cache.end())
+            return it->second;
+        const Pos originalPos = sprite.pos();
+        sprite.move(p);
+        int refused = 0;
+        for (size_t i = 0; i < std::size(PathData::g_steps); ++i)
+            if (!sprite.canMove(PathData::g_steps[i].dir))
+                ++refused;
+        sprite.move(originalPos);
+        cache[p] = refused;
+        return refused;
+    }
+
+    // weight of one refused edge in the AStarSafe entry cost (declared
+    // constant; min edge cost stays 1 so the Manhattan heuristic remains
+    // admissible + consistent)
+    constexpr int kOpenSpaceWeight = 1;
 } // namespace
 
 AStarBudget::AStarBudget(int budget)
@@ -650,6 +676,135 @@ std::vector<JoyAim> Flee::findPath(ISprite &sprite, const Pos &threatPos) const
         }
     }
     return directions;
+}
+
+AStarSafe::AStarSafe(int budget)
+    : m_budget(budget)
+{
+}
+
+int AStarSafe::manhattanDistance(const Pos &a, const Pos &b) const
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// Probe-derived open-space A* (docs/plans/ipath-candidates-plan.md phase
+// 4): the AStarBudget loop above plus an entry cost of kOpenSpaceWeight
+// per refused canMove probe out of the successor cell (openPenalty, 0..3).
+// Cramped cells (corridor walls, map edges) and dead-ends are penalised,
+// never forbidden: penalty 3 = dead end, penalty 0 = open cell. Edge cost
+// min stays 1, so the Manhattan heuristic remains admissible + consistent
+// and goal-test-on-pop plus the BUG-H17 snapshot machinery are unchanged.
+// Same budget knob and best-node partial-path fallback as phase 1.
+std::vector<JoyAim> AStarSafe::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Priority queue for open list
+    OpenList openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+    std::unordered_map<Pos, int> penaltyCache;
+
+    // Create start node
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
+
+    const Node *answer = nullptr; // best popped node (the goal, or the closest so far)
+    int expansions = 0;
+
+    while (!openList.empty())
+    {
+        const OpenEntry entry = openList.top();
+        openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
+
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
+        // Reached goal
+        if (current->pos == goalPos)
+            return chainToDirections(current);
+
+        // Best partial candidate: min hCost, tie lower gCost, tie
+        // lexicographic pos (declared so behavior is deterministic)
+        if (answer == nullptr || isCloser(*current, *answer))
+        {
+            answer = current;
+        }
+
+        // Budget exhausted: partial success, answer with the best node so far
+        if (expansions >= m_budget)
+            break;
+        ++expansions;
+
+        closedList[current->pos] = true;
+
+        // Explore neighbors
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current->pos.y + g_steps[i].delta.y)};
+
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (!canStep)
+                continue;
+
+            // entry cost: unit step + weight per refused edge out of the
+            // successor (scored once per cell per call)
+            const int newGCost =
+                current->gCost + 1 + openPenalty(sprite, newPos, penaltyCache) * kOpenSpaceWeight;
+            const int newHCost = manhattanDistance(newPos, goalPos);
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // BUG-C9: relax in place (see AStar); replacing the unique_ptr
+                // would free the Node still referenced by openList.
+                // BUG-H17: snapshot keys make the in-place update safe.
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.emplace(it->second->fCost(), it->second.get());
+            }
+        }
+    }
+    // Goal never popped: partial path to the best popped node (empty when
+    // that node is the start, i.e. genuinely boxed in)
+    return answer == nullptr ? std::vector<JoyAim>{} : chainToDirections(answer);
 }
 
 // ponytail: byte-identical to AStar::findPath with h = 0 (the reference
@@ -1717,6 +1872,10 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::FLEE)
     {
         return &PathData::flee;
+    }
+    else if (algo == BossData::ASTAR_SAFE)
+    {
+        return &PathData::aStarSafe;
     }
     else
     {

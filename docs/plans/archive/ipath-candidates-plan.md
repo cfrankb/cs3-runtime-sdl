@@ -1,10 +1,10 @@
 # Implementation Plan: IPath candidate adoption (ASTAR_BUDGET, GBFS, FLEE, ASTAR_SAFE)
 
-Status: phases 1-3 (ASTAR_BUDGET, GBFS, FLEE) implemented 2026-11-27; phase 4 proposed
+Status: all four phases (ASTAR_BUDGET, GBFS, FLEE, ASTAR_SAFE) implemented 2026-11-27 — complete
 Date: 2026-11-27
-Source: [docs/spec/ipath-algorithm-candidates.md](../spec/ipath-algorithm-candidates.md)
+Source: [docs/spec/ipath-algorithm-candidates.md](../../spec/ipath-algorithm-candidates.md)
 (verdicts and oracle rationale live there; this plan is the executable form)
-Procedure: [docs/briefs/ipath.md](../briefs/ipath.md) applies in full to each
+Procedure: [docs/briefs/ipath.md](../../briefs/ipath.md) applies in full to each
 phase. Model for phases 1/2/4: existing `AStar::findPath` in
 `src/ai_path.cpp`; phase 3 additionally touches `IPath` / `CPath::followPath`.
 

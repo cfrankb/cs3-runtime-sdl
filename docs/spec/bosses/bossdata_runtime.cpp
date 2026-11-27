@@ -390,6 +390,7 @@ namespace
         {"ASTAR_BUDGET", BossData::ASTAR_BUDGET},
         {"GBFS", BossData::GBFS},
         {"FLEE", BossData::FLEE},
+        {"ASTAR_SAFE", BossData::ASTAR_SAFE},
     };
 
     const NameValue kTiles[] = {

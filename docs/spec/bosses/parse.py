@@ -55,7 +55,8 @@ namespace BossData
         RAYCAST_BULLET,
         ASTAR_BUDGET,
         GBFS,
-        FLEE
+        FLEE,
+        ASTAR_SAFE
     };
 
     enum HitBoxType:uint8_t {

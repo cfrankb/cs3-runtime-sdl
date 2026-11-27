@@ -124,6 +124,7 @@ bool test_path_algos()
         {BossData::ASTAR_BUDGET, "ASTAR_BUDGET"},
         {BossData::GBFS, "GBFS"},
         {BossData::FLEE, "FLEE"},
+        {BossData::ASTAR_SAFE, "ASTAR_SAFE"},
     };
     for (const auto &v : valid)
     {

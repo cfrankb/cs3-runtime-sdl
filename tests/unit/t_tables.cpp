@@ -55,6 +55,8 @@ namespace
             resolvePath("Path::GBFS") != BossData::GBFS ||
             resolvePath("FLEE") != BossData::FLEE ||
             resolvePath("Path::FLEE") != BossData::FLEE ||
+            resolvePath("ASTAR_SAFE") != BossData::ASTAR_SAFE ||
+            resolvePath("Path::ASTAR_SAFE") != BossData::ASTAR_SAFE ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");

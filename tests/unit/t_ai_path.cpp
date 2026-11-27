@@ -176,6 +176,7 @@ bool test_pathfinding()
     const AStarBudget aStarBudget;
     const Greedy greedy;
     const Flee flee;
+    const AStarSafe aStarSafe;
 
     // open grid: optimal = manhattan (3)
     const Pos start{1, 1};
@@ -520,6 +521,7 @@ bool test_pathfinding()
         !dijkstra.findPath(sprite, Pos{4, 0}).empty() ||
         !thetaStar.findPath(sprite, Pos{4, 0}).empty() ||
         !greedy.findPath(sprite, Pos{4, 0}).empty() ||
+        !aStarSafe.findPath(sprite, Pos{4, 0}).empty() ||
         !flowField.findPath(sprite, Pos{4, 0}).empty())
     {
         LOGE("sealed wall: expected no path");
@@ -609,12 +611,89 @@ bool test_pathfinding()
         }
     }
 
+    // AStarSafe (plan phase 4): entry cost = 1 + kOpenSpaceWeight per
+    // refused canMove probe out of the entered cell (cramped cells and
+    // dead ends are penalised, never forbidden).
+    {
+        // wall-hug choice: two equal 6-step routes around the column
+        // {(4,3),(4,4)}; every route pays at least 1 (entering (4,2) right
+        // beside the wall top is the cheapest crossing) and the x=6 descent
+        // is the only one that pays exactly that, so it is the unique
+        // optimum on a tie-free map -> exact aim pin.
+        fillMap(10);
+        CMap &safeMap = CGame::getMap();
+        safeMap.set(4, 3, BLOCKED);
+        safeMap.set(4, 4, BLOCKED);
+        sprite.move(Pos{3, 2});
+        const std::vector<JoyAim> hug{AIM_RIGHT, AIM_RIGHT, AIM_RIGHT,
+                                      AIM_DOWN, AIM_DOWN, AIM_DOWN};
+        if (aStarSafe.findPath(sprite, Pos{6, 5}) != hug)
+        {
+            LOGE("AStarSafe wall-hug: expected RRR DDD (open descent, penalty 1)");
+            return false;
+        }
+
+        // corridor forced: entering (x,0) pays 2 (map edge + wall row),
+        // the penalty biases but never refuses: the sealed-row goal still
+        // converges at (9,0) and a budget-3 cut walks exactly 3 steps --
+        // fallback keyed on hCost as phase 1 (f = 10 + 2x is strictly
+        // increasing along the corridor, so the pop order is forced)
+        fillMap(10);
+        for (int x = 0; x < 10; ++x)
+            safeMap.set(x, 1, BLOCKED);
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> safeFull(9, AIM_RIGHT);
+        if (aStarSafe.findPath(sprite, Pos{9, 1}) != safeFull)
+        {
+            LOGE("AStarSafe corridor: expected 9 RIGHT to (9,0)");
+            return false;
+        }
+        const AStarSafe safeTight(3);
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> safeCut(3, AIM_RIGHT);
+        if (safeTight.findPath(sprite, Pos{9, 1}) != safeCut)
+        {
+            LOGE("AStarSafe budget-3: expected 3 RIGHT");
+            return false;
+        }
+
+        // free oracle: wall-free maps with interior start/goal admit a
+        // zero-penalty monotone route, so the optimal STEP count equals
+        // A*'s (penalties can only re-rank equal-cost routes, never raise
+        // this bound). Aim identity is NOT assertable (Node* heap ties,
+        // see the BUG-H17 note); budget 256 > the 144 cells never fires.
+        {
+            std::mt19937 rng(20261127);
+            CMap &map = CGame::getMap();
+            for (int trial = 0; trial < 20; ++trial)
+            {
+                map.clear();
+                map.resize(12, 12, 0, true);
+                const Pos s{static_cast<int16_t>(1 + rng() % 10),
+                            static_cast<int16_t>(1 + rng() % 10)};
+                const Pos g{static_cast<int16_t>(1 + rng() % 10),
+                            static_cast<int16_t>(1 + rng() % 10)};
+                sprite.move(s);
+                const auto a = aStar.findPath(sprite, g);
+                sprite.move(s);
+                const auto safe = aStarSafe.findPath(sprite, g);
+                if (safe.size() != a.size() || !(replay(s, safe) == g))
+                {
+                    LOGE("AStarSafe free fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                         trial, safe.size(), a.size(), s.x, s.y, g.x, g.y);
+                    return false;
+                }
+            }
+        }
+    }
+
     // out-of-bounds goal must return empty, not crash
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
         !aStarBudget.findPath(sprite, Pos{99, 99}).empty() ||
         !greedy.findPath(sprite, Pos{99, 99}).empty() ||
         !flee.findPath(sprite, Pos{99, 99}).empty() ||
+        !aStarSafe.findPath(sprite, Pos{99, 99}).empty() ||
         !bfs.findPath(sprite, Pos{-1, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
         !thetaStar.findPath(sprite, Pos{99, 99}).empty() ||
@@ -675,6 +754,11 @@ bool test_pathfinding()
     if (CPath::getPathAlgo(BossData::FLEE) == nullptr)
     {
         LOGE("getPathAlgo(FLEE) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::ASTAR_SAFE) == nullptr)
+    {
+        LOGE("getPathAlgo(ASTAR_SAFE) returned null");
         return false;
     }
 

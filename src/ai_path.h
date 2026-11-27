@@ -165,6 +165,19 @@ private:
     int manhattanDistance(const Pos &a, const Pos &b) const;
 };
 
+// AStarSafe Pathfinding class: the AStarBudget loop plus a probe-derived
+// entry cost that discourages (never forbids) cramped cells.
+class AStarSafe : public IPath
+{
+public:
+    explicit AStarSafe(int budget = 256);
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+    int m_budget;
+};
+
 class CPath
 {
 public:
