@@ -242,16 +242,14 @@ void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
     }
 
     //  Attack hitbox: Affect all player tiles it overlaps
-    boss.testHitbox1(m_map, [](const Pos &p, auto type)
-                     {
+    boss.testHitbox1(m_map, [](const Pos &p, auto type) {
                          (void)type;
                          // type-based like every other player-detection site
-                         return getTileDef(m_map.at(p.x, p.y)).type == TYPE_PLAYER; }, [&boss, this, &playerDamage, special1Ok](const HitResult &r)
-                     {
-                         if (r.type == BossData::SPECIAL1 && !special1Ok)
-                             return;                                                 // rate-gated: this tick whiffs
-                         playerDamage = std::max(boss.damage(r.type), playerDamage); // find player damage
-                     });
+                         return getTileDef(m_map.at(p.x, p.y)).type == TYPE_PLAYER; }, [&boss, this, &playerDamage, special1Ok](const HitResult &r) {
+        if (r.type == BossData::SPECIAL1 && !special1Ok)
+            return;                                                 // rate-gated: this tick whiffs
+        playerDamage = std::max(boss.damage(r.type), playerDamage); // find player damage
+    });
 
     if (playerDamage)
         addHealth(-playerDamage); // hurtPlayer
@@ -259,16 +257,14 @@ void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
     const uint32_t boss_flags = boss.data()->flags;
     if (boss_flags & BOSS_FLAG_ICE_DAMAGE)
     {
-        boss.testHitbox1(m_map, [](const Pos &pos, auto type)
-                         {
-                             (void)type;
-                             const CMap &map = CGame::getMap();
-                             const auto c = map.at(pos.x, pos.y);
-                             const TileDef &def = getTileDef(c);
-                             return def.type == TYPE_ICECUBE; // check if IceCube
-                         },
-                         [&boss, this](const HitResult &r)
-                         {
+        boss.testHitbox1(m_map, [](const Pos &pos, auto type) {
+            (void)type;
+            const CMap &map = CGame::getMap();
+            const auto c = map.at(pos.x, pos.y);
+            const TileDef &def = getTileDef(c);
+            return def.type == TYPE_ICECUBE; // check if IceCube
+        },
+                         [&boss, this](const HitResult &r) {
                              const Pos &pos = r.pos;
                              playSound(SOUND_SPLASH01);
                              if (r.type != BossData::HitBoxType::SPECIAL1)
@@ -293,17 +289,15 @@ void CGame::handleBossHitboxContact(CBoss &boss, const uint32_t ticks)
     }
 
     // test if boss has set off barrel
-    boss.testHitbox1(m_map, [](const Pos &pos, auto type)
-                     {
-                         if (type != BossData::HitBoxType::SPECIAL1)
-                             return false;
-                         const CMap &map = CGame::getMap();
-                         const auto c = map.at(pos.x, pos.y);
-                         const TileDef &def = getTileDef(c);
-                         return def.type == TYPE_BARREL; // check if barrel
-                     },
-                     [&boss, this](const HitResult &r)
-                     {
+    boss.testHitbox1(m_map, [](const Pos &pos, auto type) {
+        if (type != BossData::HitBoxType::SPECIAL1)
+            return false;
+        const CMap &map = CGame::getMap();
+        const auto c = map.at(pos.x, pos.y);
+        const TileDef &def = getTileDef(c);
+        return def.type == TYPE_BARREL; // check if barrel
+    },
+                     [&boss, this](const HitResult &r) {
                          fuseBarrel(r.pos); // lit fuse for barrel
                      });
 }
@@ -435,8 +429,7 @@ void CGame::manageMonsters(const uint32_t ticks)
     std::vector<CActor> newMonsters;
     std::set<int, std::greater<int>> deletedMonsters;
 
-    auto isDeleted = [&deletedMonsters](int i)
-    {
+    auto isDeleted = [&deletedMonsters](int i) {
         return deletedMonsters.find(i) != deletedMonsters.end();
     };
 
@@ -467,11 +460,9 @@ void CGame::manageMonsters(const uint32_t ticks)
         if (def.speed < speedCount && !speeds[def.speed])
             continue;
 
-        if (actor.type() == TYPE_MONSTER)
-        {
-            handleMonster(actor, def);
-        }
-        else if (actor.type() == TYPE_MONSTERV3 || actor.type() == TYPE_GHOST)
+        if (actor.type() == TYPE_MONSTER ||
+            actor.type() == TYPE_MONSTERV3 ||
+            actor.type() == TYPE_GHOST)
         {
             handleMonsterV3(actor, def, ticks);
         }
@@ -536,44 +527,6 @@ void CGame::manageMonsters(const uint32_t ticks)
         rebuildMonsterGrid();
 }
 
-void CGame::handleMonster(CActor &actor, const TileDef &def)
-{
-    static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
-    if (actor.isPlayerThere(actor.getAim()))
-    {
-        // apply health damages
-        addHealth(def.health);
-        if (def.ai & AI_STICKY)
-        {
-            return;
-        }
-    }
-    bool reverse = def.ai & AI_REVERSE;
-    JoyAim aim = actor.findNextDir(reverse);
-    if (aim != AIM_NONE)
-    {
-        shadowActorMove(actor, aim);
-        if (!(def.ai & AI_ROUND))
-        {
-            return;
-        }
-    }
-    for (uint8_t i = 0; i < std::size(g_dirs); ++i)
-    {
-        if (actor.getAim() != g_dirs[i] &&
-            actor.isPlayerThere(g_dirs[i]))
-        {
-            // apply health damages
-            addHealth(def.health);
-            if (def.ai & AI_FOCUS)
-            {
-                actor.setAim(g_dirs[i]);
-            }
-            break;
-        }
-    }
-}
-
 void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ticks)
 {
     static constexpr JoyAim g_dirs[] = {AIM_UP, AIM_DOWN, AIM_LEFT, AIM_RIGHT};
@@ -587,7 +540,11 @@ void CGame::handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ti
         }
     }
 
-    if (actor.type() == TYPE_MONSTERV3 || actor.type() == TYPE_GHOST)
+    // DO NOT REMOVE this type guard: it is load-bearing, not dead code.
+    // TYPE_MONSTER actors dispatched here must skip pathfinding/bullet
+    // spawning and fall through to the legacy wander tail below.
+    if (actor.type() == TYPE_MONSTERV3 ||
+        actor.type() == TYPE_GHOST)
     {
         int distance = actor.distance(m_player);
         if (distance < def.range)
@@ -876,8 +833,7 @@ void CGame::blastRadius(const Pos &pos, const size_t radius, const int damage, s
                 // check if damage can occur
                 return type != BossData::HitBoxType::SPECIAL1 && p == bp.toPos();
             },
-                             [&bp, &bossDamage](const HitResult &)
-                             {
+                             [&bp, &bossDamage](const HitResult &) {
                                  // compute maximum damage
                                  bossDamage = std::max(bp.damage, bossDamage); //
                              });

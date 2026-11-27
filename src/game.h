@@ -288,7 +288,6 @@ private:
     const CGameStats &statsConst() const;
 
     // regular monsters (mob)
-    void handleMonster(CActor &actor, const TileDef &def);
     void handleMonsterV3(CActor &actor, const TileDef &def, const uint32_t ticks);
     void handleDrone(CActor &actor, const TileDef &def);
     void handleVamPlant(CActor &actor, const TileDef &def, std::vector<CActor> &newMonsters,
