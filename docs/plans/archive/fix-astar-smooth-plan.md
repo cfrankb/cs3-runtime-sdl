@@ -1,6 +1,6 @@
 # Implementation Plan: Fix broken `ASTAR_SMOOTH`
 
-Status: proposed
+Status: implemented 2026-11-26
 Date: 2026-11-26
 Target: `AStarSmooth::smoothPath` / `AStarSmooth::findPath` in `src/ai_path.cpp`
 (L384–528)

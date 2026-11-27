@@ -5,7 +5,7 @@
 | Checkpoint | Value |
 |---|---|
 | Date | 2026-11-26 |
-| Git HEAD | cc5268c |
+| Git HEAD | e8515b4 |
 | Files tracked | 120 |
 | Covered by cs3-tests | 70 |
 | Verified items | 81 / 120 |
@@ -16,8 +16,8 @@ See [README](README.md) for the verification procedure.
 
 - [x] `src/actor.cpp` `b1b1dcdccbf4ecc8` — covered by t_actor, t_game_ai (testGhost)
 - [x] `src/actor.h` `1e32db74757f8a65` — covered by t_actor
-- [x] `src/ai_path.cpp` `59936730ed9a62f3` — covered by t_ai_path, t_actor
-- [x] `src/ai_path.h` `3100f68c01d31d7f` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.cpp` `07d3bca09aaf14c3` — covered by t_ai_path, t_actor
+- [x] `src/ai_path.h` `a85df72aba643b03` — covered by t_ai_path, t_actor
 - [x] `src/animator.cpp` `4a3e3b0a5c7e1980` — covered by t_animator
 - [x] `src/animator.h` `f54e7cab488027bb` — covered by t_animator
 - [ ] `src/animzdata.h` `69dd22ca3d973aad`

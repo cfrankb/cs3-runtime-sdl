@@ -138,6 +138,16 @@ namespace
         for (int y = y0; y <= y1; ++y)
             map.set(x, y, BLOCKED);
     }
+
+    // number of direction changes in an aim sequence
+    size_t turnCount(const std::vector<JoyAim> &moves)
+    {
+        size_t turns = 0;
+        for (size_t i = 1; i < moves.size(); ++i)
+            if (moves[i] != moves[i - 1])
+                ++turns;
+        return turns;
+    }
 }
 
 bool test_pathfinding()
@@ -166,8 +176,21 @@ bool test_pathfinding()
     // wall with a gap: AStar/BFS must route around it (10 steps optimal)
     wallColumn(1, 0, 2);
     if (!checkPath("AStar", sprite, aStar, Pos{0, 0}, Pos{4, 0}, 10) ||
-        !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10))
+        !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10) ||
+        !checkPath("AStarSmooth", sprite, aStarSmooth, Pos{0, 0}, Pos{4, 0}, 10))
         return false;
+
+    // detour shape: the smoothed path must not turn more often than A*'s
+    sprite.move(Pos{0, 0});
+    const auto astarDetour = aStar.findPath(sprite, Pos{4, 0});
+    sprite.move(Pos{0, 0});
+    const auto smoothDetour = aStarSmooth.findPath(sprite, Pos{4, 0});
+    if (turnCount(smoothDetour) > turnCount(astarDetour))
+    {
+        LOGE("AStarSmooth detour shape: %zu turns vs A* %zu",
+             turnCount(smoothDetour), turnCount(astarDetour));
+        return false;
+    }
 
     // BUG-C9: map whose heap tie-breaks force a g-cost relaxation (a node
     // already in openList is reached cheaper); pre-fix freed the old Node
@@ -210,6 +233,92 @@ bool test_pathfinding()
             {
                 LOGE("BUG-H17 trial %d: A* %zu steps vs BFS %zu ((%d,%d)->(%d,%d))",
                      trial, a.size(), b.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+        }
+    }
+
+    // fix-astar-smooth: S-bend, opposing columns x=3 rows 0..6 and x=8
+    // rows 5..11 on a 12-grid force crossings at y>=7 and y<=4; optimal
+    // is 21 steps for both algos (11 horizontal + 5 down + 3 up + 2 up)
+    {
+        fillMap(12);
+        CMap &map = CGame::getMap();
+        for (int y = 0; y <= 6; ++y)
+            map.set(3, y, BLOCKED);
+        for (int y = 5; y <= 11; ++y)
+            map.set(8, y, BLOCKED);
+        if (!checkPath("AStar", sprite, aStar, Pos{0, 2}, Pos{11, 2}, 21) ||
+            !checkPath("AStarSmooth", sprite, aStarSmooth, Pos{0, 2}, Pos{11, 2}, 21))
+            return false;
+    }
+
+    // staircase oracle, exact shape: with column x=3 rows 0..6 walled,
+    // every optimal (2,1)->(4,5) path is D6 R2 U2 (crossing only at row 7,
+    // up-legs only in the x=4 column); the x-first staircase oracle must
+    // reproduce exactly that aim sequence
+    {
+        fillMap(12);
+        wallColumn(3, 0, 6);
+        sprite.move(Pos{2, 1});
+        const auto moves = aStarSmooth.findPath(sprite, Pos{4, 5});
+        const std::vector<JoyAim> want{AIM_DOWN, AIM_DOWN, AIM_DOWN, AIM_DOWN,
+                                       AIM_DOWN, AIM_DOWN, AIM_RIGHT, AIM_RIGHT,
+                                       AIM_UP, AIM_UP};
+        if (moves != want)
+        {
+            LOGE("staircase oracle: got %zu steps; expecting exact D6 R2 U2",
+                 moves.size());
+            return false;
+        }
+    }
+
+    // seeded fuzz: AStarSmooth length parity with A* and every replayed
+    // cell walkable (catches an oracle accepting a routed detour)
+    {
+        std::mt19937 rng(0x5A05);
+        CMap &map = CGame::getMap();
+        for (int trial = 0; trial < 50; ++trial)
+        {
+            map.clear();
+            map.resize(12, 12, 0, true);
+            for (int w = 0; w < 20; ++w)
+                map.set(static_cast<int>(rng() % 12), static_cast<int>(rng() % 12), BLOCKED);
+            const Pos s{static_cast<int16_t>(rng() % 12), static_cast<int16_t>(rng() % 12)};
+            const Pos g{static_cast<int16_t>(rng() % 12), static_cast<int16_t>(rng() % 12)};
+            if (map.at(s.x, s.y) == BLOCKED || map.at(g.x, g.y) == BLOCKED)
+                continue;
+            sprite.move(s);
+            const auto smoothMoves = aStarSmooth.findPath(sprite, g);
+            sprite.move(s);
+            const auto astarMoves = aStar.findPath(sprite, g);
+            if (smoothMoves.size() != astarMoves.size())
+            {
+                LOGE("AStarSmooth fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                     trial, smoothMoves.size(), astarMoves.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            Pos p = s;
+            for (const auto aim : smoothMoves)
+            {
+                switch (aim)
+                {
+                case AIM_UP: --p.y; break;
+                case AIM_DOWN: ++p.y; break;
+                case AIM_LEFT: --p.x; break;
+                default: ++p.x; break; // AIM_RIGHT
+                }
+                if (p.x < 0 || p.y < 0 || p.x >= 12 || p.y >= 12 || map.at(p.x, p.y) == BLOCKED)
+                {
+                    LOGE("AStarSmooth fuzz trial %d: path enters blocked/out-of-bounds (%d,%d)",
+                         trial, p.x, p.y);
+                    return false;
+                }
+            }
+            if (!(p == g))
+            {
+                LOGE("AStarSmooth fuzz trial %d: ends at (%d,%d), goal (%d,%d)",
+                     trial, p.x, p.y, g.x, g.y);
                 return false;
             }
         }

@@ -51,6 +51,11 @@ public:
 private:
     int manhattanDistance(const Pos &a, const Pos &b) const;
     std::vector<JoyAim> smoothPath(const std::vector<Pos> &path, ISprite &sprite) const;
+    // probes the deterministic x-first staircase between two in-bounds
+    // cells; fills `steps` and returns true only if every step's canMove
+    // probe succeeds (no axis fallback, no routing around anything)
+    bool segmentSteps(ISprite &sprite, const Pos &from, const Pos &to,
+                      std::vector<JoyAim> &steps) const;
 };
 
 // BFS Pathfinding class

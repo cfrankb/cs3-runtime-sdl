@@ -394,57 +394,115 @@ int AStarSmooth::manhattanDistance(const Pos &a, const Pos &b) const
     return abs(a.x - b.x) + abs(a.y - b.y);
 }
 
-std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprite &sprite) const
+namespace
 {
-    if (path.size() < 2)
-        return {};
+    // aim for the unit step between consecutive A* path cells, resolved
+    // through the shared g_steps table (mirrors the searches' labelling)
+    JoyAim unitAim(const Pos &from, const Pos &to)
+    {
+        for (const auto &step : PathData::g_steps)
+        {
+            const Pos next{static_cast<int16_t>(from.x + step.delta.x),
+                           static_cast<int16_t>(from.y + step.delta.y)};
+            if (next == to)
+                return step.dir;
+        }
+        return AIM_NONE;
+    }
+}
+
+bool AStarSmooth::segmentSteps(ISprite &sprite, const Pos &from, const Pos &to,
+                               std::vector<JoyAim> &steps) const
+{
+    steps.clear();
     const int granularFactor = sprite.getGranularFactor();
     const CMap &map = CGame::getMap();
     const int mapLen = map.width() * granularFactor; // Half-tile bounds
     const int mapHei = map.height() * granularFactor;
     const Pos originalPos = sprite.pos();
+    Pos cur = from;
+    bool ok = true;
+    // deterministic x-first staircase: full horizontal leg, then vertical;
+    // unlike the greedy LineOfSight router there is no axis fallback, so a
+    // clear walk means the segment genuinely sees through the wall gaps of
+    // this exact route, not some detour
+    for (int leg = 0; leg < 2 && ok; ++leg)
+    {
+        while ((leg == 0) ? (cur.x != to.x) : (cur.y != to.y))
+        {
+            const int16_t step = (leg == 0)
+                                     ? static_cast<int16_t>(to.x > cur.x ? 1 : -1)
+                                     : static_cast<int16_t>(to.y > cur.y ? 1 : -1);
+            const JoyAim aim = (leg == 0)
+                                   ? (step > 0 ? AIM_RIGHT : AIM_LEFT)
+                                   : (step > 0 ? AIM_DOWN : AIM_UP);
+            const Pos next{static_cast<int16_t>(cur.x + (leg == 0 ? step : 0)),
+                           static_cast<int16_t>(cur.y + (leg == 1 ? step : 0))};
+            if (next.x < 0 || next.x >= mapLen || next.y < 0 || next.y >= mapHei)
+            {
+                ok = false;
+                break;
+            }
+            // probe canMove from the cell being left so the entered cell is checked
+            sprite.move(cur);
+            const bool canStep = sprite.canMove(aim);
+            if (!canStep)
+            {
+                ok = false;
+                break;
+            }
+            steps.push_back(aim);
+            cur = next;
+        }
+    }
+    sprite.move(originalPos);
+    if (!ok)
+        steps.clear();
+    return ok;
+}
 
-    LineOfSight los;
+std::vector<JoyAim> AStarSmooth::smoothPath(const std::vector<Pos> &path, ISprite &sprite) const
+{
+    if (path.size() < 2)
+        return {};
     std::vector<JoyAim> directions;
     for (size_t i = 1; i < path.size();)
     {
-        // probe line-of-sight from the actual segment start
-        sprite.move(path[i - 1]);
+        // extend the anchor greedily; segmentSteps is the single probe
+        // walk (no second execution to emit) and the last accepted run is
+        // the staircase for path[j-1]
+        std::vector<JoyAim> best;
         size_t j = i + 1;
-        while (j < path.size())
+        std::vector<JoyAim> steps;
+        while (j < path.size() && segmentSteps(sprite, path[i - 1], path[j], steps))
         {
-            Pos start = path[i - 1];
-            Pos end = path[j];
-            if (start.x < 0 || start.x >= mapLen || start.y < 0 || start.y >= mapHei ||
-                end.x < 0 || end.x >= mapLen || end.y < 0 || end.y >= mapHei)
-            {
-                LOGE("Invalid path coordinates start (%d,%d) or end (%d,%d) for map bounds (%d,%d) on line %d",
-                     start.x, start.y, end.x, end.y, mapLen, mapHei, __LINE__);
-                break;
-            }
-            // Reuse LineOfSight to check if direct path is clear in half-tile space
-            if (!los.findPath(sprite, end).empty())
-            {
-                j++;
-            }
-            else
-            {
-                break;
-            }
+            best = std::move(steps);
+            ++j;
         }
-        // emit the unit moves from path[i-1] to path[j-1] (LOS is all-or-nothing)
-        const auto segment = los.findPath(sprite, path[j - 1]);
-        if (segment.empty())
+        if (best.empty())
         {
-            LOGE("Invalid smoothed path transition from (%d,%d) to (%d,%d)",
-                 path[i - 1].x, path[i - 1].y, path[j - 1].x, path[j - 1].y);
-            sprite.move(originalPos);
-            return {};
+            // fail-soft: path[i-1]->path[i] is an edge the search itself
+            // validated with the same canMove probes, so the oracle can
+            // only refuse it on a sprite-model inconsistency; walk the
+            // single unit step instead of killing the whole path
+            const JoyAim aim = unitAim(path[i - 1], path[i]);
+            if (aim == AIM_NONE)
+            {
+                LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                     path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                return {};
+            }
+            LOGW("oracle rejected search-validated step (%d,%d)->(%d,%d)",
+                 path[i - 1].x, path[i - 1].y, path[i].x, path[i].y);
+            directions.push_back(aim);
+            i = j; // == i + 1
         }
-        directions.insert(directions.end(), segment.begin(), segment.end());
-        i = j;
+        else
+        {
+            directions.insert(directions.end(), best.begin(), best.end());
+            i = j;
+        }
     }
-    sprite.move(originalPos);
     return directions;
 }
 
