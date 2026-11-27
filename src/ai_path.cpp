@@ -24,6 +24,7 @@
 #include <functional>
 #include <iterator>
 #include <utility>
+#include <tuple>
 #include "map.h"
 #include "logger.h"
 #include "ai_path.h"
@@ -43,8 +44,13 @@ namespace PathData
     const RaycastBullet raycastBullet;
     const FlowField flowField;
     const ThetaStar thetaStar;
+    const AStarBudget aStarBudget;
+    const Greedy greedy;
+    const Flee flee;
 
     constexpr int PATH_TIMEOUT_MAX = 10; // Recompute path every 10 turns
+    constexpr int FLEE_RADIUS = 10;      // bounded flee search (<= timeout:
+                                         // one flee plan consumes like any other)
     constexpr size_t MAX_PATH_SIZE = 4096;
     // delta+direction pairs kept structurally in sync; must match the
     // CGame::translate()/JoyAim convention used by sprites and by the
@@ -96,6 +102,11 @@ struct Node
 // untouched. Min-heap via std::greater on the pair (fCost first).
 using OpenEntry = std::pair<int, Node *>;
 using OpenList = std::priority_queue<OpenEntry, std::vector<OpenEntry>, std::greater<OpenEntry>>;
+
+// GBFS open list: (hCost, gCost) snapshot key so equal-h ties fall to
+// gCost instead of Node* pointer order (see Greedy::findPath)
+using GreedyEntry = std::pair<std::pair<int, int>, Node *>;
+using GreedyList = std::priority_queue<GreedyEntry, std::vector<GreedyEntry>, std::greater<GreedyEntry>>;
 
 int AStar::manhattanDistance(const Pos &a, const Pos &b) const
 {
@@ -226,6 +237,419 @@ std::vector<JoyAim> AStar::findPath(ISprite &sprite, const Pos &goalPos) const
     }
     // No path found
     return directions; // Empty if no path found
+}
+
+namespace
+{
+    // parent-chain -> unit-step aims (AStarBudget; the conversion is
+    // byte-identical to the inline block in AStar::findPath)
+    std::vector<JoyAim> chainToDirections(const Node *node)
+    {
+        std::vector<JoyAim> directions;
+        std::vector<Pos> path;
+        while (node != nullptr)
+        {
+            path.push_back(node->pos);
+            node = node->parent;
+        }
+        std::reverse(path.begin(), path.end());
+        for (size_t i = 1; i < path.size(); ++i)
+        {
+            int dx = path[i].x - path[i - 1].x;
+            int dy = path[i].y - path[i - 1].y;
+            if (dx == 1 && dy == 0)
+                directions.push_back(JoyAim::AIM_RIGHT);
+            else if (dx == -1 && dy == 0)
+                directions.push_back(JoyAim::AIM_LEFT);
+            else if (dx == 0 && dy == 1)
+                directions.push_back(JoyAim::AIM_DOWN);
+            else if (dx == 0 && dy == -1)
+                directions.push_back(JoyAim::AIM_UP);
+            else
+            {
+                LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                     path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+                return {};
+            }
+        }
+        return directions;
+    }
+
+    // declared AStarBudget tie-break for the partial answer: min hCost,
+    // then min gCost, then lexicographic pos (never heap insertion order)
+    bool isCloser(const Node &a, const Node &b)
+    {
+        return std::tie(a.hCost, a.gCost, a.pos.x, a.pos.y) <
+               std::tie(b.hCost, b.gCost, b.pos.x, b.pos.y);
+    }
+} // namespace
+
+AStarBudget::AStarBudget(int budget)
+    : m_budget(budget)
+{
+}
+
+int AStarBudget::manhattanDistance(const Pos &a, const Pos &b) const
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// Capped A* (docs/plans/ipath-candidates-plan.md phase 1): the AStar node
+// loop above with an expansion budget counted on non-stale pops. Budget
+// exhaustion is NOT contract failure: the path to the popped node closest
+// to the goal (min hCost, tie lower gCost, tie lexicographic pos) is
+// returned so CPath re-plans from a better cell and converges at the wall
+// nearest the goal. The start node is always the first candidate, so a
+// boxed-in start reconstructs to an empty aim list: "empty = no path"
+// (spec §2) is untouched.
+std::vector<JoyAim> AStarBudget::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Priority queue for open list
+    OpenList openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+
+    // Create start node
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
+    openList.emplace(nodes[startPos]->fCost(), nodes[startPos].get());
+
+    const Node *answer = nullptr; // best popped node (the goal, or the closest so far)
+    int expansions = 0;
+
+    while (!openList.empty())
+    {
+        const OpenEntry entry = openList.top();
+        openList.pop();
+        Node *current = entry.second;
+
+        // BUG-H17: skip stale snapshots left behind by g-cost relaxation
+        if (entry.first != current->fCost())
+            continue;
+
+        // BUG-C9: relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
+        // Reached goal
+        if (current->pos == goalPos)
+            return chainToDirections(current);
+
+        // Best partial candidate: min hCost, tie lower gCost, tie
+        // lexicographic pos (declared so behavior is deterministic)
+        if (answer == nullptr || isCloser(*current, *answer))
+        {
+            answer = current;
+        }
+
+        // Budget exhausted: partial success, answer with the best node so far
+        if (expansions >= m_budget)
+            break;
+        ++expansions;
+
+        closedList[current->pos] = true;
+
+        // Explore neighbors
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current->pos.y + g_steps[i].delta.y)};
+
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (!canStep)
+                continue;
+
+            int newGCost = current->gCost + 1;
+            int newHCost = manhattanDistance(newPos, goalPos);
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
+                openList.emplace(nodes[newPos]->fCost(), nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // BUG-C9: relax in place (see AStar); replacing the unique_ptr
+                // would free the Node still referenced by openList.
+                // BUG-H17: snapshot keys make the in-place update safe.
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.emplace(it->second->fCost(), it->second.get());
+            }
+        }
+    }
+    // Goal never popped: partial path to the best popped node (empty when
+    // that node is the start, i.e. genuinely boxed in)
+    return answer == nullptr ? std::vector<JoyAim>{} : chainToDirections(answer);
+}
+
+Greedy::Greedy(int budget)
+    : m_budget(budget)
+{
+}
+
+int Greedy::manhattanDistance(const Pos &a, const Pos &b) const
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// Greedy best-first (docs/plans/ipath-candidates-plan.md phase 2): the
+// AStarBudget loop above with the open-list key reduced to (hCost, gCost)
+// snapshots. Sorting on hCost dives straight at the goal, so paths can
+// exceed A*'s optimal length -- the fuzz asserts legality + endpoint,
+// never length parity. The pair key decides equal-h ties by gCost instead
+// of heap Node* order. Budget exhaustion reuses the phase-1 best-node
+// partial path (same isCloser / chainToDirections helpers); GBFS does not
+// finalize gCost at pop, but the parent chain stays geometrically valid,
+// which is all the reconstruction reads.
+std::vector<JoyAim> Greedy::findPath(ISprite &sprite, const Pos &goalPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and goal positions
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        goalPos.x < 0 || goalPos.x >= mapLen || goalPos.y < 0 || goalPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, goalPos.x, goalPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    // Priority queue keyed on (hCost, gCost); greater<> makes it a min-heap
+    GreedyList openList;
+    std::unordered_map<Pos, std::unique_ptr<Node>> nodes;
+    std::unordered_map<Pos, bool> closedList;
+
+    // Create start node
+    nodes[startPos] = std::make_unique<Node>(startPos, 0, manhattanDistance(startPos, goalPos), nullptr);
+    openList.emplace(std::make_pair(nodes[startPos]->hCost, nodes[startPos]->gCost), nodes[startPos].get());
+
+    const Node *answer = nullptr; // best popped node (the goal, or the closest so far)
+    int expansions = 0;
+
+    while (!openList.empty())
+    {
+        const GreedyEntry entry = openList.top();
+        openList.pop();
+        Node *current = entry.second;
+
+        // skip stale snapshots left behind by g-cost relaxation (hCost
+        // never changes; the gCost half of the key is what moves)
+        if (entry.first.first != current->hCost || entry.first.second != current->gCost)
+            continue;
+
+        // relaxation re-pushes the same node; skip stale copies
+        if (closedList.find(current->pos) != closedList.end())
+            continue;
+
+        // Reached goal
+        if (current->pos == goalPos)
+            return chainToDirections(current);
+
+        // Best partial candidate: min hCost, tie lower gCost, tie
+        // lexicographic pos (declared so behavior is deterministic)
+        if (answer == nullptr || isCloser(*current, *answer))
+        {
+            answer = current;
+        }
+
+        // Budget exhausted: partial success, answer with the best node so far
+        if (expansions >= m_budget)
+            break;
+        ++expansions;
+
+        closedList[current->pos] = true;
+
+        // Explore neighbors
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current->pos.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current->pos.y + g_steps[i].delta.y)};
+
+            // Check bounds before moving
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei)
+                continue;
+
+            if (closedList.find(newPos) != closedList.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos{sprite.pos()};
+            sprite.move(current->pos);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (!canStep)
+                continue;
+
+            int newGCost = current->gCost + 1;
+            int newHCost = manhattanDistance(newPos, goalPos);
+
+            auto it = nodes.find(newPos);
+            if (it == nodes.end())
+            {
+                nodes[newPos] = std::make_unique<Node>(newPos, newGCost, newHCost, current);
+                openList.emplace(std::make_pair(newHCost, newGCost), nodes[newPos].get());
+            }
+            else if (newGCost < it->second->gCost)
+            {
+                // relax in place (see AStar); the snapshot keys make the
+                // in-place update safe. GBFS may close a node before its g
+                // reaches optimal -- accepted non-optimal by declaration.
+                it->second->gCost = newGCost;
+                it->second->parent = current;
+                openList.emplace(std::make_pair(it->second->hCost, it->second->gCost), it->second.get());
+            }
+        }
+    }
+    // Goal never popped: partial path to the best popped node (empty when
+    // that node is the start, i.e. genuinely boxed in)
+    return answer == nullptr ? std::vector<JoyAim>{} : chainToDirections(answer);
+}
+
+int Flee::manhattanDistance(const Pos &a, const Pos &b) const
+{
+    return abs(a.x - b.x) + abs(a.y - b.y);
+}
+
+// Flee (docs/plans/ipath-candidates-plan.md phase 3): ignores the approach
+// framing -- bounded BFS around the start, answer = the reachable cell
+// maximizing Manhattan distance from the threat at playerPos. BFS shape,
+// no Node/OpenList (FIFO first-touch on unit edges is optimal; same
+// ruling as FlowField). The candidate doc's max-hCost open-list key is
+// deliberately dropped: without a goal-test early exit the visited set is
+// the full reachable set within FLEE_RADIUS regardless of pop order, so
+// the answer is identical with less machinery. Tie-break declared: max
+// distance, then min g, then lexicographic pos. IPath::flees() == true
+// makes CPath::followPath skip the on-goal short-circuit: standing on the
+// threat is exactly when a flee must search. Start-as-answer (boxed in or
+// already farthest) reconstructs to the empty aim list.
+std::vector<JoyAim> Flee::findPath(ISprite &sprite, const Pos &threatPos) const
+{
+    const int granularFactor = sprite.getGranularFactor();
+    const CMap &map = CGame::getMap();
+    const int mapLen = map.width() * granularFactor;
+    const int mapHei = map.height() * granularFactor;
+    const Pos startPos = sprite.pos();
+
+    // Validate start and threat positions: the search moves away from the
+    // threat, but garbage in the score would poison the answer, so the §2
+    // bounds contract applies to both.
+    if (startPos.x < 0 || startPos.x >= mapLen || startPos.y < 0 || startPos.y >= mapHei ||
+        threatPos.x < 0 || threatPos.x >= mapLen || threatPos.y < 0 || threatPos.y >= mapHei)
+    {
+        LOGE("Invalid start (%d,%d) or goal (%d,%d) for map bounds (%d,%d) on line %d",
+             startPos.x, startPos.y, threatPos.x, threatPos.y, mapLen, mapHei, __LINE__);
+        return {};
+    }
+
+    std::queue<Pos> queue;
+    std::unordered_map<Pos, Pos> parent;
+    std::unordered_map<Pos, int> dist; // BFS g from start; doubles as visited
+    queue.push(startPos);
+    dist[startPos] = 0;
+
+    Pos answer = startPos;
+    int bestDist = manhattanDistance(startPos, threatPos);
+    int bestG = 0;
+
+    while (!queue.empty())
+    {
+        const Pos current = queue.front();
+        queue.pop();
+        const int g = dist[current];
+        const int far = manhattanDistance(current, threatPos);
+        // maximize far, tie minimize g, tie lexicographic pos
+        if (std::make_tuple(-far, g, static_cast<int>(current.x), static_cast<int>(current.y)) <
+            std::make_tuple(-bestDist, bestG, static_cast<int>(answer.x),
+                            static_cast<int>(answer.y)))
+        {
+            answer = current;
+            bestDist = far;
+            bestG = g;
+        }
+        if (g >= FLEE_RADIUS)
+            continue; // radius cap; the frontier cell itself was still scored
+
+        for (size_t i = 0; i < std::size(g_steps); ++i)
+        {
+            const Pos newPos{static_cast<int16_t>(current.x + g_steps[i].delta.x),
+                             static_cast<int16_t>(current.y + g_steps[i].delta.y)};
+            if (newPos.x < 0 || newPos.x >= mapLen || newPos.y < 0 || newPos.y >= mapHei ||
+                dist.find(newPos) != dist.end())
+                continue;
+
+            // probe canMove from the expanded node so the entered cell is checked
+            const Pos originalPos = sprite.pos();
+            sprite.move(current);
+            const bool canStep = sprite.canMove(g_steps[i].dir);
+            sprite.move(originalPos);
+            if (canStep)
+            {
+                queue.push(newPos);
+                dist[newPos] = g + 1;
+                parent[newPos] = current;
+            }
+        }
+    }
+
+    // reconstruct start -> answer through the parent map (aim conversion
+    // identical to BFS::findPath's)
+    std::vector<JoyAim> directions;
+    std::vector<Pos> path;
+    for (Pos node = answer; node != startPos; node = parent[node])
+        path.push_back(node);
+    path.push_back(startPos);
+    std::reverse(path.begin(), path.end());
+    for (size_t i = 1; i < path.size(); ++i)
+    {
+        const int dx = path[i].x - path[i - 1].x;
+        const int dy = path[i].y - path[i - 1].y;
+        if (dx == 1 && dy == 0)
+            directions.push_back(JoyAim::AIM_RIGHT);
+        else if (dx == -1 && dy == 0)
+            directions.push_back(JoyAim::AIM_LEFT);
+        else if (dx == 0 && dy == 1)
+            directions.push_back(JoyAim::AIM_DOWN);
+        else if (dx == 0 && dy == -1)
+            directions.push_back(JoyAim::AIM_UP);
+        else
+        {
+            LOGE("Invalid path transition from (%d,%d) to (%d,%d) on line %d",
+                 path[i - 1].x, path[i - 1].y, path[i].x, path[i].y, __LINE__);
+            return {};
+        }
+    }
+    return directions;
 }
 
 // ponytail: byte-identical to AStar::findPath with h = 0 (the reference
@@ -1104,7 +1528,10 @@ CPath::Result CPath::followPath(ISprite &sprite, const Pos &playerPos, const IPa
 {
     // Maintainer ruling 2026-11-18: standing on the goal needs no search;
     // skip the (expensive, always-empty) recompute instead of re-running it.
-    if (sprite.pos() == playerPos)
+    // Phase-3 concession (plan §3.1): a fleeing searcher's goal is
+    // distance, not the player's cell -- standing ON the threat is exactly
+    // when it must search. All shipped algos inherit flees() == false.
+    if (!astar.flees() && sprite.pos() == playerPos)
         return Result::NoValidPath;
 
     // Check if path is invalid or timed out
@@ -1278,6 +1705,18 @@ const IPath *CPath::getPathAlgo(const uint8_t algo)
     else if (algo == BossData::RAYCAST_BULLET)
     {
         return &PathData::raycastBullet;
+    }
+    else if (algo == BossData::ASTAR_BUDGET)
+    {
+        return &PathData::aStarBudget;
+    }
+    else if (algo == BossData::GBFS)
+    {
+        return &PathData::greedy;
+    }
+    else if (algo == BossData::FLEE)
+    {
+        return &PathData::flee;
     }
     else
     {

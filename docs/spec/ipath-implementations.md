@@ -37,9 +37,20 @@ History: [BUG-C9](../bugs/resolved/critical-triage-2026-11-17.md) (UAF),
 | `ThetaStar` | `THETASTAR` | `Path::THETASTAR` | A* with line-of-sight-grandparent relaxation, Manhattan costs | optimal length, straighter shape | none yet |
 | `Raycast` | `RAYCAST` | `Path::RAYCAST` | Bresenham ray toward the goal; no walkability probe, no fallback | straight sight ray; ends at the first wall at runtime | bullet attacks (`skill BULLET ... algo=RAYCAST`) |
 | `RaycastBullet` | `RAYCAST_BULLET` | `Path::RAYCAST_BULLET` | Amanatides & Woo DDA traversal of the segment; no walkability probe, no fallback | exact supercover sight ray (cells the line actually enters); ends at the first wall at runtime | none yet (available for bullets) |
+| `AStarBudget` | `ASTAR_BUDGET` | `Path::ASTAR_BUDGET` | A* node loop with a capped expansion budget (256); on exhaustion returns the path to the popped node closest to the goal | optimal when the budget suffices; bounded-cost partial path otherwise | none yet (de-risk option for long-range chasers) |
+| `Greedy` | `GBFS` | `Path::GBFS` | AStarBudget's loop keyed on (hCost, gCost) only — dives at the goal, no distance cost paid | NON-optimal (can exceed A*'s length); bounded per call; partial path on exhaustion | none yet (crowd/cheap-chaser slots) |
+| `Flee` | `FLEE` | `Path::FLEE` | bounded BFS (radius 10) around the start; answer = reachable cell maximizing Manhattan distance from the "goal" (treated as a threat) | NON-approach by design; farthest-reachable cell within radius, deterministic tie-break | none yet (retreat/reposition behavior) |
 
 All selectors also parse bare (`ASTAR`) or prefixed (`Path::ASTAR`) via
 `kPaths[]` / `resolvePath()`.
+
+### Recommended per use case
+
+| Use case | Pick | Also consider | Avoid | Why |
+|---|---|---|---|---|
+| Mob monster (independent chaser, `CActor`, gf=1) | `ASTAR` | `LOS` (open-arena chasers that may give up at walls), `ASTAR_BUDGET` (bounded per-recompute cost on large/gf=2 maps), `GBFS` (crowds where a slightly longer walk is invisible), `FLEE` (retreat/reposition; group-flee policy knobs deferred until content uses it) | `BFS`, `DIJKSTRA` | Shipped default (`zombie`, `ghost`, `bbdragondn` in `tilesdata.cpp`): optimal unit steps, stops at the goal, cheapest per-recompute on the small gf=1 grid. `BFS`/`DIJKSTRA` expand strictly more for the same length — they are test references, not content choices. `FLOWFIELD` is the structural fit for many-mobs-one-player but currently rebuilds the whole field per call (see §3), so it wins nothing until a shared-field builder lands. |
+| Boss (`CBoss`, gf=2, one on screen, movement is the spectacle) | `ASTAR` | `AStarSmooth` or `THETASTAR` for straighter walks, `ASTAR_BUDGET` (the gf=2 grid is where the unbounded sealed-goal cost hurts) | `BFS`, `DIJKSTRA` | Same optimal length everywhere; bosses move on the 4x larger gf=2 half-tile grid, so minimize expansions but maximize perceived quality: the two smoothers merge collinear runs (fewer turns) at zero length cost — nicer to watch for a big walking sprite. In use: demon (`bosses.ini`). |
+| Bullet (`skill BULLET algo=`, flies until `Blocked`/TTL/goal) | straight shot: `RAYCAST_BULLET` (new content) / `RAYCAST` (existing content) | routing bolt: `LOS` | search algos (`ASTAR`…) | Bullets are fire-and-forget rays resolved by `followPath`'s per-step probe, not searchers: no routing, no re-plans. New straight-shot content should use `RAYCAST_BULLET` (true sight-line collision cells, §3); keep `RAYCAST` in existing content so its hit cells don't shift. `LOS` stays for bolts that step around cover (greedy, never backtracks). |
 
 ## 2. Shared contract (every implementation)
 
@@ -110,6 +121,36 @@ re-runs the oracle per parent-chain segment (deterministic, map-static —
 must replay what the relaxation probed); a refused segment is a
 sprite-model inconsistency → `LOGE` + empty.
 
+### Greedy — `Greedy::findPath`
+The `AStarBudget` loop with the open-list key reduced to `(hCost,
+gCost)` snapshots (pair key so equal-h ties fall to gCost, not heap
+`Node*` order). Sorting on hCost alone dives straight at the goal and
+routes wall detours by feel, so paths may exceed A*'s optimal length —
+**declared non-optimal**; the seeded fuzz therefore asserts legality +
+endpoint (never length parity), plus a budget-3 clone never exceeds its
+cap. Same expansion budget (ctor parameter, default 256), same
+best-node partial path and boxed-in-start rule as `AStarBudget` (the
+`isCloser` / `chainToDirections` helpers are shared file-locals). gCost
+is not finalized at pop under a greedy key; the parent chain stays
+geometrically valid, which is all the reconstruction reads. Cheapest
+searcher per call; candidate for crowd mobs where A* is overkill. No
+shipped content selects it.
+
+### AStarBudget — `AStarBudget::findPath`
+The `AStar` node loop with a hard expansion budget (ctor parameter,
+default 256, counted on non-stale pops). Budget exhaustion is *not*
+contract failure: the path to the popped node closest to the goal (min
+`hCost`, tie lower `gCost`, tie lexicographic pos) is returned, so a mob
+150 tiles out consumes the prefix, `CPath` re-plans from a better cell,
+and re-plans converge at the wall nearest the goal — bounded ~budget-node
+cost per re-plan instead of the unbounded sealed-goal cost of full A*.
+When the budget suffices the output is optimal, length-identical to
+`AStar` (aim sequences need not match: `AStar` breaks fCost heap ties on
+`Node*` pointer, so equal-length variants are all it may emit; exact aims
+are pinned by the deterministic corridor test). A boxed-in start reconstructs to an
+empty list, so "failure = empty" is untouched. No shipped content selects
+it yet; switching long-range chasers from `ASTAR` is a content pass.
+
 ### FlowField — `FlowField::findPath`
 One reverse BFS seeded at the goal fills a flat per-cell field (1 byte:
 downhill `g_steps` index, `-1` unreached); the answer is the descent from
@@ -167,6 +208,24 @@ detonates at the first blocked cell. Exactly `dx + dy` steps, identical to
 (the collision-cell sequence) on other slopes — see the `(0,0)→(1,3)`
 discriminator in `t_ai_path`. No `Node`/`OpenList`.
 
+### Flee — `Flee::findPath`
+The inverted goal: `playerPos` is a **threat**, and the answer is the
+reachable cell *maximizing* Manhattan distance from it, searched by
+bounded BFS (radius 10, `FLEE_RADIUS`) around the start. BFS shape, no
+`Node`/`OpenList` (FIFO first-touch on unit edges is optimal; same ruling
+as `FlowField`); the candidate doc's max-hCost open-list key was dropped
+— without a goal-test early exit the visited set is the full reachable
+set within the radius regardless of pop order. Tie-break declared: max
+distance, then min g, then lexicographic pos. Start is a candidate: a
+boxed-in (or already-farthest) sprite reconstructs to the empty list, so
+"failure = empty" is untouched. `IPath::flees()` returns true — the one
+override of that hook — which makes `CPath::followPath` skip its on-goal
+short-circuit: standing ON the threat is exactly when a flee must
+search (all approach algos inherit `false` and are bit-identical). The
+radius cap keeps one flee plan consumable within `PATH_TIMEOUT_MAX`. No
+shipped content selects it; the candidate doc's group-engage policy
+(knockback-adjacent ini knobs) is deferred until first content uses it.
+
 ## 4. How a choice reaches the algo
 
 `bosses.ini path=` / skill `algo=` → `resolvePath()` (`kPaths[]`) →
@@ -178,9 +237,10 @@ discriminator in `t_ai_path`. No `Node`/`OpenList`.
 `CPath` driver (algo-agnostic): caches the aim list, recomputes when
 exhausted or every `PATH_TIMEOUT_MAX` (10) successful steps; a failed
 step invalidates the cache (`Blocked`); standing on the goal short-circuits
-to `NoValidPath` without searching; the actual final step into the
-player's cell is always refused (`isPlayerThere` → `NoValidPath`) even
-though searchers may path into it.
+to `NoValidPath` without searching (skipped for `flees()` searchers — for
+them the "goal" is distance, not the player's cell); the actual final step
+into the player's cell is always refused (`isPlayerThere` → `NoValidPath`)
+even though searchers may path into it.
 
 ## 5. Test map (`tests/unit/t_ai_path.cpp` unless noted)
 
@@ -191,13 +251,21 @@ though searchers may path into it.
   detour (AStar, BFS, AStarSmooth + turn-count parity), S-bend (21-step
   optimum), exact
   staircase-shape oracle case, BUG-C9 relaxation map, BUG-H17 A*/BFS
-  length-parity fuzz (20 seeded maps), AStarSmooth fuzz (50 seeded maps,
+  length-parity fuzz (20 seeded maps; AStarBudget length parity + endpoint
+  vs A* where a path exists), AStarBudget corridor fallback (sealed-row
+  goal converges at closest reachable cell with exact aim pin; budget-3
+  cut; boxed-in start → empty), Greedy sealed-wall empty + corridor pins
+  (9 RIGHT fallback, budget-3 cut) + fuzz endpoint/budget-3-cap checks
+  (no length parity — declared non-optimal), AStarSmooth fuzz (50 seeded maps,
   length parity + no blocked cell entered), ThetaStar exact length parity
-  in the seeded fuzz + LOS-row turn check, sealed wall, out-of-bounds,
-  start==goal ruling.
-- `t_tables.cpp`: selector name resolution incl. all nine algo names.
+   in the seeded fuzz + LOS-row turn check, sealed wall, out-of-bounds,
+   start==goal ruling, Flee open-map farthest-corner endpoint pin +
+   wall-sealed-pocket corridor + boxed-in empty + flees() flag + driver
+   adjacency concession (sprite on threat → MoveSuccesful via a boss
+   sprite).
+- `t_tables.cpp`: selector name resolution incl. all twelve algo names.
 - `t_actor.cpp` `test_path_algos`: `getPathAlgo` non-null per enum value.
-- `t_bossdata.cpp`: loaded `path <= RAYCAST_BULLET` validity bound.
+- `t_bossdata.cpp`: loaded `path <= FLEE` validity bound.
 
 ## 6. Adding or changing an algorithm
 

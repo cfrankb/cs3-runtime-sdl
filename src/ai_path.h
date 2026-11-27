@@ -30,6 +30,10 @@ class IPath
 {
 public:
     virtual std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const = 0;
+    // True for searchers whose goal is "farthest from playerPos", not
+    // "standing on it". Only Flee overrides; all shipped algos inherit
+    // false and are bit-identical.
+    virtual bool flees() const { return false; }
 };
 
 // A* Pathfinding class
@@ -113,6 +117,49 @@ class ThetaStar : public IPath
 {
 public:
     std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+};
+
+// Capped A* Pathfinding class: AStar's node loop with a hard expansion
+// budget; on exhaustion it returns the path to the popped node closest to
+// the goal (partial success, see cpp comment) instead of empty. A boxed-in
+// start still reconstructs to {} so "empty = no path" holds.
+class AStarBudget : public IPath
+{
+public:
+    explicit AStarBudget(int budget = 256);
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+    int m_budget; // const instance uses the default; tests inject tight budgets
+};
+
+// Greedy best-first (GBFS) Pathfinding class: AStarBudget's node loop with
+// the open-list key reduced to (hCost, gCost) pairs. NON-optimal by
+// construction (the budget and partial-path fallback match AStarBudget).
+class Greedy : public IPath
+{
+public:
+    explicit Greedy(int budget = 256);
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+
+private:
+    int manhattanDistance(const Pos &a, const Pos &b) const;
+    int m_budget;
+};
+
+// Flee Pathfinding class: bounded BFS (FLEE_RADIUS) around the sprite;
+// answer = the reachable cell maximizing Manhattan distance from the
+// threat position. flees() is true, so CPath::followPath skips its
+// on-goal short-circuit for it (see cpp comment).
+class Flee : public IPath
+{
+public:
+    std::vector<JoyAim> findPath(ISprite &sprite, const Pos &playerPos) const override;
+    bool flees() const override { return true; }
 
 private:
     int manhattanDistance(const Pos &a, const Pos &b) const;

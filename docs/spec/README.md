@@ -4,6 +4,9 @@
   pathfinding algorithms (inventory, guarantees, wiring); keep it current
   when adding an algorithm (procedure:
   [../briefs/ipath.md](../briefs/ipath.md)).
+- [ipath-algorithm-candidates.md](ipath-algorithm-candidates.md) —
+  evaluation of proposed `IPath` additions (verdicts + adoption order;
+  not state-of-the-world).
 
 ## tests
 

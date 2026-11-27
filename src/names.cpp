@@ -97,6 +97,9 @@ const NameValue kPaths[] = {
     _N(THETASTAR),
     _N(RAYCAST),
     _N(RAYCAST_BULLET),
+    _N(ASTAR_BUDGET),
+    _N(GBFS),
+    _N(FLEE),
 };
 
 const NameValue kTiles[] = {

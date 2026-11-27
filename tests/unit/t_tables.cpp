@@ -49,6 +49,12 @@ namespace
             resolvePath("Path::RAYCAST") != BossData::RAYCAST ||
             resolvePath("RAYCAST_BULLET") != BossData::RAYCAST_BULLET ||
             resolvePath("Path::RAYCAST_BULLET") != BossData::RAYCAST_BULLET ||
+            resolvePath("ASTAR_BUDGET") != BossData::ASTAR_BUDGET ||
+            resolvePath("Path::ASTAR_BUDGET") != BossData::ASTAR_BUDGET ||
+            resolvePath("GBFS") != BossData::GBFS ||
+            resolvePath("Path::GBFS") != BossData::GBFS ||
+            resolvePath("FLEE") != BossData::FLEE ||
+            resolvePath("Path::FLEE") != BossData::FLEE ||
             resolvePath("BOGUS") != 0)
         {
             LOGE("resolvePath mismatch");

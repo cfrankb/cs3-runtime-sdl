@@ -75,7 +75,10 @@ namespace BossData
         FLOWFIELD,
         THETASTAR,
         RAYCAST, // append-only: values serialize in CActor::m_algo
-        RAYCAST_BULLET
+        RAYCAST_BULLET,
+        ASTAR_BUDGET,
+        GBFS,
+        FLEE
     };
 
     enum HitBoxType : uint8_t

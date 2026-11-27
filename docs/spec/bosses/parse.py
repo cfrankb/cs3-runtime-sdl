@@ -52,7 +52,10 @@ namespace BossData
         FLOWFIELD,
         THETASTAR,
         RAYCAST,
-        RAYCAST_BULLET
+        RAYCAST_BULLET,
+        ASTAR_BUDGET,
+        GBFS,
+        FLEE
     };
 
     enum HitBoxType:uint8_t {

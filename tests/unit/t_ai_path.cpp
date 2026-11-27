@@ -87,6 +87,14 @@ namespace
         int getTTL() const override { return BossData::NoTTL; }
     };
 
+    // followPath's non-boss branch downcasts to CActor (shadowActorMove);
+    // isBoss() == true takes the plain sprite.move(aim) path instead
+    class BossSprite : public TestSprite
+    {
+    public:
+        bool isBoss() const override { return true; }
+    };
+
     // replay the returned aims in geometry space (findPath labels steps by
     // their actual displacement); fails if a blocked cell is entered
     Pos replay(const Pos &start, const std::vector<JoyAim> &moves)
@@ -165,12 +173,17 @@ bool test_pathfinding()
     const RaycastBullet raycastBullet;
     const FlowField flowField;
     const ThetaStar thetaStar;
+    const AStarBudget aStarBudget;
+    const Greedy greedy;
+    const Flee flee;
 
     // open grid: optimal = manhattan (3)
     const Pos start{1, 1};
     const Pos goal{4, 1};
     if (!checkPath("AStar", sprite, aStar, start, goal, 3) ||
         !checkPath("AStarSmooth", sprite, aStarSmooth, start, goal, 3) ||
+        !checkPath("AStarBudget", sprite, aStarBudget, start, goal, 3) ||
+        !checkPath("Greedy", sprite, greedy, start, goal, 3) ||
         !checkPath("Dijkstra", sprite, dijkstra, start, goal, 3) ||
         !checkPath("FlowField", sprite, flowField, start, goal, 3) ||
         !checkPath("ThetaStar", sprite, thetaStar, start, goal, 3) ||
@@ -246,6 +259,7 @@ bool test_pathfinding()
     // wall with a gap: AStar/BFS must route around it (10 steps optimal)
     wallColumn(1, 0, 2);
     if (!checkPath("AStar", sprite, aStar, Pos{0, 0}, Pos{4, 0}, 10) ||
+        !checkPath("AStarBudget", sprite, aStarBudget, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("BFS", sprite, bfs, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("Dijkstra", sprite, dijkstra, Pos{0, 0}, Pos{4, 0}, 10) ||
         !checkPath("FlowField", sprite, flowField, Pos{0, 0}, Pos{4, 0}, 10) ||
@@ -336,6 +350,44 @@ bool test_pathfinding()
             {
                 LOGE("ThetaStar fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
                      trial, ts.size(), a.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // AStarBudget equivalence: budget 256 >= the 144 cells of a
+            // 12x12 map, so the cap never fires and the search is optimal:
+            // same length as A*/BFS and it must actually reach the goal.
+            // (Aim-list identity is NOT assertable here: A* breaks fCost
+            // heap ties on Node* pointer, so even two A* runs can emit
+            // different equal-length lists; exact aims are pinned by the
+            // deterministic corridor case below.) Where A* found none, the
+            // capped algo deliberately returns the partial best-node path
+            // (the phase-1 fallback), so nothing to compare.
+            sprite.move(s);
+            const auto ab = aStarBudget.findPath(sprite, g);
+            if (!a.empty() && (ab.size() != a.size() || !(replay(s, ab) == g)))
+            {
+                LOGE("AStarBudget fuzz trial %d: %zu steps vs A* %zu ((%d,%d)->(%d,%d))",
+                     trial, ab.size(), a.size(), s.x, s.y, g.x, g.y);
+                return false;
+            }
+            // Greedy (GBFS) fuzz: declared NON-optimal, so no length
+            // parity -- but budget 256 > the 144 cells means every
+            // reachable goal is popped, so where BFS found a path greedy
+            // must find one that replays onto the goal. A budget-3 clone
+            // must never emit more than 3 steps (partial-path bound).
+            sprite.move(s);
+            const auto gr = greedy.findPath(sprite, g);
+            if (!b.empty() && (gr.empty() || !(replay(s, gr) == g)))
+            {
+                LOGE("Greedy fuzz trial %d: %zu steps, replay to (%d,%d), goal (%d,%d) ((%d,%d)->(%d,%d))",
+                     trial, gr.size(), replay(s, gr).x, replay(s, gr).y, g.x, g.y, s.x, s.y, g.x, g.y);
+                return false;
+            }
+            sprite.move(s);
+            const Greedy tiny(3);
+            const auto gr3 = tiny.findPath(sprite, g);
+            if (gr3.size() > 3)
+            {
+                LOGE("Greedy budget-3 fuzz trial %d: %zu steps exceed budget", trial, gr3.size());
                 return false;
             }
             // RaycastBullet parity: the DDA ray has no wall semantics, so
@@ -467,6 +519,7 @@ bool test_pathfinding()
         !bfs.findPath(sprite, Pos{4, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{4, 0}).empty() ||
         !thetaStar.findPath(sprite, Pos{4, 0}).empty() ||
+        !greedy.findPath(sprite, Pos{4, 0}).empty() ||
         !flowField.findPath(sprite, Pos{4, 0}).empty())
     {
         LOGE("sealed wall: expected no path");
@@ -498,9 +551,70 @@ bool test_pathfinding()
         }
     }
 
+    // AStarBudget (plan phase 1): one-wide corridor on row y=0 (row y=1
+    // fully walled), goal (9,1) sealed in the walled row. A* finds nothing;
+    // the capped search converges at (9,0), the reachable cell closest to
+    // the goal. The corridor never ties on pop order, so pins are exact.
+    {
+        fillMap(10);
+        CMap &map = CGame::getMap();
+        for (int x = 0; x < 10; ++x)
+            map.set(x, 1, BLOCKED);
+        sprite.move(Pos{0, 0});
+        if (!aStar.findPath(sprite, Pos{9, 1}).empty())
+        {
+            LOGE("AStarBudget corridor: A* expected empty for the sealed-row goal");
+            return false;
+        }
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> full(9, AIM_RIGHT);
+        if (aStarBudget.findPath(sprite, Pos{9, 1}) != full)
+        {
+            LOGE("AStarBudget corridor: expected 9 RIGHT to (9,0)");
+            return false;
+        }
+        // budget cut: 3 expansions walk exactly 3 steps toward the goal
+        const AStarBudget tight(3);
+        sprite.move(Pos{0, 0});
+        const std::vector<JoyAim> cut(3, AIM_RIGHT);
+        if (tight.findPath(sprite, Pos{9, 1}) != cut)
+        {
+            LOGE("AStarBudget budget-3: expected 3 RIGHT");
+            return false;
+        }
+        // Greedy (plan phase 2): the corridor forces the same walk and its
+        // keys never tie, so the same pins apply
+        sprite.move(Pos{0, 0});
+        if (greedy.findPath(sprite, Pos{9, 1}) != full)
+        {
+            LOGE("Greedy corridor: expected 9 RIGHT to (9,0)");
+            return false;
+        }
+        const Greedy greedyTight(3);
+        sprite.move(Pos{0, 0});
+        if (greedyTight.findPath(sprite, Pos{9, 1}) != cut)
+        {
+            LOGE("Greedy budget-3: expected 3 RIGHT");
+            return false;
+        }
+        // boxed-in start: (1,0) walled too, start is its own best node -> empty
+        map.set(1, 0, BLOCKED);
+        map.set(0, 1, BLOCKED);
+        sprite.move(Pos{0, 0});
+        if (!aStarBudget.findPath(sprite, Pos{9, 1}).empty() ||
+            !greedy.findPath(sprite, Pos{9, 1}).empty())
+        {
+            LOGE("boxed-in start: AStarBudget/Greedy expected empty");
+            return false;
+        }
+    }
+
     // out-of-bounds goal must return empty, not crash
     sprite.move(Pos{0, 0});
     if (!aStar.findPath(sprite, Pos{99, 99}).empty() ||
+        !aStarBudget.findPath(sprite, Pos{99, 99}).empty() ||
+        !greedy.findPath(sprite, Pos{99, 99}).empty() ||
+        !flee.findPath(sprite, Pos{99, 99}).empty() ||
         !bfs.findPath(sprite, Pos{-1, 0}).empty() ||
         !dijkstra.findPath(sprite, Pos{99, 99}).empty() ||
         !thetaStar.findPath(sprite, Pos{99, 99}).empty() ||
@@ -548,6 +662,21 @@ bool test_pathfinding()
         LOGE("getPathAlgo(RAYCAST_BULLET) returned null");
         return false;
     }
+    if (CPath::getPathAlgo(BossData::ASTAR_BUDGET) == nullptr)
+    {
+        LOGE("getPathAlgo(ASTAR_BUDGET) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::GBFS) == nullptr)
+    {
+        LOGE("getPathAlgo(GBFS) returned null");
+        return false;
+    }
+    if (CPath::getPathAlgo(BossData::FLEE) == nullptr)
+    {
+        LOGE("getPathAlgo(FLEE) returned null");
+        return false;
+    }
 
     // maintainer ruling 2026-11-18: start == goal skips the search and
     // reports NoValidPath (no full-grid re-exploration while touching)
@@ -557,6 +686,68 @@ bool test_pathfinding()
         if (cp.followPath(sprite, Pos{5, 5}, aStar) != CPath::NoValidPath)
         {
             LOGE("start==goal: expected NoValidPath without search");
+            return false;
+        }
+    }
+
+    // Flee (plan phase 3)
+    {
+        // flees() declaration: only the flee searcher opts out of the
+        // on-goal short-circuit
+        if (!flee.flees() || aStar.flees() || greedy.flees())
+        {
+            LOGE("flees(): only Flee may declare true");
+            return false;
+        }
+
+        // open 10x10, sprite (1,1), threat (8,8): maximize Manhattan
+        // distance to the threat over cells within FLEE_RADIUS; the corner
+        // (0,0) is uniquely farthest (16) and its parent chain is forced
+        // by BFS's UP-first step order -> UP LEFT
+        fillMap(10);
+        sprite.move(Pos{1, 1});
+        const std::vector<JoyAim> wantFlee{AIM_UP, AIM_LEFT};
+        if (flee.findPath(sprite, Pos{8, 8}) != wantFlee)
+        {
+            LOGE("Flee open map: expected UP LEFT to (0,0)");
+            return false;
+        }
+
+        // wall-sealed pocket: row y=1 fully walled, sprite (0,0) standing
+        // on the threat; reachable set is row y=0 only, farthest is (9,0)
+        {
+            fillMap(10);
+            CMap &map = CGame::getMap();
+            for (int x = 0; x < 10; ++x)
+                map.set(x, 1, BLOCKED);
+            sprite.move(Pos{0, 0});
+            const std::vector<JoyAim> corridor(9, AIM_RIGHT);
+            if (flee.findPath(sprite, Pos{0, 0}) != corridor)
+            {
+                LOGE("Flee pocket: expected 9 RIGHT away from (0,0)");
+                return false;
+            }
+            // boxed-in sprite: answer is the start -> empty aim list
+            map.set(1, 0, BLOCKED);
+            if (!flee.findPath(sprite, Pos{0, 0}).empty())
+            {
+                LOGE("Flee boxed-in: expected empty");
+                return false;
+            }
+        }
+
+        // driver concession: sprite standing ON the threat is exactly when
+        // a flee must search; the on-goal short-circuit must not fire.
+        // (isBoss()==true takes the plain move() branch; the aStar
+        // short-circuit regression is covered by the case above)
+        fillMap(10);
+        CPath cp;
+        BossSprite boss;
+        boss.move(Pos{5, 5});
+        if (cp.followPath(boss, Pos{5, 5}, flee) != CPath::MoveSuccesful ||
+            boss.pos() == Pos{5, 5})
+        {
+            LOGE("Flee adjacency: expected MoveSuccesful away from the threat");
             return false;
         }
     }

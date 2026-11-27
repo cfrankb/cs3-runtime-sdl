@@ -121,6 +121,9 @@ bool test_path_algos()
         {BossData::THETASTAR, "THETASTAR"},
         {BossData::RAYCAST, "RAYCAST"},
         {BossData::RAYCAST_BULLET, "RAYCAST_BULLET"},
+        {BossData::ASTAR_BUDGET, "ASTAR_BUDGET"},
+        {BossData::GBFS, "GBFS"},
+        {BossData::FLEE, "FLEE"},
     };
     for (const auto &v : valid)
     {

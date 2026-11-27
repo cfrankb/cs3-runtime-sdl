@@ -387,6 +387,9 @@ namespace
         {"THETASTAR", BossData::THETASTAR},
         {"RAYCAST", BossData::RAYCAST},
         {"RAYCAST_BULLET", BossData::RAYCAST_BULLET},
+        {"ASTAR_BUDGET", BossData::ASTAR_BUDGET},
+        {"GBFS", BossData::GBFS},
+        {"FLEE", BossData::FLEE},
     };
 
     const NameValue kTiles[] = {
